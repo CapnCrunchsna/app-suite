@@ -14,7 +14,7 @@ out-tsc/
 coverage/
 .angular/
 
-# Local app data — Statement Auditor keeps its SQLite file out of version control.
+# Local app data — Ledgerline keeps its SQLite file out of version control.
 # It contains real financial statements and must never be committed.
 *.sqlite
 *.sqlite-journal

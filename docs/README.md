@@ -17,20 +17,20 @@ A doc that lives here can still be a registered dashboard artifact. Register it 
 parent folder, and `docs` is not one of `plans|reports|designs`:
 
 ```bash
-node ../../scripts/new-artifact.mjs app-suite/docs/some-spec.md --type plans --project "Statement Auditor" --desc "…"
+node ../../scripts/new-artifact.mjs app-suite/docs/some-spec.md --type plans --project "Ledgerline" --desc "…"
 ```
 
 Then verify with `node ../../scripts/check-artifacts.mjs`.
 
 ## Current contents
 
-- **`statement-auditor-spec.md`** — the Statement Auditor build specification: Nx layout and
+- **`ledgerline-spec.md`** — the Ledgerline build specification: Nx layout and
   module-boundary tags, HTTP API, LLM provider seam, parse-to-analyze pipeline, SQLite schema,
   merchant normalization chain, the nine analyzer rules with their thresholds, and the
   page-level UI contract. Registered on the dashboard; its companion plan artifact is
-  `../../artifacts/plans/statement-auditor-design.md`.
+  `../../artifacts/plans/ledgerline-design.md`.
 
-## Why the Statement Auditor design was split
+## Why the Ledgerline design was split
 
 An earlier note here provisionally kept that design whole as a plan artifact, on the grounds
 that no code exists in this repo yet for a spec to version against, and proposed splitting

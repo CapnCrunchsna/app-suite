@@ -1,11 +1,11 @@
-# Statement Auditor — Build Specification
+# Ledgerline — Build Specification
 
-The implementation contract for Statement Auditor: Nx layout and module boundaries, the HTTP
+The implementation contract for Ledgerline: Nx layout and module boundaries, the HTTP
 API, the LLM provider seam, the parse-to-analyze pipeline, the SQLite schema, the merchant
 normalization chain, the nine analyzer rules with their thresholds, and the page-level UI
 contract. Everything here must be true of the code in this repository at this commit. The
 concept, the locked decisions, the roadmap and the open questions live in the companion plan
-artifact, `artifacts/plans/statement-auditor-design.md`.
+artifact, `artifacts/plans/ledgerline-design.md`.
 
 ## 1. Status and provenance
 
@@ -43,12 +43,12 @@ not app-local ones.
 ```
 app-suite/
   apps/
-    statement-auditor-ui/        Angular 18+, standalone components, signals
-    statement-auditor-api/       Node/TS, Fastify, binds 127.0.0.1. Composition root.
-    statement-auditor-api-e2e/
-    statement-parser-py/         (conditional) FastAPI + pdfplumber
+    ledgerline-ui/        Angular 18+, standalone components, signals
+    ledgerline-api/       Node/TS, Fastify, binds 127.0.0.1. Composition root.
+    ledgerline-api-e2e/
+    ledgerline-parser-py/         (conditional) FastAPI + pdfplumber
   libs/
-    statement-auditor/
+    ledgerline/
       domain/                    types, value objects, Money, DateRange. Zero deps.
       parsing/                   ParserPort, CSV profiles, PDF extraction, format detection
       normalize/                 merchant cleanup chain, alias resolution, categorization
@@ -62,7 +62,7 @@ app-suite/
 ```
 
 **Libs compute; the app persists.** `parsing`, `normalize` and `analyzers` are pure: they take
-values in and return values out. Nothing in `libs/statement-auditor/` except `data` may write.
+values in and return values out. Nothing in `libs/ledgerline/` except `data` may write.
 The API app is the composition root that wires a pure result into a repository call. This is
 not a style preference — §2.2 makes it a lint error, and §2.5's pipeline table assigns stage
 *ownership* on that basis.
@@ -83,23 +83,23 @@ the job.
 
 | Lib | tags | May depend on | Hard rule |
 |---|---|---|---|
-| `domain` | `scope:sa`, `type:domain` | nothing | Pure types and arithmetic. No I/O, no framework. |
-| `parsing` | `scope:sa`, `type:parsing` | `type:domain` | Produces `RawRow[]`. **Never** touches the database. |
-| `normalize` | `scope:sa`, `type:normalize` | `type:domain`, `type:llm` | Deterministic chain first; LLM strictly optional. Returns values, never writes. |
-| `analyzers` | `scope:sa`, `type:analyzers` | `type:domain` | **Never** imports `data` or `llm`. Snapshot in, `Finding[]` / `LinkProposal[]` out. |
-| `data` | `scope:sa`, `type:data-access` | `type:domain` | The only lib that knows a store exists. Named methods, never raw query strings from callers. |
-| `llm` | `scope:sa`, `type:llm` | `type:domain` | No knowledge of statements or findings; it moves strings. |
-| `feature-shell` | `scope:sa`, `type:feature` | `type:domain`, `type:ui`, `type:api-client` | No direct `data`/`analyzers` imports — everything through HTTP. |
+| `domain` | `scope:ll`, `type:domain` | nothing | Pure types and arithmetic. No I/O, no framework. |
+| `parsing` | `scope:ll`, `type:parsing` | `type:domain` | Produces `RawRow[]`. **Never** touches the database. |
+| `normalize` | `scope:ll`, `type:normalize` | `type:domain`, `type:llm` | Deterministic chain first; LLM strictly optional. Returns values, never writes. |
+| `analyzers` | `scope:ll`, `type:analyzers` | `type:domain` | **Never** imports `data` or `llm`. Snapshot in, `Finding[]` / `LinkProposal[]` out. |
+| `data` | `scope:ll`, `type:data-access` | `type:domain` | The only lib that knows a store exists. Named methods, never raw query strings from callers. |
+| `llm` | `scope:ll`, `type:llm` | `type:domain` | No knowledge of statements or findings; it moves strings. |
+| `feature-shell` | `scope:ll`, `type:feature` | `type:domain`, `type:ui`, `type:api-client` | No direct `data`/`analyzers` imports — everything through HTTP. |
 | `ui-kit` | `scope:shared`, `type:ui` | `type:ui` | Presentational only. |
 | `api-client` | `scope:shared`, `type:api-client` | nothing | Generated. Never hand-edited. |
-| `statement-auditor-api` | `scope:sa`, `type:app` | every `scope:sa` lib | Composition root. The only place the pure libs meet `data`. |
-| `statement-auditor-ui` | `scope:sa`, `type:app` | `type:feature`, `type:ui`, `type:api-client`, `type:domain` | Shell only. |
+| `ledgerline-api` | `scope:ll`, `type:app` | every `scope:ll` lib | Composition root. The only place the pure libs meet `data`. |
+| `ledgerline-ui` | `scope:ll`, `type:app` | `type:feature`, `type:ui`, `type:api-client`, `type:domain` | Shell only. |
 
 The corresponding ESLint rule, which is the actual contract:
 
 ```json
 "depConstraints": [
-  { "sourceTag": "scope:sa",       "onlyDependOnLibsWithTags": ["scope:sa", "scope:shared"] },
+  { "sourceTag": "scope:ll",       "onlyDependOnLibsWithTags": ["scope:ll", "scope:shared"] },
   { "sourceTag": "scope:shared",   "onlyDependOnLibsWithTags": ["scope:shared"] },
   { "sourceTag": "type:domain",    "onlyDependOnLibsWithTags": [] },
   { "sourceTag": "type:parsing",   "onlyDependOnLibsWithTags": ["type:domain"] },
@@ -125,15 +125,9 @@ JavaScript objects. That fits in memory with two orders of magnitude to spare, a
 exchange every rule is unit-testable with a literal array of transactions and zero database
 fixtures. Three conditions make the claim survive contact with real data:
 
-- **One snapshot per run, not one per analyzer.** `buildSnapshot()` runs once; the nine rules
-  receive the same frozen object. Nine independent loads would be nine times the query cost
-  and nine times the peak memory.
-- **The transfer matcher (§2.6) must be indexed, not quadratic.** A naive all-pairs scan over
-  58,000 rows is 3.4 billion comparisons. Bucket by `(abs(amount_cents), floor(date/86400))`
-  first; only compare within a bucket and its ±7-day neighbours.
-- **A guard, not a hope.** `analysis_run` records the snapshot row count. Above 250,000 rows
-  the run logs a warning; above 1,000,000 it refuses and points at date-range scoping. The
-  design is allowed to have a ceiling — it is not allowed to have an undiscovered one.
+- **One snapshot per run, not one per analyzer.** `buildSnapshot()` runs once; the nine rules receive the same frozen object. Nine independent loads would be nine times the query cost and nine times the peak memory.
+- **The transfer matcher (§2.6) must be indexed, not quadratic.** A naive all-pairs scan over 58,000 rows is 3.4 billion comparisons. Bucket by `(abs(amount_cents), floor(date/86400))` first; only compare within a bucket and its ±7-day neighbours.
+- **A guard, not a hope.** `analysis_run` records the snapshot row count. Above 250,000 rows the run logs a warning; above 1,000,000 it refuses and points at date-range scoping. The design is allowed to have a ceiling — it is not allowed to have an undiscovered one.
 
 The scaling risk in this design is not the analyzers. It is the re-normalize job (§4.3),
 which re-runs the chain and the full analysis on every merchant correction; §2.7 makes it a
@@ -228,33 +222,16 @@ groups by canonical merchant. An LLM-assigned `category_id` likewise changes §5
 §5.4 (via `overlap_group`). LLM output changing findings is not a leak to be plugged — it is
 the entire point of normalization. What must be true is narrower and testable:
 
-- **Completeness.** With the provider set to `none`, every rule still runs and can still emit,
-  using only inputs with `source ∈ {seed, rule, user}`. No rule is provider-gated.
-- **No branch on provenance.** No analyzer reads a `source` column or behaves differently
-  because a value came from a model. Provenance is metadata for the UI, never an input to a
-  threshold.
-- **No silent authority.** A finding whose evidence depends on any `source='llm'` alias or
-  category carries `llm_dependent = true`, is badged in the UI as resting on an AI-suggested
-  grouping, and has its confidence **capped at Medium** until the underlying alias is
-  user-confirmed. High confidence is reserved for groupings a human or a seed vouched for.
-- **No rewriting of settled history.** An LLM alias that would merge or split a
-  `recurring_series` with `occurrence_count ≥ 3` never auto-applies, regardless of its
-  confidence. It goes to the review queue.
+- **Completeness.** With the provider set to `none`, every rule still runs and can still emit, using only inputs with `source ∈ {seed, rule, user}`. No rule is provider-gated.
+- **No branch on provenance.** No analyzer reads a `source` column or behaves differently because a value came from a model. Provenance is metadata for the UI, never an input to a threshold.
+- **No silent authority.** A finding whose evidence depends on any `source='llm'` alias or category carries `llm_dependent = true`, is badged in the UI as resting on an AI-suggested grouping, and has its confidence **capped at Medium** until the underlying alias is user-confirmed. High confidence is reserved for groupings a human or a seed vouched for.
+- **No rewriting of settled history.** An LLM alias that would merge or split a `recurring_series` with `occurrence_count ≥ 3` never auto-applies, regardless of its confidence. It goes to the review queue.
 
 **The tests that actually verify this**, replacing the parity suite:
 
-- **T1 — provenance ablation.** Over a database with LLM aliases applied, run the analyzers
-  twice: once with the full alias set, once with every `source='llm'` alias stripped so those
-  rows fall back to their rule-normalized provisional merchants. Assert (a) the ablated run is
-  non-empty for every rule that fires in the full run, (b) every finding in the ablated run
-  survives into the full run with the same `rule_id` and subject, and (c) the diff is emitted
-  as the run's *LLM-attributable finding set* for review. A regression that lets a model
-  suppress a deterministic finding fails (b).
-- **T2 — determinism under fixed input.** `analyze(snapshot, config)` run 100× over a frozen
-  snapshot returns byte-identical `Finding[]`, ordering included. This catches map-iteration
-  order and float drift, which is what the original suite tested by accident.
-- **T3 — boundary.** `analyzers` has no dependency edge to `llm` or `data`. A lint assertion,
-  not a runtime test.
+- **T1 — provenance ablation.** Over a database with LLM aliases applied, run the analyzers twice: once with the full alias set, once with every `source='llm'` alias stripped so those rows fall back to their rule-normalized provisional merchants. Assert (a) the ablated run is non-empty for every rule that fires in the full run, (b) every finding in the ablated run survives into the full run with the same `rule_id` and subject, and (c) the diff is emitted as the run's *LLM-attributable finding set* for review. A regression that lets a model suppress a deterministic finding fails (b).
+- **T2 — determinism under fixed input.** `analyze(snapshot, config)` run 100× over a frozen snapshot returns byte-identical `Finding[]`, ordering included. This catches map-iteration order and float drift, which is what the original suite tested by accident.
+- **T3 — boundary.** `analyzers` has no dependency edge to `llm` or `data`. A lint assertion, not a runtime test.
 
 **Caching.** Every call is keyed by `sha256(provider + model + prompt)` into `llm_cache`. The
 Claude CLI path costs seconds per call, so caching is what makes bulk merchant normalization
@@ -321,16 +298,9 @@ Implementations register in priority order: `NodeCsvParser`, `NodePdfParser`,
 `PythonParserClient`, `LlmAssistedParser`. The port exists from the PDF phase even if only the
 Node implementations are built, so adding Python later is a registration, not a refactor.
 
-- **Node PDF** uses `pdfjs-dist` positional text extraction: pull text items with x/y, cluster
-  into lines by y-proximity, infer column boundaries from x-gap histograms, then map columns
-  exactly like CSV.
-- **The Python trigger condition**, stated now so it isn't a judgment call later: build
-  `statement-parser-py` when a real statement from an account you actually hold fails Node
-  extraction *and* the failure is column inference rather than the file being image-only.
-  Scanned PDFs need OCR, which Python does not fix within v1 scope.
-- **LLM-assisted parsing** sends extracted *text* — never the file — asks for JSON rows,
-  validates against a schema, and marks every row `parse_source = 'llm'`, which forces the
-  review screen and blocks silent commit.
+- **Node PDF** uses `pdfjs-dist` positional text extraction: pull text items with x/y, cluster into lines by y-proximity, infer column boundaries from x-gap histograms, then map columns exactly like CSV.
+- **The Python trigger condition**, stated now so it isn't a judgment call later: build `ledgerline-parser-py` when a real statement from an account you actually hold fails Node extraction *and* the failure is column inference rather than the file being image-only. Scanned PDFs need OCR, which Python does not fix within v1 scope.
+- **LLM-assisted parsing** sends extracted *text* — never the file — asks for JSON rows, validates against a schema, and marks every row `parse_source = 'llm'`, which forces the review screen and blocks silent commit.
 
 ### 2.6 Internal transfer linking
 
@@ -345,9 +315,7 @@ unambiguous case, propose everything else.**
 both accounts present in the system):
 
 - `|d.amount| == c.amount`
-- `−1 ≤ (c.effective_date − d.effective_date) ≤ 7` days — money leaves before it lands, and
-  one day of posting-order noise is normal. Seven days covers ACH settlement across a holiday
-  weekend; ±3 loses the common case.
+- `−1 ≤ (c.effective_date − d.effective_date) ≤ 7` days — money leaves before it lands, and one day of posting-order noise is normal. Seven days covers ACH settlement across a holiday weekend; ±3 loses the common case.
 
 Bucket candidates by `(abs(amount_cents), day)` before pairing, per §2.2's cost note.
 
@@ -369,11 +337,8 @@ produce sixteen "matches".
 
 **Disposition.**
 
-- **Score ≥ 5** — auto-link. In practice this means keyword-matched on both sides plus one
-  corroborator, which is what a credit-card payment or a savings sweep looks like.
-- **Score 2–4** — **propose**. The pair appears in a Possible Transfers queue on the Accounts
-  page and is *not* excluded from spend until confirmed. The queue shows both rows and the
-  dollar effect of linking.
+- **Score ≥ 5** — auto-link. In practice this means keyword-matched on both sides plus one corroborator, which is what a credit-card payment or a savings sweep looks like.
+- **Score 2–4** — **propose**. The pair appears in a Possible Transfers queue on the Accounts page and is *not* excluded from spend until confirmed. The queue shows both rows and the dollar effect of linking.
 - **Score < 2** — no link.
 
 **Partial payments.** A payment split across two debits, or a payment against a card whose
@@ -400,14 +365,9 @@ transaction and then re-runs the full analysis.
 
 - `POST /api/jobs/renormalize` and `POST /api/analysis/run` **enqueue** and return a job id.
 - `GET /api/jobs/:id` reports `{ state, progress, message, result }`; the UI polls.
-- Jobs of the same kind **coalesce**: a second renormalize request while one is queued merges
-  into it rather than stacking. Merchant corrections in the UI are debounced 5 seconds and
-  batched, so correcting eight merchants in a row is one job, not eight.
-- Re-normalization is **incremental** where it can be: only transactions whose current
-  `description_normalized` falls in the affected alias key-space are re-resolved. A full sweep
-  is available explicitly from Settings.
-- Jobs run in-process (single local user, `better-sqlite3` is synchronous); the queue is a
-  table, not a broker.
+- Jobs of the same kind **coalesce**: a second renormalize request while one is queued merges into it rather than stacking. Merchant corrections in the UI are debounced 5 seconds and batched, so correcting eight merchants in a row is one job, not eight.
+- Re-normalization is **incremental** where it can be: only transactions whose current `description_normalized` falls in the affected alias key-space are re-resolved. A full sweep is available explicitly from Settings.
+- Jobs run in-process (single local user, `better-sqlite3` is synchronous); the queue is a table, not a broker.
 
 ## 3. Data model
 
@@ -502,8 +462,7 @@ changed in place: uppercase, collapse internal whitespace to single spaces, stri
 outside `[A-Z0-9 ]`, trim, truncate to 40 characters. It is versioned by name.
 
 - `transaction.dedupe_key_version` records which collapse produced each key.
-- Changing the collapse function means shipping `collapse_v2` **and** a migration that
-  recomputes every key inside one transaction.
+- Changing the collapse function means shipping `collapse_v2` **and** a migration that recomputes every key inside one transaction.
 - Imports refuse to run while the table contains mixed `dedupe_key_version` values.
 
 **The multiset merge rule:** for each `dedupe_key`, insert
@@ -524,12 +483,9 @@ to zero inserts.
 *different* keys that are nonetheless the same transaction. No count comparison will ever see
 them, because they hash differently:
 
-- A statement **re-issued with a corrected amount** — $104.53 becomes $104.35. Both rows land;
-  the month over-counts by $104.53.
-- A **pending charge that later posts** at a different date or amount — $50.00 on the 10th
-  becomes $59.00 on the 12th once a tip settles.
-- The **same month exported in two formats** where one carries `transaction_date` and the
-  other only `posted_date`, so `effective_date` differs by a day or two.
+- A statement **re-issued with a corrected amount** — $104.53 becomes $104.35. Both rows land; the month over-counts by $104.53.
+- A **pending charge that later posts** at a different date or amount — $50.00 on the 10th becomes $59.00 on the 12th once a tip settles.
+- The **same month exported in two formats** where one carries `transaction_date` and the other only `posted_date`, so `effective_date` differs by a day or two.
 
 Commit therefore runs a **near-duplicate pass** after the merge: for each row about to be
 inserted, look for an existing row in the same account with `|Δ effective_date| ≤ 3` days, the
@@ -557,26 +513,12 @@ session's "removes only its rows" would have done exactly that, and the survivin
 
 The home-server plan re-indexes this data into ES later. The design keeps that cheap:
 
-- Every row has a stable id, `created_at` and `updated_at`, so an incremental re-index is a
-  watermark query. This is now true because §3.1 enforces those columns; the design session
-  claimed it while several tables lacked them.
-- **A watermark query cannot see deletions**, and this app deletes: import removal, account
-  merge, wipe. The `tombstone` table records `(entity_type, entity_id, deleted_at)` and the
-  re-index consumes it in the same pass. Without it, a deleted import's transactions would
-  live forever in the ES index and every aggregate would be wrong.
-- A `transaction` denormalizes into exactly one ES document with merchant and category
-  embedded — no joins to reconstruct. The corollary is that **a merchant rename or a
-  re-normalize re-writes every document for that merchant**, so the re-index job must be
-  driven off `updated_at` on `transaction`, which the re-normalize job bumps.
+- Every row has a stable id, `created_at` and `updated_at`, so an incremental re-index is a watermark query. This is now true because §3.1 enforces those columns; the design session claimed it while several tables lacked them.
+- **A watermark query cannot see deletions**, and this app deletes: import removal, account merge, wipe. The `tombstone` table records `(entity_type, entity_id, deleted_at)` and the re-index consumes it in the same pass. Without it, a deleted import's transactions would live forever in the ES index and every aggregate would be wrong.
+- A `transaction` denormalizes into exactly one ES document with merchant and category embedded — no joins to reconstruct. The corollary is that **a merchant rename or a re-normalize re-writes every document for that merchant**, so the re-index job must be driven off `updated_at` on `transaction`, which the re-normalize job bumps.
 - `finding` and `recurring_series` are already document-shaped.
-- The repository layer exposes **named intent methods** (`listDebitsByMerchant(range)`,
-  `monthlyCategoryTotals(range)`), never raw SQL passed in from callers. Swapping the
-  implementation means writing those same methods against ES; nothing above `data` changes.
-- The real costs, noted now so they are not discovered later: SQLite gives read-your-writes
-  consistency that ES does not, so any ES read path used immediately after a write needs an
-  explicit refresh or a write-through cache; and `UNIQUE (account_id, dedupe_key,
-  occurrence_index)` has no ES equivalent, so the merge rule's database-level guarantee
-  becomes an application-level one enforced by using the composite as the document `_id`.
+- The repository layer exposes **named intent methods** (`listDebitsByMerchant(range)`, `monthlyCategoryTotals(range)`), never raw SQL passed in from callers. Swapping the implementation means writing those same methods against ES; nothing above `data` changes.
+- The real costs, noted now so they are not discovered later: SQLite gives read-your-writes consistency that ES does not, so any ES read path used immediately after a write needs an explicit refresh or a write-through cache; and `UNIQUE (account_id, dedupe_key, occurrence_index)` has no ES equivalent, so the merge rule's database-level guarantee becomes an application-level one enforced by using the composite as the document `_id`.
 
 ## 4. Merchant normalization
 
@@ -594,19 +536,12 @@ Runs in order, each stage cheap and inspectable. This is rules-first on purpose:
 reproducible, debuggable, and works with the LLM off.
 
 1. **Case and whitespace** — uppercase, collapse runs of spaces, strip punctuation noise.
-2. **Processor prefixes** — a maintained prefix table: `SQ *`, `TST*`, `SP `, `PAYPAL *`,
-   `PP*`, `IN *`, `WWW.`, `POS DEBIT`, `ACH DEBIT`, `DEBIT CARD PURCHASE`, `RECURRING PMT`.
-   Notably these often *hide* the real merchant behind Square/Toast/PayPal — the rule strips
-   the prefix and keeps what follows.
-3. **Store and terminal numbers** — `#0042`, `STORE 1234`, trailing 3–5 digit runs, and long
-   numeric reference tails.
-4. **Geographic and contact noise** — trailing `CITY ST` pairs against a state-code list,
-   phone numbers, URLs, and country codes.
+2. **Processor prefixes** — a maintained prefix table: `SQ *`, `TST*`, `SP `, `PAYPAL *`, `PP*`, `IN *`, `WWW.`, `POS DEBIT`, `ACH DEBIT`, `DEBIT CARD PURCHASE`, `RECURRING PMT`. Notably these often *hide* the real merchant behind Square/Toast/PayPal — the rule strips the prefix and keeps what follows.
+3. **Store and terminal numbers** — `#0042`, `STORE 1234`, trailing 3–5 digit runs, and long numeric reference tails.
+4. **Geographic and contact noise** — trailing `CITY ST` pairs against a state-code list, phone numbers, URLs, and country codes.
 5. **Reference and date debris** — transaction ids, `REF#`, embedded `MM/DD`.
-6. **Alias lookup** — exact match on `alias_key` first, then prefix, then trigram fuzzy match
-   above a similarity floor. A hit resolves to a canonical merchant and stops.
-7. **Unmatched** — the cleaned string becomes a provisional merchant, marked `source = 'rule'`,
-   and joins the review queue.
+6. **Alias lookup** — exact match on `alias_key` first, then prefix, then trigram fuzzy match above a similarity floor. A hit resolves to a canonical merchant and stops.
+7. **Unmatched** — the cleaned string becomes a provisional merchant, marked `source = 'rule'`, and joins the review queue.
 
 ### 4.2 Where the LLM helps
 
@@ -653,12 +588,8 @@ and summing them double-counts the same dollars — a $1,459/yr coffee finding, 
 dining-spike finding and a subscription total can all describe the same transactions. Every
 finding therefore declares `impact_kind`:
 
-- **`savings`** — money that would stop leaving if you acted: a price-creep delta, a duplicate
-  subscription's cost, an avoidable maintenance fee. These sum. This is the number on the
-  Findings page and the default sort.
-- **`visibility`** — money you are already knowingly spending, surfaced because you have never
-  seen it totalled: small-spend aggregates, category spikes, informational overlap. These are
-  shown per-finding and are **never** added into the headline.
+- **`savings`** — money that would stop leaving if you acted: a price-creep delta, a duplicate subscription's cost, an avoidable maintenance fee. These sum. This is the number on the Findings page and the default sort.
+- **`visibility`** — money you are already knowingly spending, surfaced because you have never seen it totalled: small-spend aggregates, category spikes, informational overlap. These are shown per-finding and are **never** added into the headline.
 
 **Confidence bands:** `≥0.80` High · `0.55–0.79` Medium · `0.35–0.54` Low · `<0.35` suppressed.
 Bands, not raw numbers, are shown to the user; a "0.72" implies a precision the rules do not
@@ -717,18 +648,9 @@ real price tiers.
 
 The fix is to make grouping aware of time, in three passes:
 
-1. **Seed by amount.** Sort the merchant's debit amounts; split into candidate groups wherever
-   the gap to the running median exceeds `max(5%, $1.00)`. Recompute medians and re-split until
-   stable, capped at five iterations. (The design session's rule was circular — membership
-   defined against a median that membership defines — so the algorithm is stated here.)
-2. **Merge price steps.** Two candidate groups of the same merchant merge into one series when
-   their date ranges are **disjoint or overlap by at most one cadence**, and their independent
-   cadence estimates agree within tolerance. That is a price change, not a second
-   subscription. This is what makes §5.5 work at all: price creep is only visible inside a
-   single series.
-3. **Keep genuine concurrency separate.** Groups whose dates **interleave** — both charging in
-   the same period for at least two consecutive cycles — stay separate series. Only these
-   count as concurrent for §5.4.
+1. **Seed by amount.** Sort the merchant's debit amounts; split into candidate groups wherever the gap to the running median exceeds `max(5%, $1.00)`. Recompute medians and re-split until stable, capped at five iterations. (The design session's rule was circular — membership defined against a median that membership defines — so the algorithm is stated here.)
+2. **Merge price steps.** Two candidate groups of the same merchant merge into one series when their date ranges are **disjoint or overlap by at most one cadence**, and their independent cadence estimates agree within tolerance. That is a price change, not a second subscription. This is what makes §5.5 work at all: price creep is only visible inside a single series.
+3. **Keep genuine concurrency separate.** Groups whose dates **interleave** — both charging in the same period for at least two consecutive cycles — stay separate series. Only these count as concurrent for §5.4.
 
 **Cadence fitting.** For each cluster with ≥3 charges (see the annual exception below), take
 the sorted deltas between consecutive `effective_date` values. Do **not** take the raw median
@@ -766,19 +688,10 @@ instead of 13 — and §5.5 inherits the error.
 `0.10` if the merchant carries the `is_known_subscription` seed flag, clamped to 1.0, then
 subject to the caps below.
 
-- `regularity = 1 − clamp(MAD(residuals) ÷ tolerance(C), 0, 1)` — residuals from the cadence
-  fit above, scaled by that cadence's own tolerance. The design session used
-  `1 − MAD(deltas) ÷ cadence`, which for a monthly series can only ever produce values above
-  0.85, because the cadence match already guaranteed small deltas.
-- `count_score = clamp((n − 2) ÷ 6, 0, 1)` — 0.17 at three occurrences, 1.0 at eight. The
-  design session's `min(n, 6) ÷ 6` starts at 0.5 for the minimum qualifying series.
-- `amount_stability = 1 − clamp(CV ÷ 0.05, 0, 1)`, where CV is the coefficient of variation of
-  the series' amounts *within its current price step*. The design session said stability "falls
-  off with coefficient of variation" without defining the function.
-- **Caps:** a two-occurrence series is capped at 0.45; a three-occurrence series at 0.70. Under
-  the original formula a two-occurrence series scored 0.90 — MAD of a single delta is always
-  zero, so regularity was always 1.0 — which contradicted the same section's statement that
-  two occurrences emit at Low.
+- `regularity = 1 − clamp(MAD(residuals) ÷ tolerance(C), 0, 1)` — residuals from the cadence fit above, scaled by that cadence's own tolerance. The design session used `1 − MAD(deltas) ÷ cadence`, which for a monthly series can only ever produce values above 0.85, because the cadence match already guaranteed small deltas.
+- `count_score = clamp((n − 2) ÷ 6, 0, 1)` — 0.17 at three occurrences, 1.0 at eight. The design session's `min(n, 6) ÷ 6` starts at 0.5 for the minimum qualifying series.
+- `amount_stability = 1 − clamp(CV ÷ 0.05, 0, 1)`, where CV is the coefficient of variation of the series' amounts *within its current price step*. The design session said stability "falls off with coefficient of variation" without defining the function.
+- **Caps:** a two-occurrence series is capped at 0.45; a three-occurrence series at 0.70. Under the original formula a two-occurrence series scored 0.90 — MAD of a single delta is always zero, so regularity was always 1.0 — which contradicted the same section's statement that two occurrences emit at Low.
 
 These four changes exist because the original formula was structurally incapable of producing a
 Low band. With `count_score ≥ 0.5` by construction, `regularity ≥ 0.85` by construction, and
@@ -818,19 +731,8 @@ sync.
 Two distinct rules, deliberately weighted differently, and **separately toggleable in
 Settings** — one claims an error, the other claims nothing.
 
-- **Same-merchant multiplicity** — two or more **concurrent** series for the *same* canonical
-  merchant, where concurrent means §5.2's pass 3 kept them separate because their charge dates
-  interleave for at least two consecutive cycles. Usually a real error: a double-charged
-  account, or a personal plan still billing after a family plan started. Base confidence
-  **0.85**, `impact_kind = savings`, impact = the cheaper series' annual cost. The concurrency
-  requirement is what stops this rule from firing on every subscription that ever changed
-  price.
-- **Category overlap** — two or more active series sharing an `overlap_group`, a curated subset
-  of categories where redundancy is meaningful (video streaming, music streaming, cloud
-  storage, VPN, password manager, meal kit, news). Base confidence **0.60**,
-  `impact_kind = visibility`, and the wording is informational — "you have 3 music streaming
-  subscriptions totaling $32/mo" — not accusatory. Owning both Netflix and Disney+ is a
-  legitimate choice; the app's job is to make the total visible, not to nag.
+- **Same-merchant multiplicity** — two or more **concurrent** series for the *same* canonical merchant, where concurrent means §5.2's pass 3 kept them separate because their charge dates interleave for at least two consecutive cycles. Usually a real error: a double-charged account, or a personal plan still billing after a family plan started. Base confidence **0.85**, `impact_kind = savings`, impact = the cheaper series' annual cost. The concurrency requirement is what stops this rule from firing on every subscription that ever changed price.
+- **Category overlap** — two or more active series sharing an `overlap_group`, a curated subset of categories where redundancy is meaningful (video streaming, music streaming, cloud storage, VPN, password manager, meal kit, news). Base confidence **0.60**, `impact_kind = visibility`, and the wording is informational — "you have 3 music streaming subscriptions totaling $32/mo" — not accusatory. Owning both Netflix and Disney+ is a legitimate choice; the app's job is to make the total visible, not to nag.
 
 Overlap groups are curated seed data. `Restaurants` is deliberately not one.
 
@@ -884,18 +786,9 @@ Confidence = `0.30 + 0.15 × points`, capped at 0.85. A finding is emitted at �
 Three corrections to the design session's version, all of which would have produced constant
 false positives:
 
-- **Signals one and two were the same signal.** "First real charge falls 7/14/30/90 days after
-  the merchant's first-ever appearance in the data" can only fire when an earlier non-charge
-  row exists — which is signal one. For a merchant whose first row *is* its first charge the
-  delta is zero and nothing matches. Scoring them as independent corroboration double-counted.
-- **Bare `FREE` as a substring** matches `FREE PEOPLE` (a clothing retailer), `FREEDOM
-  MORTGAGE`, `FREEPORT`, `FREESTYLE`. Normalization uppercases everything, so an unanchored
-  substring test over every descriptor in the database is a guaranteed noise generator. The
-  match is now whole-token and `FREE` alone is dropped.
-- **"Any one signal makes a candidate" plus the intro-rate signal** fires on every subscription
-  whose price ever went up — the entire subscription base. The intro-rate signal is now worth
-  one point and cannot emit alone, and the finding is **suppressed entirely** when
-  `price_creep.v1` has already reported a step at the same first-to-second transition.
+- **Signals one and two were the same signal.** "First real charge falls 7/14/30/90 days after the merchant's first-ever appearance in the data" can only fire when an earlier non-charge row exists — which is signal one. For a merchant whose first row *is* its first charge the delta is zero and nothing matches. Scoring them as independent corroboration double-counted.
+- **Bare `FREE` as a substring** matches `FREE PEOPLE` (a clothing retailer), `FREEDOM MORTGAGE`, `FREEPORT`, `FREESTYLE`. Normalization uppercases everything, so an unanchored substring test over every descriptor in the database is a guaranteed noise generator. The match is now whole-token and `FREE` alone is dropped.
+- **"Any one signal makes a candidate" plus the intro-rate signal** fires on every subscription whose price ever went up — the entire subscription base. The intro-rate signal is now worth one point and cannot emit alone, and the finding is **suppressed entirely** when `price_creep.v1` has already reported a step at the same first-to-second transition.
 
 **Stated limitation.** This rule needs history *before* the trial. If a merchant's first charge
 lands within the first 45 days of the imported window, the rule cannot distinguish "new trial
@@ -921,13 +814,9 @@ foreign transaction, ATM fee, monthly maintenance, minimum balance.
 Three qualifications the design session omitted, each of which produces wrong numbers without
 them:
 
-- **Debits only.** On a savings account `INTEREST` is income, not a fee; on a credit card it is
-  a charge. Sign disambiguates them and nothing else does.
-- **Exclusion list.** `INTEREST CHECKING` and `INTEREST EARNED` are account descriptors, not
-  fees. Suffixes `REFUND`, `REVERSAL`, `CREDIT`, `WAIVED`, `ADJUSTMENT` disqualify a match.
-- **Net out reversals.** A fee credited back within 60 days at the same account and amount is
-  netted to zero. A refunded fee that still shows in an annual total is the kind of error that
-  costs the whole tool its credibility.
+- **Debits only.** On a savings account `INTEREST` is income, not a fee; on a credit card it is a charge. Sign disambiguates them and nothing else does.
+- **Exclusion list.** `INTEREST CHECKING` and `INTEREST EARNED` are account descriptors, not fees. Suffixes `REFUND`, `REVERSAL`, `CREDIT`, `WAIVED`, `ADJUSTMENT` disqualify a match.
+- **Net out reversals.** A fee credited back within 60 days at the same account and amount is netted to zero. A refunded fee that still shows in an annual total is the kind of error that costs the whole tool its credibility.
 
 Emits **one rollup finding per account**, not one per transaction — a per-transaction finding
 for every $3 ATM fee is noise. The rollup gives monthly and annual totals with the breakdown,
@@ -944,19 +833,9 @@ Without it the rule fires constantly on trivia: a coffee shop with a $6.40 media
 MAD flags a $9.80 latte at z = 4.6, and the MAD=0 fallback flags a $7 transit fare against a
 $2 median.
 
-- **Per merchant** with n≥5 and **per category** with n≥15: modified z-score
-  `0.6745 × (x − median) ÷ MAD`; flag `|z| > 3.5` **and** `x − median ≥ $25`.
-- **MAD = 0** (a perfectly steady charge): fall back to flagging anything above `3 × median`,
-  still subject to the $25 floor.
-- **The global rule** catches what the above structurally cannot — a one-off large charge at a
-  merchant with no history has no distribution to be an outlier in. But "any debit above the
-  95th percentile of all debits and $200" is, by definition, 5% of every transaction: about a
-  thousand findings over ten years of data, and for most households the top of that
-  distribution is rent, mortgage, tuition and insurance — expected payments, every one of them.
-  The global rule is therefore: **the ten largest debits in each rolling twelve-month window**
-  that are above the 99th percentile and above $200, are **not** members of a recurring series,
-  and are **not** internal transfers — emitted as **one rollup finding per window**, not ten
-  cards.
+- **Per merchant** with n≥5 and **per category** with n≥15: modified z-score `0.6745 × (x − median) ÷ MAD`; flag `|z| > 3.5` **and** `x − median ≥ $25`.
+- **MAD = 0** (a perfectly steady charge): fall back to flagging anything above `3 × median`, still subject to the $25 floor.
+- **The global rule** catches what the above structurally cannot — a one-off large charge at a merchant with no history has no distribution to be an outlier in. But "any debit above the 95th percentile of all debits and $200" is, by definition, 5% of every transaction: about a thousand findings over ten years of data, and for most households the top of that distribution is rent, mortgage, tuition and insurance — expected payments, every one of them. The global rule is therefore: **the ten largest debits in each rolling twelve-month window** that are above the 99th percentile and above $200, are **not** members of a recurring series, and are **not** internal transfers — emitted as **one rollup finding per window**, not ten cards.
 
 Presented as comparison, not judgment: "$412 at Merchant — typical is $23." `impact_kind =
 visibility` throughout; an outlier is information, not a saving.
@@ -968,22 +847,11 @@ month in which one of three accounts was imported has artificially low spend, wh
 next complete month look like a spike; the coverage rule is what stops the trend analyzer from
 reporting import gaps as spending behaviour.
 
-- **Spike** — a month exceeds its trailing three-month average by **both** >40% *and* >$75 **of
-  excess** (not of total), with all three trailing months present and non-zero. Both conditions,
-  because a percentage alone flags a $12 category and a dollar amount alone flags every large
-  category every month.
-- **Climb** — three consecutive monthly increases totalling >25% **and** >$50/month, where the
-  three-month rise also exceeds twice the MAD of that category's own historical monthly deltas.
-  Without the volatility test, a category performing an ordinary random walk produces three
-  consecutive increases about one window in eight; across thirty categories and a year of
-  windows that is roughly twenty-five spurious "climbs" per run.
-- **Seasonality suppression** — a spike in a month-of-year that already spiked in a prior year
-  for the same category is suppressed to a note rather than a finding. December, insurance
-  renewal months and tuition months otherwise fire every single year.
-- Both triggers exclude categories whose spend is dominated (>80%) by a single recurring
-  series, which §5.2 and §5.5 already cover better.
-- `impact_kind = visibility`. Emission is capped at the top five spikes and top five climbs per
-  run, per §5.1's budget.
+- **Spike** — a month exceeds its trailing three-month average by **both** >40% *and* >$75 **of excess** (not of total), with all three trailing months present and non-zero. Both conditions, because a percentage alone flags a $12 category and a dollar amount alone flags every large category every month.
+- **Climb** — three consecutive monthly increases totalling >25% **and** >$50/month, where the three-month rise also exceeds twice the MAD of that category's own historical monthly deltas. Without the volatility test, a category performing an ordinary random walk produces three consecutive increases about one window in eight; across thirty categories and a year of windows that is roughly twenty-five spurious "climbs" per run.
+- **Seasonality suppression** — a spike in a month-of-year that already spiked in a prior year for the same category is suppressed to a note rather than a finding. December, insurance renewal months and tuition months otherwise fire every single year.
+- Both triggers exclude categories whose spend is dominated (>80%) by a single recurring series, which §5.2 and §5.5 already cover better.
+- `impact_kind = visibility`. Emission is capped at the top five spikes and top five climbs per run, per §5.1's budget.
 
 ### 5.11 High-frequency small spend (`micro.v1`)
 
@@ -1093,33 +961,18 @@ arbitrary database access from generated SQL, and data minimization.
 
 Two constraints make those claims true rather than aspirational:
 
-- **`transactionSearch` returns rows to the UI but not to the provider.** Row-level descriptors
-  are the least aggregated data in the system, and sending them contradicts the data
-  minimization claim in the same breath as making it. The provider receives a count, the
-  aggregate totals, and at most twenty descriptors with the §2.4 redaction and P2P filter
-  applied. The UI renders the full result locally.
-- **Numeric post-validation.** Every numeric token in the model's prose must appear in the
-  returned rows or be a simple aggregate of them (sum, difference, mean, percentage of two
-  present values). An answer that fails validation is not shown; the table is shown instead
-  with a note. This is what converts "no hallucinated numbers" from a hope into a check.
+- **`transactionSearch` returns rows to the UI but not to the provider.** Row-level descriptors are the least aggregated data in the system, and sending them contradicts the data minimization claim in the same breath as making it. The provider receives a count, the aggregate totals, and at most twenty descriptors with the §2.4 redaction and P2P filter applied. The UI renders the full result locally.
+- **Numeric post-validation.** Every numeric token in the model's prose must appear in the returned rows or be a simple aggregate of them (sum, difference, mean, percentage of two present values). An answer that fails validation is not shown; the table is shown instead with a note. This is what converts "no hallucinated numbers" from a hope into a check.
 
 Every answer renders the underlying table or chart, names the query it ran, and offers "view
 the rows." An answer with no visible data behind it is not shown.
 
 ### 6.8 Settings
 
-- **LLM provider** — `none` (default) / `claude-cli` / `ollama`, with a Test Connection button
-  and health detail. Selecting `claude-cli` shows a prominent warning card: *"The Claude CLI
-  provider sends statement text — merchant descriptors, and for Q&A, aggregated amounts — off
-  this machine to Anthropic. Ollama and None keep everything local."* While it's active, a
-  persistent indicator sits in the app header.
-- **Redaction** — strips account numbers, last4 and counterparty names, and hard-filters P2P
-  descriptors (§2.4). On by default and not disableable while `claude-cli` is selected.
-- **Merchant aliases** — the review queue for LLM proposals and provisional merchants, a list
-  of user corrections, and a re-normalize trigger with job progress.
-- **Analyzers** — per-rule enable (with the two halves of `duplicate.v1` toggled separately)
-  and threshold overrides, plus rule versions and the current `config_hash`. Changing a
-  threshold warns that dismissed findings in that rule will be re-evaluated.
+- **LLM provider** — `none` (default) / `claude-cli` / `ollama`, with a Test Connection button and health detail. Selecting `claude-cli` shows a prominent warning card: *"The Claude CLI provider sends statement text — merchant descriptors, and for Q&A, aggregated amounts — off this machine to Anthropic. Ollama and None keep everything local."* While it's active, a persistent indicator sits in the app header.
+- **Redaction** — strips account numbers, last4 and counterparty names, and hard-filters P2P descriptors (§2.4). On by default and not disableable while `claude-cli` is selected.
+- **Merchant aliases** — the review queue for LLM proposals and provisional merchants, a list of user corrections, and a re-normalize trigger with job progress.
+- **Analyzers** — per-rule enable (with the two halves of `duplicate.v1` toggled separately) and threshold overrides, plus rule versions and the current `config_hash`. Changing a threshold warns that dismissed findings in that rule will be re-evaluated.
 - **Categories** — taxonomy editor and overlap-group assignment.
 - **Data** — database path, backup, export to JSON/CSV, wipe, and the degraded-LLM-call log.
 

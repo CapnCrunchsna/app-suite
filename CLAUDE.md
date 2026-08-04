@@ -8,6 +8,11 @@ Initialize here with `npx create-nx-workspace@latest` (Angular preset), then gen
 inside it.
 
 ## Projects that live here
+- **Ledgerline** — Angular UI + Node/TS Fastify API bound to `127.0.0.1`; local statement
+  analyzer. **This app bootstraps the workspace.** On-disk store is **SQLite** via
+  `better-sqlite3` behind a repository layer — the documented ES exception for a single-user
+  local desktop app, with an Elasticsearch re-index planned for the home server. Spec:
+  `docs/ledgerline-spec.md`.
 - **Meal Planner** — Ionic + Capacitor (Android-first) + PWA; local-first **SQLite on device**
   (the ES exception for local-first mobile; keep the data model sync-friendly).
 - **Photo-to-Calendar** — Ionic + Capacitor (Android); Claude vision API (Haiku); Android
