@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Nx
+.nx/cache
+.nx/workspace-data
+
+# Build output
+dist/
+tmp/
+out-tsc/
+
+# Test / coverage
+coverage/
+.angular/
+
+# Local app data — Statement Auditor keeps its SQLite file out of version control.
+# It contains real financial statements and must never be committed.
+*.sqlite
+*.sqlite-journal
+*.db
+data/
+
+# Machine-local Claude Code settings (launch.json and skills/ ARE versioned)
+.claude/settings.local.json
+
+# Editor / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
