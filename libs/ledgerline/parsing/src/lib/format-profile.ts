@@ -11,8 +11,8 @@
  * house conventions, so nothing downstream ever asks "which bank was this?"
  */
 
-import { parseDateToIso } from '@app-suite/ledgerline-domain';
-import type { AccountType, Currency } from '@app-suite/ledgerline-domain';
+import { parseDateToIso } from '@metrum/ledgerline-domain';
+import type { AccountType, Currency } from '@metrum/ledgerline-domain';
 
 export type ColumnRole =
   | 'transactionDate'

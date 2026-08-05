@@ -24,10 +24,11 @@ export default [
           // would silently permit analyzers -> data, which is the single thing §2.2
           // exists to prevent.
           //
-          // Tags for libs that do not exist yet (analyzers, data, llm, feature-shell,
-          // ui-kit, api-client) are declared ahead of those libs deliberately: the
-          // constraint is what the lib is generated *into*, so the boundary is never
-          // retrofitted onto code already written against a looser rule.
+          // Tags for libs that do not exist yet (analyzers, data, llm, feature-shell)
+          // are declared ahead of those libs deliberately: the constraint is what the
+          // lib is generated *into*, so the boundary is never retrofitted onto code
+          // already written against a looser rule. `ui` and `api-client` were
+          // generated into their constraints exactly that way.
           depConstraints: [
             {
               sourceTag: 'scope:ll',

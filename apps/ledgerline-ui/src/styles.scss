@@ -2,7 +2,7 @@
  *
  * Dark-first, per spec §6, using the MetrumDigital workspace palette from
  * `artifacts/_template.html` so the app and the dashboard read as one house.
- * Everything downstream — including `@app-suite/ui-kit` — consumes these as
+ * Everything downstream — including `@metrum/ui` — consumes these as
  * custom properties, so a light theme is a token swap on :root and nothing
  * else.
  */

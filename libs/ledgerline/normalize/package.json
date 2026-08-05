@@ -1,5 +1,5 @@
 {
-  "name": "@app-suite/ledgerline-normalize",
+  "name": "@metrum/ledgerline-normalize",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
-      "@app-suite/source": "./src/index.ts",
+      "@metrum/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "tslib": "^2.3.0",
-    "@app-suite/ledgerline-domain": "*"
+    "@metrum/ledgerline-domain": "*"
   }
 }

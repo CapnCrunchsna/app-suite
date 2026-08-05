@@ -1,0 +1,17 @@
+{
+  "name": "@metrum/ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "//": "Entry points are ng-packagr's Angular Package Format output. npm workspaces symlinks node_modules/@metrum/ui at THIS folder, so consumers read these exports rather than the manifest ng-packagr writes into dist/. Paths are ng-packagr's, not ours — see README.md.",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/metrum-ui.d.ts",
+      "default": "./dist/fesm2022/metrum-ui.mjs"
+    }
+  },
+  "peerDependencies": {
+    "@angular/core": "~22.0.4"
+  }
+}

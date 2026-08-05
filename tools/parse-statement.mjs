@@ -31,9 +31,9 @@ let parsing;
 let domain;
 let normalize;
 try {
-  parsing = await import('@app-suite/ledgerline-parsing');
-  domain = await import('@app-suite/ledgerline-domain');
-  normalize = await import('@app-suite/ledgerline-normalize');
+  parsing = await import('@metrum/ledgerline-parsing');
+  domain = await import('@metrum/ledgerline-domain');
+  normalize = await import('@metrum/ledgerline-normalize');
 } catch (error) {
   console.error('Could not load the Ledgerline libraries. Build them first:\n');
   console.error('  npm run build\n');

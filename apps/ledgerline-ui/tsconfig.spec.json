@@ -7,7 +7,7 @@
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "references": [
     {
-      "path": "../../libs/shared/ui-kit/tsconfig.lib.json"
+      "path": "../../libs/shared/ui/tsconfig.lib.json"
     }
   ]
 }

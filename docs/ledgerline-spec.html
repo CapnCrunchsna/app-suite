@@ -149,7 +149,7 @@ artifact, <code>artifacts/plans/ledgerline-design.md</code>.</p>
       llm/                       LlmProvider interface + claude-cli | ollama | none
       feature-shell/             UI routing shell and page components
     shared/
-      ui-kit/                    workspace-wide Angular components (stubbed here)
+      ui/                        workspace-wide Angular components (stubbed here)
       api-client/                generated TS client from the OpenAPI schema</code></pre>
 <p><strong>Libs compute; the app persists.</strong> <code>parsing</code>, <code>normalize</code> and <code>analyzers</code> are pure: they take values in and return values out. Nothing in <code>libs/ledgerline/</code> except <code>data</code> may write. The API app is the composition root that wires a pure result into a repository call. This is not a style preference — <a href="#s2">§2.2</a> makes it a lint error, and <a href="#s2">§2.5</a>'s pipeline table assigns stage <em>ownership</em> on that basis.</p>
 <h3 id="s2-2">2.2 Module boundaries</h3>
@@ -164,7 +164,7 @@ artifact, <code>artifacts/plans/ledgerline-design.md</code>.</p>
 <tr><td><code>data</code></td><td><code>scope:ll</code>, <code>type:data-access</code></td><td><code>type:domain</code></td><td>The only lib that knows a store exists. Named methods, never raw query strings from callers.</td></tr>
 <tr><td><code>llm</code></td><td><code>scope:ll</code>, <code>type:llm</code></td><td><code>type:domain</code></td><td>No knowledge of statements or findings; it moves strings.</td></tr>
 <tr><td><code>feature-shell</code></td><td><code>scope:ll</code>, <code>type:feature</code></td><td><code>type:domain</code>, <code>type:ui</code>, <code>type:api-client</code></td><td>No direct <code>data</code>/<code>analyzers</code> imports — everything through HTTP.</td></tr>
-<tr><td><code>ui-kit</code></td><td><code>scope:shared</code>, <code>type:ui</code></td><td><code>type:ui</code></td><td>Presentational only.</td></tr>
+<tr><td><code>ui</code></td><td><code>scope:shared</code>, <code>type:ui</code></td><td><code>type:ui</code></td><td>Presentational only.</td></tr>
 <tr><td><code>api-client</code></td><td><code>scope:shared</code>, <code>type:api-client</code></td><td>nothing</td><td>Generated. Never hand-edited.</td></tr>
 <tr><td><code>ledgerline-api</code></td><td><code>scope:ll</code>, <code>type:app</code></td><td>every <code>scope:ll</code> lib</td><td>Composition root. The only place the pure libs meet <code>data</code>.</td></tr>
 <tr><td><code>ledgerline-ui</code></td><td><code>scope:ll</code>, <code>type:app</code></td><td><code>type:feature</code>, <code>type:ui</code>, <code>type:api-client</code>, <code>type:domain</code></td><td>Shell only.</td></tr>

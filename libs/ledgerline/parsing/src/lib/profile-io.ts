@@ -10,7 +10,7 @@
  * Hand-rolled rather than schema-library-based to keep `type:parsing` dependency-free.
  */
 
-import type { AccountType } from '@app-suite/ledgerline-domain';
+import type { AccountType } from '@metrum/ledgerline-domain';
 
 import { validateProfile } from './format-profile.js';
 import type { AmountMode, ColumnRef, ColumnRole, FormatProfile, SignConvention } from './format-profile.js';

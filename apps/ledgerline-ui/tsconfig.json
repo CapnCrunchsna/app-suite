@@ -10,18 +10,7 @@
     // `emitDeclarationOnly` outright (NG4006) and the browser needs `dom`.
     // `nx typecheck` re-adds --emitDeclarationOnly on the command line.
     "emitDeclarationOnly": false,
-    "lib": ["es2022", "dom"],
-    // Angular libs must be compiled from source by the consuming app, not read
-    // out of a sibling `dist/`. `@angular/build:unit-test` hardcodes
-    // `externalPackages: true`, so a bare `@app-suite/…` specifier is left
-    // external and Vite resolves it to the plain-`tsc` `dist/` — which has no
-    // Angular metadata, gets JIT-compiled from the decorator alone, and
-    // silently drops every `input()`/`output()`. A `paths` entry resolves to a
-    // file rather than a package, so esbuild inlines the source and ngtsc
-    // compiles it. Every workspace lib this app imports needs an entry here.
-    "paths": {
-      "@app-suite/ui-kit": ["../../libs/shared/ui-kit/src/index.ts"]
-    }
+    "lib": ["es2022", "dom"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

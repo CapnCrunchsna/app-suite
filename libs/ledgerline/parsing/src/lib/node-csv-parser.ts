@@ -20,14 +20,14 @@ import {
   effectiveDate,
   parseDateToIso,
   parseMoneyToCents,
-} from '@app-suite/ledgerline-domain';
+} from '@metrum/ledgerline-domain';
 import type {
   ParseResult,
   ParseWarning,
   RawRow,
   RawRowError,
   RowStatus,
-} from '@app-suite/ledgerline-domain';
+} from '@metrum/ledgerline-domain';
 
 import { checkBalances, checkSignPlausibility } from './balance-check.js';
 import { isBlankRecord, parseCsv } from './csv-reader.js';

@@ -66,7 +66,7 @@ app-suite/
       llm/                       LlmProvider interface + claude-cli | ollama | none
       feature-shell/             UI routing shell and page components
     shared/
-      ui-kit/                    workspace-wide Angular components (stubbed here)
+      ui/                        workspace-wide Angular components (stubbed here)
       api-client/                generated TS client from the OpenAPI schema
 ```
 
@@ -99,7 +99,7 @@ the job.
 | `data` | `scope:ll`, `type:data-access` | `type:domain` | The only lib that knows a store exists. Named methods, never raw query strings from callers. |
 | `llm` | `scope:ll`, `type:llm` | `type:domain` | No knowledge of statements or findings; it moves strings. |
 | `feature-shell` | `scope:ll`, `type:feature` | `type:domain`, `type:ui`, `type:api-client` | No direct `data`/`analyzers` imports — everything through HTTP. |
-| `ui-kit` | `scope:shared`, `type:ui` | `type:ui` | Presentational only. |
+| `ui` | `scope:shared`, `type:ui` | `type:ui` | Presentational only. |
 | `api-client` | `scope:shared`, `type:api-client` | nothing | Generated. Never hand-edited. |
 | `ledgerline-api` | `scope:ll`, `type:app` | every `scope:ll` lib | Composition root. The only place the pure libs meet `data`. |
 | `ledgerline-ui` | `scope:ll`, `type:app` | `type:feature`, `type:ui`, `type:api-client`, `type:domain` | Shell only. |

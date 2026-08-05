@@ -8,7 +8,7 @@
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
   "references": [
     {
-      "path": "../../libs/shared/ui-kit/tsconfig.lib.json"
+      "path": "../../libs/shared/ui/tsconfig.lib.json"
     }
   ]
 }

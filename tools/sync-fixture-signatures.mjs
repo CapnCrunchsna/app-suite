@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { decodeStatementText, detectCsvFormat } from '@app-suite/ledgerline-parsing';
+import { decodeStatementText, detectCsvFormat } from '@metrum/ledgerline-parsing';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 

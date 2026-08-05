@@ -21,6 +21,6 @@ inside it.
   existing Postgres implementation spec before build).
 
 ## Stack defaults (inherited, restated)
-- UI: Angular + TypeScript; shared `ui-kit`, generated `api-client`.
+- UI: Angular + TypeScript; shared `ui`, generated `api-client`.
 - Server datastore: Elasticsearch. On-device mobile data: SQLite.
 - Backends serve pure JSON APIs; UIs consume generated TypeScript clients.

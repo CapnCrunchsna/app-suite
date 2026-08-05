@@ -21,7 +21,7 @@ export default [
           // `collapseV1`. Proving that takes both libs in one assertion, and §2.2
           // permits the edge — `type:normalize` may depend on `type:domain`. The
           // dependency is deliberate; only the *production* usage is absent.
-          ignoredDependencies: ['@app-suite/ledgerline-domain'],
+          ignoredDependencies: ['@metrum/ledgerline-domain'],
         },
       ],
     },

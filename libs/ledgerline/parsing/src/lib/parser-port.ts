@@ -20,7 +20,7 @@
  *    caller still works, and the pure lib avoids naming a Node-only runtime type.
  */
 
-import type { ParseResult } from '@app-suite/ledgerline-domain';
+import type { ParseResult } from '@metrum/ledgerline-domain';
 
 export interface FileMeta {
   readonly filename: string;

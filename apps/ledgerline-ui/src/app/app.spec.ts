@@ -42,10 +42,11 @@ describe('App', () => {
     ]);
   });
 
-  // Guards the `paths` entry in tsconfig.json: without it the app resolves
-  // `@app-suite/ui-kit` to its plain-`tsc` dist, Panel is JIT-compiled from the
-  // decorator alone, and `heading` silently stops being an input.
-  it('binds through to the ui-kit panel', async () => {
+  // Guards `@metrum/ui`'s build. If that lib ever stops producing real
+  // ngtsc output, Panel gets JIT-compiled from its decorator alone, `heading`
+  // silently stops being an input, and everything still renders — this is the
+  // only thing that notices. See apps/ledgerline-ui/README.md.
+  it('binds through to the ui panel', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;

@@ -32,7 +32,7 @@ import type {
   BalanceMismatch,
   ParseWarning,
   RawRow,
-} from '@app-suite/ledgerline-domain';
+} from '@metrum/ledgerline-domain';
 
 interface DirectionResult {
   readonly failures: BalanceMismatch[];

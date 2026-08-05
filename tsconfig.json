@@ -16,7 +16,7 @@
       "path": "./apps/ledgerline-ui"
     },
     {
-      "path": "./libs/shared/ui-kit"
+      "path": "./libs/shared/ui"
     },
     {
       "path": "./libs/shared/api-client"

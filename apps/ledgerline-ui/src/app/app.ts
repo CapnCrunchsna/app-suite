@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Panel } from '@app-suite/ui-kit';
+import { Panel } from '@metrum/ui';
 
 /** Spec §6's eight sections, in spec order. */
 const SECTIONS = [
@@ -41,7 +41,7 @@ export class App {
    * §6.8's persistent header indicator. `none` is the default provider, and the
    * only one that keeps every descriptor on this machine; the header says so
    * at all times rather than only in Settings. Reads `GET /api/settings` once
-   * `@app-suite/api-client` is generated.
+   * `@metrum/api-client` is generated.
    */
   protected readonly llmProvider = signal<'none' | 'claude-cli' | 'ollama'>(
     'none',

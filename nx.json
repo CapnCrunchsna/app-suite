@@ -46,6 +46,9 @@
     "test": {
       "dependsOn": ["^build"]
     },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
     "@angular/build:application": {
       "cache": true,
       "dependsOn": ["^build"],

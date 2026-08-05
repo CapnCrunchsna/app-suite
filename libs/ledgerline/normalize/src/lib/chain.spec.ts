@@ -1,4 +1,4 @@
-import { collapseV1 } from '@app-suite/ledgerline-domain';
+import { collapseV1 } from '@metrum/ledgerline-domain';
 import { describe, expect, it } from 'vitest';
 
 import type { MerchantAlias } from './alias.js';
