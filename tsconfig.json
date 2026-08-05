@@ -11,6 +11,15 @@
     },
     {
       "path": "./libs/ledgerline/normalize"
+    },
+    {
+      "path": "./apps/ledgerline-ui"
+    },
+    {
+      "path": "./libs/shared/ui-kit"
+    },
+    {
+      "path": "./libs/shared/api-client"
     }
   ],
   "compilerOptions": {}

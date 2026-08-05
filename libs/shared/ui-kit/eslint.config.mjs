@@ -1,0 +1,39 @@
+import nx from '@nx/eslint-plugin';
+import baseConfig from '../../../eslint.config.mjs';
+
+export default [
+  ...nx.configs['flat/angular'],
+  ...nx.configs['flat/angular-template'],
+  ...baseConfig,
+  {
+    files: ['**/*.ts'],
+    rules: {
+      // Workspace-wide components, so a workspace-wide prefix — not `ll`.
+      '@angular-eslint/directive-selector': [
+        'error',
+        { type: 'attribute', prefix: 'ui', style: 'camelCase' },
+      ],
+      '@angular-eslint/component-selector': [
+        'error',
+        { type: 'element', prefix: 'ui', style: 'kebab-case' },
+      ],
+    },
+  },
+  {
+    files: ['**/*.json'],
+    rules: {
+      '@nx/dependency-checks': [
+        'error',
+        {
+          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+        },
+      ],
+    },
+    languageOptions: {
+      parser: await import('jsonc-eslint-parser'),
+    },
+  },
+  {
+    ignores: ['**/out-tsc'],
+  },
+];

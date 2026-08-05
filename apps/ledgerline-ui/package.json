@@ -1,0 +1,8 @@
+{
+  "name": "@app-suite/ledgerline-ui",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@app-suite/ui-kit": "0.0.1"
+  }
+}

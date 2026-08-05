@@ -1,0 +1,40 @@
+<header class="header">
+  <span class="header__brand">Ledgerline</span>
+  <span class="header__tagline">local statement analyzer</span>
+  <span class="header__spacer"></span>
+  <span
+    class="header__provider"
+    [class.header__provider--remote]="llmProvider() === 'claude-cli'"
+  >
+    LLM: {{ llmProvider() }}
+  </span>
+</header>
+
+<div class="shell">
+  <nav class="rail" aria-label="Sections">
+    @for (section of sections; track section) {
+    <button
+      type="button"
+      class="rail__item"
+      [class.rail__item--active]="active() === section"
+      [attr.aria-current]="active() === section ? 'page' : null"
+      (click)="select(section)"
+    >
+      {{ section }}
+    </button>
+    }
+  </nav>
+
+  <main class="content">
+    <ui-panel [heading]="active()">
+      <p class="content__note">
+        Wireframe. §6's pages land in
+        <code>libs/ledgerline/feature-shell</code>, reading through
+        <code>&#64;app-suite/api-client</code> — this shell holds routing and
+        chrome only.
+      </p>
+    </ui-panel>
+
+    <router-outlet />
+  </main>
+</div>

@@ -12,19 +12,31 @@
   },
   "private": true,
   "devDependencies": {
+    "@angular-devkit/core": "~22.0.4",
+    "@angular-devkit/schematics": "~22.0.4",
+    "@angular/build": "~22.0.4",
+    "@angular/cli": "~22.0.4",
+    "@angular/compiler-cli": "~22.0.4",
+    "@angular/language-service": "~22.0.4",
     "@eslint/js": "^9.39.5",
+    "@nx/angular": "23.1.0",
     "@nx/eslint": "^23.1.0",
     "@nx/eslint-plugin": "^23.1.0",
     "@nx/js": "23.1.0",
     "@nx/vite": "^23.1.0",
     "@nx/vitest": "^23.1.0",
+    "@nx/web": "23.1.0",
+    "@schematics/angular": "~22.0.4",
     "@swc-node/register": "1.11.1",
     "@swc/core": "1.15.8",
     "@swc/helpers": "0.5.18",
     "@types/node": "^24.0.0",
+    "@typescript-eslint/utils": "^8.58.0",
     "@vitest/coverage-v8": "~4.1.0",
+    "angular-eslint": "^22.0.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^27.1.0",
     "jsonc-eslint-parser": "^2.4.2",
     "nx": "23.1.0",
     "prettier": "^3.8.1",
@@ -38,5 +50,14 @@
     "apps/*",
     "libs/ledgerline/*",
     "libs/shared/*"
-  ]
+  ],
+  "dependencies": {
+    "@angular/common": "~22.0.4",
+    "@angular/compiler": "~22.0.4",
+    "@angular/core": "~22.0.4",
+    "@angular/forms": "~22.0.4",
+    "@angular/platform-browser": "~22.0.4",
+    "@angular/router": "~22.0.4",
+    "rxjs": "~7.8.0"
+  }
 }

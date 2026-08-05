@@ -1,0 +1,54 @@
+/* Ledgerline global styles.
+ *
+ * Dark-first, per spec §6, using the MetrumDigital workspace palette from
+ * `artifacts/_template.html` so the app and the dashboard read as one house.
+ * Everything downstream — including `@app-suite/ui-kit` — consumes these as
+ * custom properties, so a light theme is a token swap on :root and nothing
+ * else.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0a1517;
+  --surface: #0f2124;
+  --surface-2: #143034;
+  --border: #1f4a47;
+  --text: #dcefeb;
+  --text-dim: #7ea8a1;
+  --accent: #2dd4bf;
+  --accent-2: #34d399;
+  --shadow: 0 1px 3px rgb(0 0 0 / 50%);
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    16px/1.65 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+}
+
+code {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 0.875em;
+}

@@ -43,3 +43,6 @@ npm-debug.log
 yarn-error.log
 
 vitest.config.*.timestamp*
+.angular
+
+__screenshots__/

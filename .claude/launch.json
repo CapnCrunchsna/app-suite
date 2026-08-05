@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ledgerline-ui",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "serve", "ledgerline-ui"],
+      "port": 4200
+    }
+  ]
+}
