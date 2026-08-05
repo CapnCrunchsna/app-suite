@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledgerline — Statement Parsing — MetrumDigital</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%20role='img'%20aria-label='MetrumDigital'%3E%20%3Cdefs%3E%20%3ClinearGradient%20id='mdg'%20x1='0'%20y1='0'%20x2='32'%20y2='32'%20gradientUnits='userSpaceOnUse'%3E%20%3Cstop%20offset='0'%20stop-color='%230ea5e9'/%3E%20%3Cstop%20offset='.55'%20stop-color='%2314b8a6'/%3E%20%3Cstop%20offset='1'%20stop-color='%2322c55e'/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20x='1'%20y='1'%20width='30'%20height='30'%20rx='8'%20fill='%230d9488'/%3E%20%3Cg%20fill='%235eead4'%3E%20%3Crect%20x='1'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3C/g%3E%20%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='3'%20fill='url(%23mdg)'/%3E%20%3Cpath%20d='M9%2022V10.5l7%206.5%207-6.5V22'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%20%3C/svg%3E">
+
+<!-- Restore saved theme before paint to avoid flash. Default is dark. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('md-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0a1517; --surface:#0f2124; --surface-2:#143034; --border:#1f4a47;
+    --text:#dcefeb; --text-dim:#7ea8a1; --accent:#2dd4bf; --accent-2:#34d399;
+    --code-bg:#0f2124; --shadow:0 1px 3px rgba(0,0,0,.5);
+    --radius:10px; --maxw:880px;
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff; --surface:#f0faf8; --surface-2:#e0f3ef; --border:#bfe3dc;
+    --text:#0b2a27; --text-dim:#48706a; --accent:#0d9488; --accent-2:#059669;
+    --code-bg:#f0faf8; --shadow:0 1px 3px rgba(140,149,159,.3);
+  }
+  html[data-theme="dark"]{color-scheme:dark}
+  html[data-theme="light"]{color-scheme:light}
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    transition:background .2s ease,color .2s ease;
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
+  }
+  .topbar a{color:var(--accent); text-decoration:none; font-weight:600}
+  .topbar a:hover{text-decoration:underline}
+  .home{white-space:nowrap; display:inline-flex; align-items:center; gap:8px}
+  .brand-mark{width:22px; height:22px; flex:none}
+  .related{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+  .related .label{color:var(--text-dim); font-weight:400}
+  .related a{font-weight:500; padding:3px 10px; border:1px solid var(--border);
+    border-radius:999px; background:var(--surface-2)}
+  .spacer{flex:1}
+  .toggle{
+    cursor:pointer; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:600;
+  }
+  .toggle:hover{border-color:var(--accent)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:40px 24px 80px}
+  h1{font-size:2rem; line-height:1.2; margin:0 0 6px}
+  h2{margin-top:2em; padding-bottom:.3em; border-bottom:1px solid var(--border)}
+  .meta{color:var(--text-dim); font-size:14px; margin:0 0 32px}
+  .meta .tag{display:inline-block; padding:2px 10px; border-radius:999px;
+    background:var(--surface-2); border:1px solid var(--border); margin-right:8px; font-weight:600}
+  a{color:var(--accent)}
+  code{background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:.15em .4em; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.9em}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; overflow:auto}
+  pre code{background:none; border:none; padding:0}
+  blockquote{margin:1em 0; padding:.5em 1em; border-left:4px solid var(--accent);
+    background:var(--surface); border-radius:0 var(--radius) var(--radius) 0; color:var(--text-dim)}
+  table{border-collapse:collapse; width:100%; margin:1em 0}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left}
+  th{background:var(--surface-2)}
+  hr{border:none; border-top:1px solid var(--border); margin:2em 0}
+  footer{max-width:var(--maxw); margin:0 auto; padding:24px; color:var(--text-dim);
+    font-size:14px; border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../../dashboard.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="mdLogoT" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0ea5e9"/><stop offset=".55" stop-color="#14b8a6"/><stop offset="1" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0d9488"/>
+      <g fill="#5eead4"><rect x="1" y="8.5" width="4" height="2.6"/><rect x="1" y="14.7" width="4" height="2.6"/><rect x="1" y="20.9" width="4" height="2.6"/><rect x="27" y="8.5" width="4" height="2.6"/><rect x="27" y="14.7" width="4" height="2.6"/><rect x="27" y="20.9" width="4" height="2.6"/></g>
+      <rect x="5" y="5" width="22" height="22" rx="3" fill="url(#mdLogoT)"/>
+      <path d="M9 22V10.5l7 6.5 7-6.5V22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>← Dashboard</span>
+  </a>
+  <nav class="related">
+    <span class="label">Related:</span>
+    <a href="ledgerline-spec.html">Ledgerline — Build Specification</a>
+    <a href="../../artifacts/plans/ledgerline-design.html">Ledgerline — Design & v1 Plan</a>
+  </nav>
+  <span class="spacer"></span>
+  <button id="themeToggle" class="toggle" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+<h1>Statement parsing — what is built, how to run it, how to add a bank</h1>
+<p class="meta"><span class="tag">plans</span> 2026-08-04</p>
+<p>Implementation notes for the CSV ingest path: the three libs it lives in, the format-profile<br>
+schema, the CLI, the places this code deliberately departs from <code>ledgerline-spec.md</code>, and an<br>
+honest list of what has never been run against a real statement. Companion to the spec, which<br>
+remains the contract; where this document and the spec disagree, the disagreements are listed<br>
+in <a href="#s5">§5</a> and are deliberate.</p>
+<h2 id="s1">1. Status</h2>
+<p>Built: the <code>ingest → detect → parse → normalize</code> half of <a href="#s2">§2.5</a>'s pipeline, for <strong>CSV only</strong>.</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Piece</th><th>State</th></tr>
+<tr><td>Nx workspace, <code>libs/ledgerline/{domain,parsing,normalize}</code> with <a href="#s2">§2.2</a> tags and <code>depConstraints</code></td><td>done, lint-enforced</td></tr>
+<tr><td><code>collapse_v1</code> and the dedupe key (<a href="#s3">§3.3</a>)</td><td>done, frozen, golden-tested</td></tr>
+<tr><td>Money as signed integer cents; ISO dates; <code>effective_date</code> (<a href="#s3">§3.1</a>, §7.1)</td><td>done</td></tr>
+<tr><td>Header-signature detection and format profiles (<a href="#s2">§2.5</a> <code>detect</code>)</td><td>done</td></tr>
+<tr><td><code>NodeCsvParser</code> (<a href="#s2">§2.5</a> <code>parse</code>)</td><td>done</td></tr>
+<tr><td>Seven-stage merchant chain (<a href="#s4">§4.1</a>), deterministic stages only</td><td>done</td></tr>
+<tr><td><code>ParserPort</code> seam (<a href="#s2">§2.5</a>)</td><td>done, one implementation registered</td></tr>
+<tr><td>Running-balance reconciliation (<a href="#s6">§6.1</a>), plus a sign-plausibility check for deposit accounts</td><td>done</td></tr>
+<tr><td>PDF ingest</td><td><strong>not built</strong> — v0.4</td></tr>
+<tr><td>LLM stage of <a href="#s4">§4.2</a>, analyzers, API, UI, SQLite schema</td><td><strong>not built</strong> — out of scope for this build</td></tr>
+</table></div>
+<p><strong>Nothing here writes anywhere.</strong> Every entry point takes values and returns values, per <a href="#s2">§2.1</a>'s "libs compute; the app persists". There is no database in this repo yet.</p>
+<h2 id="s2">2. Running it</h2>
+<pre><code>npm install
+npm run build</code></pre>
+<p>Parse a statement:</p>
+<pre><code>node tools/parse-statement.mjs fixtures/statements/northgate-checking-2026-01.csv</code></pre>
+<p>Useful flags: <code>--json</code> for the full machine-readable result (including each row's <code>dedupeKey</code> and normalized merchant), <code>--trace &lt;n&gt;</code> to print the per-stage normalization trace for one row, <code>--profile &lt;id|path&gt;</code> to force a profile instead of matching on the header signature, and <code>--account &lt;id&gt;</code> to set the account id that dedupe keys are computed against.</p>
+<p>The full pipeline — boundary lint, typecheck, tests — is:</p>
+<pre><code>npm run check</code></pre>
+<p><code>lint</code> is part of that pipeline on purpose. <a href="#s2">§2.2</a> calls the module boundaries "the single most load-bearing piece of the design", and notes that "a lint rule that nobody runs is not enforcement".</p>
+<h2 id="s3">3. Where real statements go</h2>
+<p><code>data/</code> and <code>*.sqlite</code> are already in <code>.gitignore</code>. **Put real statements in <code>data/</code>**, never in <code>fixtures/</code> — everything in <code>fixtures/</code> is committed. The files under <code>fixtures/statements/</code> are synthetic and contain no real financial data.</p>
+<h2 id="s4">4. Format profiles</h2>
+<p>A profile is JSON in <code>profiles/</code>, keyed on the hash of the header row. Fields mirror the <code>format_profile</code> table in <a href="#s3">§3.1</a>, so persisting one later is a column-for-column write.</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td><code>id</code></td><td>Unique. Used by <code>--profile</code> and recorded on the parse result.</td></tr>
+<tr><td><code>institution</code></td><td>Display only.</td></tr>
+<tr><td><code>accountTypeHint</code></td><td><code>checking</code> · <code>savings</code> · <code>credit_card</code> · <code>null</code>.</td></tr>
+<tr><td><code>headerSignature</code></td><td>sha256 of the normalized header tokens. Generated — do not type it by hand.</td></tr>
+<tr><td><code>headerTokens</code></td><td>The normalized tokens, kept for fuzzy matching and diagnostics.</td></tr>
+<tr><td><code>hasHeader</code></td><td><code>false</code> means address every column by index.</td></tr>
+<tr><td><code>delimiter</code></td><td>One character.</td></tr>
+<tr><td><code>skipLines</code></td><td>Preamble rows to drop before the header. Blank lines do not count.</td></tr>
+<tr><td><code>dateFormat</code></td><td>Explicit, never sniffed. Tokens: <code>YYYY</code> <code>YY</code> <code>MMM</code> <code>MM</code> <code>M</code> <code>DD</code> <code>D</code>, any literal separators.</td></tr>
+<tr><td><code>amountMode</code></td><td><code>single</code> (one signed column) or <code>debit_credit</code> (two unsigned columns).</td></tr>
+<tr><td><code>signConvention</code></td><td><code>as_is</code> or <code>invert</code>, applied <em>after</em> the mode produces a signed number.</td></tr>
+<tr><td><code>columnMap</code></td><td>Role → column. A bare string is a header name, a bare number is a zero-based index.</td></tr>
+<tr><td><code>pendingValues</code></td><td>Values in the status column meaning "not settled". Compared case-insensitively.</td></tr>
+</table></div>
+<p>Roles: <code>transactionDate</code>, <code>postedDate</code>, <code>description</code>, <code>amount</code>, <code>debit</code>, <code>credit</code>, <code>balance</code>, <code>status</code>. <code>description</code> is required, and at least one of <code>transactionDate</code> / <code>postedDate</code>.</p>
+<h3>The sign convention, which is the part that matters</h3>
+<p><a href="#s3">§3.1</a> requires <strong>negative = money leaving the account</strong>, uniformly across checking and credit cards. Banks do not agree, and the profile is where the disagreement is absorbed so that nothing downstream ever asks which bank a row came from.</p>
+<p>The two axes compose rather than multiplying into per-bank cases:</p>
+<ol><li><code>amountMode</code> builds a signed number — <code>single</code> takes the column as-is; <code>debit_credit</code> computes <code>|credit| − |debit|</code>.</li><li><code>signConvention: invert</code> flips it when the bank's idea of positive is the opposite of ours.</li></ol>
+<p>A checking export that prints a purchase as <code>-18.75</code> is <code>single</code> + <code>as_is</code>. A credit-card export that prints the same purchase as <code>18.75</code> and a payment as <code>-500.00</code> is <code>single</code> + <code>invert</code>. The bundled fixtures cover both, plus a <code>debit_credit</code> credit union, and a test asserts that a $500 card payment comes out as <code>−50000</code> in checking and <code>+50000</code> on the card — equal and opposite, which is what <a href="#s2">§2.6</a>'s transfer matching needs.</p>
+<h3>Adding a bank</h3>
+<p>Point the tool at the file. An unrecognized header exits with the signature, the located header line, sample rows, any similar known profiles, and a filled-in starter profile:</p>
+<pre><code>node tools/parse-statement.mjs data/statements/my-bank-2026-01.csv</code></pre>
+<p>Fill in the <code>CHANGE ME</code> fields, save under <code>profiles/</code>, and re-run. <strong>Check the reconciliation line.</strong> If the file has a balance column and the profile is right, you get:</p>
+<pre><code>✓ running balance reconciles across 11 rows (ascending order)
+  the amount column is mapped correctly and no rows are missing
+  (this does not verify signConvention; balances look plausible for the account type)</code></pre>
+<p>That check is the reason to map <code>balance</code> even though it is optional — <a href="#s2">§2.5</a> notes that a silently misparsed amount column "poisons every downstream finding, and it is very hard to notice after the fact". Row order is tried both ways, so you do not need to know whether your bank exports newest-first.</p>
+<h3>What reconciliation cannot tell you</h3>
+<p>**It cannot verify <code>signConvention</code>,** and it is worth understanding why before trusting a green line. <code>invert</code> is applied to the balance as well as the amount — it has to be, or a credit-card export would never reconcile — so both sides flip together and <code>(−b[n]) − (−b[n−1]) === −a[n]</code> holds exactly as well as the correct orientation. <strong>A profile with the convention backwards reconciles perfectly and inverts every number in the app.</strong></p>
+<p>The separate check for that is <code>sign_convention_suspect</code>, and it only has signal on deposit accounts: a checking or savings balance is money you have, so if most parsed balances come out negative the profile is inverted — an account is not overdrawn for a whole statement. Credit cards are deliberately excluded, because a card balance is a debt that different institutions print with different signs and a genuine credit balance after a refund is legal; <a href="#s3">§3.1</a> fixes the sign of <code>amount_cents</code>, not of <code>balance_cents</code>.</p>
+<p>So for a <strong>credit card</strong> the sign convention is the one thing you have to eyeball. Confirm that purchases came out negative and payments positive — the table the CLI prints shows both.</p>
+<p>Detection <strong>never auto-applies a profile it is not certain about.</strong> A near match is offered as a suggestion with a similarity score and nothing else; per plan question 2, confirmation is what stops a one-column header change from silently re-mapping an amount column.</p>
+<h2 id="s5">5. Where the code and the spec differ</h2>
+<p><strong>Nowhere.</strong> Building this found four places where the spec was wrong or unimplementable as worded; all four were amended in the spec on 2026-08-04 rather than worked around here. See [<code>ledgerline-spec.md</code> §9](ledgerline-spec.md) for the list and the reasoning — in short: <code>ParserPort.parse</code> returning <code>RawRow[]</code> could not satisfy <a href="#s6">§6.1</a>'s own review screen; stage 1's punctuation stripping would have destroyed the markers stage 2 matches on; stage 4's URL rule resolved <code>NETFLIX.COM 866-579-7172 CA</code> to <code>CA</code>; and <code>collapse_v1</code>'s delete-semantics hashed <code>AMAZON - PRIME</code> differently from <code>AMAZON PRIME</code>.</p>
+<p>That last one was amended <strong>before the first import</strong>, which is the only moment it was free. <code>collapse_v1</code> now substitutes punctuation with a space rather than deleting it, folds diacritics, and trims after truncating. No row has ever been keyed under the old wording, so the name still refers to exactly one definition. <strong>From the first stored row onward that stops being true</strong>, and any further change means shipping <code>collapseV2</code> beside it plus a migration that recomputes every key in one transaction.</p>
+<h3>One implementation choice the spec leaves open</h3>
+<p>**<code>collapse_v1</code> lives in <code>domain</code>, not next to the <a href="#s4">§4</a> chain.** The spec says where the dedupe <em>stage</em> runs (<a href="#s2">§2.5</a>: in <code>data</code>) but not where the function lives. Putting it in <code>domain</code> falls out of the boundary table: <a href="#s2">§2.2</a> lets <code>type:data-access</code> depend only on <code>type:domain</code>, so <code>data</code> <em>cannot</em> reach the normalization chain even if someone wanted it to. That makes the separation <a href="#s3">§3.3</a> demands a property of the module graph rather than a convention someone has to remember — which matters, because <a href="#s3">§3.3</a> calls it "the correctness condition [...] most likely to be violated by accident."</p>
+<h2 id="s6">6. What has never been run against a real statement</h2>
+<p>Per §7.6 — "nothing in <a href="#s5">§5</a> has been run against a real statement" — the same honesty applies here, and more sharply, because <strong>no real CSV was available when this was written</strong>. What that does and does not mean:</p>
+<p><strong>Validated against synthetic fixtures only, and therefore encoding my assumptions about how banks behave rather than how yours actually does:</strong></p>
+<ul><li>The three bundled profiles and the shapes they represent. They were written alongside the fixtures, so they prove the <em>mechanism</em> absorbs disagreement — not that any real bank matches one of them.</li><li>Preamble detection, delimiter guessing, and header location.</li><li>The processor-prefix table, the state-code list and the reference-debris patterns in <a href="#s4">§4.1</a>'s stages. These were derived from the three example descriptors in the spec plus common knowledge, and are the single most likely thing to need extending on contact with a real file.</li></ul>
+<p><strong>Genuinely validated, because it does not depend on a bank:</strong></p>
+<ul><li>The money path: no float anywhere, exact integer sums, every negative form banks print, and loud refusal of ambiguous non-US formatting.</li><li>Date parsing against a declared format, including rejection of impossible calendar dates and the demonstration that <code>01/02/2026</code> reads differently under <code>MM/DD/YYYY</code> and <code>DD/MM/YYYY</code>.</li><li><code>collapse_v1</code> golden values, and the test that growing the normalization chain changes <code>description_normalized</code> and leaves the dedupe input untouched — the <a href="#s3">§3.3</a> regression.</li><li>The module boundaries, verified by a deliberate violation that lint rejected.</li></ul>
+<p><strong>Uncalibrated numbers</strong>, both marked in the code:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Constant</th><th>Value</th><th>Where</th></tr>
+<tr><td><code>SIGNATURE_SUGGESTION_FLOOR</code></td><td>0.5</td><td><code>parsing/detect.ts</code> — only gates what is <em>offered</em>, never what is applied</td></tr>
+<tr><td><code>FUZZY_SIMILARITY_FLOOR</code></td><td>0.72</td><td><code>normalize/alias.ts</code> — set conservatively on purpose</td></tr>
+</table></div>
+<p>The fuzzy floor is worth understanding before tuning: trigram similarity catches <em>truncation and decoration</em>, which is how descriptors actually vary — <code>BLUE BOTTLE COFFE</code> against <code>BLUE BOTTLE COFFEE</code> scores ~0.85. It does not catch typos; <code>STARBUKS</code> against <code>STARBUCKS</code> scores ~0.58 and stays below the floor deliberately, because a wrong merge is invisible in the findings while a missed one is one click in the review queue.</p>
+<p><strong>The first thing to do with a real statement</strong> is run the CLI over it and read four things: the reconciliation verdict, the row count, the warnings, and — for a credit card — whether purchases came out negative. The first three catch most of the ways this goes wrong; the fourth catches the one reconciliation is structurally blind to.</p>
+</main>
+
+<footer>
+  Generated by Claude Code · <a href="../../dashboard.html">Back to dashboard</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('md-theme', next); } catch (e) {}
+    syncToggleLabel();
+  }
+  function syncToggleLabel(){
+    var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+  }
+  syncToggleLabel();
+</script>
+</body>
+</html>
