@@ -1,0 +1,28 @@
+{
+  "id": "cardinal-card-v1",
+  "institution": "Cardinal Card",
+  "accountTypeHint": "credit_card",
+  "headerSignature": "0bfcbc98249568b050eba24ae0e90042eb1711a7ea4bc13429387411b816f61c",
+  "headerTokens": [
+    "transaction date",
+    "post date",
+    "description",
+    "category",
+    "amount"
+  ],
+  "hasHeader": true,
+  "delimiter": ",",
+  "skipLines": 0,
+  "dateFormat": "YYYY-MM-DD",
+  "amountMode": "single",
+  "signConvention": "invert",
+  "columnMap": {
+    "transactionDate": "Transaction Date",
+    "postedDate": "Post Date",
+    "description": "Description",
+    "amount": "Amount"
+  },
+  "pendingValues": [],
+  "version": 1,
+  "source": "seed"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "northgate-checking-v1",
+  "institution": "Northgate Bank",
+  "accountTypeHint": "checking",
+  "headerSignature": "1c2660b0adbc776455a603178a59445e365c6425693a3c3ea008116ffe7aeb1f",
+  "headerTokens": [
+    "date",
+    "description",
+    "amount",
+    "running balance",
+    "status"
+  ],
+  "hasHeader": true,
+  "delimiter": ",",
+  "skipLines": 3,
+  "dateFormat": "MM/DD/YYYY",
+  "amountMode": "single",
+  "signConvention": "as_is",
+  "columnMap": {
+    "transactionDate": "Date",
+    "description": "Description",
+    "amount": "Amount",
+    "balance": "Running Balance",
+    "status": "Status"
+  },
+  "pendingValues": [
+    "pending"
+  ],
+  "version": 1,
+  "source": "seed"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "ledgerline-normalize",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/normalize/src",
+  "projectType": "library",
+  "tags": ["scope:ll", "type:normalize"],
+  "// targets": "to see all targets run: nx show project ledgerline-normalize --web",
+  "targets": {}
+}

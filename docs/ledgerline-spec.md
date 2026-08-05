@@ -9,9 +9,18 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 
 ## 1. Status and provenance
 
-**Status: pre-implementation.** No code exists yet. Every number in this document is a
-*designed* threshold, not a measured one; the calibration note in §7.6 says what has to
-happen to each of them once real statements are in the database.
+**Status: partially implemented.** The Nx workspace exists with its §2.2 tags and boundary
+lint, and the CSV half of §2.5's `ingest → detect → parse → normalize` path is built in
+`libs/ledgerline/{domain,parsing,normalize}`. PDF ingest, the LLM stage of §4.2, the
+analyzers of §5, the API of §2.3, the schema of §3 and the UI of §6 are **not** built.
+`docs/statement-parsing.md` records what has and has not been validated. §9 lists the
+amendments implementation made to this document.
+
+Every number in this document is still a *designed* threshold, not a measured one; the
+calibration note in §7.6 says what has to happen to each of them once real statements are in
+the database. **No real statement has been parsed yet** — the code was validated against
+synthetic fixtures only, which is a weaker claim than §7.6's and is stated as such in
+`docs/statement-parsing.md` §6.
 
 This document was extracted from §3–§7 of the design session artifact on 2026-08-03, under
 the workspace rule in `../../CLAUDE.md` § Version control — *must it be true of the code at
@@ -289,10 +298,22 @@ column poisons every downstream finding, and it is very hard to notice after the
 ```ts
 export interface ParserPort {
   id: string;
-  canParse(file: FileMeta, sample: Buffer): Promise<number>;  // 0..1 confidence
-  parse(file: FileMeta, bytes: Buffer): Promise<RawRow[]>;
+  canParse(file: FileMeta, sample: Uint8Array): Promise<number>;  // 0..1 confidence
+  parse(file: FileMeta, bytes: Uint8Array): Promise<ParseResult>;
 }
 ```
+
+**`parse` returns a `ParseResult`, not `RawRow[]`** — the rows that parsed, the rows that did
+not, the warnings, the detected profile and header signature, the period bounds, and the
+balance-reconciliation verdict. A bare row array cannot carry any of that, and this section
+is not free to choose otherwise: §6.1 requires the review screen to show "unparsed rows,
+dates outside the detected period, pending rows, and a balance that doesn't reconcile", and
+§3.1's `statement_import` stores `rows_parsed`, `rows_inserted`, `parser`, `parser_version`
+and `error_detail`. Returning only the rows that succeeded discards exactly the rows a
+reviewer needs to see, which would make §2.5's review-before-commit rule unimplementable.
+
+`Uint8Array` rather than `Buffer` because a `Buffer` *is* a `Uint8Array` — every caller is
+unaffected, and the pure libs avoid naming a Node-only runtime type.
 
 Implementations register in priority order: `NodeCsvParser`, `NodePdfParser`,
 `PythonParserClient`, `LlmAssistedParser`. The port exists from the PDF phase even if only the
@@ -458,8 +479,26 @@ be the §4 normalization chain: that chain is a maintained, growing prefix table
 addition to it would change `description_normalized` for historical rows, change every
 `dedupe_key`, and cause the next overlapping import to re-insert rows it should have merged —
 silently doubling a month of spend. `collapse_v1` is instead a minimal transform that is never
-changed in place: uppercase, collapse internal whitespace to single spaces, strip characters
-outside `[A-Z0-9 ]`, trim, truncate to 40 characters. It is versioned by name.
+changed in place, and it is versioned by name. In order:
+
+1. Uppercase.
+2. Fold diacritics to their base letter (NFD, then drop combining marks).
+3. **Replace** every character outside `[A-Z0-9 ]` with a space.
+4. Collapse whitespace runs to a single space.
+5. Trim.
+6. Truncate to 40 characters, then trim again in case the cut landed on a space.
+
+**Step 3 substitutes rather than deletes, and that is the whole of the design.** Punctuation
+in a descriptor is a separator — `TST*THE PLANT CAFE`, `AMAZON.COM`, `7-ELEVEN`,
+`AMAZON - PRIME`. Deleting it glues tokens together (`TSTTHE PLANT CAFE`) and leaves a double
+space wherever the separator was itself spaced. Both are deterministic, so neither breaks the
+key outright — but banks are not consistent about punctuation between exports, and under
+delete-semantics `AMAZON - PRIME` and `AMAZON PRIME` hash differently, so the merge rule
+re-inserts a row it should have absorbed. That is the exact failure this section exists to
+prevent, arriving through the collapse instead of through the normalization chain. Diacritic
+folding is there for the same reason: the reader falls back to Windows-1252 for files that are
+not valid UTF-8, so an accented merchant name reaches the collapse intact, and dropping the
+accent alone would split `MÜLLER` into `M LLER`.
 
 - `transaction.dedupe_key_version` records which collapse produced each key.
 - Changing the collapse function means shipping `collapse_v2` **and** a migration that recomputes every key inside one transaction.
@@ -535,10 +574,10 @@ Conflating them would make every prefix-table addition corrupt the dedupe histor
 Runs in order, each stage cheap and inspectable. This is rules-first on purpose: it is fast,
 reproducible, debuggable, and works with the LLM off.
 
-1. **Case and whitespace** — uppercase, collapse runs of spaces, strip punctuation noise.
+1. **Case and whitespace** — uppercase, fold Unicode dashes and quotes to ASCII, drop control characters, collapse runs of spaces. **Punctuation stripping does not happen here**, and must not: stage 2's prefix table is `SQ *`, `TST*`, `PAYPAL *`, entries identified *by* their punctuation. Removing `*` at this stage leaves `SQ BLUE BOTTLE`, every processor prefix silently stops matching, and the chain goes on producing stable, wrong output. Character-class stripping is a final tidy after stage 5.
 2. **Processor prefixes** — a maintained prefix table: `SQ *`, `TST*`, `SP `, `PAYPAL *`, `PP*`, `IN *`, `WWW.`, `POS DEBIT`, `ACH DEBIT`, `DEBIT CARD PURCHASE`, `RECURRING PMT`. Notably these often *hide* the real merchant behind Square/Toast/PayPal — the rule strips the prefix and keeps what follows.
 3. **Store and terminal numbers** — `#0042`, `STORE 1234`, trailing 3–5 digit runs, and long numeric reference tails.
-4. **Geographic and contact noise** — trailing `CITY ST` pairs against a state-code list, phone numbers, URLs, and country codes.
+4. **Geographic and contact noise** — phone numbers, country codes, and a trailing state code against a state-code list. A URL keeps its host label and loses its scheme, `WWW.` and TLD: `NETFLIX.COM 866-579-7172 CA` must reach stage 6 as `NETFLIX`, and deleting the whole token leaves `CA`, a merchant named after a US state. **The city is deliberately not stripped.** The state code is verifiable against a list; the city is merely whatever token precedes it, and removing it blind turns `BLUE BOTTLE COFFE CA` into `BLUE BOTTLE`. The costs are asymmetric — over-stripping silently merges two merchants and every §5 rule groups by merchant, while under-stripping leaves `STARBUCKS SEATTLE`, which is *stable* and therefore still groups correctly, only less prettily. The known cost is that one chain in two cities is two provisional merchants until an alias joins them, which is step 6's job. Revisit with a city list once real statements show how often it happens (§7.6).
 5. **Reference and date debris** — transaction ids, `REF#`, embedded `MM/DD`.
 6. **Alias lookup** — exact match on `alias_key` first, then prefix, then trigram fuzzy match above a similarity floor. A hit resolves to a canonical merchant and stops.
 7. **Unmatched** — the cleaned string becomes a provisional merchant, marked `source = 'rule'`, and joins the review queue.
@@ -1054,3 +1093,21 @@ The extraction was not verbatim. Substantive changes, in document order:
 | 6.4 | Headline sums `savings` only. |
 | 6.7 | `transactionSearch` no longer sends rows to the provider; added numeric post-validation. |
 | 7 | New section: the cross-cutting rules that several sections were each getting wrong separately. |
+
+## 9. Amendments from implementation — 2026-08-04
+
+The CSV ingest path was built on 2026-08-04 (`docs/statement-parsing.md`). Writing it found
+four places where this document was wrong or unimplementable as worded. All four are corrected
+above; they are recorded here because a spec that quietly reshapes itself to match whatever got
+built is worth nothing.
+
+| § | Amendment | Why |
+|---|---|---|
+| 1 | Status is no longer "pre-implementation", and now says plainly that no *real* statement has been parsed — only synthetic fixtures. | The original status line would have read as calibration that has not happened. |
+| 2.5 | `ParserPort.parse` returns `ParseResult`, not `RawRow[]`; `Uint8Array` replaces `Buffer`. | **The original signature was unimplementable against this document's own requirements.** §6.1's review screen needs unparsed rows, pending rows and the balance verdict, and §3.1's `statement_import` stores `rows_parsed`, `parser`, `parser_version` and `error_detail`. A row array carries none of it, so §2.5's review-before-commit rule could not have been built. |
+| 3.3 | `collapse_v1` **substitutes** punctuation with a space instead of deleting it, folds diacritics, and trims after truncation. | Delete-semantics glued tokens together (`TST*THE PLANT CAFE` → `TSTTHE PLANT CAFE`) and hashed `AMAZON - PRIME` differently from `AMAZON PRIME`, so two exports of one transaction that differ only in punctuation would produce two keys and the merge rule would double-count — the precise failure §3.3 exists to prevent, arriving by a route the section did not anticipate. Amended **before the first import**, so no stored row was keyed under the old wording and the name `collapse_v1` still refers to exactly one definition. After the first import this would have required `collapse_v2` and a full re-key migration. |
+| 4.1 | Stage 1 no longer strips punctuation; stage 4 keeps a URL's host label and does not strip the city. | Stage 1's punctuation stripping would have destroyed the `SQ *` / `TST*` / `PAYPAL *` markers that stage 2 matches on — every processor prefix would silently stop unwrapping while the chain kept producing plausible output. Stage 4's URL rule as worded deleted `NETFLIX.COM` entirely and resolved the descriptor to `CA`. Both were found by running the chain over fixtures and reading the output. |
+
+Two thresholds introduced by the implementation are **uncalibrated** in the §7.6 sense and are
+marked as such in the code: `SIGNATURE_SUGGESTION_FLOOR` (0.5) and `FUZZY_SIMILARITY_FLOOR`
+(0.72).

@@ -1,0 +1,9 @@
+{
+  "name": "ledgerline-domain",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/domain/src",
+  "projectType": "library",
+  "tags": ["scope:ll", "type:domain"],
+  "// targets": "to see all targets run: nx show project ledgerline-domain --web",
+  "targets": {}
+}

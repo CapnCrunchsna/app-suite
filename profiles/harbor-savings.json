@@ -1,0 +1,29 @@
+{
+  "id": "harbor-savings-v1",
+  "institution": "Harbor Credit Union",
+  "accountTypeHint": "savings",
+  "headerSignature": "eb1e1c4e69eefd7f6573d92a99fe30ceeb848d0de99758d4932026be58c4afc9",
+  "headerTokens": [
+    "posted date",
+    "description",
+    "debit",
+    "credit",
+    "balance"
+  ],
+  "hasHeader": true,
+  "delimiter": ",",
+  "skipLines": 0,
+  "dateFormat": "MMM D, YYYY",
+  "amountMode": "debit_credit",
+  "signConvention": "as_is",
+  "columnMap": {
+    "postedDate": "Posted Date",
+    "description": "Description",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balance": "Balance"
+  },
+  "pendingValues": [],
+  "version": 1,
+  "source": "seed"
+}

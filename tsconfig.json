@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./libs/ledgerline/domain"
+    },
+    {
+      "path": "./libs/ledgerline/parsing"
+    },
+    {
+      "path": "./libs/ledgerline/normalize"
+    }
+  ],
+  "compilerOptions": {}
+}

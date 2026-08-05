@@ -1,0 +1,9 @@
+{
+  "name": "ledgerline-parsing",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/parsing/src",
+  "projectType": "library",
+  "tags": ["scope:ll", "type:parsing"],
+  "// targets": "to see all targets run: nx show project ledgerline-parsing --web",
+  "targets": {}
+}

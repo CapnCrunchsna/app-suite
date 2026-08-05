@@ -29,6 +29,10 @@ Then verify with `node ../../scripts/check-artifacts.mjs`.
   merchant normalization chain, the nine analyzer rules with their thresholds, and the
   page-level UI contract. Registered on the dashboard; its companion plan artifact is
   `../../artifacts/plans/ledgerline-design.md`.
+- **`statement-parsing.md`** — implementation notes for the CSV ingest path: the
+  format-profile schema, the `parse-statement` CLI, how to add a bank, the five places the
+  code deliberately departs from the spec, and what has and has not been validated against a
+  real statement. Not yet registered on the dashboard.
 
 ## Why the Ledgerline design was split
 

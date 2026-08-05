@@ -30,3 +30,16 @@ data/
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# Nx tooling (added when the workspace was scaffolded)
+.nx/polygraph
+.nx/self-healing
+.nx/migrate-runs
+.claude/worktrees
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+*.tsbuildinfo
+npm-debug.log
+yarn-error.log
+
+vitest.config.*.timestamp*
