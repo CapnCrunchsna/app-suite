@@ -10,11 +10,14 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 ## 1. Status and provenance
 
 **Status: partially implemented.** The Nx workspace exists with its §2.2 tags and boundary
-lint, and the CSV half of §2.5's `ingest → detect → parse → normalize` path is built in
-`libs/ledgerline/{domain,parsing,normalize}`. PDF ingest, the LLM stage of §4.2, the
-analyzers of §5, the API of §2.3, the schema of §3 and the UI of §6 are **not** built.
-`docs/statement-parsing.md` records what has and has not been validated. §9 lists the
-amendments implementation made to this document.
+lint; the CSV half of §2.5's `ingest → detect → parse → normalize` path is built in
+`libs/ledgerline/{domain,parsing,normalize}`; and as of 2026-08-06 the persistence and
+import-commit half is built too — the whole of §3 (schema, indexes, constraints, idempotent
+re-import) in `libs/ledgerline/data`, and the import, account, transaction and data endpoints
+of §2.3 in `apps/ledgerline-api`. PDF ingest, the LLM stage of §4.2, the analyzers of §5, the
+remaining endpoints of §2.3 and the UI of §6 are **not** built. `docs/statement-parsing.md`
+records what has and has not been validated. §9 lists the amendments implementation made to
+this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1111,3 +1114,30 @@ built is worth nothing.
 Two thresholds introduced by the implementation are **uncalibrated** in the §7.6 sense and are
 marked as such in the code: `SIGNATURE_SUGGESTION_FLOOR` (0.5) and `FUZZY_SIMILARITY_FLOOR`
 (0.72).
+
+## 10. Open discrepancies — recorded, not resolved
+
+Building the persistence and import-commit path on 2026-08-06 found one place where this
+document contradicts itself. It is recorded here rather than amended, because resolving it
+means choosing a number, and §7.6 makes choosing a number a calibration decision against real
+statements rather than a bug fix. **The code implements what §3.3 specifies, verbatim.**
+
+**§3.3's near-duplicate predicate cannot catch §3.3's own pending-to-posted example.** That
+section names "a pending charge that later posts" as one of the three cases the near-duplicate
+pass exists to cover, and illustrates it with "$50.00 on the 10th becomes $59.00 on the 12th
+once a tip settles". The predicate it then states — `|Δ effective_date| ≤ 3` days, the same
+`collapse_v1(description_raw)`, and an amount within **±$2 or ±3%** — admits neither: an 18%
+tip is 900 cents and 18 percent. A tipped restaurant meal pulled mid-cycle therefore lands as
+two rows, and the month over-counts by the authorization amount until the pending row is
+superseded by something else or removed by hand.
+
+The failure direction is the one §3.3 prefers — "over-counting is visible and losing a real
+transaction is not" — so this is a miss, not a corruption. Widening the band to cover tips
+(20–25% of the amount, or an absolute floor in the tens of dollars) would also make any two
+same-merchant charges in one week near-duplicates of each other, which is a review queue full
+of choices nobody wants to make. A tip-shaped rule would more likely key on the pending flag
+than on the amount: *an existing pending row whose posted successor is larger by up to 30%* is
+a narrower predicate than a wider symmetric band. That is a design decision, and it is open.
+
+`libs/ledgerline/data/src/lib/import/import.spec.ts` pins the current behaviour with a test
+named after this discrepancy, so whichever way it is resolved, the resolution is deliberate.

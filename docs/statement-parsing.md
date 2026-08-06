@@ -22,10 +22,14 @@ Built: the `ingest → detect → parse → normalize` half of §2.5's pipeline,
 | Running-balance reconciliation (§6.1), plus a sign-plausibility check for deposit accounts | done |
 | PDF ingest | **not built** — v0.4 |
 | UI (§6) | Angular shell scaffolded since — wireframe only, no pages. See `apps/ledgerline-ui/README.md`. |
-| LLM stage of §4.2, analyzers, API, SQLite schema | **not built** — out of scope for this build |
+| SQLite schema (§3.1, §3.2), idempotent re-import (§3.3), the API (§2.3) | built since, 2026-08-06, in `libs/ledgerline/data` and `apps/ledgerline-api` |
+| LLM stage of §4.2, the analyzers of §5 | **not built** — out of scope for this build |
 
-**Nothing here writes anywhere.** Every entry point takes values and returns values, per §2.1's
-"libs compute; the app persists". There is no database in this repo yet.
+**Nothing in these three libs writes anywhere**, and that is still true now that a database
+exists. Every entry point here takes values and returns values, per §2.1's "libs compute; the
+app persists"; `libs/ledgerline/data` is the only lib that knows a store exists, and §2.2's
+boundary lint refuses a `parsing → data` or `normalize → data` edge outright. The composition
+root that joins them is `apps/ledgerline-api`.
 
 ## 2. Running it
 
@@ -149,7 +153,12 @@ stops a one-column header change from silently re-mapping an amount column.
 
 ## 5. Where the code and the spec differ
 
-**Nowhere.** Building this found four places where the spec was wrong or unimplementable as
+**Nowhere**, for the parsing path. Building the persistence path later found one place where
+the spec contradicts *itself* — §3.3's near-duplicate predicate cannot catch §3.3's own
+pending-to-posted example — which is recorded in `ledgerline-spec.md` §10 and left open rather
+than silently widened.
+
+Building this found four places where the spec was wrong or unimplementable as
 worded; all four were amended in the spec on 2026-08-04 rather than worked around here. See
 [`ledgerline-spec.md` §9](ledgerline-spec.md) for the list and the reasoning — in short:
 `ParserPort.parse` returning `RawRow[]` could not satisfy §6.1's own review screen; stage 1's

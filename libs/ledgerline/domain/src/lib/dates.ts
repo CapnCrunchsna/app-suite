@@ -173,3 +173,42 @@ export function effectiveDate(
 ): string | null {
   return transactionDate ?? postedDate;
 }
+
+/**
+ * A closed interval of ISO dates — both ends inclusive.
+ *
+ * §2.1 puts `DateRange` in `domain` alongside `Money`, and §3.4's repository
+ * examples (`listDebitsByMerchant(range)`, `monthlyCategoryTotals(range)`) take
+ * one. Inclusive on both ends because every window in this app is a statement
+ * period or a calendar month, and a half-open month boundary is how the last day
+ * of January goes missing from a monthly total.
+ */
+export interface DateRange {
+  readonly from: string;
+  readonly to: string;
+}
+
+const MS_PER_DAY = 86_400_000;
+
+function toUtcMillis(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+/**
+ * Shift an ISO date by a whole number of days, staying in UTC.
+ *
+ * UTC rather than local time because a local-time shift crosses a daylight
+ * saving boundary twice a year and lands on the same calendar day it started
+ * from — which would silently narrow §3.3's ±3 day near-duplicate window to two
+ * days for one week in March.
+ */
+export function addDaysIso(iso: string, days: number): string {
+  const shifted = new Date(toUtcMillis(iso) + days * MS_PER_DAY);
+  return shifted.toISOString().slice(0, 10);
+}
+
+/** Signed whole days from `a` to `b`. Both are midnight UTC, so this is exact. */
+export function daysBetweenIso(a: string, b: string): number {
+  return Math.round((toUtcMillis(b) - toUtcMillis(a)) / MS_PER_DAY);
+}

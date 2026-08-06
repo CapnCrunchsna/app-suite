@@ -20,6 +20,12 @@
     },
     {
       "path": "./libs/shared/api-client"
+    },
+    {
+      "path": "./libs/ledgerline/data"
+    },
+    {
+      "path": "./apps/ledgerline-api"
     }
   ],
   "compilerOptions": {}

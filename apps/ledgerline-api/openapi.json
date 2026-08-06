@@ -1,0 +1,3144 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ledgerline API",
+    "description": "Local statement analyzer. Binds 127.0.0.1 and has no authentication: it is a single-user process holding every statement its owner has imported.",
+    "version": "0.1.0"
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Liveness, schema version, and any profile that failed to load at boot",
+        "tags": [
+          "data"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "schemaVersion": {
+                      "type": "integer"
+                    },
+                    "transactions": {
+                      "type": "integer"
+                    },
+                    "profileLoadErrors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports": {
+      "post": {
+        "summary": "Upload one or more statement files",
+        "tags": [
+          "imports"
+        ],
+        "description": "Stages and parses; commits nothing. A byte-identical re-upload returns the existing import untouched (spec 3.3, idempotency layer one).",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "import": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "accountId": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "sourceFilename": {
+                                "type": "string"
+                              },
+                              "fileSha256": {
+                                "type": "string"
+                              },
+                              "fileSizeBytes": {
+                                "type": "integer"
+                              },
+                              "formatProfileId": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "periodStart": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "periodEnd": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "rowsParsed": {
+                                "type": "integer"
+                              },
+                              "rowsInserted": {
+                                "type": "integer"
+                              },
+                              "rowsDuplicate": {
+                                "type": "integer"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "uploaded",
+                                  "needs_mapping",
+                                  "staged",
+                                  "committed",
+                                  "failed"
+                                ]
+                              },
+                              "parser": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "parserVersion": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "errorDetail": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "diagnosticsJson": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "importedAt": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "created": {
+                            "type": "boolean"
+                          },
+                          "accountSuggestion": {
+                            "type": [
+                              "null",
+                              "object"
+                            ],
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Import history",
+        "tags": [
+          "imports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "accountId": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "sourceFilename": {
+                        "type": "string"
+                      },
+                      "fileSha256": {
+                        "type": "string"
+                      },
+                      "fileSizeBytes": {
+                        "type": "integer"
+                      },
+                      "formatProfileId": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "periodStart": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "periodEnd": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "rowsParsed": {
+                        "type": "integer"
+                      },
+                      "rowsInserted": {
+                        "type": "integer"
+                      },
+                      "rowsDuplicate": {
+                        "type": "integer"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "uploaded",
+                          "needs_mapping",
+                          "staged",
+                          "committed",
+                          "failed"
+                        ]
+                      },
+                      "parser": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "parserVersion": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "errorDetail": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "diagnosticsJson": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "importedAt": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "updatedAt": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/{id}": {
+      "get": {
+        "summary": "Staged parse result for review",
+        "tags": [
+          "imports"
+        ],
+        "description": "Rows with their disposition, the exact duplicates the merge rule will absorb, the near-duplicates needing a three-way choice, unparsed rows, and the balance verdict (spec 6.1). The plan is null until an account is confirmed.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Confirm the account, override the profile, or re-parse",
+        "tags": [
+          "imports"
+        ],
+        "description": "Refused once the import is committed (spec 6.1).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string"
+                  },
+                  "formatProfileId": {
+                    "type": "string"
+                  },
+                  "reparse": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an import",
+        "tags": [
+          "imports"
+        ],
+        "description": "Removes only the transactions this import is the last remaining source for. Deleting the first of two overlapping imports keeps the rows the second still contains (spec 3.3).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deletedTransactionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "retainedTransactionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/{id}/commit": {
+      "post": {
+        "summary": "Commit a staged import",
+        "tags": [
+          "imports"
+        ],
+        "description": "Idempotent. Applies the multiset merge rule, then the near-duplicate resolutions, then refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resolutions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "rowIndex",
+                        "existingTransactionId",
+                        "resolution"
+                      ],
+                      "properties": {
+                        "rowIndex": {
+                          "type": "integer"
+                        },
+                        "existingTransactionId": {
+                          "type": "string"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "enum": [
+                            "replace",
+                            "keep_both",
+                            "skip"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "allowZeroAmountRows": {
+                    "type": "boolean",
+                    "description": "Store $0 rows as trial authorizations. Without it a non-pending $0 row is refused as a probable misparse (spec 3.2)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts": {
+      "get": {
+        "summary": "List accounts",
+        "tags": [
+          "accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "institution": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "accountType": {
+                        "type": "string",
+                        "enum": [
+                          "checking",
+                          "savings",
+                          "credit_card"
+                        ]
+                      },
+                      "last4": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "isActive": {
+                        "type": "boolean"
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "updatedAt": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an account",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "displayName",
+                  "accountType"
+                ],
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "checking",
+                      "savings",
+                      "credit_card"
+                    ]
+                  },
+                  "institution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "last4": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "institution": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "accountType": {
+                      "type": "string",
+                      "enum": [
+                        "checking",
+                        "savings",
+                        "credit_card"
+                      ]
+                    },
+                    "last4": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/{id}": {
+      "get": {
+        "summary": "Get one account",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "institution": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "accountType": {
+                      "type": "string",
+                      "enum": [
+                        "checking",
+                        "savings",
+                        "credit_card"
+                      ]
+                    },
+                    "last4": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update an account",
+        "tags": [
+          "accounts"
+        ],
+        "description": "Archiving is `isActive: false` — see spec 6.2.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "institution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "checking",
+                      "savings",
+                      "credit_card"
+                    ]
+                  },
+                  "last4": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "institution": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "accountType": {
+                      "type": "string",
+                      "enum": [
+                        "checking",
+                        "savings",
+                        "credit_card"
+                      ]
+                    },
+                    "last4": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "summary": "Filter, search and paginate transactions",
+        "tags": [
+          "transactions"
+        ],
+        "description": "Internal transfers are excluded unless asked for — a credit-card payment is not spending (spec 6.3). `hasFinding` comes from `finding_evidence` (spec 2.3).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "accountIds",
+            "required": false,
+            "description": "Comma-separated account ids"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "merchantIds",
+            "required": false,
+            "description": "Comma-separated merchant ids"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "categoryIds",
+            "required": false,
+            "description": "Comma-separated category ids"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "description": "Inclusive ISO date"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "description": "Inclusive ISO date"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "minAmountCents",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "maxAmountCents",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "isPending",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "hasFinding",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "in": "query",
+            "name": "includeInternalTransfers",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "in": "query",
+            "name": "includeExcluded",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Full-text across raw and normalized descriptors"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "date_desc",
+                "date_asc",
+                "amount_desc",
+                "amount_asc"
+              ],
+              "default": "date_desc"
+            },
+            "in": "query",
+            "name": "sort",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/transactions/{id}": {
+      "get": {
+        "summary": "One transaction, with the imports that cover it",
+        "tags": [
+          "transactions"
+        ],
+        "description": "The covering imports are spec 6.3’s row expander.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Assign merchant or category, mark internal transfer, exclude",
+        "tags": [
+          "transactions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "merchantId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "categoryId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "isInternalTransfer": {
+                    "type": "boolean"
+                  },
+                  "isExcluded": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/backup": {
+      "post": {
+        "summary": "Write a consistent copy of the database",
+        "tags": [
+          "data"
+        ],
+        "description": "Uses SQLite’s online backup rather than a file copy: under WAL the `.sqlite` file alone is not the whole database, so copying it while the API is running can miss the most recent commits.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Stable machine-readable code"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "rowIndexes": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/export": {
+      "post": {
+        "summary": "Export every transaction as JSON or CSV",
+        "tags": [
+          "data"
+        ],
+        "description": "Money is exported twice on purpose: `amountCents` is the value, and `amount` is the rendered form for a human reading the file. Only the first is ever read back.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            },
+            "in": "query",
+            "name": "format",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "imports",
+      "description": "Upload, review, commit and delete statement imports"
+    },
+    {
+      "name": "accounts",
+      "description": "Account CRUD"
+    },
+    {
+      "name": "transactions",
+      "description": "Filter, search and edit transactions"
+    },
+    {
+      "name": "data",
+      "description": "Backup and export"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { effectiveDate, isIsoDate, parseDateToIso } from './dates.js';
+import { addDaysIso, daysBetweenIso, effectiveDate, isIsoDate, parseDateToIso } from './dates.js';
 
 const iso = (input: string, format: string): string => {
   const result = parseDateToIso(input, format);
@@ -75,5 +75,51 @@ describe('effectiveDate', () => {
     expect(effectiveDate(null, '2026-01-05')).toBe('2026-01-05');
     expect(effectiveDate('2026-01-03', null)).toBe('2026-01-03');
     expect(effectiveDate(null, null)).toBeNull();
+  });
+});
+
+describe('addDaysIso', () => {
+  it('shifts forwards and backwards across month and year boundaries', () => {
+    expect(addDaysIso('2026-01-30', 3)).toBe('2026-02-02');
+    expect(addDaysIso('2026-03-02', -3)).toBe('2026-02-27');
+    expect(addDaysIso('2026-01-01', -1)).toBe('2025-12-31');
+    expect(addDaysIso('2026-01-15', 0)).toBe('2026-01-15');
+  });
+
+  it('handles a leap day', () => {
+    expect(addDaysIso('2028-02-28', 1)).toBe('2028-02-29');
+    expect(addDaysIso('2026-02-28', 1)).toBe('2026-03-01');
+  });
+
+  /**
+   * The reason this arithmetic is in UTC.
+   *
+   * §3.3's near-duplicate window is ±3 days. A local-time shift across a
+   * daylight-saving boundary gains or loses an hour, and a three-day shift that
+   * lands 71 hours later can round back onto the day it started from — silently
+   * narrowing the window to two days for one week in March, in a way no test
+   * that avoids that week would ever see.
+   */
+  it('is exactly three days across a daylight-saving boundary', () => {
+    // US DST began 2026-03-08; the EU's began 2026-03-29.
+    expect(addDaysIso('2026-03-06', 3)).toBe('2026-03-09');
+    expect(addDaysIso('2026-03-09', -3)).toBe('2026-03-06');
+    expect(addDaysIso('2026-03-27', 3)).toBe('2026-03-30');
+    // ...and across the autumn transition, which moves the other way.
+    expect(addDaysIso('2026-10-31', 3)).toBe('2026-11-03');
+  });
+});
+
+describe('daysBetweenIso', () => {
+  it('is signed and exact', () => {
+    expect(daysBetweenIso('2026-01-10', '2026-01-12')).toBe(2);
+    expect(daysBetweenIso('2026-01-12', '2026-01-10')).toBe(-2);
+    expect(daysBetweenIso('2026-01-12', '2026-01-12')).toBe(0);
+    expect(daysBetweenIso('2025-12-31', '2026-01-01')).toBe(1);
+  });
+
+  it('agrees with addDaysIso across a daylight-saving boundary', () => {
+    expect(daysBetweenIso('2026-03-06', '2026-03-09')).toBe(3);
+    expect(daysBetweenIso('2026-10-31', '2026-11-03')).toBe(3);
   });
 });

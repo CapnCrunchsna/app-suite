@@ -1,0 +1,12 @@
+{
+  "name": "ledgerline-data",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/data/src",
+  "projectType": "library",
+  "tags": [
+    "scope:ll",
+    "type:data-access"
+  ],
+  "// targets": "to see all targets run: nx show project ledgerline-data --web",
+  "targets": {}
+}

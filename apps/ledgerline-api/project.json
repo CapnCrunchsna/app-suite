@@ -1,0 +1,45 @@
+{
+  "name": "ledgerline-api",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/ledgerline-api/src",
+  "projectType": "application",
+  "tags": [
+    "scope:ll",
+    "type:app"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "^build"
+      ],
+      "cache": true,
+      "inputs": [
+        "production",
+        "^production"
+      ],
+      "outputs": [
+        "{projectRoot}/dist",
+        "{projectRoot}/openapi.json"
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "parallel": false,
+        "commands": [
+          "tsc --build tsconfig.lib.json",
+          "node ./dist/openapi/emit.js"
+        ]
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "build"
+      ],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "node ./dist/main.js"
+      }
+    }
+  }
+}

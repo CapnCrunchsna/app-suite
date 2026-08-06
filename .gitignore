@@ -18,8 +18,14 @@ coverage/
 # It contains real financial statements and must never be committed.
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.db
-data/
+# Anchored to the workspace root on purpose. An unanchored `data/` matches any
+# directory of that name at any depth, which silently swallowed the whole of
+# `libs/ledgerline/data/` — Nx globs project files through .gitignore, so the
+# lib did not exist as far as the project graph was concerned.
+/data/
 
 # Machine-local Claude Code settings (launch.json and skills/ ARE versioned)
 .claude/settings.local.json
