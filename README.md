@@ -10,18 +10,26 @@ level up at `artifacts/plans/ledgerline-design.md`.
 
 ## What exists today
 
-The CSV ingest path — `ingest → detect → parse → normalize` from spec §2.5. No database, no
-API, no UI yet.
+The CSV ingest path — `ingest → detect → parse → normalize` from spec §2.5 — plus an Angular
+shell for the UI. No database and no API yet, and the shell has no pages.
 
 ```
+apps/
+  ledgerline-ui/   Angular shell: header, §6 section rail. Wireframe only
 libs/ledgerline/
   domain/      types, Money (integer cents), ISO dates, the frozen collapse_v1 + dedupe key
   parsing/     ParserPort, header-signature detection, format profiles, the CSV parser
   normalize/   the seven-stage deterministic merchant chain (no LLM)
+libs/shared/
+  ui/          presentational Angular components — `@metrum/ui`, stubbed
+  api-client/  the generated OpenAPI client — `@metrum/api-client`, stubbed
 fixtures/statements/   synthetic CSVs in three disagreeing bank shapes
 profiles/              format profiles, keyed on a header-row hash
 tools/                 the parse-statement CLI
 ```
+
+Packages are scoped `@metrum`. `libs/shared/ui` is the one lib that does not build with plain
+`tsc` — see its README for why that is load-bearing rather than incidental.
 
 ## Getting started
 

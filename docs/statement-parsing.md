@@ -21,7 +21,8 @@ Built: the `ingest → detect → parse → normalize` half of §2.5's pipeline,
 | `ParserPort` seam (§2.5) | done, one implementation registered |
 | Running-balance reconciliation (§6.1), plus a sign-plausibility check for deposit accounts | done |
 | PDF ingest | **not built** — v0.4 |
-| LLM stage of §4.2, analyzers, API, UI, SQLite schema | **not built** — out of scope for this build |
+| UI (§6) | Angular shell scaffolded since — wireframe only, no pages. See `apps/ledgerline-ui/README.md`. |
+| LLM stage of §4.2, analyzers, API, SQLite schema | **not built** — out of scope for this build |
 
 **Nothing here writes anywhere.** Every entry point takes values and returns values, per §2.1's
 "libs compute; the app persists". There is no database in this repo yet.
