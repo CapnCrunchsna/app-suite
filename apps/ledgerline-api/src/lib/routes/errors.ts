@@ -6,27 +6,20 @@
  * which is the useful half of the same rule. Declaring them also puts the
  * failure modes in the emitted OpenAPI document, where the generated client can
  * see them.
+ *
+ * The shape itself now lives in `schemas.ts` as the shared `ApiError`, so the
+ * generated client has one error interface rather than one per status code per
+ * route, and `openapi.json` carries one definition rather than sixty copies.
  */
 
-export const errorSchema = {
-  type: 'object',
-  properties: {
-    error: { type: 'string', description: 'Stable machine-readable code' },
-    message: { type: 'string' },
-    rowIndexes: {
-      type: 'array',
-      items: { type: 'integer' },
-      description: 'Present on `zero_amount_rows`: the rows that parsed to $0.00.',
-    },
-  },
-} as const;
+import { ref } from './schemas.js';
 
 /** Spread into a route's `response` map. */
 export const errorResponses = {
-  400: errorSchema,
-  404: errorSchema,
-  409: errorSchema,
-  415: errorSchema,
-  422: errorSchema,
-  500: errorSchema,
+  400: ref('ApiError'),
+  404: ref('ApiError'),
+  409: ref('ApiError'),
+  415: ref('ApiError'),
+  422: ref('ApiError'),
+  500: ref('ApiError'),
 };

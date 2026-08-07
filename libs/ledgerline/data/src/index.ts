@@ -8,6 +8,7 @@ export * from './lib/import/commit.js';
 export * from './lib/repositories/accounts.js';
 export * from './lib/repositories/format-profiles.js';
 export * from './lib/repositories/imports.js';
+export * from './lib/repositories/jobs.js';
 export * from './lib/repositories/merchants.js';
 export * from './lib/repositories/settings.js';
 export * from './lib/repositories/tombstones.js';

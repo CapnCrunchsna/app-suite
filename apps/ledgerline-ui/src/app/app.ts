@@ -1,32 +1,30 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { Panel } from '@metrum/ui';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
-/** Spec §6's eight sections, in spec order. */
+/** Spec §6's eight sections, in spec order. `path` is null until the page exists —
+ *  a rail item that routes nowhere is a link to a blank screen. */
 const SECTIONS = [
-  'Import',
-  'Accounts',
-  'Transactions',
-  'Findings',
-  'Subscriptions',
-  'Insights',
-  'Ask',
-  'Settings',
+  { label: 'Import', path: null },
+  { label: 'Accounts', path: null },
+  { label: 'Transactions', path: 'transactions' },
+  { label: 'Findings', path: null },
+  { label: 'Subscriptions', path: null },
+  { label: 'Insights', path: null },
+  { label: 'Ask', path: null },
+  { label: 'Settings', path: null },
 ] as const;
 
-type Section = (typeof SECTIONS)[number];
-
 /**
- * The app shell — header, section rail, content area. Wireframe only: §6's
- * pages are components in `libs/ledgerline/feature-shell`, and the rail becomes
- * `routerLink`s when `appRoutes` has something to point at.
+ * The app shell — header, section rail, content area.
  *
  * §2.2 keeps this a shell. The app may reach `type:feature`, `type:ui`,
- * `type:api-client` and `type:domain`, and talks to the API over HTTP only.
+ * `type:api-client` and `type:domain`, and talks to the API over HTTP only. §6's
+ * pages are components in `libs/ledgerline/feature-shell`; this file knows their
+ * names and their routes, and nothing about what they render.
  */
 @Component({
   selector: 'll-root',
-  imports: [RouterOutlet, Panel],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,20 +32,11 @@ type Section = (typeof SECTIONS)[number];
 export class App {
   protected readonly sections = SECTIONS;
 
-  /** Stands in for the active route until there are routes. */
-  protected readonly active = signal<Section>('Findings');
-
   /**
    * §6.8's persistent header indicator. `none` is the default provider, and the
    * only one that keeps every descriptor on this machine; the header says so
-   * at all times rather than only in Settings. Reads `GET /api/settings` once
-   * `@metrum/api-client` is generated.
+   * at all times rather than only in Settings. Reads `GET /api/settings` once that
+   * endpoint exists.
    */
-  protected readonly llmProvider = signal<'none' | 'claude-cli' | 'ollama'>(
-    'none',
-  );
-
-  protected select(section: Section): void {
-    this.active.set(section);
-  }
+  protected readonly llmProvider = signal<'none' | 'claude-cli' | 'ollama'>('none');
 }

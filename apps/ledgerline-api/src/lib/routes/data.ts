@@ -55,13 +55,14 @@ function csvCell(value: unknown): string {
 export function registerDataRoutes(
   app: FastifyInstance,
   context: LedgerlineContext,
-  config: ApiConfig
+  config: ApiConfig,
 ): void {
   app.post(
     '/api/data/backup',
     {
       schema: {
         summary: 'Write a consistent copy of the database',
+        operationId: 'backupData',
         description:
           'Uses SQLite’s online backup rather than a file copy: under WAL the `.sqlite` file ' +
           'alone is not the whole database, so copying it while the API is running can miss the ' +
@@ -71,7 +72,10 @@ export function registerDataRoutes(
           ...errorResponses,
           200: {
             type: 'object',
-            properties: { path: { type: 'string' }, createdAt: { type: 'string' } },
+            properties: {
+              path: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
           },
         },
       },
@@ -89,7 +93,7 @@ export function registerDataRoutes(
       const path = join(config.backupDir, `ledgerline-${createdAt.replace(/[:.]/g, '-')}.sqlite`);
       await context.store.backup(path);
       return { path, createdAt };
-    }
+    },
   );
 
   app.post<{ Querystring: { format?: 'json' | 'csv' } }>(
@@ -97,13 +101,16 @@ export function registerDataRoutes(
     {
       schema: {
         summary: 'Export every transaction as JSON or CSV',
+        operationId: 'exportData',
         description:
           'Money is exported twice on purpose: `amountCents` is the value, and `amount` is the ' +
           'rendered form for a human reading the file. Only the first is ever read back.',
         tags: ['data'],
         querystring: {
           type: 'object',
-          properties: { format: { type: 'string', enum: ['json', 'csv'], default: 'json' } },
+          properties: {
+            format: { type: 'string', enum: ['json', 'csv'], default: 'json' },
+          },
         },
       },
     },
@@ -120,7 +127,10 @@ export function registerDataRoutes(
           offset,
         });
         for (const row of page.rows) {
-          rows.push({ ...row.transaction, amount: formatCents(row.transaction.amountCents) });
+          rows.push({
+            ...row.transaction,
+            amount: formatCents(row.transaction.amountCents),
+          });
         }
         if (offset + pageSize >= page.total) break;
       }
@@ -138,6 +148,6 @@ export function registerDataRoutes(
         accounts: context.store.accounts.list(),
         transactions: rows,
       };
-    }
+    },
   );
 }

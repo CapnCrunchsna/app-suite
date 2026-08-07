@@ -1,0 +1,107 @@
+/* Colours come from the host app's custom properties (apps/ledgerline-ui/src/styles.scss).
+ * This lib ships no palette, same rule as @metrum/ui. */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.filters__field--wide {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.filters__field--narrow {
+  min-width: 108px;
+  flex: 0 0 auto;
+}
+
+.filters__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.filters__input {
+  padding: 6px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.875rem;
+  min-width: 0;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent, #2dd4bf);
+    outline-offset: 1px;
+  }
+}
+
+.filters__input--invalid {
+  border-color: #e0796a;
+}
+
+.filters__toggles {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 6px;
+}
+
+.filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #7ea8a1);
+  cursor: help;
+  white-space: nowrap;
+
+  input {
+    accent-color: var(--accent, #2dd4bf);
+    cursor: pointer;
+  }
+}
+
+.filters__reset {
+  padding: 6px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text, #dcefeb);
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.filters__warning {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #e0796a;
+
+  code {
+    padding: 0 3px;
+  }
+}

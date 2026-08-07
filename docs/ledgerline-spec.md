@@ -11,13 +11,17 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 
 **Status: partially implemented.** The Nx workspace exists with its §2.2 tags and boundary
 lint; the CSV half of §2.5's `ingest → detect → parse → normalize` path is built in
-`libs/ledgerline/{domain,parsing,normalize}`; and as of 2026-08-06 the persistence and
+`libs/ledgerline/{domain,parsing,normalize}`; as of 2026-08-06 the persistence and
 import-commit half is built too — the whole of §3 (schema, indexes, constraints, idempotent
 re-import) in `libs/ledgerline/data`, and the import, account, transaction and data endpoints
-of §2.3 in `apps/ledgerline-api`. PDF ingest, the LLM stage of §4.2, the analyzers of §5, the
-remaining endpoints of §2.3 and the UI of §6 are **not** built. `docs/statement-parsing.md`
-records what has and has not been validated. §9 lists the amendments implementation made to
-this document.
+of §2.3 in `apps/ledgerline-api`; and as of 2026-08-07 the **first UI page** is built —
+§6.3's Transactions page in `libs/ledgerline/feature-shell`, with `POST /api/transactions/bulk`
+behind it and `libs/shared/api-client` genuinely generated from the emitted contract.
+
+PDF ingest, the LLM stage of §4.2, the analyzers of §5, §2.7's job **runner**, the remaining
+endpoints of §2.3 and the other seven pages of §6 are **not** built.
+`docs/statement-parsing.md` records what has and has not been validated. §9 and §9a list the
+amendments implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -164,9 +168,11 @@ serialization out of the box, and a clean Nx build target.
 | `GET` | `/api/accounts/:id/coverage` | Per-month statement coverage for the coverage bar (§6.2). |
 | `POST` | `/api/accounts/:id/merge` | Merge another account into this one; re-points transactions and imports. |
 | `GET` | `/api/transactions` | Filter, search, paginate. Includes `hasFinding` via `finding_evidence`. |
-| `PATCH` | `/api/transactions/:id` | Assign merchant/category, mark transfer, exclude. |
+| `GET` | `/api/transactions/:id` | One transaction, the imports that cover it, and the verbatim statement line each of those printed — §6.3's row expander. |
+| `PATCH` | `/api/transactions/:id` | Assign merchant/category, mark transfer, exclude. A merchant assignment writes a `user` alias and enqueues a re-normalize (§4.3). |
 | `POST` | `/api/transactions/bulk` | Apply one change to a filter-matched set. `?dryRun=true` returns the match count only — this is what backs the UI's "apply to all 47 matching". |
 | `GET` | `/api/merchants` · `PATCH /:id` · `POST /api/merchants/aliases` | Canonical merchants and alias management. |
+| `GET` | `/api/categories` | Spend categories, for §6.3's category filter and inline assignment. |
 | `GET` | `/api/merchants/review-queue` | Provisional merchants and sub-floor LLM proposals awaiting a decision. |
 | `POST` | `/api/transfers/propose` · `POST /api/transfers/:id/confirm` · `DELETE /api/transfers/:id` | Transfer link proposals and their resolution (§2.6). |
 | `POST` | `/api/analysis/run` | Enqueue an analysis run. Returns a job id (§2.7). |
@@ -1114,6 +1120,26 @@ built is worth nothing.
 Two thresholds introduced by the implementation are **uncalibrated** in the §7.6 sense and are
 marked as such in the code: `SIGNATURE_SUGGESTION_FLOOR` (0.5) and `FUZZY_SIMILARITY_FLOOR`
 (0.72).
+
+## 9a. Amendments from implementation — 2026-08-07 (§6.3)
+
+Building the Transactions page found four gaps between §2.3's API table and what §6.3's page
+actually needs. All four are additions rather than corrections — nothing above was wrong — but
+they are recorded for the same reason: §2.3's table is the contract, and an endpoint that exists
+in code and not in the table is an endpoint nobody reviewed.
+
+| § | Addition | Why |
+|---|---|---|
+| 2.3 | `GET /api/categories`. | §6.3 requires a category filter and an "assign category" inline edit, and §2.3's table has no way to read the `category` table — categories appear only inside `GET /api/insights/categories`, which is an aggregate. A dropdown cannot be populated from an aggregate. |
+| 2.3 | `GET /api/jobs/:id` and `GET /api/jobs` were built; `POST /api/jobs/renormalize` was **not**. | §6.3 ends "the UI shows its progress rather than blocking", which needs the read. The producer is not needed because on this page a re-normalize is never something the user asks for directly — it is a consequence of a merchant correction (§4.3), enqueued by the transaction route that made the correction. The job **runner** remains unbuilt, so a job stays `queued`; the UI says so rather than animating a progress bar that cannot move. |
+| 2.3 | `GET /api/transactions/:id` is now **in the table**, and returns `rawText` and a `sources` array alongside `coveringImports`. | The route was built on 2026-08-06 and §2.3's table never listed it, which is exactly the gap this section exists to close. On the payload: §6.3 asks for "the verbatim statement line and the imports that cover it", and `coveringImports` alone answers the second half. `sources` is §3.1's own argument for `transaction_source.raw_row_id` made good — "the same transaction is a different printed line in each statement that carries it" — so a row covered by two overlapping imports has two verbatim lines. |
+| 4.1 | A seed category set (`SEED_CATEGORIES` in `normalize`), alongside `SEED_MERCHANTS` and `SEED_ALIASES`. | §3.1's `category.kind` CHECK enumerates the four kinds the design reasons about, but nothing seeded a single row, so §6.3's "assign category" had nothing to assign. Deliberately small and **uncalibrated** in the §7.6 sense, with the same caveat `SEED_ALIASES` carries: it is a starting point, not a taxonomy. `overlap_group` is left unset on every row, because guessing which services overlap before §5.4 exists would be inventing the answer to that analyzer's hardest question. |
+
+One implementation detail is worth recording because it is load-bearing for the generated
+client. Every route now declares an explicit `operationId` and every shared response shape an
+explicit `$id`; `tools/generate-api-client.mjs` invents no names and errors on a route without
+one. Two tests in `apps/ledgerline-api/src/contract.spec.ts` fail the build if `openapi.json`
+drifts from the route schemas, or if the committed client drifts from `openapi.json`.
 
 ## 10. Open discrepancies — recorded, not resolved
 

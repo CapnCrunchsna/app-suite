@@ -73,10 +73,30 @@ const SELECT_MERCHANT = `SELECT id, canonical_name, display_name, website, defau
 const SELECT_ALIAS = `SELECT id, alias_key, merchant_id, match_type, confidence, source
                         FROM merchant_alias`;
 
+const SELECT_CATEGORY = `SELECT id, name, parent_id, kind, overlap_group FROM category`;
+
+interface CategoryRow {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  kind: CategoryRecord['kind'];
+  overlap_group: string | null;
+}
+
+function toCategory(row: CategoryRow): CategoryRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    parentId: row.parent_id,
+    kind: row.kind,
+    overlapGroup: row.overlap_group,
+  };
+}
+
 export class MerchantRepository {
   constructor(
     private readonly db: Database,
-    private readonly clock: Clock
+    private readonly clock: Clock,
   ) {}
 
   get(id: string): MerchantRecord | null {
@@ -117,7 +137,7 @@ export class MerchantRepository {
         `INSERT INTO merchant_canonical
            (id, canonical_name, display_name, website, default_category_id,
             is_known_subscription, is_transfer_kind, overlap_group, source, created_at, updated_at)
-         VALUES (?, ?, ?, NULL, NULL, 0, 0, NULL, 'rule', ?, ?)`
+         VALUES (?, ?, ?, NULL, NULL, 0, 0, NULL, 'rule', ?, ?)`,
       )
       .run(stamp.id, canonicalName, canonicalName, stamp.createdAt, stamp.updatedAt);
 
@@ -140,7 +160,7 @@ export class MerchantRepository {
            is_known_subscription = excluded.is_known_subscription,
            is_transfer_kind = excluded.is_transfer_kind,
            overlap_group = excluded.overlap_group,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at`,
       )
       .run(
         input.id,
@@ -152,7 +172,7 @@ export class MerchantRepository {
         asInt(input.isTransferKind ?? false),
         input.overlapGroup ?? null,
         now,
-        now
+        now,
       );
     return this.get(input.id) as MerchantRecord;
   }
@@ -178,7 +198,7 @@ export class MerchantRepository {
   upsertAlias(input: AliasInput): MerchantAliasRecord {
     const existing = this.db
       .prepare<[string, string], MerchantAliasRow>(
-        `${SELECT_ALIAS} WHERE alias_key = ? AND match_type = ?`
+        `${SELECT_ALIAS} WHERE alias_key = ? AND match_type = ?`,
       )
       .get(input.aliasKey, input.matchType);
 
@@ -190,19 +210,19 @@ export class MerchantRepository {
         .prepare(
           `UPDATE merchant_alias
               SET merchant_id = ?, confidence = ?, source = ?, updated_at = ?
-            WHERE id = ?`
+            WHERE id = ?`,
         )
         .run(
           input.merchantId,
           input.confidence ?? null,
           input.source,
           this.clock.now(),
-          existing.id
+          existing.id,
         );
       return toMerchantAlias(
         this.db
           .prepare<[string], MerchantAliasRow>(`${SELECT_ALIAS} WHERE id = ?`)
-          .get(existing.id) as MerchantAliasRow
+          .get(existing.id) as MerchantAliasRow,
       );
     }
 
@@ -211,7 +231,7 @@ export class MerchantRepository {
       .prepare(
         `INSERT INTO merchant_alias
            (id, alias_key, merchant_id, match_type, confidence, source, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         stamp.id,
@@ -221,13 +241,13 @@ export class MerchantRepository {
         input.confidence ?? null,
         input.source,
         stamp.createdAt,
-        stamp.updatedAt
+        stamp.updatedAt,
       );
 
     return toMerchantAlias(
       this.db
         .prepare<[string], MerchantAliasRow>(`${SELECT_ALIAS} WHERE id = ?`)
-        .get(stamp.id) as MerchantAliasRow
+        .get(stamp.id) as MerchantAliasRow,
     );
   }
 
@@ -242,7 +262,7 @@ export class MerchantRepository {
            parent_id = excluded.parent_id,
            kind = excluded.kind,
            overlap_group = excluded.overlap_group,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at`,
       )
       .run(
         input.id,
@@ -251,29 +271,20 @@ export class MerchantRepository {
         input.kind,
         input.overlapGroup ?? null,
         now,
-        now
+        now,
       );
   }
 
   listCategories(): CategoryRecord[] {
     return this.db
-      .prepare<
-        [],
-        {
-          id: string;
-          name: string;
-          parent_id: string | null;
-          kind: CategoryRecord['kind'];
-          overlap_group: string | null;
-        }
-      >(`SELECT id, name, parent_id, kind, overlap_group FROM category ORDER BY name`)
+      .prepare<[], CategoryRow>(`${SELECT_CATEGORY} ORDER BY name`)
       .all()
-      .map((row) => ({
-        id: row.id,
-        name: row.name,
-        parentId: row.parent_id,
-        kind: row.kind,
-        overlapGroup: row.overlap_group,
-      }));
+      .map(toCategory);
+  }
+
+  /** One category, for validating an assignment before it is written. */
+  getCategory(id: string): CategoryRecord | null {
+    const row = this.db.prepare<[string], CategoryRow>(`${SELECT_CATEGORY} WHERE id = ?`).get(id);
+    return row ? toCategory(row) : null;
   }
 }

@@ -56,7 +56,14 @@
     },
     "@angular/build:unit-test": {
       "cache": true,
+      "//dependsOn": "An executor-keyed default replaces the `test` one rather than merging with it, so `^build` has to be restated here. It is load-bearing, not tidiness: this executor hardcodes `externalPackages: true`, so a bare `@metrum/…` specifier resolves through node_modules to that lib's dist/ — and without `^build` the test runs against whatever dist/ was last left there. That is a test that passes or fails depending on task order.",
+      "dependsOn": ["^build"],
       "inputs": ["default", "^production"]
+    },
+    "@angular/build:ng-packagr": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
     }
   },
   "generators": {
@@ -65,6 +72,13 @@
       "linter": "eslint",
       "style": "scss",
       "unitTestRunner": "vitest-angular"
+    },
+    "@nx/angular:library": {
+      "linter": "eslint",
+      "unitTestRunner": "vitest-angular"
+    },
+    "@nx/angular:component": {
+      "style": "scss"
     }
   }
 }

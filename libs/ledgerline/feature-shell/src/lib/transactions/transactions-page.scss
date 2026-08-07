@@ -1,0 +1,403 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------- notice --- */
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: var(--radius, 10px);
+  background: var(--surface-2, #143034);
+  font-size: 0.85rem;
+}
+
+.notice__text {
+  flex: 1 1 auto;
+}
+
+.notice__job {
+  padding: 2px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.notice__dismiss {
+  border: 0;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text, #dcefeb);
+  }
+}
+
+/* ------------------------------------------------------------ toolbar --- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar__status {
+  color: var(--accent, #2dd4bf);
+}
+
+.toolbar__pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  select {
+    padding: 3px 6px;
+    border: 1px solid var(--border, #1f4a47);
+    border-radius: 5px;
+    background: var(--bg, #0a1517);
+    color: var(--text, #dcefeb);
+    font: inherit;
+    font-size: 0.8rem;
+  }
+}
+
+.toolbar__page {
+  padding: 5px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+/* ------------------------------------------------------------ failure --- */
+
+.failure {
+  padding: 16px;
+  border: 1px solid #e0796a;
+  border-radius: var(--radius, 10px);
+  background: rgb(224 121 106 / 8%);
+}
+
+.failure__text {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+}
+
+.failure__detail {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* -------------------------------------------------------------- table --- */
+
+.table {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* One grid template for the header and every row, declared once so a column
+ * cannot drift between them. */
+.table__head,
+.table__row {
+  display: grid;
+  grid-template-columns:
+    minmax(112px, 120px)
+    minmax(200px, 2.4fr)
+    minmax(130px, 1fr)
+    minmax(110px, 0.9fr)
+    minmax(100px, 110px)
+    minmax(210px, 0.1fr);
+  align-items: center;
+  gap: 0 10px;
+}
+
+.table__head {
+  padding: 0 12px;
+  height: 38px;
+  background: var(--surface-2, #143034);
+  border-bottom: 1px solid var(--border, #1f4a47);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.table__sort {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: var(--text, #dcefeb);
+  }
+}
+
+.table__viewport {
+  /* The scroll container. Everything below is either a rendered row or a spacer
+     standing in for rows that are not in the DOM.
+     *
+     * `max-height` rather than `height`, so three results are three rows tall
+     * instead of three rows and a screenful of nothing. The spacers make the inner
+     * content exactly `totalHeight`, so the container sizes to the page and stops
+     * at 60vh — and the window arithmetic still gets a real `clientHeight` either
+     * way: capped at 60vh it virtualizes, uncapped it renders the lot, which for a
+     * page that fits on screen is the right answer.
+     *
+     * `contain: content`, not `strict`: `strict` adds size containment, which makes
+     * the element lay out as if it were empty and defeats sizing to content. */
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  contain: content;
+}
+
+.table__spacer {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.table__row {
+  padding: 0 12px;
+  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  font-size: 0.83rem;
+  box-sizing: border-box;
+
+  &:hover {
+    background: rgb(20 48 52 / 55%);
+  }
+}
+
+.table__row--expanded {
+  background: var(--surface-2, #143034);
+}
+
+.table__row--pending {
+  /* Pending rows are stored and shown, and out of every total (§2.5). Dimmed so
+     that is visible without reading the chip. */
+  color: var(--text-dim, #7ea8a1);
+}
+
+.table__cell {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.table__cell--date {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table__cell--amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table__cell--desc {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.table__cell--flags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.table__expand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    color: var(--accent, #2dd4bf);
+  }
+}
+
+.table__chevron {
+  color: var(--text-dim, #7ea8a1);
+  font-size: 0.7rem;
+  width: 8px;
+}
+
+.table__raw {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+}
+
+.table__normalized {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.table__editable {
+  border: 0;
+  border-bottom: 1px dashed rgb(126 168 161 / 45%);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.83rem;
+  text-align: left;
+  padding: 2px 0;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    color: var(--accent, #2dd4bf);
+    border-bottom-color: var(--accent, #2dd4bf);
+  }
+}
+
+/* §4.1 step 7's provisional merchants are the ones worth correcting, so they are
+ * marked rather than blending in with a seeded name. */
+.table__provisional {
+  font-style: italic;
+
+  &::after {
+    content: ' ·';
+    color: var(--accent, #2dd4bf);
+  }
+}
+
+.table__select {
+  width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 4px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.table__credit {
+  color: var(--accent-2, #34d399);
+}
+
+.table__detail {
+  /* Not fixed-height: this is the one region the window arithmetic measures. */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 4px;
+}
+
+.table__empty {
+  margin: 0;
+  padding: 28px 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* --------------------------------------------------------------- chips --- */
+
+.chip {
+  padding: 1px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--text-dim, #7ea8a1);
+  background: transparent;
+}
+
+.chip--pending {
+  border-color: #b08b4f;
+  color: #d9b878;
+}
+
+.chip--finding {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.chip--toggle {
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text, #dcefeb);
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.chip--on {
+  background: var(--accent, #2dd4bf);
+  border-color: var(--accent, #2dd4bf);
+  color: #06201c;
+  font-weight: 600;
+}

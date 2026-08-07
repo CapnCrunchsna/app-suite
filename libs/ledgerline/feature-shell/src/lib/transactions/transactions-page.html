@@ -1,0 +1,243 @@
+<ui-panel heading="Transactions">
+  <ll-transaction-filters
+    [accounts]="accounts()"
+    [merchants]="merchants()"
+    [categories]="categories()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+  />
+</ui-panel>
+
+@if (notice()) {
+<div class="notice" role="status">
+  <span class="notice__text">{{ notice() }}</span>
+  @let job = renormalizeJob(); @if (job) {
+  <span class="notice__job" [attr.data-state]="job.state">
+    re-normalize {{ job.state }} @if (job.state === 'queued') { · the job runner is not built yet,
+    so it stays queued } @else { · {{ job.progress }}% }
+  </span>
+  }
+  <button type="button" class="notice__dismiss" (click)="dismissNotice()" aria-label="Dismiss">
+    ×
+  </button>
+</div>
+}
+
+<ui-panel>
+  <div class="toolbar">
+    <span class="toolbar__range">{{ rangeLabel() }}</span>
+
+    @if (page.isLoading()) {
+    <span class="toolbar__status">loading…</span>
+    } @else if (busy()) {
+    <span class="toolbar__status">saving…</span>
+    }
+
+    <span class="toolbar__spacer"></span>
+
+    <!-- `[selected]` on the option, not `[value]` on the select: binding the
+         select's value can run before `@for` has produced the options, which
+         leaves it `''` and sends `limit=0` — a 400 that blanks the table. -->
+    <label class="toolbar__pagesize">
+      Rows per page
+      <select (change)="setPageSize($any($event.target).value)">
+        @for (size of PAGE_SIZES; track size) {
+        <option [value]="size" [selected]="size === pageSize()">{{ size }}</option>
+        }
+      </select>
+    </label>
+
+    <button
+      type="button"
+      class="toolbar__page"
+      (click)="previousPage()"
+      [disabled]="!hasPrevious()"
+    >
+      ‹ Previous
+    </button>
+    <button type="button" class="toolbar__page" (click)="nextPage()" [disabled]="!hasNext()">
+      Next ›
+    </button>
+  </div>
+
+  @if (page.error()) {
+  <div class="failure" role="alert">
+    <p class="failure__text">
+      Could not reach the API. It binds <code>127.0.0.1:4310</code> and has to be running:
+      <code>npx nx serve ledgerline-api</code>
+    </p>
+    <p class="failure__detail">{{ $any(page.error()).message }}</p>
+    <button type="button" class="toolbar__page" (click)="reload()">Try again</button>
+  </div>
+  } @else {
+  <div class="table" role="table" aria-label="Transactions">
+    <div class="table__head" role="row">
+      <button
+        type="button"
+        class="table__cell table__cell--date table__sort"
+        role="columnheader"
+        (click)="toggleDateSort()"
+        title="Ordered by effective date — the statement's posted date is display-only and never orders anything."
+      >
+        Date @if (sort() === 'date_desc') { ↓ } @else if (sort() === 'date_asc') { ↑ }
+      </button>
+      <span class="table__cell table__cell--desc" role="columnheader">Descriptor</span>
+      <span class="table__cell table__cell--merchant" role="columnheader">Merchant</span>
+      <span class="table__cell table__cell--category" role="columnheader">Category</span>
+      <button
+        type="button"
+        class="table__cell table__cell--amount table__sort"
+        role="columnheader"
+        (click)="toggleAmountSort()"
+      >
+        Amount @if (sort() === 'amount_desc') { ↓ } @else if (sort() === 'amount_asc') { ↑ }
+      </button>
+      <span class="table__cell table__cell--flags" role="columnheader">Flags</span>
+    </div>
+
+    <!-- The scrolling viewport. Only the windowed slice is in the DOM; the two
+           spacers stand in for the rest so the scrollbar is the right size. -->
+    <div
+      class="table__viewport"
+      #viewport
+      (scroll)="onScroll($event)"
+      [style.--row-height.px]="ROW_HEIGHT"
+    >
+      @if (rows().length === 0 && !page.isLoading()) {
+      <p class="table__empty">
+        Nothing matches. If the database is empty, import a statement first — the API's
+        <code>POST /api/imports</code> path, or the Import page once it exists.
+      </p>
+      } @else {
+      <div class="table__spacer" [style.height.px]="window().paddingTop"></div>
+
+      @for (entry of visibleRows(); track entry.row.transaction.id) { @let t =
+      entry.row.transaction;
+      <div
+        class="table__row"
+        role="row"
+        [class.table__row--expanded]="expandedId() === t.id"
+        [class.table__row--pending]="t.isPending"
+        [style.height.px]="ROW_HEIGHT"
+      >
+        <button
+          type="button"
+          class="table__cell table__cell--date table__expand"
+          role="cell"
+          (click)="toggleExpanded(t.id)"
+          [attr.aria-expanded]="expandedId() === t.id"
+          [title]="'Show the verbatim statement line and covering imports'"
+        >
+          <span class="table__chevron">{{ expandedId() === t.id ? '▾' : '▸' }}</span>
+          {{ t.effectiveDate }}
+        </button>
+
+        <span class="table__cell table__cell--desc" role="cell" [title]="t.descriptionRaw">
+          <span class="table__raw">{{ t.descriptionRaw }}</span>
+          <span class="table__normalized">{{ t.descriptionNormalized }}</span>
+        </span>
+
+        <button
+          type="button"
+          class="table__cell table__cell--merchant table__editable"
+          role="cell"
+          (click)="startMerchantEdit(t.id)"
+          title="Assign a merchant. Every merchant edit offers to apply to all matching descriptors."
+        >
+          <span [class.table__provisional]="isProvisional(t.merchantId)">
+            {{ merchantLabel(t.merchantId) }}
+          </span>
+        </button>
+
+        @if (isEditing(t.id, 'category')) {
+        <span class="table__cell table__cell--category" role="cell">
+          <select
+            class="table__select"
+            (change)="assignCategory(t.id, $any($event.target).value)"
+            (blur)="cancelEdit()"
+          >
+            <option value="">— pick —</option>
+            @for (category of categories(); track category.id) {
+            <option [value]="category.id" [selected]="category.id === t.categoryId">
+              {{ category.name }}
+            </option>
+            }
+          </select>
+        </span>
+        } @else {
+        <button
+          type="button"
+          class="table__cell table__cell--category table__editable"
+          role="cell"
+          (click)="startEdit(t.id, 'category')"
+          title="Assign a category"
+        >
+          {{ categoryLabel(t.categoryId) }}
+        </button>
+        }
+
+        <span
+          class="table__cell table__cell--amount"
+          role="cell"
+          [class.table__credit]="t.amountCents > 0"
+        >
+          {{ formatCents(t.amountCents) }}
+        </span>
+
+        <span class="table__cell table__cell--flags" role="cell">
+          @if (t.isPending) {
+          <span class="chip chip--pending" title="Stored and shown; out of every total.">
+            pending
+          </span>
+          } @if (entry.row.hasFinding) {
+          <span class="chip chip--finding" title="Cited as evidence by a finding."> finding </span>
+          }
+          <button
+            type="button"
+            class="chip chip--toggle"
+            [class.chip--on]="t.isInternalTransfer"
+            (click)="toggleInternalTransfer(entry.row)"
+            [disabled]="busy()"
+            title="Mark as money moving between your own accounts, not spending."
+          >
+            transfer
+          </button>
+          <button
+            type="button"
+            class="chip chip--toggle"
+            [class.chip--on]="t.isExcluded"
+            (click)="toggleExcluded(entry.row)"
+            [disabled]="busy()"
+            title="Exclude from analysis."
+          >
+            excluded
+          </button>
+        </span>
+      </div>
+
+      <!-- One variable-height region per row, which is what keeps the
+                 window arithmetic to a single `expandedHeight`. -->
+      @if (expandedId() === t.id) {
+      <div class="table__detail" #detailPanel>
+        @if (isEditing(t.id, 'merchant')) {
+        <ll-merchant-assign
+          [transaction]="t"
+          [merchants]="merchants()"
+          (assigned)="assignMerchant(entry.row, $event)"
+          (cancelled)="cancelEdit()"
+        />
+        }
+        <ll-transaction-detail
+          [detail]="detail()"
+          [merchants]="merchantsById()"
+          [categories]="categoriesById()"
+        />
+      </div>
+      } }
+
+      <div class="table__spacer" [style.height.px]="window().paddingBottom"></div>
+      }
+    </div>
+  </div>
+  }
+</ui-panel>

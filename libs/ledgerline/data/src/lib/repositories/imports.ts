@@ -78,6 +78,16 @@ export interface ImportPatch {
   readonly importedAt?: string | null;
 }
 
+/** One statement's printed line for a transaction, and which statement it was.
+ *  §6.3's row expander shows one of these per covering import. */
+export interface TransactionSourceLine {
+  readonly importId: string;
+  readonly sourceFilename: string;
+  /** Null when the covering import's raw row is gone — a re-pointed source after
+   *  §3.3's deletion can leave the pair without a line of its own. */
+  readonly rawText: string | null;
+}
+
 export interface DeleteImportResult {
   readonly deletedTransactionIds: readonly string[];
   readonly retainedTransactionIds: readonly string[];
@@ -93,7 +103,7 @@ export class ImportRepository {
   constructor(
     private readonly db: Database,
     private readonly clock: Clock,
-    private readonly tombstones: TombstoneRepository
+    private readonly tombstones: TombstoneRepository,
   ) {}
 
   /**
@@ -116,7 +126,7 @@ export class ImportRepository {
               period_start, period_end, rows_parsed, rows_inserted, rows_duplicate, status,
               parser, parser_version, error_detail, diagnostics_json, imported_at,
               created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, NULL, ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, NULL, ?, ?)`,
         )
         .run(
           stamp.id,
@@ -134,7 +144,7 @@ export class ImportRepository {
           input.errorDetail ?? null,
           input.diagnosticsJson ?? null,
           stamp.createdAt,
-          stamp.updatedAt
+          stamp.updatedAt,
         );
 
       this.insertRawRows(stamp.id, input.rawRows ?? []);
@@ -146,7 +156,7 @@ export class ImportRepository {
   private insertRawRows(importId: string, rows: readonly StagedRawRow[]): void {
     const insert = this.db.prepare(
       `INSERT INTO raw_row (id, import_id, row_index, raw_text, parsed_json, parse_status, parse_source, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     for (const row of rows) {
       const stamp = newStamp(this.clock);
@@ -159,7 +169,7 @@ export class ImportRepository {
         row.parseStatus,
         row.parseSource,
         stamp.createdAt,
-        stamp.updatedAt
+        stamp.updatedAt,
       );
     }
   }
@@ -169,7 +179,11 @@ export class ImportRepository {
    * because the rows it produced are already in `transaction` and there is no
    * meaningful way to reconcile a different parse against them.
    */
-  replaceRawRows(importId: string, rows: readonly StagedRawRow[], patch: ImportPatch): StatementImportRecord {
+  replaceRawRows(
+    importId: string,
+    rows: readonly StagedRawRow[],
+    patch: ImportPatch,
+  ): StatementImportRecord {
     const current = this.getOrThrow(importId);
     if (current.status === 'committed') {
       throw new Error(`import ${importId} is committed; re-parse is refused (spec 6.1)`);
@@ -184,7 +198,10 @@ export class ImportRepository {
       this.db.prepare('DELETE FROM raw_row WHERE import_id = ?').run(importId);
       this.tombstones.recordMany('raw_row', doomed);
       this.insertRawRows(importId, rows);
-      this.applyPatch(importId, { ...patch, rowsParsed: patch.rowsParsed ?? rows.length });
+      this.applyPatch(importId, {
+        ...patch,
+        rowsParsed: patch.rowsParsed ?? rows.length,
+      });
     })();
 
     return this.getOrThrow(importId);
@@ -218,7 +235,9 @@ export class ImportRepository {
   /** The original bytes, for re-parse under a different column mapping (§6.1). */
   readFileBytes(id: string): Uint8Array {
     const row = this.db
-      .prepare<[string], { file_bytes: Buffer }>('SELECT file_bytes FROM statement_import WHERE id = ?')
+      .prepare<[string], { file_bytes: Buffer }>(
+        'SELECT file_bytes FROM statement_import WHERE id = ?',
+      )
       .get(id);
     if (!row) throw new Error(`no import ${id}`);
     return new Uint8Array(row.file_bytes);
@@ -228,7 +247,7 @@ export class ImportRepository {
     return this.db
       .prepare<[string], RawRowRow>(
         `SELECT id, import_id, row_index, raw_text, parsed_json, parse_status, parse_source
-           FROM raw_row WHERE import_id = ? ORDER BY row_index`
+           FROM raw_row WHERE import_id = ? ORDER BY row_index`,
       )
       .all(importId)
       .map(toRawRow);
@@ -249,7 +268,7 @@ export class ImportRepository {
             SET account_id = ?, format_profile_id = ?, status = ?, period_start = ?, period_end = ?,
                 rows_parsed = ?, rows_inserted = ?, rows_duplicate = ?, parser = ?, parser_version = ?,
                 error_detail = ?, diagnostics_json = ?, imported_at = ?, updated_at = ?
-          WHERE id = ?`
+          WHERE id = ?`,
       )
       .run(
         pick(patch.accountId, current.accountId),
@@ -266,7 +285,7 @@ export class ImportRepository {
         pick(patch.diagnosticsJson, current.diagnosticsJson),
         pick(patch.importedAt, current.importedAt),
         this.clock.now(),
-        id
+        id,
       );
   }
 
@@ -287,7 +306,7 @@ export class ImportRepository {
          VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (transaction_id, import_id) DO UPDATE SET
            raw_row_id = excluded.raw_row_id,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at`,
       )
       .run(stamp.id, transactionId, importId, rawRowId, stamp.createdAt, stamp.updatedAt);
   }
@@ -307,7 +326,7 @@ export class ImportRepository {
       .prepare(
         `UPDATE OR REPLACE transaction_source
             SET transaction_id = ?, updated_at = ?
-          WHERE transaction_id = ?`
+          WHERE transaction_id = ?`,
       )
       .run(toTransactionId, now, fromTransactionId);
   }
@@ -316,10 +335,50 @@ export class ImportRepository {
     return (
       this.db
         .prepare<[string], { n: number }>(
-          'SELECT COUNT(*) AS n FROM transaction_source WHERE transaction_id = ?'
+          'SELECT COUNT(*) AS n FROM transaction_source WHERE transaction_id = ?',
         )
         .get(transactionId)?.n ?? 0
     );
+  }
+
+  /** One raw row by id — the verbatim statement line behind a transaction
+   *  (§6.3's row expander, via `transaction.raw_row_id`). */
+  getRawRow(id: string): RawRowRecord | null {
+    const row = this.db
+      .prepare<[string], RawRowRow>(
+        `SELECT id, import_id, row_index, raw_text, parsed_json, parse_status, parse_source
+           FROM raw_row WHERE id = ?`,
+      )
+      .get(id);
+    return row ? toRawRow(row) : null;
+  }
+
+  /**
+   * The verbatim line this transaction has *in each statement that carries it*.
+   *
+   * §3.1's `transaction_source.raw_row_id` exists for exactly this: "the same
+   * transaction is a different printed line in each statement that carries it",
+   * so a row covered by two overlapping imports has two verbatim lines and the
+   * expander can show which statement each came from.
+   */
+  listSourcesForTransaction(transactionId: string): TransactionSourceLine[] {
+    return this.db
+      .prepare<[string], { import_id: string; source_filename: string; raw_text: string | null }>(
+        `SELECT ts.import_id AS import_id,
+                si.source_filename AS source_filename,
+                rr.raw_text AS raw_text
+           FROM transaction_source AS ts
+           JOIN statement_import AS si ON si.id = ts.import_id
+           LEFT JOIN raw_row AS rr ON rr.id = ts.raw_row_id
+          WHERE ts.transaction_id = ?
+          ORDER BY si.created_at`,
+      )
+      .all(transactionId)
+      .map((row) => ({
+        importId: row.import_id,
+        sourceFilename: row.source_filename,
+        rawText: row.raw_text,
+      }));
   }
 
   /** Which imports cover a transaction — §6.3's row expander. */
@@ -327,7 +386,7 @@ export class ImportRepository {
     return this.db
       .prepare<[string], StatementImportRow>(
         `${SELECT} WHERE id IN (SELECT import_id FROM transaction_source WHERE transaction_id = ?)
-          ORDER BY created_at`
+          ORDER BY created_at`,
       )
       .all(transactionId)
       .map(toStatementImport);
@@ -348,7 +407,7 @@ export class ImportRepository {
     return this.db.transaction((): DeleteImportResult => {
       const covered = this.db
         .prepare<[string], { transaction_id: string }>(
-          'SELECT transaction_id FROM transaction_source WHERE import_id = ?'
+          'SELECT transaction_id FROM transaction_source WHERE import_id = ?',
         )
         .all(id)
         .map((row) => row.transaction_id);
@@ -361,10 +420,10 @@ export class ImportRepository {
               WHERE ts.import_id = ?
                 AND NOT EXISTS (SELECT 1 FROM transaction_source AS other
                                  WHERE other.transaction_id = ts.transaction_id
-                                   AND other.import_id <> ?)`
+                                   AND other.import_id <> ?)`,
           )
           .all(id, id)
-          .map((row) => row.transaction_id)
+          .map((row) => row.transaction_id),
       );
 
       const retained = covered.filter((transactionId) => !lastSource.has(transactionId));
@@ -381,7 +440,7 @@ export class ImportRepository {
                                LIMIT 1),
                 updated_at = ?
           WHERE id = ?
-            AND raw_row_id IN (SELECT id FROM raw_row WHERE import_id = ?)`
+            AND raw_row_id IN (SELECT id FROM raw_row WHERE import_id = ?)`,
       );
       const now = this.clock.now();
       for (const transactionId of retained) {
@@ -390,7 +449,9 @@ export class ImportRepository {
 
       this.db.prepare('DELETE FROM transaction_source WHERE import_id = ?').run(id);
 
-      const deleteEvidence = this.db.prepare('DELETE FROM finding_evidence WHERE transaction_id = ?');
+      const deleteEvidence = this.db.prepare(
+        'DELETE FROM finding_evidence WHERE transaction_id = ?',
+      );
       const deleteTransaction = this.db.prepare('DELETE FROM "transaction" WHERE id = ?');
       for (const transactionId of lastSource) {
         deleteEvidence.run(transactionId);
@@ -409,7 +470,10 @@ export class ImportRepository {
       this.tombstones.recordMany('raw_row', doomedRawRows);
       this.tombstones.record('statement_import', record.id);
 
-      return { deletedTransactionIds: [...lastSource], retainedTransactionIds: retained };
+      return {
+        deletedTransactionIds: [...lastSource],
+        retainedTransactionIds: retained,
+      };
     })();
   }
 }

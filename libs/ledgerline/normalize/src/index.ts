@@ -4,3 +4,4 @@ export * from './lib/alias.js';
 export * from './lib/p2p.js';
 export * from './lib/chain.js';
 export * from './lib/seed-aliases.js';
+export * from './lib/seed-categories.js';

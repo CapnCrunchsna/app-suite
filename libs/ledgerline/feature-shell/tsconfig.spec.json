@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "//": "Compiles the lib's own sources rather than referencing tsconfig.lib.json, matching apps/ledgerline-ui. A self-reference makes the spec project depend on declaration outputs that `--emitDeclarationOnly` typechecking has not produced yet (TS6305).",
+  "compilerOptions": {
+    "outDir": "./out-tsc/vitest",
+    "tsBuildInfoFile": "out-tsc/vitest/tsconfig.spec.tsbuildinfo",
+    "types": ["vitest/globals"],
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "references": [
+    {
+      "path": "../../shared/ui/tsconfig.lib.json"
+    },
+    {
+      "path": "../domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../../shared/api-client/tsconfig.lib.json"
+    }
+  ]
+}

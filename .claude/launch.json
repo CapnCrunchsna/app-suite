@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "ledgerline-api",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "serve", "ledgerline-api"],
+      "port": 4310
+    },
+    {
       "name": "ledgerline-ui",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "serve", "ledgerline-ui"],

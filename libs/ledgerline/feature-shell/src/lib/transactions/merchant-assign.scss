@@ -1,0 +1,110 @@
+.assign {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface-2, #143034);
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: var(--radius, 10px);
+}
+
+.assign__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.assign__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.assign__select {
+  flex: 1 1 220px;
+  min-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.assign__descriptor {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+
+  code {
+    color: var(--text, #dcefeb);
+    font-size: 0.75rem;
+  }
+}
+
+.assign__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.assign__apply {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+/* The bulk action is the one §6.3 calls the point of the page, so it is the one
+ * that looks like the primary button. */
+.assign__apply--bulk {
+  border-color: var(--accent, #2dd4bf);
+  background: var(--accent, #2dd4bf);
+  color: #06201c;
+  font-weight: 600;
+}
+
+.assign__cancel {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text, #dcefeb);
+  }
+}
+
+.assign__note {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.assign__error {
+  font-size: 0.78rem;
+  color: #e0796a;
+}

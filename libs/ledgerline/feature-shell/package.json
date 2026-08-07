@@ -1,0 +1,24 @@
+{
+  "name": "@metrum/ledgerline-feature-shell",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "//": "Entry points are ng-packagr's Angular Package Format output, derived from the package name — same arrangement and same reasoning as @metrum/ui. See libs/shared/ui/README.md.",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/types/metrum-ledgerline-feature-shell.d.ts",
+      "default": "./dist/fesm2022/metrum-ledgerline-feature-shell.mjs"
+    }
+  },
+  "//peerDependencies": "Angular is a peer for the reason in libs/shared/ui/README.md — a second copy in its own node_modules breaks DI and instanceof. The three @metrum packages are peers because this lib does not bundle them: ng-packagr leaves them external, the consuming app has them in its own graph, and npm workspaces symlinks all three at the root so one copy is resolved either way.",
+  "peerDependencies": {
+    "@angular/core": "~22.0.4",
+    "@angular/forms": "~22.0.4",
+    "@angular/router": "~22.0.4",
+    "@metrum/api-client": "0.0.1",
+    "@metrum/ledgerline-domain": "0.0.1",
+    "@metrum/ui": "0.0.1"
+  },
+  "sideEffects": false
+}

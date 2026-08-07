@@ -51,11 +51,7 @@ export interface TransactionPatch {
   readonly refundPairId?: string | null;
 }
 
-export type TransactionSort =
-  | 'date_desc'
-  | 'date_asc'
-  | 'amount_desc'
-  | 'amount_asc';
+export type TransactionSort = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
 
 export interface TransactionQuery {
   readonly accountIds?: readonly string[];
@@ -64,6 +60,17 @@ export interface TransactionQuery {
   readonly maxAmountCents?: number;
   readonly merchantIds?: readonly string[];
   readonly categoryIds?: readonly string[];
+  /**
+   * Exact match on `description_normalized` — §6.3's "apply to all 47 matching
+   * descriptors".
+   *
+   * Exact and not `LIKE`, unlike `text` below. The dry-run count and the apply
+   * that follows it have to select the same set, and a substring filter makes
+   * that promise depend on nothing having been typed into the search box in
+   * between. A user who is told "47 matching" and gets 51 updated has been lied
+   * to about a permanent, precedence-topping correction (§4.3).
+   */
+  readonly descriptorsNormalized?: readonly string[];
   readonly isPending?: boolean;
   readonly hasFinding?: boolean;
   /** §6.3: the internal-transfer toggle is **off by default** — a credit-card
@@ -89,6 +96,19 @@ export interface TransactionPage {
   readonly total: number;
   readonly limit: number;
   readonly offset: number;
+}
+
+/**
+ * What one bulk correction changed (§2.3's `POST /api/transactions/bulk`).
+ *
+ * `transactionIds` is returned rather than only a count because §4.3's
+ * re-normalize job is incremental — "only transactions whose current
+ * `description_normalized` falls in the affected alias key-space are
+ * re-resolved" — and that job's payload is exactly this set.
+ */
+export interface BulkApplyResult {
+  readonly matched: number;
+  readonly transactionIds: readonly string[];
 }
 
 export interface MerchantDebits {
@@ -147,7 +167,7 @@ export class TransactionRepository {
   constructor(
     private readonly db: Database,
     private readonly clock: Clock,
-    private readonly tombstones: TombstoneRepository
+    private readonly tombstones: TombstoneRepository,
   ) {}
 
   insert(input: NewTransaction): TransactionRecord {
@@ -160,7 +180,7 @@ export class TransactionRepository {
             merchant_id, category_id, category_source, is_pending, is_internal_transfer,
             transfer_pair_id, refund_pair_id, is_excluded, allows_zero_amount,
             dedupe_key, dedupe_key_version, occurrence_index, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, 0, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, 0, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         stamp.id,
@@ -183,7 +203,7 @@ export class TransactionRepository {
         input.dedupeKeyVersion,
         input.occurrenceIndex,
         stamp.createdAt,
-        stamp.updatedAt
+        stamp.updatedAt,
       );
     return this.getOrThrow(stamp.id);
   }
@@ -208,7 +228,7 @@ export class TransactionRepository {
         `UPDATE "transaction"
             SET merchant_id = ?, category_id = ?, category_source = ?, is_internal_transfer = ?,
                 is_excluded = ?, transfer_pair_id = ?, refund_pair_id = ?, updated_at = ?
-          WHERE id = ?`
+          WHERE id = ?`,
       )
       .run(
         pick(patch.merchantId, current.merchantId),
@@ -219,7 +239,7 @@ export class TransactionRepository {
         pick(patch.transferPairId, current.transferPairId),
         pick(patch.refundPairId, current.refundPairId),
         this.clock.now(),
-        id
+        id,
       );
     return this.getOrThrow(id);
   }
@@ -253,7 +273,7 @@ export class TransactionRepository {
     if (dedupeKeys.length === 0) return counts;
 
     const statement = this.db.prepare<[string, string], { n: number }>(
-      `SELECT COUNT(*) AS n FROM "transaction" WHERE account_id = ? AND dedupe_key = ?`
+      `SELECT COUNT(*) AS n FROM "transaction" WHERE account_id = ? AND dedupe_key = ?`,
     );
     for (const key of new Set(dedupeKeys)) {
       counts.set(key, statement.get(accountId, key)?.n ?? 0);
@@ -271,7 +291,7 @@ export class TransactionRepository {
   nextOccurrenceIndex(accountId: string, dedupeKey: string): number {
     const row = this.db
       .prepare<[string, string], { highest: number | null }>(
-        'SELECT MAX(occurrence_index) AS highest FROM "transaction" WHERE account_id = ? AND dedupe_key = ?'
+        'SELECT MAX(occurrence_index) AS highest FROM "transaction" WHERE account_id = ? AND dedupe_key = ?',
       )
       .get(accountId, dedupeKey);
     return (row?.highest ?? -1) + 1;
@@ -280,7 +300,7 @@ export class TransactionRepository {
   listByDedupeKey(accountId: string, dedupeKey: string): TransactionRecord[] {
     return this.db
       .prepare<[string, string], TransactionRow>(
-        `${SELECT} WHERE account_id = ? AND dedupe_key = ? ORDER BY occurrence_index`
+        `${SELECT} WHERE account_id = ? AND dedupe_key = ? ORDER BY occurrence_index`,
       )
       .all(accountId, dedupeKey)
       .map(toTransaction);
@@ -294,7 +314,7 @@ export class TransactionRepository {
   distinctDedupeKeyVersions(): string[] {
     return this.db
       .prepare<[], { dedupe_key_version: string }>(
-        'SELECT DISTINCT dedupe_key_version FROM "transaction" ORDER BY dedupe_key_version'
+        'SELECT DISTINCT dedupe_key_version FROM "transaction" ORDER BY dedupe_key_version',
       )
       .all()
       .map((row) => row.dedupe_key_version);
@@ -338,7 +358,7 @@ export class TransactionRepository {
         window.amountCents,
         window.amountCents,
         window.amountCents,
-        ...excluded
+        ...excluded,
       )
       .map(toTransaction);
   }
@@ -377,7 +397,7 @@ export class TransactionRepository {
             AND effective_date <= ?
             AND id <> ?
           ORDER BY effective_date ${isDebit ? 'ASC' : 'DESC'}, id
-          LIMIT 1`
+          LIMIT 1`,
       )
       .get(
         input.accountId,
@@ -385,7 +405,7 @@ export class TransactionRepository {
         -input.amountCents,
         from,
         to,
-        input.excludeTransactionId
+        input.excludeTransactionId,
       );
 
     return row ? toTransaction(row) : null;
@@ -395,7 +415,7 @@ export class TransactionRepository {
   linkRefundPair(debitId: string, creditId: string, pairId: string): void {
     const now = this.clock.now();
     const statement = this.db.prepare(
-      'UPDATE "transaction" SET refund_pair_id = ?, updated_at = ? WHERE id = ?'
+      'UPDATE "transaction" SET refund_pair_id = ?, updated_at = ? WHERE id = ?',
     );
     statement.run(pairId, now, debitId);
     statement.run(pairId, now, creditId);
@@ -403,7 +423,19 @@ export class TransactionRepository {
 
   // ------------------------------------------------------------ read paths ---
 
-  search(query: TransactionQuery): TransactionPage {
+  /**
+   * §6.3's filter set as one SQL predicate, shared by every read that takes a
+   * `TransactionQuery`.
+   *
+   * Built once rather than per method on purpose. `search` shows the user a
+   * count, `countMatching` is what the bulk dry-run promises, and `applyBulk` is
+   * what actually writes — three callers that must agree exactly. Duplicating
+   * the clause is how "apply to all 47 matching" comes to update 51 rows.
+   */
+  private buildFilter(query: TransactionQuery): {
+    clause: string;
+    params: unknown[];
+  } {
     const where: string[] = [];
     const params: unknown[] = [];
 
@@ -431,6 +463,12 @@ export class TransactionRepository {
       where.push(`t.category_id IN (${query.categoryIds.map(() => '?').join(', ')})`);
       params.push(...query.categoryIds);
     }
+    if (query.descriptorsNormalized?.length) {
+      where.push(
+        `t.description_normalized IN (${query.descriptorsNormalized.map(() => '?').join(', ')})`,
+      );
+      params.push(...query.descriptorsNormalized);
+    }
     if (query.isPending !== undefined) {
       where.push('t.is_pending = ?');
       params.push(asInt(query.isPending));
@@ -443,25 +481,30 @@ export class TransactionRepository {
     }
     if (query.text) {
       where.push(
-        `(t.description_raw LIKE ? ESCAPE '\\' OR t.description_normalized LIKE ? ESCAPE '\\')`
+        `(t.description_raw LIKE ? ESCAPE '\\' OR t.description_normalized LIKE ? ESCAPE '\\')`,
       );
       params.push(likeTerm(query.text), likeTerm(query.text));
     }
     if (query.hasFinding !== undefined) {
       where.push(
-        `${query.hasFinding ? 'EXISTS' : 'NOT EXISTS'} (SELECT 1 FROM finding_evidence AS fe WHERE fe.transaction_id = t.id)`
+        `${query.hasFinding ? 'EXISTS' : 'NOT EXISTS'} (SELECT 1 FROM finding_evidence AS fe WHERE fe.transaction_id = t.id)`,
       );
     }
 
-    const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    return {
+      clause: where.length > 0 ? `WHERE ${where.join(' AND ')}` : '',
+      params,
+    };
+  }
+
+  search(query: TransactionQuery): TransactionPage {
+    const { clause, params } = this.buildFilter(query);
     const limit = Math.min(Math.max(query.limit ?? 100, 1), 1000);
     const offset = Math.max(query.offset ?? 0, 0);
 
     const total =
       this.db
-        .prepare<unknown[], { n: number }>(
-          `SELECT COUNT(*) AS n FROM "transaction" AS t ${clause}`
-        )
+        .prepare<unknown[], { n: number }>(`SELECT COUNT(*) AS n FROM "transaction" AS t ${clause}`)
         .get(...params)?.n ?? 0;
 
     const rows = this.db
@@ -473,26 +516,139 @@ export class TransactionRepository {
            FROM "transaction" AS t
            ${clause}
           ORDER BY ${SORT_SQL[query.sort ?? 'date_desc']}
-          LIMIT ? OFFSET ?`
+          LIMIT ? OFFSET ?`,
       )
       .all(...params, limit, offset)
-      .map((row) => ({ transaction: toTransaction(row), hasFinding: row.has_finding === 1 }));
+      .map((row) => ({
+        transaction: toTransaction(row),
+        hasFinding: row.has_finding === 1,
+      }));
 
     return { rows, total, limit, offset };
+  }
+
+  /**
+   * How many rows a filter matches, without hydrating one.
+   *
+   * §2.3: "`?dryRun=true` returns the match count only — this is what backs the
+   * UI's 'apply to all 47 matching'." The count is the whole answer, so this is
+   * `COUNT(*)` and not `search().total`: the paged variant also selects and maps
+   * a page of rows nobody asked for.
+   */
+  countMatching(query: TransactionQuery): number {
+    const { clause, params } = this.buildFilter(query);
+    return (
+      this.db
+        .prepare<unknown[], { n: number }>(`SELECT COUNT(*) AS n FROM "transaction" AS t ${clause}`)
+        .get(...params)?.n ?? 0
+    );
+  }
+
+  /**
+   * The distinct `description_normalized` values a filter covers.
+   *
+   * §4.3's alias rows are keyed on the normalized descriptor, not on a
+   * transaction — "fixing `SPOTIFYUSA` once retroactively merges four years of
+   * charges into one series." A bulk merchant correction over a filter that
+   * happens to span two spellings therefore has to write two aliases, and this is
+   * how the caller learns there were two.
+   */
+  listMatchingDescriptors(query: TransactionQuery): string[] {
+    const { clause, params } = this.buildFilter(query);
+    return this.db
+      .prepare<unknown[], { description_normalized: string }>(
+        `SELECT DISTINCT t.description_normalized
+           FROM "transaction" AS t ${clause}
+          ORDER BY t.description_normalized`,
+      )
+      .all(...params)
+      .map((row) => row.description_normalized);
+  }
+
+  /**
+   * Apply one change to every row a filter matches (§2.3, §6.3).
+   *
+   * Two properties this owes its caller. The ids are collected **inside** the
+   * same transaction as the writes, so the set that gets updated is the set that
+   * gets reported — no second evaluation of the filter, and nothing observable
+   * between the two halves. And only the columns the patch actually names are
+   * written: `update` above reads-then-writes every column, which for a bulk
+   * merchant assignment would rewrite `is_excluded` and `category_source` on
+   * hundreds of rows to the values they already had, and would clobber a
+   * concurrent edit on any column the caller never mentioned.
+   */
+  applyBulk(query: TransactionQuery, patch: TransactionPatch): BulkApplyResult {
+    const assignments: string[] = [];
+    const values: unknown[] = [];
+
+    // A fixed column map, for the same reason SORT_SQL is one: no caller string
+    // reaches SQL uninterpreted (§3.4).
+    if (patch.merchantId !== undefined) {
+      assignments.push('merchant_id = ?');
+      values.push(patch.merchantId);
+    }
+    if (patch.categoryId !== undefined) {
+      assignments.push('category_id = ?');
+      values.push(patch.categoryId);
+    }
+    if (patch.categorySource !== undefined) {
+      assignments.push('category_source = ?');
+      values.push(patch.categorySource);
+    }
+    if (patch.isInternalTransfer !== undefined) {
+      assignments.push('is_internal_transfer = ?');
+      values.push(asInt(patch.isInternalTransfer));
+    }
+    if (patch.isExcluded !== undefined) {
+      assignments.push('is_excluded = ?');
+      values.push(asInt(patch.isExcluded));
+    }
+    if (patch.transferPairId !== undefined) {
+      assignments.push('transfer_pair_id = ?');
+      values.push(patch.transferPairId);
+    }
+    if (patch.refundPairId !== undefined) {
+      assignments.push('refund_pair_id = ?');
+      values.push(patch.refundPairId);
+    }
+
+    const { clause, params } = this.buildFilter(query);
+
+    return this.db.transaction(() => {
+      const ids = this.db
+        .prepare<unknown[], { id: string }>(`SELECT t.id FROM "transaction" AS t ${clause}`)
+        .all(...params)
+        .map((row) => row.id);
+
+      // An empty patch is a legal no-op — the caller may have sent a change that
+      // reduced to nothing — but `SET updated_at = ?` alone would still stamp
+      // every matched row as edited.
+      if (assignments.length > 0 && ids.length > 0) {
+        const statement = this.db.prepare(
+          `UPDATE "transaction" SET ${assignments.join(', ')}, updated_at = ? WHERE id = ?`,
+        );
+        const now = this.clock.now();
+        for (const id of ids) statement.run(...values, now, id);
+      }
+
+      return { matched: ids.length, transactionIds: ids };
+    })();
   }
 
   countForAccount(accountId: string): number {
     return (
       this.db
         .prepare<[string], { n: number }>(
-          'SELECT COUNT(*) AS n FROM "transaction" WHERE account_id = ?'
+          'SELECT COUNT(*) AS n FROM "transaction" WHERE account_id = ?',
         )
         .get(accountId)?.n ?? 0
     );
   }
 
   countAll(): number {
-    return this.db.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM "transaction"').get()?.n ?? 0;
+    return (
+      this.db.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM "transaction"').get()?.n ?? 0
+    );
   }
 
   /**
@@ -518,11 +674,18 @@ export class TransactionRepository {
             AND t.is_excluded = 0
             AND t.effective_date >= ?
             AND t.effective_date <= ?
-          ORDER BY m.canonical_name, t.effective_date, t.id`
+          ORDER BY m.canonical_name, t.effective_date, t.id`,
       )
       .all(range.from, range.to);
 
-    const grouped = new Map<string, { merchantId: string | null; merchantName: string; transactions: TransactionRecord[] }>();
+    const grouped = new Map<
+      string,
+      {
+        merchantId: string | null;
+        merchantName: string;
+        transactions: TransactionRecord[];
+      }
+    >();
     for (const row of rows) {
       const key = row.merchant_id ?? ` unresolved:${row.description_normalized}`;
       let bucket = grouped.get(key);
@@ -569,7 +732,7 @@ export class TransactionRepository {
             AND t.effective_date >= ?
             AND t.effective_date <= ?
           GROUP BY month, t.category_id
-          ORDER BY month, c.name`
+          ORDER BY month, c.name`,
       )
       .all(range.from, range.to)
       .map((row) => ({

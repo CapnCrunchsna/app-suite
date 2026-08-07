@@ -61,6 +61,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     {
       schema: {
         summary: 'Upload one or more statement files',
+        operationId: 'uploadImports',
         description:
           'Stages and parses; commits nothing. A byte-identical re-upload returns the existing ' +
           'import untouched (spec 3.3, idempotency layer one).',
@@ -89,9 +90,10 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     },
     async (request, reply) => {
       if (!request.isMultipart()) {
-        return reply
-          .code(415)
-          .send({ error: 'unsupported_media_type', message: 'expected multipart/form-data' });
+        return reply.code(415).send({
+          error: 'unsupported_media_type',
+          message: 'expected multipart/form-data',
+        });
       }
 
       const staged = [];
@@ -104,7 +106,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         return reply.code(400).send({ error: 'no_files', message: 'no files in the request' });
       }
       return { imports: staged };
-    }
+    },
   );
 
   app.get(
@@ -112,11 +114,15 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     {
       schema: {
         summary: 'Import history',
+        operationId: 'listImports',
         tags: ['imports'],
-        response: { 200: { type: 'array', items: importSchema }, ...errorResponses },
+        response: {
+          200: { type: 'array', items: importSchema },
+          ...errorResponses,
+        },
       },
     },
-    async () => context.store.imports.list()
+    async () => context.store.imports.list(),
   );
 
   app.get<{ Params: { id: string } }>(
@@ -124,12 +130,17 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     {
       schema: {
         summary: 'Staged parse result for review',
+        operationId: 'getImport',
         description:
           'Rows with their disposition, the exact duplicates the merge rule will absorb, the ' +
           'near-duplicates needing a three-way choice, unparsed rows, and the balance verdict ' +
           '(spec 6.1). The plan is null until an account is confirmed.',
         tags: ['imports'],
-        params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
         response: errorResponses,
       },
     },
@@ -138,7 +149,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         return reply.code(404).send({ error: 'not_found', message: 'no such import' });
       }
       return reviewImport(context, request.params.id);
-    }
+    },
   );
 
   app.patch<{
@@ -149,9 +160,14 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     {
       schema: {
         summary: 'Confirm the account, override the profile, or re-parse',
+        operationId: 'updateImport',
         description: 'Refused once the import is committed (spec 6.1).',
         tags: ['imports'],
-        params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
         body: {
           type: 'object',
           properties: {
@@ -180,13 +196,16 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
       }
 
       const profileId = formatProfileId ?? record.formatProfileId;
-      const shouldReparse = reparse === true || (formatProfileId !== undefined && formatProfileId !== record.formatProfileId);
+      const shouldReparse =
+        reparse === true ||
+        (formatProfileId !== undefined && formatProfileId !== record.formatProfileId);
 
       if (shouldReparse) {
         if (!profileId) {
-          return reply
-            .code(400)
-            .send({ error: 'no_profile', message: 're-parse needs a formatProfileId' });
+          return reply.code(400).send({
+            error: 'no_profile',
+            message: 're-parse needs a formatProfileId',
+          });
         }
         const profileRecord = context.store.formatProfiles.get(profileId);
         if (!profileRecord) {
@@ -194,7 +213,10 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         }
 
         const text = decodeStatementText(context.store.imports.readFileBytes(record.id));
-        const parsed = parseCsvWithProfile({ text, profile: toFormatProfile(profileRecord) });
+        const parsed = parseCsvWithProfile({
+          text,
+          profile: toFormatProfile(profileRecord),
+        });
 
         context.store.imports.replaceRawRows(
           record.id,
@@ -227,7 +249,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
               warnings: parsed.warnings,
               balanceCheck: parsed.balanceCheck,
             }),
-          }
+          },
         );
         return reviewImport(context, record.id);
       }
@@ -237,7 +259,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         formatProfileId: profileId,
       });
       return reviewImport(context, record.id);
-    }
+    },
   );
 
   app.post<{
@@ -251,11 +273,16 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     {
       schema: {
         summary: 'Commit a staged import',
+        operationId: 'commitImport',
         description:
           'Idempotent. Applies the multiset merge rule, then the near-duplicate resolutions, then ' +
           'refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).',
         tags: ['imports'],
-        params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
         body: {
           type: 'object',
           properties: {
@@ -287,7 +314,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         return reply.code(404).send({ error: 'not_found', message: 'no such import' });
       }
       return commitStagedImport(context, request.params.id, request.body ?? {});
-    }
+    },
   );
 
   app.delete<{ Params: { id: string } }>(
@@ -295,18 +322,29 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     {
       schema: {
         summary: 'Delete an import',
+        operationId: 'deleteImport',
         description:
           'Removes only the transactions this import is the last remaining source for. Deleting ' +
           'the first of two overlapping imports keeps the rows the second still contains (spec 3.3).',
         tags: ['imports'],
-        params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
         response: {
           ...errorResponses,
           200: {
             type: 'object',
             properties: {
-              deletedTransactionIds: { type: 'array', items: { type: 'string' } },
-              retainedTransactionIds: { type: 'array', items: { type: 'string' } },
+              deletedTransactionIds: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              retainedTransactionIds: {
+                type: 'array',
+                items: { type: 'string' },
+              },
             },
           },
         },
@@ -317,6 +355,6 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         return reply.code(404).send({ error: 'not_found', message: 'no such import' });
       }
       return context.store.imports.delete(request.params.id);
-    }
+    },
   );
 }

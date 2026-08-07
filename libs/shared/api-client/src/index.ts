@@ -1,12 +1,16 @@
 // GENERATED — NEVER HAND-EDIT.
 //
-// Everything under `libs/shared/api-client/src/` is regenerated from the
-// OpenAPI schema that `ledgerline-api` emits at build time (spec §2.1, §2.3).
-// Hand edits are silently overwritten by the next generation run — change the
-// Fastify route schemas instead, and regenerate.
+// Emitted by `tools/generate-api-client.mjs` from
+// `apps/ledgerline-api/openapi.json` (spec 2.1, 2.2, 2.3). Hand edits are
+// silently overwritten by the next generation run.
 //
-// The lib is stubbed ahead of the API on purpose: §2.2's `type:api-client`
-// constraint (`onlyDependOnLibsWithTags: []`) has to exist before the first
-// line of code is written against it, not after.
+// To change anything here, change the Fastify route schema that produces it and
+// regenerate:
+//
+//     npx nx generate-client api-client
+//
+// `ledgerline-api`'s test suite fails if this directory and `openapi.json`
+// disagree, so a stale client cannot reach a commit.
 
+export * from './lib/schemas.js';
 export * from './lib/api-client.js';

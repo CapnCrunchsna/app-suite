@@ -1,0 +1,42 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "noPropertyAccessFromIndexSignature": true,
+    "module": "preserve",
+    // The workspace base targets Node libs and declaration-only emit. Angular's
+    // compiler rejects `emitDeclarationOnly` outright (NG4006) and the browser
+    // needs `dom` — the same two overrides `apps/ledgerline-ui` explains.
+    "emitDeclarationOnly": false,
+    "lib": ["es2022", "dom"],
+    // Resolve workspace deps through their published entry points rather than the
+    // base config's `@metrum/source` condition, which points at `src/index.ts`.
+    //
+    // Two reasons, and the first is a hard failure. `@metrum/ledgerline-domain` is
+    // a Node lib: `dedupe.ts` imports `node:crypto`, and pulling its *source* into
+    // an ngtsc compile with `types: []` fails on a type this lib has no business
+    // declaring. The second is that the source condition would be a lie about what
+    // gets bundled — `@angular/build` applies no custom conditions, and
+    // `@angular/build:unit-test` hardcodes `externalPackages: true`, so both the app
+    // build and its tests resolve these three to `dist/`. Typechecking against
+    // anything else is typechecking against code that will not be loaded.
+    "customConditions": []
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

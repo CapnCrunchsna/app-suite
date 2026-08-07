@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 import { LedgerlineStore } from '@metrum/ledgerline-data';
 import type { FormatProfileRecord } from '@metrum/ledgerline-data';
-import { SEED_ALIASES, SEED_MERCHANTS } from '@metrum/ledgerline-normalize';
+import { SEED_ALIASES, SEED_CATEGORIES, SEED_MERCHANTS } from '@metrum/ledgerline-normalize';
 import { createNodeCsvParser, loadProfile } from '@metrum/ledgerline-parsing';
 import type { ColumnRef, ColumnRole, FormatProfile, ParserPort } from '@metrum/ledgerline-parsing';
 
@@ -63,6 +63,13 @@ export function createContext(options: CreateContextOptions): LedgerlineContext 
  * across boots.
  */
 function seedMerchants(store: LedgerlineStore): void {
+  // Categories first: `merchant_canonical.default_category_id` and
+  // `transaction.category_id` are both real foreign keys (§3.2), so nothing can
+  // reference a category that has not been inserted yet.
+  for (const category of SEED_CATEGORIES) {
+    store.merchants.upsertCategory(category);
+  }
+
   for (const merchant of SEED_MERCHANTS) {
     store.merchants.upsertSeed({
       id: merchant.merchantId,

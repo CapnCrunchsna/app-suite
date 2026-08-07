@@ -16,17 +16,18 @@ import swagger from '@fastify/swagger';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 
-import {
-  MixedDedupeKeyVersionError,
-  ZeroAmountRowError,
-} from '@metrum/ledgerline-data';
+import { MixedDedupeKeyVersionError, ZeroAmountRowError } from '@metrum/ledgerline-data';
 
+import { DEV_ORIGINS } from './config.js';
 import type { ApiConfig } from './config.js';
 import type { LedgerlineContext } from './context.js';
 import { ImportNotReadyError } from './import-service.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerDataRoutes } from './routes/data.js';
 import { registerImportRoutes } from './routes/imports.js';
+import { registerJobRoutes } from './routes/jobs.js';
+import { registerMerchantRoutes } from './routes/merchants.js';
+import { registerSharedSchemas } from './routes/schemas.js';
 import { registerTransactionRoutes } from './routes/transactions.js';
 
 /** A statement CSV is small; a bank export of ten years is still under a few MB.
@@ -49,9 +50,17 @@ export const OPENAPI_DOCUMENT = {
     version: '0.1.0',
   },
   tags: [
-    { name: 'imports', description: 'Upload, review, commit and delete statement imports' },
+    {
+      name: 'imports',
+      description: 'Upload, review, commit and delete statement imports',
+    },
     { name: 'accounts', description: 'Account CRUD' },
-    { name: 'transactions', description: 'Filter, search and edit transactions' },
+    {
+      name: 'transactions',
+      description: 'Filter, search and edit transactions',
+    },
+    { name: 'merchants', description: 'Canonical merchants and categories' },
+    { name: 'jobs', description: 'Long-running work and its progress' },
     { name: 'data', description: 'Backup and export' },
   ],
 };
@@ -59,8 +68,59 @@ export const OPENAPI_DOCUMENT = {
 export async function buildServer(options: BuildServerOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false });
 
-  await app.register(swagger, { openapi: OPENAPI_DOCUMENT });
+  await app.register(swagger, {
+    openapi: OPENAPI_DOCUMENT,
+    /**
+     * Name components after their `$id`, not `def-0`.
+     *
+     * This is the difference between a generated client that exports
+     * `Transaction` and one that exports `Def4`. The default resolver numbers
+     * components in registration order, which also means inserting a schema
+     * renumbers every one after it — a one-line change to a route would rewrite
+     * the whole of `openapi.json` and the whole generated client, and the diff
+     * that is supposed to show a contract change would show noise instead.
+     */
+    refResolver: {
+      buildLocalReference: (json, _baseUri, _fragment, index) =>
+        typeof json['$id'] === 'string' ? json['$id'] : `def-${index}`,
+    },
+  });
   await app.register(multipart, { limits: { fileSize: MAX_UPLOAD_BYTES } });
+
+  // Before any route that `$ref`s one. Fastify resolves shared schemas at
+  // registration time, so a late `addSchema` fails at boot rather than silently.
+  registerSharedSchemas(app);
+
+  /**
+   * The Angular dev server is a different origin from this API (`ng serve` on
+   * 4200, Fastify on 4310), so the browser preflights every non-GET the
+   * Transactions page makes.
+   *
+   * The allow-list is loopback only, and that is the whole security argument:
+   * this process has no authentication and holds every statement its owner has
+   * imported (§2.1), so `*` here would let any page in the browser read the lot.
+   * Loopback origins can only be served by something already running on this
+   * machine. `credentials` is deliberately absent — there is nothing to send.
+   */
+  app.addHook('onRequest', async (request, reply) => {
+    const origin = request.headers.origin;
+    if (origin !== undefined && DEV_ORIGINS.has(origin)) {
+      reply.header('access-control-allow-origin', origin);
+      reply.header('vary', 'origin');
+    }
+  });
+
+  app.options('/api/*', { schema: { hide: true } }, async (request, reply) =>
+    reply
+      .header('access-control-allow-methods', 'GET, POST, PATCH, DELETE, OPTIONS')
+      .header(
+        'access-control-allow-headers',
+        request.headers['access-control-request-headers'] ?? 'content-type',
+      )
+      .header('access-control-max-age', '600')
+      .code(204)
+      .send(),
+  );
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     // These three are decisions the caller can act on, not faults. Returning 500
@@ -70,9 +130,11 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
       return reply.code(409).send({ error: 'mixed_dedupe_key_version', message: error.message });
     }
     if (error instanceof ZeroAmountRowError) {
-      return reply
-        .code(422)
-        .send({ error: 'zero_amount_rows', message: error.message, rowIndexes: error.rowIndexes });
+      return reply.code(422).send({
+        error: 'zero_amount_rows',
+        message: error.message,
+        rowIndexes: error.rowIndexes,
+      });
     }
     if (error instanceof ImportNotReadyError) {
       return reply.code(409).send({ error: 'import_not_ready', message: error.message });
@@ -90,6 +152,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
     {
       schema: {
         summary: 'Liveness, schema version, and any profile that failed to load at boot',
+        operationId: 'getHealth',
         tags: ['data'],
         response: {
           200: {
@@ -109,12 +172,14 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
       schemaVersion: options.context.store.migrations.alreadyAtVersion,
       transactions: options.context.store.transactions.countAll(),
       profileLoadErrors: options.context.profileLoadErrors,
-    })
+    }),
   );
 
   registerImportRoutes(app, options.context);
   registerAccountRoutes(app, options.context);
   registerTransactionRoutes(app, options.context);
+  registerMerchantRoutes(app, options.context);
+  registerJobRoutes(app, options.context);
   registerDataRoutes(app, options.context, options.config);
 
   await app.ready();

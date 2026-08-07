@@ -10,7 +10,16 @@
     // `emitDeclarationOnly` outright (NG4006) and the browser needs `dom`.
     // `nx typecheck` re-adds --emitDeclarationOnly on the command line.
     "emitDeclarationOnly": false,
-    "lib": ["es2022", "dom"]
+    "lib": ["es2022", "dom"],
+    // Resolve workspace deps through their published entry points rather than the
+    // base config's `@metrum/source` condition, which points at `src/index.ts`.
+    // `@metrum/ledgerline-domain` is a Node lib — `dedupe.ts` imports `node:crypto`
+    // — and pulling its source into this compile fails on a type a browser app has
+    // no business declaring. It is also what the bundler does: `@angular/build`
+    // applies no custom conditions, so the source condition would be typechecking
+    // against code that never gets loaded. Same override, same reasoning, as
+    // `libs/ledgerline/feature-shell/tsconfig.json`.
+    "customConditions": []
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

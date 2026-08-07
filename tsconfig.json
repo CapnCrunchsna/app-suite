@@ -26,6 +26,9 @@
     },
     {
       "path": "./apps/ledgerline-api"
+    },
+    {
+      "path": "./libs/ledgerline/feature-shell"
     }
   ],
   "compilerOptions": {}

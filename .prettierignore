@@ -5,3 +5,10 @@
 /.nx/workspace-data
 .nx/self-healing
 .angular
+
+# Generated, and the generator owns its formatting. `apps/ledgerline-api`'s test
+# suite fails if this directory differs from what `tools/generate-api-client.mjs`
+# emits from `openapi.json` — so a prettier pass over it breaks the build, which is
+# the drift check doing its job rather than a problem with the check.
+/libs/shared/api-client/src
+/apps/ledgerline-api/openapi.json

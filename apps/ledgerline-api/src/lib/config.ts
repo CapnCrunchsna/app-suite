@@ -12,6 +12,14 @@
 export const API_HOST = '127.0.0.1';
 export const DEFAULT_API_PORT = 4310;
 
+/** The Angular dev server, on both spellings of loopback. The only origins the
+ *  API answers a cross-origin request from — see the CORS hook in `server.ts` for
+ *  why the list is loopback rather than `*`. */
+export const DEV_ORIGINS: ReadonlySet<string> = new Set([
+  'http://localhost:4200',
+  'http://127.0.0.1:4200',
+]);
+
 export interface ApiConfig {
   readonly port: number;
   /** A path, or `:memory:` in tests. */

@@ -8,7 +8,8 @@
     "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
     "check": "nx run-many -t lint typecheck test",
-    "parse": "node tools/parse-statement.mjs"
+    "parse": "node tools/parse-statement.mjs",
+    "seed:dev": "node tools/seed-dev-data.mjs"
   },
   "private": true,
   "devDependencies": {
@@ -35,12 +36,14 @@
     "@typescript-eslint/utils": "^8.58.0",
     "@vitest/coverage-v8": "~4.1.0",
     "angular-eslint": "^22.0.0",
+    "autoprefixer": "^10.4.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^27.1.0",
     "jsonc-eslint-parser": "^2.4.2",
     "ng-packagr": "~22.0.0",
     "nx": "23.1.0",
+    "postcss": "^8.4.5",
     "prettier": "^3.8.1",
     "tslib": "^2.3.0",
     "typescript": "~6.0.3",

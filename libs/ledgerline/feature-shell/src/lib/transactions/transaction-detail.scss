@@ -1,0 +1,137 @@
+.detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px 26px;
+  padding: 14px 18px 16px;
+  background: var(--bg, #0a1517);
+  border-top: 1px solid var(--border, #1f4a47);
+  border-bottom: 1px solid var(--border, #1f4a47);
+}
+
+.detail--loading {
+  display: block;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 0.85rem;
+}
+
+.detail__block {
+  min-width: 0;
+}
+
+.detail__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.detail__count {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font-size: 0.7rem;
+}
+
+/* Verbatim means verbatim: `pre` and `pre-wrap`, so nothing collapses a run of
+ * spaces the bank actually printed. */
+.detail__raw {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.detail__raw--secondary {
+  margin-top: 6px;
+  opacity: 0.85;
+}
+
+.detail__empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.detail__imports {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail__import {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detail__filename {
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.detail__period {
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.detail__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0;
+  font-size: 0.8rem;
+
+  dt {
+    color: var(--text-dim, #7ea8a1);
+    white-space: nowrap;
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  code {
+    font-size: 0.75rem;
+  }
+}
+
+.detail__credit {
+  color: var(--accent-2, #34d399);
+}
+
+.detail__cents,
+.detail__source {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.detail__source {
+  padding: 1px 5px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 8px;
+}
+
+.detail__key {
+  font-family: ui-monospace, Consolas, monospace;
+}

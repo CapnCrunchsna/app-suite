@@ -10,24 +10,10 @@
 import type { FastifyInstance } from 'fastify';
 
 import { errorResponses } from './errors.js';
+import { ACCOUNT_TYPES, ref } from './schemas.js';
 import type { LedgerlineContext } from '../context.js';
 
-const ACCOUNT_TYPES = ['checking', 'savings', 'credit_card'] as const;
-
-const accountSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    displayName: { type: 'string' },
-    institution: { type: ['string', 'null'] },
-    accountType: { type: 'string', enum: ACCOUNT_TYPES },
-    last4: { type: ['string', 'null'] },
-    currency: { type: 'string' },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string' },
-    updatedAt: { type: 'string' },
-  },
-} as const;
+const accountSchema = ref('Account');
 
 export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineContext): void {
   app.get(
@@ -35,11 +21,15 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
     {
       schema: {
         summary: 'List accounts',
+        operationId: 'listAccounts',
         tags: ['accounts'],
-        response: { 200: { type: 'array', items: accountSchema }, ...errorResponses },
+        response: {
+          200: { type: 'array', items: accountSchema },
+          ...errorResponses,
+        },
       },
     },
-    async () => context.store.accounts.list()
+    async () => context.store.accounts.list(),
   );
 
   app.get<{ Params: { id: string } }>(
@@ -47,8 +37,13 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
     {
       schema: {
         summary: 'Get one account',
+        operationId: 'getAccount',
         tags: ['accounts'],
-        params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
         response: { 200: accountSchema, ...errorResponses },
       },
     },
@@ -56,7 +51,7 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
       const account = context.store.accounts.get(request.params.id);
       if (!account) return reply.code(404).send({ error: 'not_found', message: 'no such account' });
       return account;
-    }
+    },
   );
 
   app.post<{
@@ -71,6 +66,7 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
     {
       schema: {
         summary: 'Create an account',
+        operationId: 'createAccount',
         tags: ['accounts'],
         body: {
           type: 'object',
@@ -85,7 +81,7 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
         response: { 201: accountSchema, ...errorResponses },
       },
     },
-    async (request, reply) => reply.code(201).send(context.store.accounts.create(request.body))
+    async (request, reply) => reply.code(201).send(context.store.accounts.create(request.body)),
   );
 
   app.patch<{
@@ -102,9 +98,14 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
     {
       schema: {
         summary: 'Update an account',
+        operationId: 'updateAccount',
         description: 'Archiving is `isActive: false` — see spec 6.2.',
         tags: ['accounts'],
-        params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
         body: {
           type: 'object',
           properties: {
@@ -123,6 +124,6 @@ export function registerAccountRoutes(app: FastifyInstance, context: LedgerlineC
         return reply.code(404).send({ error: 'not_found', message: 'no such account' });
       }
       return context.store.accounts.update(request.params.id, request.body);
-    }
+    },
   );
 }

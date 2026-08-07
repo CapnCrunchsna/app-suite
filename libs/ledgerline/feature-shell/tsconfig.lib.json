@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    // `dist/` belongs to ng-packagr; `tsc` (the inferred `typecheck` target) gets
+    // its own directory so the two never overwrite each other's `index.d.ts`.
+    // Same arrangement as `libs/shared/ui`, for the reason in its README.
+    "outDir": "out-tsc/lib",
+    "tsBuildInfoFile": "out-tsc/lib/tsconfig.lib.tsbuildinfo",
+    "declaration": true,
+    "declarationMap": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "references": [
+    {
+      "path": "../../shared/ui/tsconfig.lib.json"
+    },
+    {
+      "path": "../domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../../shared/api-client/tsconfig.lib.json"
+    }
+  ]
+}

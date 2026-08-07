@@ -26,6 +26,7 @@ import type { MigrationOutcome } from './migrations/runner.js';
 import { AccountRepository } from './repositories/accounts.js';
 import { FormatProfileRepository } from './repositories/format-profiles.js';
 import { ImportRepository } from './repositories/imports.js';
+import { JobRepository } from './repositories/jobs.js';
 import { MerchantRepository } from './repositories/merchants.js';
 import { SettingsRepository } from './repositories/settings.js';
 import { TombstoneRepository } from './repositories/tombstones.js';
@@ -45,11 +46,12 @@ export class LedgerlineStore {
   readonly imports: ImportRepository;
   readonly transactions: TransactionRepository;
   readonly settings: SettingsRepository;
+  readonly jobs: JobRepository;
   readonly migrations: MigrationOutcome;
 
   private constructor(
     readonly db: Database,
-    private readonly clock: Clock
+    private readonly clock: Clock,
   ) {
     this.migrations = applyMigrations(db, clock);
     this.tombstones = new TombstoneRepository(db, clock);
@@ -59,6 +61,7 @@ export class LedgerlineStore {
     this.imports = new ImportRepository(db, clock, this.tombstones);
     this.transactions = new TransactionRepository(db, clock, this.tombstones);
     this.settings = new SettingsRepository(db, clock);
+    this.jobs = new JobRepository(db, clock);
   }
 
   static open(options: LedgerlineStoreOptions): LedgerlineStore {

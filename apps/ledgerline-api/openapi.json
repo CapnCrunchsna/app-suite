@@ -6,11 +6,710 @@
     "version": "0.1.0"
   },
   "components": {
-    "schemas": {}
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Stable machine-readable code"
+          },
+          "message": {
+            "type": "string"
+          },
+          "rowIndexes": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+          }
+        }
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "institution": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountType": {
+            "type": "string",
+            "enum": [
+              "checking",
+              "savings",
+              "credit_card"
+            ]
+          },
+          "last4": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "institution",
+          "accountType",
+          "last4",
+          "currency",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "rawRowId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postedDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "transactionDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effectiveDate": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "integer"
+          },
+          "balanceCents": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "descriptionRaw": {
+            "type": "string"
+          },
+          "descriptionNormalized": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categorySource": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "enum": [
+              "seed",
+              "rule",
+              "llm",
+              "user",
+              null
+            ]
+          },
+          "isPending": {
+            "type": "boolean"
+          },
+          "isInternalTransfer": {
+            "type": "boolean"
+          },
+          "transferPairId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "refundPairId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isExcluded": {
+            "type": "boolean"
+          },
+          "allowsZeroAmount": {
+            "type": "boolean"
+          },
+          "dedupeKey": {
+            "type": "string"
+          },
+          "dedupeKeyVersion": {
+            "type": "string"
+          },
+          "occurrenceIndex": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "rawRowId",
+          "postedDate",
+          "transactionDate",
+          "effectiveDate",
+          "amountCents",
+          "balanceCents",
+          "currency",
+          "descriptionRaw",
+          "descriptionNormalized",
+          "merchantId",
+          "categoryId",
+          "categorySource",
+          "isPending",
+          "isInternalTransfer",
+          "transferPairId",
+          "refundPairId",
+          "isExcluded",
+          "allowsZeroAmount",
+          "dedupeKey",
+          "dedupeKeyVersion",
+          "occurrenceIndex",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TransactionSearchRow": {
+        "type": "object",
+        "properties": {
+          "transaction": {
+            "$ref": "#/components/schemas/Transaction"
+          },
+          "hasFinding": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "transaction",
+          "hasFinding"
+        ]
+      },
+      "TransactionPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionSearchRow"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "limit",
+          "offset"
+        ]
+      },
+      "StatementImport": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceFilename": {
+            "type": "string"
+          },
+          "fileSha256": {
+            "type": "string"
+          },
+          "fileSizeBytes": {
+            "type": "integer"
+          },
+          "formatProfileId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodStart": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodEnd": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rowsParsed": {
+            "type": "integer"
+          },
+          "rowsInserted": {
+            "type": "integer"
+          },
+          "rowsDuplicate": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploaded",
+              "needs_mapping",
+              "staged",
+              "committed",
+              "failed"
+            ]
+          },
+          "parser": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parserVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorDetail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "diagnosticsJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "importedAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "sourceFilename",
+          "fileSha256",
+          "fileSizeBytes",
+          "formatProfileId",
+          "periodStart",
+          "periodEnd",
+          "rowsParsed",
+          "rowsInserted",
+          "rowsDuplicate",
+          "status",
+          "parser",
+          "parserVersion",
+          "errorDetail",
+          "diagnosticsJson",
+          "importedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TransactionSourceLine": {
+        "type": "object",
+        "properties": {
+          "importId": {
+            "type": "string"
+          },
+          "sourceFilename": {
+            "type": "string"
+          },
+          "rawText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "importId",
+          "sourceFilename",
+          "rawText"
+        ]
+      },
+      "TransactionDetail": {
+        "type": "object",
+        "properties": {
+          "transaction": {
+            "$ref": "#/components/schemas/Transaction"
+          },
+          "coveringImports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatementImport"
+            }
+          },
+          "rawText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionSourceLine"
+            }
+          }
+        },
+        "required": [
+          "transaction",
+          "coveringImports",
+          "rawText",
+          "sources"
+        ]
+      },
+      "Merchant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "canonicalName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "website": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "defaultCategoryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isKnownSubscription": {
+            "type": "boolean"
+          },
+          "isTransferKind": {
+            "type": "boolean"
+          },
+          "overlapGroup": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "seed",
+              "rule",
+              "llm",
+              "user"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "canonicalName",
+          "displayName",
+          "website",
+          "defaultCategoryId",
+          "isKnownSubscription",
+          "isTransferKind",
+          "overlapGroup",
+          "source"
+        ]
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "spend",
+              "fee",
+              "transfer",
+              "income"
+            ]
+          },
+          "overlapGroup": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "parentId",
+          "kind",
+          "overlapGroup"
+        ]
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed"
+            ]
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resultJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "progress",
+          "message",
+          "resultJson",
+          "finishedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TransactionFilter": {
+        "type": "object",
+        "properties": {
+          "accountIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "merchantIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "descriptorsNormalized": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "minAmountCents": {
+            "type": "integer"
+          },
+          "maxAmountCents": {
+            "type": "integer"
+          },
+          "isPending": {
+            "type": "boolean"
+          },
+          "hasFinding": {
+            "type": "boolean"
+          },
+          "includeInternalTransfers": {
+            "type": "boolean"
+          },
+          "includeExcluded": {
+            "type": "boolean"
+          },
+          "q": {
+            "type": "string"
+          }
+        }
+      },
+      "TransactionBulkChange": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isInternalTransfer": {
+            "type": "boolean"
+          },
+          "isExcluded": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TransactionBulkResult": {
+        "type": "object",
+        "properties": {
+          "dryRun": {
+            "type": "boolean"
+          },
+          "matchCount": {
+            "type": "integer"
+          },
+          "updated": {
+            "type": "integer"
+          },
+          "aliasKeysWritten": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "renormalizeJobId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "renormalizeJobCoalesced": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dryRun",
+          "matchCount",
+          "updated",
+          "aliasKeysWritten",
+          "renormalizeJobId",
+          "renormalizeJobCoalesced"
+        ]
+      }
+    }
   },
   "paths": {
     "/api/health": {
       "get": {
+        "operationId": "getHealth",
         "summary": "Liveness, schema version, and any profile that failed to load at boot",
         "tags": [
           "data"
@@ -48,6 +747,7 @@
     },
     "/api/imports": {
       "post": {
+        "operationId": "uploadImports",
         "summary": "Upload one or more statement files",
         "tags": [
           "imports"
@@ -192,23 +892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -218,23 +902,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -244,23 +912,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -270,23 +922,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -296,23 +932,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -322,23 +942,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -346,6 +950,7 @@
         }
       },
       "get": {
+        "operationId": "listImports",
         "summary": "Import history",
         "tags": [
           "imports"
@@ -462,23 +1067,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -488,23 +1077,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -514,23 +1087,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -540,23 +1097,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -566,23 +1107,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -592,23 +1117,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -618,6 +1127,7 @@
     },
     "/api/imports/{id}": {
       "get": {
+        "operationId": "getImport",
         "summary": "Staged parse result for review",
         "tags": [
           "imports"
@@ -639,23 +1149,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -665,23 +1159,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -691,23 +1169,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -717,23 +1179,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -743,23 +1189,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -769,23 +1199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -793,6 +1207,7 @@
         }
       },
       "patch": {
+        "operationId": "updateImport",
         "summary": "Confirm the account, override the profile, or re-parse",
         "tags": [
           "imports"
@@ -835,23 +1250,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -861,23 +1260,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -887,23 +1270,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -913,23 +1280,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -939,23 +1290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -965,23 +1300,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -989,6 +1308,7 @@
         }
       },
       "delete": {
+        "operationId": "deleteImport",
         "summary": "Delete an import",
         "tags": [
           "imports"
@@ -1034,23 +1354,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1060,23 +1364,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1086,23 +1374,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1112,23 +1384,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1138,23 +1394,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1164,23 +1404,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1190,6 +1414,7 @@
     },
     "/api/imports/{id}/commit": {
       "post": {
+        "operationId": "commitImport",
         "summary": "Commit a staged import",
         "tags": [
           "imports"
@@ -1254,23 +1479,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1280,23 +1489,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1306,23 +1499,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1332,23 +1509,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1358,23 +1519,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1384,23 +1529,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1410,6 +1539,7 @@
     },
     "/api/accounts": {
       "get": {
+        "operationId": "listAccounts",
         "summary": "List accounts",
         "tags": [
           "accounts"
@@ -1422,47 +1552,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "displayName": {
-                        "type": "string"
-                      },
-                      "institution": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "accountType": {
-                        "type": "string",
-                        "enum": [
-                          "checking",
-                          "savings",
-                          "credit_card"
-                        ]
-                      },
-                      "last4": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "currency": {
-                        "type": "string"
-                      },
-                      "isActive": {
-                        "type": "boolean"
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "updatedAt": {
-                        "type": "string"
-                      }
-                    }
+                    "$ref": "#/components/schemas/Account"
                   }
                 }
               }
@@ -1473,23 +1563,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1499,23 +1573,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1525,23 +1583,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1551,23 +1593,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1577,23 +1603,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1603,23 +1613,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1627,6 +1621,7 @@
         }
       },
       "post": {
+        "operationId": "createAccount",
         "summary": "Create an account",
         "tags": [
           "accounts"
@@ -1677,47 +1672,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "displayName": {
-                      "type": "string"
-                    },
-                    "institution": {
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    "accountType": {
-                      "type": "string",
-                      "enum": [
-                        "checking",
-                        "savings",
-                        "credit_card"
-                      ]
-                    },
-                    "last4": {
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/components/schemas/Account"
                 }
               }
             }
@@ -1727,23 +1682,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1753,23 +1692,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1779,23 +1702,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1805,23 +1712,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1831,23 +1722,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1857,23 +1732,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1883,6 +1742,7 @@
     },
     "/api/accounts/{id}": {
       "get": {
+        "operationId": "getAccount",
         "summary": "Get one account",
         "tags": [
           "accounts"
@@ -1903,47 +1763,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "displayName": {
-                      "type": "string"
-                    },
-                    "institution": {
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    "accountType": {
-                      "type": "string",
-                      "enum": [
-                        "checking",
-                        "savings",
-                        "credit_card"
-                      ]
-                    },
-                    "last4": {
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/components/schemas/Account"
                 }
               }
             }
@@ -1953,23 +1773,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -1979,23 +1783,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2005,23 +1793,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2031,23 +1803,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2057,23 +1813,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2083,23 +1823,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2107,6 +1831,7 @@
         }
       },
       "patch": {
+        "operationId": "updateAccount",
         "summary": "Update an account",
         "tags": [
           "accounts"
@@ -2167,47 +1892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "displayName": {
-                      "type": "string"
-                    },
-                    "institution": {
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    "accountType": {
-                      "type": "string",
-                      "enum": [
-                        "checking",
-                        "savings",
-                        "credit_card"
-                      ]
-                    },
-                    "last4": {
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "isActive": {
-                      "type": "boolean"
-                    },
-                    "createdAt": {
-                      "type": "string"
-                    },
-                    "updatedAt": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/components/schemas/Account"
                 }
               }
             }
@@ -2217,23 +1902,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2243,23 +1912,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2269,23 +1922,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2295,23 +1932,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2321,23 +1942,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2347,23 +1952,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2373,6 +1962,7 @@
     },
     "/api/transactions": {
       "get": {
+        "operationId": "listTransactions",
         "summary": "Filter, search and paginate transactions",
         "tags": [
           "transactions"
@@ -2522,18 +2112,86 @@
         ],
         "responses": {
           "200": {
-            "description": "Default Response"
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/transactions/{id}": {
       "get": {
+        "operationId": "getTransaction",
         "summary": "One transaction, with the imports that cover it",
         "tags": [
           "transactions"
         ],
-        "description": "The covering imports are spec 6.3’s row expander.",
+        "description": "The covering imports and the verbatim line are spec 6.3’s row expander. `rawText` is the statement line as printed, never trimmed or re-encoded (spec 2.5).",
         "parameters": [
           {
             "schema": {
@@ -2545,28 +2203,22 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionDetail"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2576,23 +2228,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2602,23 +2238,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2628,23 +2248,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2654,23 +2258,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2680,23 +2268,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2704,36 +2276,18 @@
         }
       },
       "patch": {
+        "operationId": "updateTransaction",
         "summary": "Assign merchant or category, mark internal transfer, exclude",
         "tags": [
           "transactions"
         ],
+        "description": "A merchant assignment writes a `user` merchant_alias and enqueues a coalesced re-normalize job (spec 4.3, 2.7).",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "merchantId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "categoryId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "isInternalTransfer": {
-                    "type": "boolean"
-                  },
-                  "isExcluded": {
-                    "type": "boolean"
-                  }
-                }
+                "$ref": "#/components/schemas/TransactionBulkChange"
               }
             }
           }
@@ -2749,28 +2303,22 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2780,23 +2328,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2806,23 +2338,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2832,23 +2348,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2858,23 +2358,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2884,23 +2368,480 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions/bulk": {
+      "post": {
+        "operationId": "bulkUpdateTransactions",
+        "summary": "Apply one change to a filter-matched set",
+        "tags": [
+          "transactions"
+        ],
+        "description": "`?dryRun=true` returns the match count only and writes nothing — this is what backs spec 6.3’s \"apply to all 47 matching descriptors\". A real apply of a merchant writes one `user` merchant_alias per matched descriptor (spec 4.3) and enqueues a coalesced re-normalize job (spec 2.7).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "filter"
+                ],
+                "properties": {
+                  "filter": {
+                    "$ref": "#/components/schemas/TransactionFilter"
+                  },
+                  "change": {
+                    "$ref": "#/components/schemas/TransactionBulkChange"
                   }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "in": "query",
+            "name": "dryRun",
+            "required": false,
+            "description": "Count the matched set and write nothing"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionBulkResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchants": {
+      "get": {
+        "operationId": "listMerchants",
+        "summary": "Canonical merchants, by name",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Includes provisional merchants — spec 4.1 step 7 makes an unresolved descriptor a `source = \"rule\"` merchant, and `source` is what the UI shows to distinguish one from a seeded merchant (spec 7.5).",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Merchant"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "summary": "Spend categories",
+        "tags": [
+          "merchants"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{id}": {
+      "get": {
+        "operationId": "getJob",
+        "summary": "One job’s state and progress",
+        "tags": [
+          "jobs"
+        ],
+        "description": "Spec 2.7: the UI polls this rather than blocking on the work.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "operationId": "listJobs",
+        "summary": "Recent jobs, newest first",
+        "tags": [
+          "jobs"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2910,6 +2851,7 @@
     },
     "/api/data/backup": {
       "post": {
+        "operationId": "backupData",
         "summary": "Write a consistent copy of the database",
         "tags": [
           "data"
@@ -2939,23 +2881,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2965,23 +2891,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -2991,23 +2901,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3017,23 +2911,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3043,23 +2921,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3069,23 +2931,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "description": "Stable machine-readable code"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "rowIndexes": {
-                      "type": "array",
-                      "items": {
-                        "type": "integer"
-                      },
-                      "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
-                    }
-                  }
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -3095,6 +2941,7 @@
     },
     "/api/data/export": {
       "post": {
+        "operationId": "exportData",
         "summary": "Export every transaction as JSON or CSV",
         "tags": [
           "data"
@@ -3135,6 +2982,14 @@
     {
       "name": "transactions",
       "description": "Filter, search and edit transactions"
+    },
+    {
+      "name": "merchants",
+      "description": "Canonical merchants and categories"
+    },
+    {
+      "name": "jobs",
+      "description": "Long-running work and its progress"
     },
     {
       "name": "data",

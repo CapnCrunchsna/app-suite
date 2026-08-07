@@ -1,0 +1,32 @@
+{
+  "name": "ledgerline-feature-shell",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/feature-shell/src",
+  "prefix": "ll",
+  "projectType": "library",
+  "tags": ["scope:ll", "type:feature"],
+  "targets": {
+    "build": {
+      "//": "ng-packagr, not tsc — see libs/shared/ui/README.md for the silent failure that avoids. `@angular/build:ng-packagr` rather than `@nx/angular:package` (which libs/shared/ui uses) because `@angular/build:unit-test` only accepts an `@angular/build` build target to read compiler options from; against the Nx executor it refuses with 'not supported'. Same ng-packagr underneath, same Angular Package Format out.",
+      "executor": "@angular/build:ng-packagr",
+      "dependsOn": ["^build"],
+      "outputs": ["{projectRoot}/dist"],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "libs/ledgerline/feature-shell/ng-package.json",
+        "tsConfig": "libs/ledgerline/feature-shell/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {},
+        "development": {}
+      }
+    },
+    "test": {
+      "//": "`lint` is deliberately absent so it is inferred from @nx/eslint/plugin rather than using the deprecated @nx/eslint:lint executor the generator emits.",
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "watch": false
+      }
+    }
+  }
+}
