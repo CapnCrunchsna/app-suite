@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto';
 
 import { effectiveDate } from '@metrum/ledgerline-domain';
-import type { ParseResult, ParseWarning, RawRow } from '@metrum/ledgerline-domain';
+import type { BalanceCheck, ParseResult, ParseWarning, RawRow } from '@metrum/ledgerline-domain';
 import type {
   CommitImportResult,
   CommitResolution,
@@ -22,7 +22,12 @@ import type {
 } from '@metrum/ledgerline-data';
 import { normalizeBatch, SEED_MERCHANT_KEYS } from '@metrum/ledgerline-normalize';
 import type { MerchantAlias } from '@metrum/ledgerline-normalize';
-import { decodeStatementText, detectCsvFormat, selectParser, sniffFileKind } from '@metrum/ledgerline-parsing';
+import {
+  decodeStatementText,
+  detectCsvFormat,
+  selectParser,
+  sniffFileKind,
+} from '@metrum/ledgerline-parsing';
 
 import { toFormatProfile } from './context.js';
 import type { LedgerlineContext } from './context.js';
@@ -52,7 +57,7 @@ export interface ImportReview {
   readonly import: StatementImportRecord;
   readonly accountSuggestion: AccountSuggestion | null;
   readonly warnings: readonly ParseWarning[];
-  readonly balanceCheck: unknown;
+  readonly balanceCheck: BalanceCheck;
   readonly rows: readonly ReviewRow[];
   readonly unparsedRows: readonly RawRowRecord[];
   readonly plan: ReviewPlan | null;
@@ -85,7 +90,7 @@ export interface ReviewPlan {
 
 interface Diagnostics {
   readonly warnings: readonly ParseWarning[];
-  readonly balanceCheck: unknown;
+  readonly balanceCheck: BalanceCheck;
 }
 
 export function sha256(bytes: Uint8Array): string {
@@ -102,13 +107,17 @@ export function sha256(bytes: Uint8Array): string {
  */
 export async function stageUpload(
   context: LedgerlineContext,
-  file: UploadedFile
+  file: UploadedFile,
 ): Promise<StagedUpload> {
   const fileSha256 = sha256(file.bytes);
 
   const existing = context.store.imports.findByFileSha256(fileSha256);
   if (existing) {
-    return { import: existing, created: false, accountSuggestion: suggestAccount(context, existing.sourceFilename, null) };
+    return {
+      import: existing,
+      created: false,
+      accountSuggestion: suggestAccount(context, existing.sourceFilename, null),
+    };
   }
 
   const kind = sniffFileKind(file.bytes);
@@ -119,7 +128,7 @@ export async function stageUpload(
       fileSha256,
       kind === 'pdf'
         ? 'PDF ingest is not built yet (roadmap v0.4). Export the statement as CSV.'
-        : 'not a delimited text file'
+        : 'not a delimited text file',
     );
   }
 
@@ -161,7 +170,7 @@ export async function stageUpload(
   const selected = await selectParser(
     context.parsers,
     { filename: file.filename, sizeBytes: file.bytes.byteLength },
-    file.bytes
+    file.bytes,
   );
   if (!selected) {
     return stageUnreadable(context, file, fileSha256, 'no registered parser claimed this file');
@@ -171,7 +180,7 @@ export async function stageUpload(
   try {
     parsed = await selected.parser.parse(
       { filename: file.filename, sizeBytes: file.bytes.byteLength },
-      file.bytes
+      file.bytes,
     );
   } catch (cause) {
     return stageUnreadable(context, file, fileSha256, (cause as Error).message);
@@ -206,7 +215,7 @@ function stageUnreadable(
   context: LedgerlineContext,
   file: UploadedFile,
   fileSha256: string,
-  reason: string
+  reason: string,
 ): StagedUpload {
   const staged = context.store.imports.stage({
     sourceFilename: file.filename,
@@ -254,19 +263,19 @@ function toStagedRawRows(parsed: ParseResult) {
 function suggestAccount(
   context: LedgerlineContext,
   filename: string,
-  accountTypeHint: string | null
+  accountTypeHint: string | null,
 ): AccountSuggestion | null {
   const accounts = context.store.accounts.list().filter((account) => account.isActive);
 
   const byLast4 = accounts.find(
-    (account) => account.last4 !== null && filename.includes(account.last4)
+    (account) => account.last4 !== null && filename.includes(account.last4),
   );
   if (byLast4) {
     return { accountId: byLast4.id, reason: `filename contains last4 ${byLast4.last4}` };
   }
 
   const byName = accounts.find((account) =>
-    filename.toLowerCase().includes(account.displayName.toLowerCase().split(' ')[0])
+    filename.toLowerCase().includes(account.displayName.toLowerCase().split(' ')[0]),
   );
   if (byName) {
     return { accountId: byName.id, reason: `filename resembles "${byName.displayName}"` };
@@ -295,7 +304,7 @@ function suggestAccount(
  */
 export function buildIncomingRows(
   context: LedgerlineContext,
-  importId: string
+  importId: string,
 ): { rows: IncomingRow[]; unparsed: RawRowRecord[] } {
   const rawRows = context.store.imports.listRawRows(importId);
   const parsedRows = rawRows.filter((row) => row.parseStatus === 'ok' && row.parsedJson !== null);
@@ -316,7 +325,7 @@ export function buildIncomingRows(
 
   const normalized = normalizeBatch(
     hydrated.map((entry) => entry.row.descriptionRaw),
-    { aliases, knownMerchantKeys: SEED_MERCHANT_KEYS, trace: false }
+    { aliases, knownMerchantKeys: SEED_MERCHANT_KEYS, trace: false },
   );
 
   const rows = hydrated.map((entry, index) => {
@@ -354,7 +363,7 @@ export function buildIncomingRows(
  */
 function resolveMerchant(
   context: LedgerlineContext,
-  resolution: { kind: 'alias'; merchantId: string } | { kind: 'provisional'; name: string }
+  resolution: { kind: 'alias'; merchantId: string } | { kind: 'provisional'; name: string },
 ): string | null {
   if (resolution.kind === 'alias') return resolution.merchantId;
   if (resolution.name.trim() === '') return null;
@@ -383,7 +392,9 @@ export function reviewImport(context: LedgerlineContext, importId: string): Impo
       warnings: diagnostics.warnings,
       balanceCheck: diagnostics.balanceCheck,
       rows: [],
-      unparsedRows: context.store.imports.listRawRows(importId).filter((r) => r.parseStatus === 'error'),
+      unparsedRows: context.store.imports
+        .listRawRows(importId)
+        .filter((r) => r.parseStatus === 'error'),
       plan: null,
     };
   }
@@ -394,9 +405,7 @@ export function reviewImport(context: LedgerlineContext, importId: string): Impo
 
   return {
     import: record,
-    accountSuggestion: accountId
-      ? null
-      : suggestAccount(context, record.sourceFilename, null),
+    accountSuggestion: accountId ? null : suggestAccount(context, record.sourceFilename, null),
     warnings: diagnostics.warnings,
     balanceCheck: diagnostics.balanceCheck,
     rows: toReviewRows(context, importId, rows, plan),
@@ -409,10 +418,10 @@ function toReviewRows(
   context: LedgerlineContext,
   importId: string,
   rows: readonly IncomingRow[],
-  plan: ImportPlan | null
+  plan: ImportPlan | null,
 ): ReviewRow[] {
   const rawText = new Map(
-    context.store.imports.listRawRows(importId).map((row) => [row.rowIndex, row.rawText])
+    context.store.imports.listRawRows(importId).map((row) => [row.rowIndex, row.rawText]),
   );
   const merged = new Set(plan?.merged.map((entry) => entry.rowIndex) ?? []);
   const near = new Set(plan?.nearDuplicates.map((entry) => entry.rowIndex) ?? []);
@@ -462,13 +471,27 @@ function toReviewPlan(plan: ImportPlan): ReviewPlan {
   };
 }
 
+/**
+ * A file that was never parsed has an `unavailable` balance verdict, not a missing
+ * one.
+ *
+ * `null` here would be a third state on top of §6.1's three, and the review screen
+ * would have to invent a caption for it. "Unavailable, because the file has not been
+ * parsed" is the same thing said in the vocabulary the check already has — and it is
+ * what keeps `balanceCheck` non-nullable on the wire.
+ */
+const NOT_PARSED: BalanceCheck = {
+  kind: 'unavailable',
+  reason: 'the file has not been parsed yet, so there are no balances to reconcile',
+};
+
 function parseDiagnostics(json: string | null): Diagnostics {
-  if (!json) return { warnings: [], balanceCheck: null };
+  if (!json) return { warnings: [], balanceCheck: NOT_PARSED };
   try {
     const parsed = JSON.parse(json) as Partial<Diagnostics>;
-    return { warnings: parsed.warnings ?? [], balanceCheck: parsed.balanceCheck ?? null };
+    return { warnings: parsed.warnings ?? [], balanceCheck: parsed.balanceCheck ?? NOT_PARSED };
   } catch {
-    return { warnings: [], balanceCheck: null };
+    return { warnings: [], balanceCheck: NOT_PARSED };
   }
 }
 
@@ -489,19 +512,19 @@ export interface CommitRequest {
 export function commitStagedImport(
   context: LedgerlineContext,
   importId: string,
-  request: CommitRequest
+  request: CommitRequest,
 ): CommitImportResult {
   const record = context.store.imports.getOrThrow(importId);
 
   if (record.status === 'needs_mapping' || record.status === 'failed') {
     throw new ImportNotReadyError(
-      `import ${importId} is ${record.status} and has no rows to commit`
+      `import ${importId} is ${record.status} and has no rows to commit`,
     );
   }
   if (!record.accountId) {
     throw new ImportNotReadyError(
       `import ${importId} has no account. PATCH /api/imports/${importId} with an accountId first — ` +
-        `spec 6.1 requires the guessed account to be confirmed before commit.`
+        `spec 6.1 requires the guessed account to be confirmed before commit.`,
     );
   }
 

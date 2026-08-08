@@ -17,6 +17,7 @@ import type {
   Account,
   Transaction,
   TransactionPage,
+  StatementImport,
   TransactionDetail,
   Merchant,
   Category,
@@ -24,6 +25,13 @@ import type {
   TransactionFilter,
   TransactionBulkChange,
   TransactionBulkResult,
+  ImportReview,
+  UploadResult,
+  CommitResult,
+  DeleteImportResult,
+  FormatProfile,
+  FormatProfileDraft,
+  FormatProfilePreview,
 } from './schemas.js';
 
 /** Where the API listens by default (spec 2.1: it binds loopback, never 0.0.0.0). */
@@ -96,68 +104,12 @@ export type GetHealthResponse = {
   readonly profileLoadErrors?: string[];
 };
 
-export type ListImportsResponse = ({
-  readonly id?: string;
-  readonly accountId?: string | null;
-  readonly sourceFilename?: string;
-  readonly fileSha256?: string;
-  readonly fileSizeBytes?: number;
-  readonly formatProfileId?: string | null;
-  readonly periodStart?: string | null;
-  readonly periodEnd?: string | null;
-  readonly rowsParsed?: number;
-  readonly rowsInserted?: number;
-  readonly rowsDuplicate?: number;
-  readonly status?: 'uploaded' | 'needs_mapping' | 'staged' | 'committed' | 'failed';
-  readonly parser?: string | null;
-  readonly parserVersion?: string | null;
-  readonly errorDetail?: string | null;
-  readonly diagnosticsJson?: string | null;
-  readonly importedAt?: string | null;
-  readonly createdAt?: string;
-  readonly updatedAt?: string;
-})[];
-
-export type UploadImportsResponse = {
-  readonly imports?: ({
-    readonly import?: {
-      readonly id?: string;
-      readonly accountId?: string | null;
-      readonly sourceFilename?: string;
-      readonly fileSha256?: string;
-      readonly fileSizeBytes?: number;
-      readonly formatProfileId?: string | null;
-      readonly periodStart?: string | null;
-      readonly periodEnd?: string | null;
-      readonly rowsParsed?: number;
-      readonly rowsInserted?: number;
-      readonly rowsDuplicate?: number;
-      readonly status?: 'uploaded' | 'needs_mapping' | 'staged' | 'committed' | 'failed';
-      readonly parser?: string | null;
-      readonly parserVersion?: string | null;
-      readonly errorDetail?: string | null;
-      readonly diagnosticsJson?: string | null;
-      readonly importedAt?: string | null;
-      readonly createdAt?: string;
-      readonly updatedAt?: string;
-    };
-    readonly created?: boolean;
-    readonly accountSuggestion?: {
-      readonly accountId?: string;
-      readonly reason?: string;
-    } | null;
-  })[];
-};
+export type ListImportsResponse = StatementImport[];
 
 export type UpdateImportBody = {
   readonly accountId?: string;
   readonly formatProfileId?: string;
   readonly reparse?: boolean;
-};
-
-export type DeleteImportResponse = {
-  readonly deletedTransactionIds?: string[];
-  readonly retainedTransactionIds?: string[];
 };
 
 export type CommitImportBody = {
@@ -170,6 +122,19 @@ export type CommitImportBody = {
    * Store $0 rows as trial authorizations. Without it a non-pending $0 row is refused as a probable misparse (spec 3.2).
    */
   readonly allowZeroAmountRows?: boolean;
+};
+
+export type ListFormatProfilesResponse = FormatProfile[];
+
+export type CreateFormatProfileBody = {
+  readonly importId: string;
+  readonly draft: FormatProfileDraft;
+};
+
+export type PreviewFormatProfileBody = {
+  readonly importId: string;
+  readonly draft: FormatProfileDraft;
+  readonly limit?: number;
 };
 
 export type ListAccountsResponse = Account[];
@@ -268,8 +233,8 @@ export class LedgerlineApi {
    *
    * Stages and parses; commits nothing. A byte-identical re-upload returns the existing import untouched (spec 3.3, idempotency layer one).
    */
-  uploadImports(): Promise<UploadImportsResponse> {
-    return this.request<UploadImportsResponse>('POST', `/api/imports`, {
+  uploadImports(): Promise<UploadResult> {
+    return this.request<UploadResult>('POST', `/api/imports`, {
     });
   }
 
@@ -278,8 +243,8 @@ export class LedgerlineApi {
    *
    * Rows with their disposition, the exact duplicates the merge rule will absorb, the near-duplicates needing a three-way choice, unparsed rows, and the balance verdict (spec 6.1). The plan is null until an account is confirmed.
    */
-  getImport(id: string): Promise<unknown> {
-    return this.request<unknown>('GET', `/api/imports/${encodeURIComponent(String(id))}`, {
+  getImport(id: string): Promise<ImportReview> {
+    return this.request<ImportReview>('GET', `/api/imports/${encodeURIComponent(String(id))}`, {
     });
   }
 
@@ -288,8 +253,8 @@ export class LedgerlineApi {
    *
    * Refused once the import is committed (spec 6.1).
    */
-  updateImport(id: string, body: UpdateImportBody): Promise<unknown> {
-    return this.request<unknown>('PATCH', `/api/imports/${encodeURIComponent(String(id))}`, {
+  updateImport(id: string, body: UpdateImportBody): Promise<ImportReview> {
+    return this.request<ImportReview>('PATCH', `/api/imports/${encodeURIComponent(String(id))}`, {
       body,
     });
   }
@@ -299,8 +264,8 @@ export class LedgerlineApi {
    *
    * Removes only the transactions this import is the last remaining source for. Deleting the first of two overlapping imports keeps the rows the second still contains (spec 3.3).
    */
-  deleteImport(id: string): Promise<DeleteImportResponse> {
-    return this.request<DeleteImportResponse>('DELETE', `/api/imports/${encodeURIComponent(String(id))}`, {
+  deleteImport(id: string): Promise<DeleteImportResult> {
+    return this.request<DeleteImportResult>('DELETE', `/api/imports/${encodeURIComponent(String(id))}`, {
     });
   }
 
@@ -309,8 +274,40 @@ export class LedgerlineApi {
    *
    * Idempotent. Applies the multiset merge rule, then the near-duplicate resolutions, then refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).
    */
-  commitImport(id: string, body: CommitImportBody): Promise<unknown> {
-    return this.request<unknown>('POST', `/api/imports/${encodeURIComponent(String(id))}/commit`, {
+  commitImport(id: string, body: CommitImportBody): Promise<CommitResult> {
+    return this.request<CommitResult>('POST', `/api/imports/${encodeURIComponent(String(id))}/commit`, {
+      body,
+    });
+  }
+
+  /**
+   * Column-mapping profiles, keyed on header signature
+   *
+   * Both shipped (`source: "seed"`) and mapper-created (`source: "user"`) profiles. The mapper lists them so a near-miss can be copied rather than rebuilt (spec 6.1).
+   */
+  listFormatProfiles(): Promise<ListFormatProfilesResponse> {
+    return this.request<ListFormatProfilesResponse>('GET', `/api/format-profiles`, {
+    });
+  }
+
+  /**
+   * Save a column mapping as a reusable profile
+   *
+   * Keyed on the header signature read from the import’s own bytes, never from the request. An existing profile for that signature is updated in place with its version bumped — `header_signature` is UNIQUE (spec 3.1), so a second row for one signature is not a thing that can exist. Re-parse the import with `PATCH /api/imports/:id { formatProfileId }`.
+   */
+  createFormatProfile(body: CreateFormatProfileBody): Promise<FormatProfile> {
+    return this.request<FormatProfile>('POST', `/api/format-profiles`, {
+      body,
+    });
+  }
+
+  /**
+   * Parse a candidate mapping without saving it
+   *
+   * Runs the real parser over the import’s stored bytes, so spec 6.1’s live preview shows what the importer would actually produce rather than a second opinion about it. Nothing is written — not the profile, not the rows.
+   */
+  previewFormatProfile(body: PreviewFormatProfileBody): Promise<FormatProfilePreview> {
+    return this.request<FormatProfilePreview>('POST', `/api/format-profiles/preview`, {
       body,
     });
   }

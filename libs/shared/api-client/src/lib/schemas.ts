@@ -178,3 +178,204 @@ export interface TransactionBulkResult {
   readonly renormalizeJobId: string | null;
   readonly renormalizeJobCoalesced: boolean;
 }
+
+export interface AccountSuggestion {
+  readonly accountId: string;
+  readonly reason: string;
+}
+
+export interface RawRow {
+  readonly rowIndex: number;
+  readonly lineNumber: number;
+  readonly rawText: string;
+  readonly transactionDate: string | null;
+  readonly postedDate: string | null;
+  readonly effectiveDate: string;
+  readonly descriptionRaw: string;
+  readonly amountCents: number;
+  readonly balanceCents: number | null;
+  readonly status: 'posted' | 'pending';
+  readonly currency: string;
+  readonly parseStatus: 'ok' | 'error';
+  readonly parseSource: 'csv' | 'pdf' | 'llm';
+}
+
+export interface RawRowRecord {
+  readonly id: string;
+  readonly importId: string;
+  readonly rowIndex: number;
+  readonly rawText: string;
+  readonly parsedJson: string | null;
+  readonly parseStatus: 'ok' | 'error';
+  readonly parseSource: 'csv' | 'pdf' | 'llm';
+}
+
+export interface ParseWarning {
+  readonly kind: 'zero_amount' | 'pending_row' | 'balance_mismatch' | 'balance_unavailable' | 'unparsed_row' | 'duplicate_in_file' | 'empty_description' | 'header_only' | 'signature_mismatch' | 'sign_convention_suspect' | 'profile_warning';
+  readonly message: string;
+  readonly rowIndex?: number;
+  readonly lineNumber?: number;
+}
+
+export interface BalanceMismatch {
+  readonly rowIndex: number;
+  readonly expectedCents: number;
+  readonly actualCents: number;
+  readonly deltaCents: number;
+}
+
+export interface BalanceCheck {
+  readonly kind: 'unavailable' | 'reconciled' | 'mismatch';
+  readonly reason?: string;
+  readonly order?: 'ascending' | 'descending';
+  readonly rowsChecked?: number;
+  readonly bestOrder?: 'ascending' | 'descending';
+  readonly failureCount?: number;
+  readonly failures?: BalanceMismatch[];
+}
+
+export interface ReviewRow {
+  readonly rowIndex: number;
+  readonly rawText: string;
+  readonly row: RawRow;
+  readonly disposition: 'insert' | 'duplicate' | 'near_duplicate';
+}
+
+export interface NearDuplicateCandidate {
+  readonly rowIndex: number;
+  readonly existingTransactionId: string;
+  readonly existingEffectiveDate: string;
+  readonly existingAmountCents: number;
+  readonly existingDescriptionRaw: string;
+  readonly existingIsPending: boolean;
+  readonly dayGap: number;
+  readonly amountDeltaCents: number;
+  readonly pendingToPosted: boolean;
+  readonly defaultResolution: 'replace' | 'keep_both' | 'skip';
+}
+
+export interface ReviewPlan {
+  readonly willInsert: number;
+  readonly alreadyPresent: number;
+  readonly nearDuplicates: NearDuplicateCandidate[];
+}
+
+export interface ImportReview {
+  readonly import: StatementImport;
+  readonly accountSuggestion: {
+    readonly accountId: string;
+    readonly reason: string;
+  } | null;
+  readonly warnings: ParseWarning[];
+  readonly balanceCheck: BalanceCheck;
+  readonly rows: ReviewRow[];
+  readonly unparsedRows: RawRowRecord[];
+  readonly plan: {
+    readonly willInsert: number;
+    readonly alreadyPresent: number;
+    readonly nearDuplicates: NearDuplicateCandidate[];
+  } | null;
+}
+
+export interface StagedUpload {
+  readonly import: StatementImport;
+  readonly created: boolean;
+  readonly accountSuggestion: {
+    readonly accountId: string;
+    readonly reason: string;
+  } | null;
+}
+
+export interface UploadResult {
+  readonly imports: StagedUpload[];
+}
+
+export interface CommitResult {
+  readonly importId: string;
+  readonly rowsParsed: number;
+  readonly rowsInserted: number;
+  readonly rowsDuplicate: number;
+  readonly rowsMerged: number;
+  readonly rowsSkippedAsNearDuplicate: number;
+  readonly rowsReplaced: number;
+  readonly refundPairsLinked: number;
+  readonly insertedTransactionIds: string[];
+  readonly alreadyCommitted: boolean;
+}
+
+export interface DeleteImportResult {
+  readonly deletedTransactionIds: string[];
+  readonly retainedTransactionIds: string[];
+}
+
+export interface ColumnRef {
+  readonly by: 'header' | 'index';
+  readonly name?: string;
+  readonly index?: number;
+}
+
+export interface ColumnMap {
+  readonly transactionDate?: ColumnRef;
+  readonly postedDate?: ColumnRef;
+  readonly description?: ColumnRef;
+  readonly amount?: ColumnRef;
+  readonly debit?: ColumnRef;
+  readonly credit?: ColumnRef;
+  readonly balance?: ColumnRef;
+  readonly status?: ColumnRef;
+}
+
+export interface FormatProfile {
+  readonly id: string;
+  readonly institution: string;
+  readonly accountTypeHint: 'checking' | 'savings' | 'credit_card' | null;
+  readonly headerSignature: string;
+  readonly headerTokens: string[];
+  readonly hasHeader: boolean;
+  readonly delimiter: string;
+  readonly skipLines: number;
+  readonly dateFormat: string;
+  readonly amountMode: 'single' | 'debit_credit';
+  readonly signConvention: 'as_is' | 'invert';
+  readonly columnMap: ColumnMap;
+  readonly pendingValues: string[];
+  readonly currency: string;
+  readonly version: number;
+  readonly source: 'seed' | 'user';
+}
+
+export interface FormatProfileDraft {
+  readonly id?: string;
+  readonly institution: string;
+  readonly accountTypeHint?: 'checking' | 'savings' | 'credit_card' | null;
+  readonly hasHeader?: boolean;
+  readonly delimiter?: string;
+  readonly skipLines?: number;
+  readonly dateFormat: string;
+  readonly amountMode?: 'single' | 'debit_credit';
+  readonly signConvention?: 'as_is' | 'invert';
+  readonly columnMap: ColumnMap;
+  readonly pendingValues?: string[];
+}
+
+export interface FormatProfilePreview {
+  readonly ok: boolean;
+  readonly errors: string[];
+  readonly warnings: string[];
+  readonly rows: RawRow[];
+  readonly failures: {
+    readonly rowIndex?: number;
+    readonly lineNumber?: number;
+    readonly rawText?: string;
+    readonly errors?: string[];
+  }[];
+  readonly parseWarnings: ParseWarning[];
+  readonly balanceCheck: BalanceCheck;
+  readonly headerSignature: string;
+  readonly headerTokens: string[];
+  readonly detectedDelimiter: string;
+  readonly detectedSkipLines: number;
+  readonly sampleRows: {
+    readonly cells?: string[];
+  }[];
+}

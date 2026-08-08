@@ -703,6 +703,870 @@
           "renormalizeJobId",
           "renormalizeJobCoalesced"
         ]
+      },
+      "AccountSuggestion": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accountId",
+          "reason"
+        ]
+      },
+      "RawRow": {
+        "type": "object",
+        "properties": {
+          "rowIndex": {
+            "type": "integer"
+          },
+          "lineNumber": {
+            "type": "integer"
+          },
+          "rawText": {
+            "type": "string"
+          },
+          "transactionDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postedDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effectiveDate": {
+            "type": "string"
+          },
+          "descriptionRaw": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "integer"
+          },
+          "balanceCents": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "posted",
+              "pending"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "parseStatus": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
+          },
+          "parseSource": {
+            "type": "string",
+            "enum": [
+              "csv",
+              "pdf",
+              "llm"
+            ]
+          }
+        },
+        "required": [
+          "rowIndex",
+          "lineNumber",
+          "rawText",
+          "transactionDate",
+          "postedDate",
+          "effectiveDate",
+          "descriptionRaw",
+          "amountCents",
+          "balanceCents",
+          "status",
+          "currency",
+          "parseStatus",
+          "parseSource"
+        ]
+      },
+      "RawRowRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "importId": {
+            "type": "string"
+          },
+          "rowIndex": {
+            "type": "integer"
+          },
+          "rawText": {
+            "type": "string"
+          },
+          "parsedJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parseStatus": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
+          },
+          "parseSource": {
+            "type": "string",
+            "enum": [
+              "csv",
+              "pdf",
+              "llm"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "importId",
+          "rowIndex",
+          "rawText",
+          "parsedJson",
+          "parseStatus",
+          "parseSource"
+        ]
+      },
+      "ParseWarning": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "zero_amount",
+              "pending_row",
+              "balance_mismatch",
+              "balance_unavailable",
+              "unparsed_row",
+              "duplicate_in_file",
+              "empty_description",
+              "header_only",
+              "signature_mismatch",
+              "sign_convention_suspect",
+              "profile_warning"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "rowIndex": {
+            "type": "integer"
+          },
+          "lineNumber": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "message"
+        ]
+      },
+      "BalanceMismatch": {
+        "type": "object",
+        "properties": {
+          "rowIndex": {
+            "type": "integer"
+          },
+          "expectedCents": {
+            "type": "integer"
+          },
+          "actualCents": {
+            "type": "integer"
+          },
+          "deltaCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rowIndex",
+          "expectedCents",
+          "actualCents",
+          "deltaCents"
+        ]
+      },
+      "BalanceCheck": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "unavailable",
+              "reconciled",
+              "mismatch"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending"
+            ]
+          },
+          "rowsChecked": {
+            "type": "integer"
+          },
+          "bestOrder": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending"
+            ]
+          },
+          "failureCount": {
+            "type": "integer"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BalanceMismatch"
+            }
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "ReviewRow": {
+        "type": "object",
+        "properties": {
+          "rowIndex": {
+            "type": "integer"
+          },
+          "rawText": {
+            "type": "string"
+          },
+          "row": {
+            "$ref": "#/components/schemas/RawRow"
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "insert",
+              "duplicate",
+              "near_duplicate"
+            ]
+          }
+        },
+        "required": [
+          "rowIndex",
+          "rawText",
+          "row",
+          "disposition"
+        ]
+      },
+      "NearDuplicateCandidate": {
+        "type": "object",
+        "properties": {
+          "rowIndex": {
+            "type": "integer"
+          },
+          "existingTransactionId": {
+            "type": "string"
+          },
+          "existingEffectiveDate": {
+            "type": "string"
+          },
+          "existingAmountCents": {
+            "type": "integer"
+          },
+          "existingDescriptionRaw": {
+            "type": "string"
+          },
+          "existingIsPending": {
+            "type": "boolean"
+          },
+          "dayGap": {
+            "type": "integer"
+          },
+          "amountDeltaCents": {
+            "type": "integer"
+          },
+          "pendingToPosted": {
+            "type": "boolean"
+          },
+          "defaultResolution": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "keep_both",
+              "skip"
+            ]
+          }
+        },
+        "required": [
+          "rowIndex",
+          "existingTransactionId",
+          "existingEffectiveDate",
+          "existingAmountCents",
+          "existingDescriptionRaw",
+          "existingIsPending",
+          "dayGap",
+          "amountDeltaCents",
+          "pendingToPosted",
+          "defaultResolution"
+        ]
+      },
+      "ReviewPlan": {
+        "type": "object",
+        "properties": {
+          "willInsert": {
+            "type": "integer"
+          },
+          "alreadyPresent": {
+            "type": "integer"
+          },
+          "nearDuplicates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NearDuplicateCandidate"
+            }
+          }
+        },
+        "required": [
+          "willInsert",
+          "alreadyPresent",
+          "nearDuplicates"
+        ]
+      },
+      "ImportReview": {
+        "type": "object",
+        "properties": {
+          "import": {
+            "$ref": "#/components/schemas/StatementImport"
+          },
+          "accountSuggestion": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "accountId": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "accountId",
+              "reason"
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParseWarning"
+            }
+          },
+          "balanceCheck": {
+            "$ref": "#/components/schemas/BalanceCheck"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewRow"
+            }
+          },
+          "unparsedRows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RawRowRecord"
+            }
+          },
+          "plan": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "willInsert": {
+                "type": "integer"
+              },
+              "alreadyPresent": {
+                "type": "integer"
+              },
+              "nearDuplicates": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/NearDuplicateCandidate"
+                }
+              }
+            },
+            "required": [
+              "willInsert",
+              "alreadyPresent",
+              "nearDuplicates"
+            ]
+          }
+        },
+        "required": [
+          "import",
+          "accountSuggestion",
+          "warnings",
+          "balanceCheck",
+          "rows",
+          "unparsedRows",
+          "plan"
+        ]
+      },
+      "StagedUpload": {
+        "type": "object",
+        "properties": {
+          "import": {
+            "$ref": "#/components/schemas/StatementImport"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "accountSuggestion": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "accountId": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "accountId",
+              "reason"
+            ]
+          }
+        },
+        "required": [
+          "import",
+          "created",
+          "accountSuggestion"
+        ]
+      },
+      "UploadResult": {
+        "type": "object",
+        "properties": {
+          "imports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StagedUpload"
+            }
+          }
+        },
+        "required": [
+          "imports"
+        ]
+      },
+      "CommitResult": {
+        "type": "object",
+        "properties": {
+          "importId": {
+            "type": "string"
+          },
+          "rowsParsed": {
+            "type": "integer"
+          },
+          "rowsInserted": {
+            "type": "integer"
+          },
+          "rowsDuplicate": {
+            "type": "integer"
+          },
+          "rowsMerged": {
+            "type": "integer"
+          },
+          "rowsSkippedAsNearDuplicate": {
+            "type": "integer"
+          },
+          "rowsReplaced": {
+            "type": "integer"
+          },
+          "refundPairsLinked": {
+            "type": "integer"
+          },
+          "insertedTransactionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "alreadyCommitted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "importId",
+          "rowsParsed",
+          "rowsInserted",
+          "rowsDuplicate",
+          "rowsMerged",
+          "rowsSkippedAsNearDuplicate",
+          "rowsReplaced",
+          "refundPairsLinked",
+          "insertedTransactionIds",
+          "alreadyCommitted"
+        ]
+      },
+      "DeleteImportResult": {
+        "type": "object",
+        "properties": {
+          "deletedTransactionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "retainedTransactionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "deletedTransactionIds",
+          "retainedTransactionIds"
+        ]
+      },
+      "ColumnRef": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "type": "string",
+            "enum": [
+              "header",
+              "index"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "by"
+        ]
+      },
+      "ColumnMap": {
+        "type": "object",
+        "properties": {
+          "transactionDate": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "postedDate": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "description": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "debit": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "credit": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "balance": {
+            "$ref": "#/components/schemas/ColumnRef"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ColumnRef"
+          }
+        }
+      },
+      "FormatProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "accountTypeHint": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "enum": [
+              "checking",
+              "savings",
+              "credit_card",
+              null
+            ]
+          },
+          "headerSignature": {
+            "type": "string"
+          },
+          "headerTokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hasHeader": {
+            "type": "boolean"
+          },
+          "delimiter": {
+            "type": "string"
+          },
+          "skipLines": {
+            "type": "integer"
+          },
+          "dateFormat": {
+            "type": "string"
+          },
+          "amountMode": {
+            "type": "string",
+            "enum": [
+              "single",
+              "debit_credit"
+            ]
+          },
+          "signConvention": {
+            "type": "string",
+            "enum": [
+              "as_is",
+              "invert"
+            ]
+          },
+          "columnMap": {
+            "$ref": "#/components/schemas/ColumnMap"
+          },
+          "pendingValues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currency": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "seed",
+              "user"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "institution",
+          "accountTypeHint",
+          "headerSignature",
+          "headerTokens",
+          "hasHeader",
+          "delimiter",
+          "skipLines",
+          "dateFormat",
+          "amountMode",
+          "signConvention",
+          "columnMap",
+          "pendingValues",
+          "currency",
+          "version",
+          "source"
+        ]
+      },
+      "FormatProfileDraft": {
+        "type": "object",
+        "required": [
+          "institution",
+          "dateFormat",
+          "columnMap"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "institution": {
+            "type": "string",
+            "minLength": 1
+          },
+          "accountTypeHint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "checking",
+              "savings",
+              "credit_card",
+              null
+            ]
+          },
+          "hasHeader": {
+            "type": "boolean"
+          },
+          "delimiter": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1
+          },
+          "skipLines": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dateFormat": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amountMode": {
+            "type": "string",
+            "enum": [
+              "single",
+              "debit_credit"
+            ]
+          },
+          "signConvention": {
+            "type": "string",
+            "enum": [
+              "as_is",
+              "invert"
+            ]
+          },
+          "columnMap": {
+            "$ref": "#/components/schemas/ColumnMap"
+          },
+          "pendingValues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "FormatProfilePreview": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RawRow"
+            }
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rowIndex": {
+                  "type": "integer"
+                },
+                "lineNumber": {
+                  "type": "integer"
+                },
+                "rawText": {
+                  "type": "string"
+                },
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "parseWarnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParseWarning"
+            }
+          },
+          "balanceCheck": {
+            "$ref": "#/components/schemas/BalanceCheck"
+          },
+          "headerSignature": {
+            "type": "string"
+          },
+          "headerTokens": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detectedDelimiter": {
+            "type": "string"
+          },
+          "detectedSkipLines": {
+            "type": "integer"
+          },
+          "sampleRows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cells": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "ok",
+          "errors",
+          "warnings",
+          "rows",
+          "failures",
+          "parseWarnings",
+          "balanceCheck",
+          "headerSignature",
+          "headerTokens",
+          "detectedDelimiter",
+          "detectedSkipLines",
+          "sampleRows"
+        ]
       }
     }
   },
@@ -759,130 +1623,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "imports": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "import": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string"
-                              },
-                              "accountId": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "sourceFilename": {
-                                "type": "string"
-                              },
-                              "fileSha256": {
-                                "type": "string"
-                              },
-                              "fileSizeBytes": {
-                                "type": "integer"
-                              },
-                              "formatProfileId": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "periodStart": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "periodEnd": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "rowsParsed": {
-                                "type": "integer"
-                              },
-                              "rowsInserted": {
-                                "type": "integer"
-                              },
-                              "rowsDuplicate": {
-                                "type": "integer"
-                              },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "uploaded",
-                                  "needs_mapping",
-                                  "staged",
-                                  "committed",
-                                  "failed"
-                                ]
-                              },
-                              "parser": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "parserVersion": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "errorDetail": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "diagnosticsJson": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "importedAt": {
-                                "type": [
-                                  "null",
-                                  "string"
-                                ]
-                              },
-                              "createdAt": {
-                                "type": "string"
-                              },
-                              "updatedAt": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "created": {
-                            "type": "boolean"
-                          },
-                          "accountSuggestion": {
-                            "type": [
-                              "null",
-                              "object"
-                            ],
-                            "properties": {
-                              "accountId": {
-                                "type": "string"
-                              },
-                              "reason": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UploadResult"
                 }
               }
             }
@@ -963,100 +1704,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "accountId": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "sourceFilename": {
-                        "type": "string"
-                      },
-                      "fileSha256": {
-                        "type": "string"
-                      },
-                      "fileSizeBytes": {
-                        "type": "integer"
-                      },
-                      "formatProfileId": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "periodStart": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "periodEnd": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "rowsParsed": {
-                        "type": "integer"
-                      },
-                      "rowsInserted": {
-                        "type": "integer"
-                      },
-                      "rowsDuplicate": {
-                        "type": "integer"
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "uploaded",
-                          "needs_mapping",
-                          "staged",
-                          "committed",
-                          "failed"
-                        ]
-                      },
-                      "parser": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "parserVersion": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "errorDetail": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "diagnosticsJson": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "importedAt": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string"
-                      },
-                      "updatedAt": {
-                        "type": "string"
-                      }
-                    }
+                    "$ref": "#/components/schemas/StatementImport"
                   }
                 }
               }
@@ -1144,6 +1792,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReview"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Default Response",
             "content": {
@@ -1245,6 +1903,16 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReview"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Default Response",
             "content": {
@@ -1330,21 +1998,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "deletedTransactionIds": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "retainedTransactionIds": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/DeleteImportResult"
                 }
               }
             }
@@ -1474,6 +2128,313 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/format-profiles": {
+      "get": {
+        "operationId": "listFormatProfiles",
+        "summary": "Column-mapping profiles, keyed on header signature",
+        "tags": [
+          "imports"
+        ],
+        "description": "Both shipped (`source: \"seed\"`) and mapper-created (`source: \"user\"`) profiles. The mapper lists them so a near-miss can be copied rather than rebuilt (spec 6.1).",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FormatProfile"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFormatProfile",
+        "summary": "Save a column mapping as a reusable profile",
+        "tags": [
+          "imports"
+        ],
+        "description": "Keyed on the header signature read from the import’s own bytes, never from the request. An existing profile for that signature is updated in place with its version bumped — `header_signature` is UNIQUE (spec 3.1), so a second row for one signature is not a thing that can exist. Re-parse the import with `PATCH /api/imports/:id { formatProfileId }`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "importId",
+                  "draft"
+                ],
+                "properties": {
+                  "importId": {
+                    "type": "string"
+                  },
+                  "draft": {
+                    "$ref": "#/components/schemas/FormatProfileDraft"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormatProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/format-profiles/preview": {
+      "post": {
+        "operationId": "previewFormatProfile",
+        "summary": "Parse a candidate mapping without saving it",
+        "tags": [
+          "imports"
+        ],
+        "description": "Runs the real parser over the import’s stored bytes, so spec 6.1’s live preview shows what the importer would actually produce rather than a second opinion about it. Nothing is written — not the profile, not the rows.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "importId",
+                  "draft"
+                ],
+                "properties": {
+                  "importId": {
+                    "type": "string"
+                  },
+                  "draft": {
+                    "$ref": "#/components/schemas/FormatProfileDraft"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 12
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormatProfilePreview"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Default Response",
             "content": {

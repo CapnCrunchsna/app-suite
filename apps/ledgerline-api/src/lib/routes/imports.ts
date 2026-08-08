@@ -12,48 +12,13 @@
 import type { FastifyInstance } from 'fastify';
 
 import type { CommitResolution } from '@metrum/ledgerline-data';
-import { parseCsvWithProfile } from '@metrum/ledgerline-parsing';
+import { decodeStatementText, parseCsvWithProfile } from '@metrum/ledgerline-parsing';
 
 import { errorResponses } from './errors.js';
+import { RESOLUTIONS, ref } from './schemas.js';
 import { toFormatProfile } from '../context.js';
 import type { LedgerlineContext } from '../context.js';
 import { commitStagedImport, reviewImport, stageUpload } from '../import-service.js';
-import { decodeStatementText } from '@metrum/ledgerline-parsing';
-
-const RESOLUTIONS = ['replace', 'keep_both', 'skip'] as const;
-
-const importSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    accountId: { type: ['string', 'null'] },
-    sourceFilename: { type: 'string' },
-    fileSha256: { type: 'string' },
-    fileSizeBytes: { type: 'integer' },
-    formatProfileId: { type: ['string', 'null'] },
-    periodStart: { type: ['string', 'null'] },
-    periodEnd: { type: ['string', 'null'] },
-    rowsParsed: { type: 'integer' },
-    rowsInserted: { type: 'integer' },
-    rowsDuplicate: { type: 'integer' },
-    status: {
-      type: 'string',
-      enum: ['uploaded', 'needs_mapping', 'staged', 'committed', 'failed'],
-    },
-    parser: { type: ['string', 'null'] },
-    parserVersion: { type: ['string', 'null'] },
-    errorDetail: { type: ['string', 'null'] },
-    diagnosticsJson: { type: ['string', 'null'] },
-    importedAt: { type: ['string', 'null'] },
-    createdAt: { type: 'string' },
-    updatedAt: { type: 'string' },
-  },
-} as const;
-
-const suggestionSchema = {
-  type: ['object', 'null'],
-  properties: { accountId: { type: 'string' }, reason: { type: 'string' } },
-} as const;
 
 export function registerImportRoutes(app: FastifyInstance, context: LedgerlineContext): void {
   app.post(
@@ -67,25 +32,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
           'import untouched (spec 3.3, idempotency layer one).',
         tags: ['imports'],
         consumes: ['multipart/form-data'],
-        response: {
-          ...errorResponses,
-          200: {
-            type: 'object',
-            properties: {
-              imports: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    import: importSchema,
-                    created: { type: 'boolean' },
-                    accountSuggestion: suggestionSchema,
-                  },
-                },
-              },
-            },
-          },
-        },
+        response: { 200: ref('UploadResult'), ...errorResponses },
       },
     },
     async (request, reply) => {
@@ -117,7 +64,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         operationId: 'listImports',
         tags: ['imports'],
         response: {
-          200: { type: 'array', items: importSchema },
+          200: { type: 'array', items: ref('StatementImport') },
           ...errorResponses,
         },
       },
@@ -141,7 +88,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
           properties: { id: { type: 'string' } },
           required: ['id'],
         },
-        response: errorResponses,
+        response: { 200: ref('ImportReview'), ...errorResponses },
       },
     },
     async (request, reply) => {
@@ -176,7 +123,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
             reparse: { type: 'boolean' },
           },
         },
-        response: errorResponses,
+        response: { 200: ref('ImportReview'), ...errorResponses },
       },
     },
     async (request, reply) => {
@@ -306,7 +253,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
             },
           },
         },
-        response: errorResponses,
+        response: { 200: ref('CommitResult'), ...errorResponses },
       },
     },
     async (request, reply) => {
@@ -332,22 +279,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
           properties: { id: { type: 'string' } },
           required: ['id'],
         },
-        response: {
-          ...errorResponses,
-          200: {
-            type: 'object',
-            properties: {
-              deletedTransactionIds: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-              retainedTransactionIds: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-            },
-          },
-        },
+        response: { 200: ref('DeleteImportResult'), ...errorResponses },
       },
     },
     async (request, reply) => {

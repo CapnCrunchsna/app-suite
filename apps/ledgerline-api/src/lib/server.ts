@@ -24,6 +24,7 @@ import type { LedgerlineContext } from './context.js';
 import { ImportNotReadyError } from './import-service.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerDataRoutes } from './routes/data.js';
+import { registerFormatProfileRoutes } from './routes/format-profiles.js';
 import { registerImportRoutes } from './routes/imports.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerMerchantRoutes } from './routes/merchants.js';
@@ -176,6 +177,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   );
 
   registerImportRoutes(app, options.context);
+  registerFormatProfileRoutes(app, options.context);
   registerAccountRoutes(app, options.context);
   registerTransactionRoutes(app, options.context);
   registerMerchantRoutes(app, options.context);
