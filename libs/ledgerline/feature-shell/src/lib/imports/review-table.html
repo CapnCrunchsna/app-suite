@@ -1,0 +1,114 @@
+<div class="rows" role="table" aria-label="Rows to import">
+  <div class="rows__head" role="row">
+    <span class="rows__cell rows__cell--index" role="columnheader">#</span>
+    <span class="rows__cell rows__cell--date" role="columnheader">Date</span>
+    <span class="rows__cell rows__cell--desc" role="columnheader">Descriptor</span>
+    <span class="rows__cell rows__cell--amount" role="columnheader">Amount</span>
+    <span class="rows__cell rows__cell--balance" role="columnheader">Balance</span>
+    <span class="rows__cell rows__cell--disposition" role="columnheader">Disposition</span>
+  </div>
+
+  @for (entry of rows(); track entry.rowIndex) {
+  <div
+    class="rows__row"
+    role="row"
+    [class.rows__row--duplicate]="entry.disposition === 'duplicate'"
+    [class.rows__row--near]="entry.disposition === 'near_duplicate'"
+    [class.rows__row--flagged]="flaggedRows().has(entry.rowIndex)"
+  >
+    <button
+      type="button"
+      class="rows__cell rows__cell--index rows__expand"
+      role="cell"
+      (click)="rowToggled.emit(entry.rowIndex)"
+      [attr.aria-expanded]="expandedRow() === entry.rowIndex"
+      title="Show the verbatim statement line"
+    >
+      <span class="rows__chevron">{{ expandedRow() === entry.rowIndex ? '▾' : '▸' }}</span>
+      {{ entry.rowIndex }}
+    </button>
+
+    <span class="rows__cell rows__cell--date" role="cell">
+      {{ entry.row.effectiveDate }} @if (entry.row.status === 'pending') {
+      <span class="tag tag--pending" title="Stored and shown; out of every total.">pending</span>
+      }
+    </span>
+
+    <span class="rows__cell rows__cell--desc" role="cell" [title]="entry.row.descriptionRaw">
+      {{ entry.row.descriptionRaw }}
+    </span>
+
+    <span
+      class="rows__cell rows__cell--amount"
+      role="cell"
+      [class.rows__credit]="entry.row.amountCents > 0"
+    >
+      {{ formatCents(entry.row.amountCents) }}
+    </span>
+
+    <span class="rows__cell rows__cell--balance" role="cell">
+      {{ entry.row.balanceCents === null ? '—' : formatCents(entry.row.balanceCents) }}
+    </span>
+
+    <span class="rows__cell rows__cell--disposition" role="cell">
+      @switch (entry.disposition) { @case ('duplicate') {
+      <span class="tag tag--dupe" title="§3.3's merge rule: the account already holds this row.">
+        already imported
+      </span>
+      } @case ('near_duplicate') {
+      <span class="tag tag--near">needs a decision</span>
+      } @default {
+      <span class="tag tag--insert">insert</span>
+      } }
+    </span>
+  </div>
+
+  @if (expandedRow() === entry.rowIndex) {
+  <!-- §6.1: "the raw source line available per row". Rendered verbatim in a
+           <pre>, because §2.5 keeps `raw_row.raw_text` never normalized, trimmed
+           or re-encoded, and collapsing its whitespace here would undo the only
+           property that makes it useful when a parse looks wrong. -->
+  <pre class="rows__raw">{{ entry.rawText }}</pre>
+  } @let candidate = candidateFor(entry.rowIndex); @if (entry.disposition === 'near_duplicate' &&
+  candidate) {
+  <div class="near" role="group" [attr.aria-label]="'Near-duplicate of row ' + entry.rowIndex">
+    <div class="near__compare">
+      <div class="near__side">
+        <span class="near__label">Incoming</span>
+        <span class="near__date">{{ entry.row.effectiveDate }}</span>
+        <span class="near__amount">{{ formatCents(entry.row.amountCents) }}</span>
+        <span class="near__desc">{{ entry.row.descriptionRaw }}</span>
+      </div>
+      <span class="near__gap">{{ gapLabel(candidate) }}</span>
+      <div class="near__side">
+        <span class="near__label">
+          Already in this account @if (candidate.existingIsPending) {
+          <span class="tag tag--pending">pending</span>
+          }
+        </span>
+        <span class="near__date">{{ candidate.existingEffectiveDate }}</span>
+        <span class="near__amount">{{ formatCents(candidate.existingAmountCents) }}</span>
+        <span class="near__desc">{{ candidate.existingDescriptionRaw }}</span>
+      </div>
+    </div>
+
+    <div class="near__choices">
+      @for (option of RESOLUTIONS; track option.value) {
+      <label class="near__choice" [title]="option.hint">
+        <input
+          type="radio"
+          [name]="'resolution-' + entry.rowIndex"
+          [value]="option.value"
+          [checked]="resolutionFor(entry.rowIndex) === option.value"
+          (change)="resolutionChanged.emit({ rowIndex: entry.rowIndex, resolution: option.value })"
+        />
+        <span>{{ option.label }}</span>
+      </label>
+      }
+      <span class="near__why">{{ whyDefault(candidate) }}</span>
+    </div>
+  </div>
+  } } @empty {
+  <p class="rows__empty">No rows parsed out of this file. The warning strip above says why.</p>
+  }
+</div>

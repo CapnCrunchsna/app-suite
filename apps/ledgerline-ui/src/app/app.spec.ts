@@ -47,7 +47,7 @@ describe('App', () => {
     ]);
   });
 
-  // A rail item becomes a link only once its page exists. Seven of the eight are
+  // A rail item becomes a link only once its page exists. Six of the eight are
   // spans, so none of them can be clicked into a blank screen.
   it('links only the sections that are built', async () => {
     const fixture = TestBed.createComponent(App);
@@ -55,8 +55,8 @@ describe('App', () => {
     const el = fixture.nativeElement as HTMLElement;
 
     const linked = [...el.querySelectorAll('a.rail__item')].map((n) => n.textContent?.trim());
-    expect(linked).toEqual(['Transactions']);
-    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(7);
+    expect(linked).toEqual(['Import', 'Transactions']);
+    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(6);
   });
 
   it('opens on Transactions, the one page that renders stored data', async () => {

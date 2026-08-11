@@ -1,0 +1,278 @@
+<div class="mapper">
+  <div class="mapper__intro">
+    <p class="mapper__lead">
+      No profile matches this file's header. Map its columns once and
+      <strong>the next statement from this bank imports without asking</strong> — the profile is
+      keyed on the header signature (§6.1).
+    </p>
+    <p class="mapper__detected">
+      Detected: delimiter <code>{{ detectedDelimiter() || '?' }}</code> · {{ detectedSkipLines() }}
+      preamble {{ detectedSkipLines() === 1 ? 'line' : 'lines' }} before the header. Neither is
+      yours to supply — the file already said.
+    </p>
+  </div>
+
+  <!-- ------------------------------------------------------ the grid --- -->
+
+  <div class="grid" role="table" aria-label="Columns in this file">
+    <!-- One `--columns` for the header and every sample row, so a cell cannot
+         drift out from under the dropdown that names it. -->
+    <div class="grid__scroll" [style.--columns]="headerTokens().length">
+      <div class="grid__head" role="row">
+        @for (token of headerTokens(); track $index) {
+        <div class="grid__col" role="columnheader" [class.grid__col--mapped]="isMapped(token)">
+          <span class="grid__token">{{ token || '(unnamed)' }}</span>
+          <!-- A column with no heading cannot be named in a profile, and a
+                 profile addresses columns by name so it survives a bank adding
+                 one. So it is offered as unmappable rather than as a role that
+                 would save and then never match. -->
+          <select
+            class="grid__select"
+            [attr.aria-label]="'Role for column ' + token"
+            [disabled]="token === ''"
+            [title]="token === '' ? 'This column has no heading, so no profile can name it.' : ''"
+            [ngModel]="roleFor(token)"
+            (ngModelChange)="setRole(token, $event)"
+          >
+            <option value="ignore">Ignore</option>
+            @for (role of COLUMN_ROLES; track role.value) {
+            <option [value]="role.value">{{ role.label }}</option>
+            }
+          </select>
+        </div>
+        } @empty {
+        <p class="grid__empty">Reading the file…</p>
+        }
+      </div>
+
+      @for (sample of sampleRows(); track $index) {
+      <div class="grid__row" role="row">
+        @for (cell of sample.cells ?? []; track $index) {
+        <span class="grid__cell" role="cell" [title]="cell">{{ cell }}</span>
+        }
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- ---------------------------------------------------- the controls --- -->
+
+  <div class="controls">
+    <label class="controls__field">
+      <span class="controls__label">Institution</span>
+      <input
+        type="text"
+        class="controls__input"
+        placeholder="Northgate Bank"
+        [ngModel]="institution()"
+        (ngModelChange)="institution.set($event)"
+      />
+    </label>
+
+    <label class="controls__field">
+      <span class="controls__label">Date format</span>
+      <select
+        class="controls__input"
+        [ngModel]="dateFormat()"
+        (ngModelChange)="dateFormat.set($event)"
+      >
+        @for (format of DATE_FORMATS; track format) {
+        <option [value]="format">{{ format }}</option>
+        } @if (!DATE_FORMATS.includes($any(dateFormat()))) {
+        <option [value]="dateFormat()">{{ dateFormat() }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="controls__field controls__field--narrow">
+      <span
+        class="controls__label"
+        title="Anything domain/dates.ts understands: YYYY YY MMM MM M DD D."
+      >
+        or type one
+      </span>
+      <input
+        type="text"
+        class="controls__input"
+        placeholder="DD-MMM-YY"
+        [ngModel]="dateFormat()"
+        (ngModelChange)="dateFormat.set($event)"
+      />
+    </label>
+
+    @if (hasStatusColumn()) {
+    <label class="controls__field">
+      <span
+        class="controls__label"
+        title="Values in the status column meaning 'not settled' (§2.5)."
+      >
+        Pending values
+      </span>
+      <input
+        type="text"
+        class="controls__input"
+        placeholder="pending, authorized"
+        [ngModel]="pendingValuesText()"
+        (ngModelChange)="pendingValuesText.set($event)"
+      />
+    </label>
+    } @if (copyable().length > 0) {
+    <label class="controls__field">
+      <span class="controls__label">Start from</span>
+      <select class="controls__input" (change)="copyFrom($any($event.target).value)">
+        <option value="">an existing profile…</option>
+        @for (profile of copyable(); track profile.id) {
+        <option [value]="profile.id">{{ profile.institution }}</option>
+        }
+      </select>
+    </label>
+    }
+  </div>
+
+  <fieldset class="sign">
+    <legend class="sign__legend">Sign convention</legend>
+    <label class="sign__choice">
+      <input
+        type="radio"
+        name="sign-convention"
+        value="as_is"
+        [checked]="signConvention() === 'as_is'"
+        (change)="signConvention.set('as_is')"
+      />
+      <span>As printed</span>
+    </label>
+    <label class="sign__choice">
+      <input
+        type="radio"
+        name="sign-convention"
+        value="invert"
+        [checked]="signConvention() === 'invert'"
+        (change)="signConvention.set('invert')"
+      />
+      <span>Invert</span>
+    </label>
+    <span class="sign__hint">
+      The house convention is <strong>negative means money leaving the account</strong> (§3.1), the
+      same for checking and credit cards. A card export that prints a $40 purchase as
+      <code>40.00</code> needs Invert; so does a debit/credit file whose outflows landed in the
+      column you called Credit.
+    </span>
+  </fieldset>
+
+  <!-- ------------------------------------------------ verbatim outcome --- -->
+
+  @if (preview.isLoading()) {
+  <p class="outcome outcome--busy" role="status">Parsing with this mapping…</p>
+  } @if (preview.error()) {
+  <p class="outcome outcome--bad" role="alert">
+    The preview call failed: {{ $any(preview.error()).message }}
+  </p>
+  } @if (errors().length > 0) {
+  <ul class="outcome outcome--bad" role="alert">
+    @for (message of errors(); track message) {
+    <li>{{ message }}</li>
+    }
+  </ul>
+  } @if (warnings().length > 0) {
+  <ul class="outcome outcome--warn" role="status">
+    @for (message of warnings(); track message) {
+    <li>{{ message }}</li>
+    }
+  </ul>
+  } @if (decimalCommaRefusal()) {
+  <p class="outcome outcome--warn">
+    This file writes amounts with a decimal comma. That is refused per row by design and
+    <strong>no column mapping can fix it</strong>: <code>45,20</code> and <code>45.20</code> mean
+    different things in different locales, and reading the first as $4,520 is a 1000× error nothing
+    downstream would catch (§3.1). European formats are not supported in v1.
+  </p>
+  }
+
+  <!-- ------------------------------------------------- the live preview --- -->
+
+  <div class="live">
+    <h4 class="live__heading">
+      Live preview
+      <span class="live__note">the importer's own parser, over this file's real bytes</span>
+    </h4>
+
+    @if (parsedRows().length === 0) {
+    <p class="live__empty">
+      Nothing parsed yet. A partial preview beside a list of errors would read as a partial success,
+      so the route returns no rows until the mapping is usable.
+    </p>
+    } @else {
+    <div class="live__table">
+      <div class="live__head">
+        <span>Date</span>
+        <span>Descriptor</span>
+        <span>Amount</span>
+        <span>Balance</span>
+        <span>Status</span>
+      </div>
+      @for (row of parsedRows(); track row.rowIndex) {
+      <div class="live__row">
+        <span class="live__date">{{ row.effectiveDate }}</span>
+        <span class="live__desc" [title]="row.descriptionRaw">{{ row.descriptionRaw }}</span>
+        <span class="live__amount" [class.live__credit]="row.amountCents > 0">
+          {{ formatCents(row.amountCents) }}
+        </span>
+        <span class="live__amount">
+          {{ row.balanceCents === null ? '—' : formatCents(row.balanceCents) }}
+        </span>
+        <span class="live__status">{{ row.status }}</span>
+      </div>
+      <pre class="live__raw">{{ row.rawText }}</pre>
+      }
+    </div>
+    } @if (failures().length > 0) {
+    <div class="live__failures">
+      <h5 class="live__subheading">{{ failures().length }} rows did not parse</h5>
+      @for (failure of failures(); track $index) {
+      <div class="live__failure">
+        <pre class="live__raw">{{ failure.rawText }}</pre>
+        <ul class="live__failure-errors">
+          @for (message of failure.errors ?? []; track message) {
+          <li>{{ message }}</li>
+          }
+        </ul>
+      </div>
+      }
+    </div>
+    } @if (parseWarnings().length > 0) {
+    <ul class="live__warnings">
+      @for (warning of parseWarnings(); track $index) {
+      <li><code>{{ warning.kind }}</code> {{ warning.message }}</li>
+      }
+    </ul>
+    } @let balance = balanceCheck(); @if (balance) {
+    <p class="live__balance" [attr.data-kind]="balance.kind">
+      Balance check: <strong>{{ balance.kind }}</strong>
+      @if (balance.reason) { — {{ balance.reason }} } @if (balance.kind === 'mismatch') { — {{
+      balance.failureCount }} of {{ balance.rowsChecked }} rows disagree, which usually means the
+      amount column or the sign convention is wrong. }
+    </p>
+    }
+  </div>
+
+  <div class="mapper__actions">
+    <button
+      type="button"
+      class="mapper__save"
+      (click)="save()"
+      [disabled]="!canSave() || busy()"
+      title="Saves the profile, then re-parses this import under it."
+    >
+      Save mapping and re-parse
+    </button>
+    <button type="button" class="mapper__cancel" (click)="cancelled.emit()">Cancel</button>
+    @if (!canSave() && !preview.isLoading()) {
+    <span class="mapper__blocked">
+      @if (institution().trim() === '') { Name the institution — it is what the profile will be
+      called. } @else { The mapping has to parse this file before it can be saved. A stored profile
+      that cannot parse is worse than none: detection would match it on signature and every future
+      statement from this bank would fail against it instead of reaching this screen. }
+    </span>
+    }
+  </div>
+</div>

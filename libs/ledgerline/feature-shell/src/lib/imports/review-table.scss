@@ -1,0 +1,252 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* One grid template for the header and every row, declared once so a column
+ * cannot drift between them. */
+.rows__head,
+.rows__row {
+  display: grid;
+  grid-template-columns:
+    minmax(52px, 62px)
+    minmax(112px, 132px)
+    minmax(200px, 2.6fr)
+    minmax(96px, 108px)
+    minmax(96px, 108px)
+    minmax(118px, 130px);
+  align-items: center;
+  gap: 0 10px;
+}
+
+.rows__head {
+  padding: 0 12px;
+  height: 34px;
+  background: var(--surface-2, #143034);
+  border-bottom: 1px solid var(--border, #1f4a47);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.rows__row {
+  padding: 6px 12px;
+  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  font-size: 0.8rem;
+}
+
+/* §6.1: exact duplicates are greyed. Still readable — the count summary is only
+ * checkable if the rows behind it are. */
+.rows__row--duplicate {
+  opacity: 0.45;
+}
+
+.rows__row--near {
+  background: rgb(176 139 79 / 10%);
+}
+
+.rows__row--flagged {
+  box-shadow: inset 3px 0 0 #b08b4f;
+}
+
+.rows__cell {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.rows__cell--date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rows__cell--desc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rows__cell--amount,
+.rows__cell--balance {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rows__cell--disposition {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rows__expand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent, #2dd4bf);
+  }
+}
+
+.rows__chevron {
+  width: 8px;
+  font-size: 0.65rem;
+}
+
+.rows__credit {
+  color: var(--accent-2, #34d399);
+}
+
+.rows__raw {
+  margin: 0;
+  padding: 8px 12px 10px 62px;
+  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  background: var(--bg, #0a1517);
+  color: var(--text-dim, #7ea8a1);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.rows__empty {
+  margin: 0;
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------- near-duplicates --- */
+
+.near {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  background: rgb(176 139 79 / 7%);
+}
+
+.near__compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+}
+
+.near__side {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface, #0f2124);
+  min-width: 0;
+}
+
+.near__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.near__date {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.near__amount {
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.near__desc {
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.near__gap {
+  font-size: 0.7rem;
+  color: #d9b878;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.near__choices {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.78rem;
+}
+
+.near__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.near__why {
+  flex: 1 1 240px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ---------------------------------------------------------- tags --- */
+
+.tag {
+  padding: 1px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.64rem;
+  white-space: nowrap;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.tag--insert {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.tag--dupe {
+  background: rgb(31 74 71 / 45%);
+}
+
+.tag--near,
+.tag--pending {
+  border-color: #b08b4f;
+  color: #d9b878;
+}

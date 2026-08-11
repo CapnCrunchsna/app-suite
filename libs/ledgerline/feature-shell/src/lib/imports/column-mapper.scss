@@ -1,0 +1,404 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.mapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #b08b4f;
+  border-radius: 8px;
+  background: rgb(176 139 79 / 6%);
+}
+
+.mapper__lead {
+  margin: 0 0 4px;
+  font-size: 0.86rem;
+}
+
+.mapper__detected {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ---------------------------------------------------------- the grid --- */
+
+.grid {
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+  background: var(--surface, #0f2124);
+  overflow: hidden;
+}
+
+.grid__scroll {
+  overflow-x: auto;
+}
+
+.grid__head,
+.grid__row {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 1), minmax(140px, 1fr));
+  gap: 0 8px;
+  padding: 0 10px;
+  min-width: min-content;
+}
+
+.grid__head {
+  padding-block: 8px;
+  border-bottom: 1px solid var(--border, #1f4a47);
+  background: var(--surface-2, #143034);
+}
+
+.grid__col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.grid__col--mapped .grid__select {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.grid__token {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid__select {
+  width: 100%;
+  padding: 3px 5px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.grid__row {
+  padding-block: 4px;
+  border-bottom: 1px solid rgb(31 74 71 / 35%);
+  font-size: 0.75rem;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.grid__cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.grid__empty {
+  margin: 0;
+  padding: 10px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------- the controls --- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+}
+
+.controls__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 150px;
+}
+
+.controls__field--narrow {
+  min-width: 120px;
+}
+
+.controls__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.controls__input {
+  padding: 4px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.sign {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 8px 12px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+}
+
+.sign__legend {
+  padding: 0 6px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.sign__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.sign__hint {
+  flex: 1 1 320px;
+  font-size: 0.73rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* -------------------------------------------------- verbatim outcome --- */
+
+.outcome {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+ul.outcome {
+  padding-left: 28px;
+}
+
+.outcome--busy {
+  color: var(--accent, #2dd4bf);
+}
+
+.outcome--bad {
+  border-color: #e0796a;
+  background: rgb(224 121 106 / 8%);
+  color: #eda596;
+}
+
+.outcome--warn {
+  border-color: #b08b4f;
+  background: rgb(176 139 79 / 8%);
+  color: #d9b878;
+}
+
+/* ---------------------------------------------------- the live preview --- */
+
+.live {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.live__note,
+.live__empty {
+  font-size: 0.73rem;
+  font-weight: 400;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.live__empty {
+  margin: 0;
+}
+
+.live__table {
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+  background: var(--surface, #0f2124);
+  overflow: hidden;
+}
+
+.live__head,
+.live__row {
+  display: grid;
+  grid-template-columns: 108px minmax(160px, 2.4fr) 96px 96px 74px;
+  gap: 0 10px;
+  padding: 4px 10px;
+  align-items: center;
+}
+
+.live__head {
+  background: var(--surface-2, #143034);
+  border-bottom: 1px solid var(--border, #1f4a47);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.live__row {
+  font-size: 0.78rem;
+}
+
+.live__date {
+  font-variant-numeric: tabular-nums;
+}
+
+.live__desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live__amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.live__credit {
+  color: var(--accent-2, #34d399);
+}
+
+.live__status {
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* The verbatim line under each parsed row is what makes this a preview of a
+ * *reading* rather than a list of numbers: `01/02/2026 → 2026-01-02` is only
+ * checkable with the source beside it. */
+.live__raw {
+  margin: 0;
+  padding: 0 10px 5px;
+  color: rgb(126 168 161 / 75%);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.68rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border-bottom: 1px solid rgb(31 74 71 / 35%);
+}
+
+.live__failures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #e0796a;
+  border-radius: 7px;
+  background: rgb(224 121 106 / 6%);
+}
+
+.live__subheading {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #eda596;
+}
+
+.live__failure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.live__failure-errors {
+  margin: 0;
+  padding-left: 24px;
+  font-size: 0.72rem;
+  color: #eda596;
+}
+
+.live__warnings {
+  margin: 0;
+  padding-left: 24px;
+  font-size: 0.73rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.live__balance {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-dim, #7ea8a1);
+
+  &[data-kind='reconciled'] {
+    color: var(--accent-2, #34d399);
+  }
+
+  &[data-kind='mismatch'] {
+    color: #eda596;
+  }
+}
+
+/* ------------------------------------------------------------ actions --- */
+
+.mapper__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mapper__save {
+  padding: 6px 14px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 6px;
+  background: var(--accent, #2dd4bf);
+  color: #06201c;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.mapper__cancel {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent, #2dd4bf);
+  }
+}
+
+.mapper__blocked {
+  flex: 1 1 280px;
+  font-size: 0.73rem;
+  color: var(--text-dim, #7ea8a1);
+}

@@ -1,0 +1,204 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 20px;
+  border: 2px dashed var(--border, #1f4a47);
+  border-radius: var(--radius, 10px);
+  background: rgb(20 48 52 / 35%);
+  text-align: center;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.zone--over {
+  border-color: var(--accent, #2dd4bf);
+  background: rgb(45 212 191 / 10%);
+}
+
+.zone__headline {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.zone__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.zone__browse {
+  position: relative;
+  overflow: hidden;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent, #2dd4bf);
+  }
+}
+
+/* Visually hidden rather than `display: none`: a hidden input is not focusable,
+ * and the label is the only way to reach the picker from the keyboard. */
+.zone__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.zone__browse-text {
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------- staged files --- */
+
+.staged {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.staged__row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.6fr) 64px 72px minmax(180px, 2fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+  background: var(--surface-2, #143034);
+  font-size: 0.8rem;
+}
+
+.staged__row--selected {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.staged__row--failed {
+  border-color: #e0796a;
+}
+
+.staged__name {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+}
+
+.staged__size {
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.staged__progress {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(31 74 71 / 60%);
+  overflow: hidden;
+}
+
+/* Indeterminate while the request is open and full once it lands. The API
+ * buffers the whole file before replying, so a byte-accurate percentage would be
+ * a number this page cannot actually observe. */
+.staged__bar {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--accent, #2dd4bf);
+  animation: staged-progress 900ms linear infinite;
+}
+
+.staged__bar--done {
+  width: 100%;
+  animation: none;
+}
+
+@keyframes staged-progress {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.staged__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.badge {
+  padding: 1px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.badge--ok {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.badge--busy {
+  color: var(--accent, #2dd4bf);
+}
+
+.badge--warn {
+  border-color: #b08b4f;
+  color: #d9b878;
+}
+
+.badge--bad {
+  border-color: #e0796a;
+  color: #eda596;
+  /* The API's own refusal reason, which is a sentence rather than a word. */
+  white-space: normal;
+  text-align: right;
+}
+
+.badge--known {
+  background: rgb(31 74 71 / 45%);
+}

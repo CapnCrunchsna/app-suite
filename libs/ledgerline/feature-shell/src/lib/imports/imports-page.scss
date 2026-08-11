@@ -1,0 +1,332 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------- notice --- */
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: var(--radius, 10px);
+  background: var(--surface-2, #143034);
+  font-size: 0.85rem;
+}
+
+.notice--good {
+  border-color: var(--accent-2, #34d399);
+}
+
+.notice__text {
+  flex: 1 1 auto;
+}
+
+.notice__dismiss {
+  border: 0;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text, #dcefeb);
+  }
+}
+
+/* ------------------------------------------------------------- failure --- */
+
+.failure {
+  padding: 16px;
+  border: 1px solid #e0796a;
+  border-radius: var(--radius, 10px);
+  background: rgb(224 121 106 / 8%);
+}
+
+.failure__text {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+}
+
+.failure__detail {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.button {
+  padding: 5px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent, #2dd4bf);
+  }
+}
+
+/* --------------------------------------------------------- review head --- */
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.head__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.head__filename {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.head__status {
+  padding: 1px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.66rem;
+  color: var(--text-dim, #7ea8a1);
+
+  &[data-status='committed'] {
+    border-color: var(--accent-2, #34d399);
+    color: var(--accent-2, #34d399);
+  }
+
+  &[data-status='needs_mapping'] {
+    border-color: #b08b4f;
+    color: #d9b878;
+  }
+
+  &[data-status='failed'] {
+    border-color: #e0796a;
+    color: #eda596;
+  }
+}
+
+.head__busy {
+  font-size: 0.76rem;
+  color: var(--accent, #2dd4bf);
+}
+
+.head__facts {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.refused {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #e0796a;
+  border-radius: 8px;
+  background: rgb(224 121 106 / 8%);
+  font-size: 0.84rem;
+  color: #eda596;
+}
+
+/* ------------------------------------------------- account confirmation --- */
+
+.account {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 8px;
+  background: var(--surface-2, #143034);
+  font-size: 0.8rem;
+}
+
+/* §6.1 makes this a gate, not a field: commit refuses without it, so the
+ * unconfirmed state is the one that looks unfinished. */
+.account--unconfirmed {
+  border-color: #b08b4f;
+  background: rgb(176 139 79 / 10%);
+}
+
+.account__prompt {
+  flex: 1 1 340px;
+  color: var(--text-dim, #7ea8a1);
+
+  strong {
+    color: var(--text, #dcefeb);
+  }
+}
+
+.account__done {
+  flex: 1 1 auto;
+}
+
+.account__change {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.account__select {
+  padding: 4px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.account__empty {
+  flex: 1 1 100%;
+  font-size: 0.74rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* -------------------------------------------------------- warning strip --- */
+
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.warnings__item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 7px 11px;
+  border: 1px solid var(--border, #1f4a47);
+  border-left-width: 3px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+
+  &[data-severity='bad'] {
+    border-left-color: #e0796a;
+    background: rgb(224 121 106 / 7%);
+  }
+
+  &[data-severity='warn'] {
+    border-left-color: #b08b4f;
+    background: rgb(176 139 79 / 7%);
+  }
+
+  &[data-severity='note'] {
+    border-left-color: var(--text-dim, #7ea8a1);
+  }
+}
+
+.warnings__headline {
+  font-weight: 600;
+}
+
+.warnings__detail {
+  flex: 1 1 340px;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 0.74rem;
+}
+
+.warnings__rows {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ---------------------------------------------------------------- plan --- */
+
+.plan {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.plan__figure strong {
+  color: var(--text, #dcefeb);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__figure--decide strong {
+  color: #d9b878;
+}
+
+.plan__figure--bad strong {
+  color: #eda596;
+}
+
+.plan__figure--pending {
+  font-size: 0.76rem;
+}
+
+/* -------------------------------------------------------------- commit --- */
+
+.commit {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.commit__optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  flex: 1 1 100%;
+  padding: 8px 11px;
+  border: 1px solid #b08b4f;
+  border-radius: 7px;
+  background: rgb(176 139 79 / 8%);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.commit__button {
+  padding: 7px 18px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 6px;
+  background: var(--accent, #2dd4bf);
+  color: #06201c;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.commit__blocked,
+.commit__done {
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+}

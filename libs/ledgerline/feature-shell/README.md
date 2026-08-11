@@ -3,8 +3,8 @@
 Ledgerline's §6 pages. `scope:ll`, `type:feature`, consumed as
 `@metrum/ledgerline-feature-shell`.
 
-Built so far: **Transactions (§6.3)**. The other seven sections are rail items in
-`apps/ledgerline-ui` that route nowhere yet.
+Built so far: **Import (§6.1)** and **Transactions (§6.3)**. The other six sections
+are rail items in `apps/ledgerline-ui` that route nowhere yet.
 
 ## The boundary is the point of this lib
 
@@ -35,12 +35,23 @@ lib/
     transaction-detail.ts       the row expander (presentational)
     merchant-assign.ts          the merchant edit and its bulk offer
     virtual-window.ts           the windowing arithmetic, as a pure function
+  imports/
+    imports-page.ts             the container — owns all state and every request
+    import-dropzone.ts          the dropzone and the staged file list
+    review-table.ts             parsed rows, duplicates, the three-way choice
+    review-warnings.ts          §6.1's warning strip, as a pure function
+    column-mapper.ts            the inline mapper and its live preview
+    import-history.ts           re-parse and delete
 ```
 
-The container owns the state and the four children are presentational — except
-`MerchantAssign`, which owns one dry-run count. That split is what keeps *the
-filter the user is reading* and *the filter the bulk apply sends* the same object
-rather than two that agree by inspection.
+Both pages follow the same split: the container owns the state and every request,
+and the children are presentational. Two children are the exception, for one
+reason. `MerchantAssign` owns its dry-run count so that *the filter the user is
+reading* and *the filter the bulk apply sends* are the same object rather than
+two that agree by inspection. `ColumnMapper` owns its draft and the preview that
+draft drives, because the draft is a dozen fields nothing outside it reads and the
+preview refires on every dropdown change; the *write* still leaves through the
+page.
 
 ## Three things about the Transactions page worth knowing
 
@@ -65,6 +76,29 @@ every account and date and including rows the internal-transfer and excluded
 filters hide — a merchant correction is a statement about identity, and scoping it
 to the visible filter would leave one descriptor resolving two ways in one
 database.
+
+## Three things about the Import page worth knowing
+
+**A resource's params must never read that resource's own value.** The mapper's
+preview takes the draft as its params, and the draft's column map is addressed by
+header name — names that arrive *in the preview response*. Deriving the map from
+that response made the params a consumer of their own result, and the failure is
+silent: the signal graph stops propagating and the second dropdown change, and
+every one after it, previews nothing. Keying the roles by header name rather than
+by column position removes the read entirely, and is what a saved `columnMap`
+addresses anyway.
+
+**The account gate is a data rule, not a form field.** `POST /commit` refuses an
+import with no account and `GET /api/imports/:id` returns `plan: null` until there
+is one, because §3.3's merge rule counts rows *within an account* — there is no
+duplicate count before the account is known. So the page shows no plan and no
+reachable Commit until the `PATCH` lands, rather than showing a plan it would then
+have to disown.
+
+**Two fields are deliberately absent from the mapper's draft.** Detection reports
+the delimiter and the preamble length on every preview, and the API's fallback
+prefers what was detected over what was assumed — but only when the field is
+absent. Sending them is how `,` silently overrides a detected `;`.
 
 ## Why this lib builds with ng-packagr
 
@@ -101,12 +135,15 @@ stale; `rm -rf .angular/cache` and restart the dev server.
 
 ## Tests
 
-`transactions-page.spec.ts` runs against a stubbed `LedgerlineApiService` rather
-than a served API: `apps/ledgerline-api`'s suite already drives the real HTTP
-surface over real fixture bytes, and repeating that here would test the API twice
-and the page not at all. What it tests is the part the API cannot see — that the
-count and the apply use one filter, that the internal-transfer default is off, and
-that money reaches the DOM formatted from cents rather than parsed from a string.
+Both page specs run against a stubbed `LedgerlineApiService` rather than a served
+API: `apps/ledgerline-api`'s suite already drives the real HTTP surface over real
+fixture bytes, and repeating that here would test the API twice and the page not
+at all. What they test is the part the API cannot see — for §6.3, that the count
+and the apply use one filter, that the internal-transfer default is off, and that
+money reaches the DOM formatted from cents rather than parsed from a string; for
+§6.1, that Commit is unreachable until the account is confirmed, that a
+near-duplicate's default is pre-selected and applied to nothing, and that the
+mapper's draft omits the two fields detection already answered.
 
 It also carries the `@metrum/ui` binding guard that used to live in
 `apps/ledgerline-ui`. That guard has to sit wherever `ui-panel` is actually

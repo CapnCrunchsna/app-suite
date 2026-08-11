@@ -4,7 +4,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 /** Spec §6's eight sections, in spec order. `path` is null until the page exists —
  *  a rail item that routes nowhere is a link to a blank screen. */
 const SECTIONS = [
-  { label: 'Import', path: null },
+  { label: 'Import', path: 'imports' },
   { label: 'Accounts', path: null },
   { label: 'Transactions', path: 'transactions' },
   { label: 'Findings', path: null },

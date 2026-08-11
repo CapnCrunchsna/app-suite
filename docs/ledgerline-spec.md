@@ -16,12 +16,15 @@ import-commit half is built too — the whole of §3 (schema, indexes, constrain
 re-import) in `libs/ledgerline/data`, and the import, account, transaction and data endpoints
 of §2.3 in `apps/ledgerline-api`; and as of 2026-08-07 the **first UI page** is built —
 §6.3's Transactions page in `libs/ledgerline/feature-shell`, with `POST /api/transactions/bulk`
-behind it and `libs/shared/api-client` genuinely generated from the emitted contract.
+behind it and `libs/shared/api-client` genuinely generated from the emitted contract. As of
+2026-08-11 §6.1's **Import page** is built on the same lib — the dropzone, the review table
+with its duplicate and near-duplicate dispositions, the warning strip, the commit gate, the
+inline column mapper over `POST /api/format-profiles/preview`, and the import history.
 
 PDF ingest, the LLM stage of §4.2, the analyzers of §5, §2.7's job **runner**, the remaining
-endpoints of §2.3 and the other seven pages of §6 are **not** built.
-`docs/statement-parsing.md` records what has and has not been validated. §9 and §9a list the
-amendments implementation made to this document.
+endpoints of §2.3 and the other six pages of §6 are **not** built.
+`docs/statement-parsing.md` records what has and has not been validated. §9, §9a and §9b list
+the amendments implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1140,6 +1143,26 @@ client. Every route now declares an explicit `operationId` and every shared resp
 explicit `$id`; `tools/generate-api-client.mjs` invents no names and errors on a route without
 one. Two tests in `apps/ledgerline-api/src/contract.spec.ts` fail the build if `openapi.json`
 drifts from the route schemas, or if the committed client drifts from `openapi.json`.
+
+## 9b. Amendments from implementation — 2026-08-11 (§6.1)
+
+Building the Import page found one place where §6.1 asks for a check this codebase cannot
+currently make, and one place where §6.1's wording understates what the UI has to do. Neither
+is a correction to a rule; both are recorded for the reason §9a gives — a requirement that
+quietly becomes unimplementable is worth more written down than silently dropped.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.1 | **"Dates outside the detected period" cannot fire today, and the page says where the period came from.** The check is implemented against `statement_import.period_start`/`period_end`, which is the contract; those two are currently derived by `NodeCsvParser` as the minimum and maximum `effective_date` of the rows that parsed, so no row can fall outside them by construction. | The requirement is right and the implementation is honest — the moment `detect` reads the period off the statement header, which the Northgate fixture prints two lines above its columns (`Statement Period: 01/01/2026 - 01/20/2026`), a row dated outside it is exactly the misparse this warning exists to catch. What the UI must not do is render a strip that cannot light up and let it read as a check that passed, so the review header labels the period as derived from the rows. The alternative — clustering the dates in the UI and flagging stragglers — was rejected: it puts an uncalibrated threshold (§7.6) in a `type:feature` lib and duplicates a judgment `type:parsing` owns. |
+| 6.1 | **The account confirmation is a gate on the whole review, not a field on it.** The page shows no plan and no reachable Commit until `PATCH /api/imports/:id { accountId }` has landed. | §6.1 says the guess "must be confirmed" and reads as a form field, but §3.3's merge rule counts rows *within an account*: `GET /api/imports/:id` therefore returns `plan: null` and every disposition is `insert` until an account exists. A screen that showed a duplicate count before the account was chosen would be showing a count against no account — and the count is the number on which the reviewer authorises the commit. |
+
+One implementation detail is worth recording because it is a trap rather than a choice.
+**A `resource`'s params must not read that resource's own value.** The column mapper previews
+a draft whose `columnMap` addresses columns by header name, and the header names arrive in the
+preview response; deriving the draft from the response made the preview's params a consumer of
+the preview's result. That cycle does not throw — the signal graph stops propagating, and every
+dropdown change after the first previews nothing at all. The roles are keyed by header name
+instead, which removes the read and matches what a saved `column_map` addresses anyway.
 
 ## 10. Open discrepancies — recorded, not resolved
 

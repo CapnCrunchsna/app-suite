@@ -14,20 +14,37 @@
  */
 
 import { Injectable, InjectionToken, inject } from '@angular/core';
-import { LedgerlineApi } from '@metrum/api-client';
+import {
+  API_BASE_PATH,
+  DEFAULT_BASE_URL,
+  LedgerlineApi,
+  LedgerlineApiError,
+} from '@metrum/api-client';
 import type {
   Account,
+  ApiError,
   BulkUpdateTransactionsBody,
   Category,
+  CommitImportBody,
+  CommitResult,
+  CreateFormatProfileBody,
+  DeleteImportResult,
+  FormatProfile,
+  FormatProfilePreview,
+  ImportReview,
   Job,
   ListTransactionsQuery,
   Merchant,
+  PreviewFormatProfileBody,
+  StatementImport,
   Transaction,
   TransactionBulkChange,
   TransactionBulkResult,
   TransactionDetail,
   TransactionFilter,
   TransactionPage,
+  UpdateImportBody,
+  UploadResult,
 } from '@metrum/api-client';
 
 /**
@@ -43,9 +60,13 @@ export const LEDGERLINE_API_BASE_URL = new InjectionToken<string>('LEDGERLINE_AP
 
 @Injectable({ providedIn: 'root' })
 export class LedgerlineApiService {
-  private readonly api = new LedgerlineApi({
-    baseUrl: inject(LEDGERLINE_API_BASE_URL, { optional: true }) ?? undefined,
-  });
+  /** Kept, not just handed to the client, because one route below cannot go
+   *  through the client at all — see `uploadImports`. */
+  private readonly baseUrl = (
+    inject(LEDGERLINE_API_BASE_URL, { optional: true }) ?? DEFAULT_BASE_URL
+  ).replace(/\/$/, '');
+
+  private readonly api = new LedgerlineApi({ baseUrl: this.baseUrl });
 
   listTransactions(query: ListTransactionsQuery): Promise<TransactionPage> {
     return this.api.listTransactions(query);
@@ -98,5 +119,87 @@ export class LedgerlineApiService {
   /** §2.7: the UI polls a job rather than blocking on it. */
   getJob(id: string): Promise<Job> {
     return this.api.getJob(id);
+  }
+
+  // ------------------------------------------------------------- §6.1 ---
+
+  /**
+   * `POST /api/imports` — the one method here that is not a pass-through, and
+   * the only place in this lib that calls `fetch` itself.
+   *
+   * The route consumes `multipart/form-data`, which OpenAPI's `consumes` records
+   * but does not *describe*: there is no schema for the parts, so the generator
+   * has nothing to emit a body parameter from and `uploadImports()` on the
+   * generated client takes none. Rather than hand-edit generated code (which the
+   * next `npx nx generate-client api-client` would overwrite) or invent a JSON
+   * shape the route does not accept, the `FormData` goes out directly — and it
+   * throws the client's own `LedgerlineApiError` so a caller branches on
+   * `error.code` here exactly as it does everywhere else.
+   *
+   * No `content-type` header on purpose: the browser has to set it, because only
+   * the browser knows the multipart boundary it generated.
+   */
+  async uploadImports(files: readonly File[]): Promise<UploadResult> {
+    const form = new FormData();
+    for (const file of files) form.append('files', file, file.name);
+
+    const path = `${API_BASE_PATH}/imports`;
+    const response = await fetch(`${this.baseUrl}${path}`, { method: 'POST', body: form });
+
+    if (!response.ok) {
+      let body: ApiError | null = null;
+      try {
+        body = (await response.json()) as ApiError;
+      } catch {
+        body = null;
+      }
+      throw new LedgerlineApiError(
+        response.status,
+        body,
+        body?.message ?? `POST ${path} failed with ${response.status}`,
+      );
+    }
+
+    return (await response.json()) as UploadResult;
+  }
+
+  /** §6.1's import history. */
+  listImports(): Promise<StatementImport[]> {
+    return this.api.listImports();
+  }
+
+  /** The staged parse result §2.5 requires a reviewer to see before commit. */
+  getImport(id: string): Promise<ImportReview> {
+    return this.api.getImport(id);
+  }
+
+  /** Confirm the guessed account, apply a saved profile, or re-parse. */
+  updateImport(id: string, body: UpdateImportBody): Promise<ImportReview> {
+    return this.api.updateImport(id, body);
+  }
+
+  /** The one call that lands rows in `transaction`. */
+  commitImport(id: string, body: CommitImportBody): Promise<CommitResult> {
+    return this.api.commitImport(id, body);
+  }
+
+  /** Removes only the rows this import is the last remaining source for (§3.3). */
+  deleteImport(id: string): Promise<DeleteImportResult> {
+    return this.api.deleteImport(id);
+  }
+
+  /** Named profiles, for the detected badge and for copying a near miss. */
+  listFormatProfiles(): Promise<FormatProfile[]> {
+    return this.api.listFormatProfiles();
+  }
+
+  /** The mapper's live preview — the real parser over the real bytes. */
+  previewFormatProfile(body: PreviewFormatProfileBody): Promise<FormatProfilePreview> {
+    return this.api.previewFormatProfile(body);
+  }
+
+  /** Saves the mapping. Deliberately does not re-parse — that is `updateImport`. */
+  createFormatProfile(body: CreateFormatProfileBody): Promise<FormatProfile> {
+    return this.api.createFormatProfile(body);
   }
 }

@@ -1,0 +1,142 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history__row {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.6fr)
+    92px
+    minmax(110px, 1fr)
+    minmax(160px, 1fr)
+    minmax(190px, 1.2fr)
+    auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+  background: var(--surface-2, #143034);
+  font-size: 0.78rem;
+}
+
+.history__row--selected {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.history__row--failed {
+  border-color: #e0796a;
+}
+
+.history__name {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent, #2dd4bf);
+  }
+}
+
+.history__status {
+  padding: 1px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.66rem;
+  text-align: center;
+  color: var(--text-dim, #7ea8a1);
+
+  &[data-status='committed'] {
+    border-color: var(--accent-2, #34d399);
+    color: var(--accent-2, #34d399);
+  }
+
+  &[data-status='needs_mapping'] {
+    border-color: #b08b4f;
+    color: #d9b878;
+  }
+
+  &[data-status='failed'] {
+    border-color: #e0796a;
+    color: #eda596;
+  }
+}
+
+.history__account,
+.history__period,
+.history__counts {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 0.73rem;
+}
+
+.history__period,
+.history__counts {
+  font-variant-numeric: tabular-nums;
+}
+
+.history__actions {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.history__action {
+  padding: 3px 9px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.history__action--danger {
+  border-color: #e0796a;
+  color: #eda596;
+
+  &:hover:not(:disabled) {
+    background: rgb(224 121 106 / 12%);
+    border-color: #e0796a;
+  }
+}
+
+.history__empty {
+  padding: 18px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-dim, #7ea8a1);
+}

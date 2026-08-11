@@ -1,0 +1,231 @@
+<ui-panel heading="Import">
+  <ll-import-dropzone
+    [files]="staged()"
+    [profiles]="profiles()"
+    [selectedId]="selectedImportId()"
+    (dropped)="onDropped($event)"
+    (selected)="select($event)"
+  />
+</ui-panel>
+
+@if (notice() || commitReport()) {
+<div class="notice" [class.notice--good]="commitReport()" role="status">
+  <span class="notice__text">{{ commitReport() ?? notice() }}</span>
+  <button type="button" class="notice__dismiss" (click)="dismissNotice()" aria-label="Dismiss">
+    ×
+  </button>
+</div>
+} @if (review.error()) {
+<ui-panel>
+  <div class="failure" role="alert">
+    <p class="failure__text">
+      Could not reach the API. It binds <code>127.0.0.1:4310</code> and has to be running:
+      <code>npx nx serve ledgerline-api</code>
+    </p>
+    <p class="failure__detail">{{ $any(review.error()).message }}</p>
+    <button type="button" class="button" (click)="reload()">Try again</button>
+  </div>
+</ui-panel>
+} @let cur = current(); @if (cur) { @let rec = cur.import;
+<ui-panel heading="Review">
+  <div class="head">
+    <div class="head__identity">
+      <span class="head__filename">{{ rec.sourceFilename }}</span>
+      <span class="head__status" [attr.data-status]="rec.status">
+        {{ rec.status.replace('_', ' ') }}
+      </span>
+      @if (review.isLoading()) {
+      <span class="head__busy">reading…</span>
+      } @else if (busy()) {
+      <span class="head__busy">working…</span>
+      }
+    </div>
+    <p class="head__facts">
+      @if (rec.parser) { {{ rec.parser }} {{ rec.parserVersion }} · } @if (rec.periodStart &&
+      rec.periodEnd) {
+      <span
+        title="The minimum and maximum effective date of the rows that parsed — not read off the statement header. See §9b."
+      >
+        {{ rec.periodStart }} → {{ rec.periodEnd }}
+      </span>
+      · } {{ rec.rowsParsed }} rows parsed · sha256 <code>{{ rec.fileSha256.slice(0, 12) }}…</code>
+    </p>
+  </div>
+
+  <!-- ------------------------------------------------ a refused file --- -->
+
+  @if (rec.status === 'failed') {
+  <p class="refused" role="alert">{{ rec.errorDetail }}</p>
+  }
+
+  <!-- ------------------------------------------- §6.1's column mapper --- -->
+
+  @if (needsMapping()) {
+  <ll-column-mapper
+    [importId]="rec.id"
+    [profiles]="profiles()"
+    [busy]="busy()"
+    (saved)="saveMapping($event)"
+    (cancelled)="select(rec.id)"
+  />
+  } @else if (rec.status !== 'failed') {
+  <!-- ------------------------------------- the account confirmation --- -->
+
+  @let suggestion = cur.accountSuggestion;
+  <div class="account" [class.account--unconfirmed]="!accountConfirmed()">
+    @if (accountConfirmed()) {
+    <span class="account__done">
+      Filing into <strong>{{ accountName(rec.accountId) }}</strong>
+    </span>
+    @if (!isCommitted()) {
+    <label class="account__change">
+      change
+      <select
+        class="account__select"
+        [disabled]="busy()"
+        (change)="confirmAccount($any($event.target).value)"
+      >
+        <option value="">— pick an account —</option>
+        @for (account of accounts(); track account.id) {
+        <option [value]="account.id" [selected]="account.id === rec.accountId">
+          {{ account.displayName }}
+        </option>
+        }
+      </select>
+    </label>
+    } } @else {
+    <span class="account__prompt">
+      <strong>Confirm the account before committing.</strong>
+      @if (suggestion) { Guessed from the file: {{ accountName(suggestion.accountId) }} — {{
+      suggestion.reason }}. A guess that has to be confirmed can afford to be wrong. } @else {
+      Nothing in the filename matched an account, so there is no guess to confirm. }
+    </span>
+    <select
+      class="account__select"
+      [disabled]="busy() || accounts().length === 0"
+      (change)="confirmAccount($any($event.target).value)"
+    >
+      <option value="">— pick an account —</option>
+      @for (account of accounts(); track account.id) {
+      <option [value]="account.id" [selected]="account.id === suggestedAccountId()">
+        {{ account.displayName }}
+      </option>
+      }
+    </select>
+    @if (accounts().length === 0) {
+    <span class="account__empty">
+      No accounts exist yet. Create one with <code>POST /api/accounts</code> — §6.2's Accounts page
+      is not built.
+    </span>
+    } }
+  </div>
+
+  <!-- ------------------------------------------ §6.1's warning strip --- -->
+
+  @if (warnings().length > 0) {
+  <ul class="warnings">
+    @for (warning of warnings(); track $index) {
+    <li class="warnings__item" [attr.data-severity]="warning.severity">
+      <span class="warnings__headline">{{ warning.headline }}</span>
+      <span class="warnings__detail">{{ warning.detail }}</span>
+      @if (warning.rowIndexes.length > 0) {
+      <span class="warnings__rows">rows {{ warning.rowIndexes.join(', ') }}</span>
+      }
+    </li>
+    }
+  </ul>
+  }
+
+  <!-- ------------------------------------------------------- the plan --- -->
+
+  @let plannedRows = cur.plan;
+  <div class="plan">
+    @if (plannedRows) {
+    <span class="plan__figure"> <strong>{{ plannedRows.willInsert }}</strong> to insert </span>
+    <span class="plan__figure" title="§3.3's multiset merge rule absorbed these.">
+      <strong>{{ plannedRows.alreadyPresent }}</strong> of {{ cur.rows.length }} already present
+    </span>
+    @if (plannedRows.nearDuplicates.length > 0) {
+    <span class="plan__figure plan__figure--decide">
+      <strong>{{ plannedRows.nearDuplicates.length }}</strong> need a decision
+    </span>
+    } @if (cur.unparsedRows.length > 0) {
+    <span class="plan__figure plan__figure--bad">
+      <strong>{{ cur.unparsedRows.length }}</strong> did not parse
+    </span>
+    } } @else {
+    <span class="plan__figure plan__figure--pending">
+      Duplicate counts appear once the account is confirmed — the merge rule counts rows within one
+      account.
+    </span>
+    }
+  </div>
+
+  <!-- ------------------------------------------- §6.1's review table --- -->
+
+  <ll-review-table
+    [rows]="cur.rows"
+    [nearDuplicates]="nearDuplicates()"
+    [resolutions]="resolutions()"
+    [flaggedRows]="flaggedRows()"
+    [expandedRow]="expandedRow()"
+    (resolutionChanged)="onResolutionChange($event)"
+    (rowToggled)="toggleRow($event)"
+  />
+
+  <!-- ------------------------------------------------------- commit --- -->
+
+  <div class="commit">
+    @if (hasZeroAmountRows()) {
+    <label class="commit__optin">
+      <input
+        type="checkbox"
+        [checked]="allowZeroAmountRows()"
+        (change)="setAllowZeroAmountRows($any($event.target).checked)"
+      />
+      <span>
+        These $0 rows are trial authorizations @if (zeroAmountRows().length > 0) { (rows {{
+        zeroAmountRows().join(', ') }}) } — store them rather than refusing them as a probable
+        misparse.
+      </span>
+    </label>
+    } @if (isCommitted()) {
+    <span class="commit__done">
+      Committed{{ rec.importedAt ? ' ' + rec.importedAt : '' }}. {{ rec.rowsInserted }} rows
+      inserted, {{ rec.rowsDuplicate }} already present.
+    </span>
+    } @else {
+    <button
+      type="button"
+      class="commit__button"
+      (click)="commit()"
+      [disabled]="!canCommit()"
+      [title]="
+              accountConfirmed()
+                ? 'Insert these rows into the transaction table.'
+                : 'Commit needs a confirmed account — §6.1.'
+            "
+    >
+      Commit {{ plannedRows ? plannedRows.willInsert : cur.rows.length }} rows
+    </button>
+    @if (!accountConfirmed()) {
+    <span class="commit__blocked">
+      Nothing enters the database until Commit, and Commit needs the account confirmed.
+    </span>
+    } }
+  </div>
+  }
+</ui-panel>
+}
+
+<ui-panel heading="Import history">
+  <ll-import-history
+    [imports]="imports()"
+    [accounts]="accounts()"
+    [selectedId]="selectedImportId()"
+    [busy]="busy()"
+    (reviewed)="select($event)"
+    (reparsed)="reparse($event)"
+    (deleted)="remove($event)"
+  />
+</ui-panel>
