@@ -1,0 +1,9 @@
+{
+  "name": "ledgerline-analyzers",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/parsing/src",
+  "projectType": "library",
+  "tags": ["scope:ll", "type:analyzers"],
+  "// targets": "to see all targets run: nx show project ledgerline-analyzers --web",
+  "targets": {}
+}

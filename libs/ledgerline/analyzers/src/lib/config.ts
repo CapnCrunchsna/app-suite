@@ -1,0 +1,189 @@
+/**
+ * §7.4: "Every threshold in §5 is a default in a config object; Settings
+ * overrides it; `analysis_run` records `config_hash`; `finding.rule_version`
+ * incorporates it. **No analyzer reads a module-level constant.**"
+ *
+ * That last sentence is the rule this file exists to make true, and the reason is
+ * in §5.1: changing a threshold that lives in code silently resolves and
+ * re-creates findings with no explanation, and quietly invalidates dismissals
+ * whose evidence never changed. With the threshold in a hashed config, the same
+ * change resurfaces those findings grouped as "re-evaluated with an improved
+ * rule" — the user is told why their dismissal was reopened.
+ *
+ * **Every number here is uncalibrated** in the §7.6 sense. Nothing in §5 has been
+ * run against a real statement; these are starting points with stated reasoning,
+ * and the hash machinery below exists precisely so that tuning them is a normal
+ * operation rather than a schema migration.
+ *
+ * Analyzers take `(snapshot, config)`. A rule that reaches for a constant instead
+ * is a rule whose behaviour cannot be explained from `analysis_run`.
+ */
+
+import { createHash } from 'node:crypto';
+
+import type { Cadence } from './cadence.js';
+
+/** §5.1's bands. Bands, not raw numbers, reach the user — a "0.72" implies a
+ *  precision these rules do not have. */
+export interface BandThresholds {
+  readonly high: number;
+  readonly medium: number;
+  readonly low: number;
+}
+
+export interface GlobalConfig {
+  readonly bands: BandThresholds;
+  /**
+   * §5.1's absolute impact floor. No finding under this annual impact is emitted
+   * unless its rule opts out — only `lapsed.v1` does, because its value is
+   * confirmation rather than money. Applied globally, this kills the largest
+   * single source of noise in §5.9 and §5.10 without touching their statistics.
+   */
+  readonly minAnnualImpactCents: number;
+  /**
+   * §5.1's emission budget. False-positive volume is the failure mode that gets a
+   * tool like this abandoned, and an unbounded rule is one bad threshold away
+   * from producing a thousand cards.
+   */
+  readonly maxFindingsPerRule: number;
+  /** §2.4/§5.1: confidence is capped at Medium for any `llm_dependent` finding. */
+  readonly llmDependentConfidenceCap: number;
+}
+
+export interface RecurrenceConfig {
+  /**
+   * §5.2's cadence table — data, not a constant, for the reason at the top of
+   * this file. The tolerances in particular are exactly the kind of number §7.6
+   * expects to move once real statements exist: a bank that bills "the first
+   * business day" produces monthly gaps that drift further than ±4 across a run
+   * of holidays.
+   */
+  readonly cadences: readonly Cadence[];
+  /** §5.2 pass 1: split wherever the gap to the running median exceeds
+   *  `max(percent, floor)`. */
+  readonly amountTolerancePercent: number;
+  readonly amountToleranceFloorCents: number;
+  /** Pass 1 recomputes medians and re-splits until stable, capped here. */
+  readonly seedIterations: number;
+  /** Charges needed before a cluster gets a cadence fit at all. */
+  readonly minOccurrences: number;
+  /** §5.2's cadence fit allows up to two missed cycles: `1 ≤ k ≤ 3`. */
+  readonly maxCyclesPerDelta: number;
+  /** Four-weekly beats monthly only when every delta is in range *and* there are
+   *  at least this many charges — a fixed-day-of-month subscription cannot
+   *  produce that, because any span covering a 31-day month forces 30 or 31. */
+  readonly fourWeeklyMinOccurrences: number;
+  readonly fourWeeklyDeltaMinDays: number;
+  readonly fourWeeklyDeltaMaxDays: number;
+  /** §5.2's annual exception: two charges this far apart with stable amounts
+   *  emit at Medium without the known-subscription flag. */
+  readonly annualPairMinDays: number;
+  readonly annualPairMaxDays: number;
+  /** Active = last charge within this multiple of `cadence_days` of the
+   *  account's coverage end (§7.2). */
+  readonly livenessCadenceMultiple: number;
+  /** §5.7: a series whose last charge is older than this multiple is "appears
+   *  cancelled". */
+  readonly lapsedCadenceMultiple: number;
+  readonly weightRegularity: number;
+  readonly weightCount: number;
+  readonly weightAmountStability: number;
+  readonly knownSubscriptionBonus: number;
+  /** `count_score = clamp((n − 2) ÷ span, 0, 1)` — 0.17 at three occurrences,
+   *  1.0 at eight. */
+  readonly countScoreSpan: number;
+  /** `amount_stability = 1 − clamp(CV ÷ ceiling, 0, 1)`. */
+  readonly amountStabilityCvCeiling: number;
+  /** §5.2's caps. Under the design session's formula a two-occurrence series
+   *  scored 0.90 — MAD of a single delta is always zero, so regularity was always
+   *  1.0 — which contradicted the same section's "two occurrences emit at Low". */
+  readonly twoOccurrenceConfidenceCap: number;
+  readonly threeOccurrenceConfidenceCap: number;
+  /** §5.5's "holds" requirement, as a day budget: a step is confirmed by
+   *  `max(1, min(2, ceil(days ÷ cadence_days)))` occurrences at the new price, so
+   *  weekly through monthly need two and quarterly through annual need one. */
+  readonly priceStepConfirmationDays: number;
+}
+
+export interface AnalyzerConfig {
+  readonly global: GlobalConfig;
+  readonly recurrence: RecurrenceConfig;
+}
+
+export const DEFAULT_CONFIG: AnalyzerConfig = {
+  global: {
+    bands: { high: 0.8, medium: 0.55, low: 0.35 },
+    minAnnualImpactCents: 2500,
+    maxFindingsPerRule: 25,
+    // The top of the Medium band. §5.1 says "capped at Medium", which is a band
+    // and not a number, so the cap is the highest confidence still inside it.
+    llmDependentConfidenceCap: 0.79,
+  },
+  recurrence: {
+    cadences: [
+      { label: 'weekly', days: 7, toleranceDays: 2, perYear: 52.18 },
+      { label: 'biweekly', days: 14, toleranceDays: 2, perYear: 26.09 },
+      { label: 'four_weekly', days: 28, toleranceDays: 2, perYear: 13.04 },
+      { label: 'monthly', days: 30.44, toleranceDays: 4, perYear: 12 },
+      { label: 'quarterly', days: 91.3, toleranceDays: 7, perYear: 4 },
+      { label: 'semiannual', days: 182.6, toleranceDays: 12, perYear: 2 },
+      { label: 'annual', days: 365.25, toleranceDays: 20, perYear: 1 },
+    ],
+    amountTolerancePercent: 0.05,
+    amountToleranceFloorCents: 100,
+    seedIterations: 5,
+    minOccurrences: 3,
+    maxCyclesPerDelta: 3,
+    fourWeeklyMinOccurrences: 6,
+    fourWeeklyDeltaMinDays: 27,
+    fourWeeklyDeltaMaxDays: 29,
+    annualPairMinDays: 355,
+    annualPairMaxDays: 375,
+    livenessCadenceMultiple: 1.5,
+    lapsedCadenceMultiple: 2,
+    weightRegularity: 0.45,
+    weightCount: 0.3,
+    weightAmountStability: 0.25,
+    knownSubscriptionBonus: 0.1,
+    countScoreSpan: 6,
+    amountStabilityCvCeiling: 0.05,
+    twoOccurrenceConfidenceCap: 0.45,
+    threeOccurrenceConfidenceCap: 0.7,
+    priceStepConfirmationDays: 60,
+  },
+};
+
+/** A partial override, as Settings would supply it. One level of nesting, which
+ *  is all the config has. */
+export type ConfigOverride = {
+  readonly [K in keyof AnalyzerConfig]?: Partial<AnalyzerConfig[K]>;
+};
+
+export function resolveConfig(override: ConfigOverride = {}): AnalyzerConfig {
+  return {
+    global: { ...DEFAULT_CONFIG.global, ...override.global },
+    recurrence: { ...DEFAULT_CONFIG.recurrence, ...override.recurrence },
+  };
+}
+
+/**
+ * `analysis_run.config_hash` (§3.1), and an input to every `rule_version`.
+ *
+ * Keys are sorted before hashing, so a config assembled in a different property
+ * order hashes the same. Without that, `resolveConfig`'s spread order would be
+ * part of the contract and a harmless refactor would resurface every dismissed
+ * finding as "re-evaluated with an improved rule".
+ */
+export function configHash(config: AnalyzerConfig): string {
+  return createHash('sha256').update(canonicalJson(config), 'utf8').digest('hex').slice(0, 16);
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`);
+  return `{${entries.join(',')}}`;
+}

@@ -19,12 +19,17 @@ of §2.3 in `apps/ledgerline-api`; and as of 2026-08-07 the **first UI page** is
 behind it and `libs/shared/api-client` genuinely generated from the emitted contract. As of
 2026-08-11 §6.1's **Import page** is built on the same lib — the dropzone, the review table
 with its duplicate and near-duplicate dispositions, the warning strip, the commit gate, the
-inline column mapper over `POST /api/format-profiles/preview`, and the import history.
+inline column mapper over `POST /api/format-profiles/preview`, and the import history. Also as
+of 2026-08-11, `libs/ledgerline/analyzers` exists with §5.1's shared finding contract, §7.4's
+config-and-hash machinery, and the **recurrence rule** (§5.2, §5.3) that §5.4–§5.7 build on.
 
-PDF ingest, the LLM stage of §4.2, the analyzers of §5, §2.7's job **runner**, the remaining
-endpoints of §2.3 and the other six pages of §6 are **not** built.
-`docs/statement-parsing.md` records what has and has not been validated. §9, §9a and §9b list
-the amendments implementation made to this document.
+PDF ingest, the LLM stage of §4.2, **§5.4–§5.11's eight remaining rules**, §2.6's transfer
+matcher, §2.7's job **runner**, the analysis and findings endpoints of §2.3 and the other six
+pages of §6 are **not** built. Nothing yet *runs* the analyzers: there is no `buildSnapshot()`,
+no finding persistence and no `POST /api/analysis/run`, so §5.2's series exist as a tested pure
+function and have never been computed over stored data.
+`docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b and §9c
+list the amendments implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1163,6 +1168,31 @@ preview response; deriving the draft from the response made the preview's params
 the preview's result. That cycle does not throw — the signal graph stops propagating, and every
 dropdown change after the first previews nothing at all. The roles are keyed by header name
 instead, which removes the read and matches what a saved `column_map` addresses anyway.
+
+## 9c. Amendments from implementation — 2026-08-11 (§5.2)
+
+Building `libs/ledgerline/analyzers` — the shared finding contract (§5.1) and the recurrence
+rule (§5.2, §5.3) — found two places where §5.2's algorithm is under-specified in a way that
+changes its output. Both are gaps being filled rather than rules being overridden, and both are
+recorded because a threshold or a tie-break that only exists in code is a number nobody
+reviewed.
+
+| § | Amendment | Why |
+|---|---|---|
+| 5.2 | **The cadence fit needs a stated tie-break, and "best score wins" is not one.** Ties go to the cadence assuming the fewest missed cycles — the lowest mean `k`. | §5.2 scores a cadence by `median(\|r\|)` and allows `1 ≤ k ≤ 3` so that a missing statement does not lose the series. Those two rules together make exact ties the *normal* case rather than a rarity: a run of 14-day gaps fits **weekly** with `k = 2` and a residual of exactly zero, scoring identically to biweekly with `k = 1`. Every cadence is degenerate with its own multiples this way. Without a stated tie-break the implementation falls back to declaration order or to "shortest", either of which reads every biweekly series as a weekly one that skips and every four-weekly series as a biweekly one that skips — **halving the annualized cost of all of them**, which is the same class of error the four-weekly/monthly tie-break exists to prevent and 6× larger. Fewest assumed missing charges is the parsimonious reading: it does not invent eleven skipped charges that left no trace on any statement. |
+| 5.2 | **The single-charge annual exception is scoped to the merchant, not to the amount cluster.** "A single large charge at a known-subscription merchant" means the merchant has one charge in the imported window. | Read as a property of the cluster, it fires once per cluster: a known-subscription merchant whose amounts are too spread to group produces several one-charge "possible annual subscription" series at once, all describing the same merchant. That is both wrong on its face and exactly the false-positive volume §5.1's emission budget exists to bound. |
+
+One thing §5.2 leaves genuinely open is left open. "A single **large** charge" is not quantified,
+and no threshold was invented for it: §5.1's absolute impact floor already decides whether the
+resulting finding is worth showing, and it is a stated, configurable number. Adding a second
+one here would be a threshold with no reasoning attached.
+
+The `1 ≤ k ≤ 3` bound also has a consequence worth stating, because it is not obviously
+desirable and it is implemented verbatim: a monthly series with a six-month hole fails the
+monthly fit outright rather than fitting it with a larger `k`, so a subscription that paused
+and resumed produces no series at all. That fails toward silence rather than toward a wrong
+cadence, which is the direction §5.1's noise argument prefers — but it is a real miss, and
+`recurrence.spec.ts` pins it.
 
 ## 10. Open discrepancies — recorded, not resolved
 
