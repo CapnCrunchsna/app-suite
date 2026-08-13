@@ -48,6 +48,14 @@ export interface GlobalConfig {
   readonly maxFindingsPerRule: number;
   /** §2.4/§5.1: confidence is capped at Medium for any `llm_dependent` finding. */
   readonly llmDependentConfidenceCap: number;
+  /**
+   * §2.2's guard on the snapshot, which that section insists on having: "The
+   * design is allowed to have a ceiling — it is not allowed to have an
+   * undiscovered one." A heavy household is ~58,000 transactions, so these are
+   * four and seventeen times the design load.
+   */
+  readonly snapshotWarnRows: number;
+  readonly snapshotMaxRows: number;
 }
 
 export interface RecurrenceConfig {
@@ -82,9 +90,6 @@ export interface RecurrenceConfig {
   /** Active = last charge within this multiple of `cadence_days` of the
    *  account's coverage end (§7.2). */
   readonly livenessCadenceMultiple: number;
-  /** §5.7: a series whose last charge is older than this multiple is "appears
-   *  cancelled". */
-  readonly lapsedCadenceMultiple: number;
   readonly weightRegularity: number;
   readonly weightCount: number;
   readonly weightAmountStability: number;
@@ -103,11 +108,92 @@ export interface RecurrenceConfig {
    *  `max(1, min(2, ceil(days ÷ cadence_days)))` occurrences at the new price, so
    *  weekly through monthly need two and quarterly through annual need one. */
   readonly priceStepConfirmationDays: number;
+  /**
+   * The smallest amount change that counts as a **different price level**, as
+   * opposed to proration noise.
+   *
+   * Distinct from `amountTolerancePercent` above, which decides whether two
+   * charges belong to the same *cluster*, and distinct again from §5.5's
+   * reporting floor, which decides whether a step is worth telling the user
+   * about. Collapsing this into the clustering tolerance is what hides §5.5's own
+   * motivating example: at 5%, a $3.80 rise on a $200/month subscription never
+   * becomes a step at all, so the noise floor stated in cents never gets to see
+   * it. See §9d.
+   */
+  readonly priceStepMinDeltaCents: number;
+}
+
+/** §5.4 — two rules under one id, "deliberately weighted differently, and
+ *  separately toggleable in Settings — one claims an error, the other claims
+ *  nothing." The toggles are why they are two flags rather than one. */
+export interface DuplicateConfig {
+  readonly sameMerchantEnabled: boolean;
+  readonly categoryOverlapEnabled: boolean;
+  /** Usually a real error: a double-charged account, or a personal plan still
+   *  billing after a family plan started. */
+  readonly sameMerchantConfidence: number;
+  /** Informational. Owning both Netflix and Disney+ is a legitimate choice; the
+   *  app's job is to make the total visible, not to nag. */
+  readonly categoryOverlapConfidence: number;
+}
+
+export interface PriceCreepConfig {
+  /**
+   * §5.5's noise floor, stated in the unit the whole app sorts by. The design
+   * session's "under 2% or $0.50" suppressed a $3.80 step on a $200/month
+   * subscription (1.9%, $45.60/yr — material) while admitting a $0.60 step on an
+   * annual plan ($0.60/yr — not). Percentage is a presentation field, not a
+   * filter.
+   */
+  readonly minStepDeltaCents: number;
+  readonly minAnnualisedDeltaCents: number;
+  /** §5.5: the arithmetic is certain; the only doubt is whether the series is
+   *  really one subscription, which is what `series.confidence` measures. */
+  readonly confirmedConfidenceCap: number;
+  readonly unconfirmedConfidenceCap: number;
+}
+
+export interface TrialConfig {
+  /** The classic card-validation pattern: a $0.00 or near-zero authorization
+   *  shortly before the first real charge. */
+  readonly authorizationMaxCents: number;
+  readonly authorizationMinDaysBefore: number;
+  readonly authorizationMaxDaysBefore: number;
+  /** Trial lengths that count as corroboration, measured from the authorization
+   *  and not from the merchant's first appearance — §5.6's first correction. */
+  readonly trialLengthsDays: readonly number[];
+  readonly trialLengthToleranceDays: number;
+  /**
+   * Whole-token markers. `FREE` alone is deliberately absent: normalization
+   * uppercases everything, so an unanchored substring test matches `FREE PEOPLE`
+   * (a clothing retailer), `FREEDOM MORTGAGE`, `FREEPORT` and `FREESTYLE`.
+   */
+  readonly trialMarkers: readonly string[];
+  readonly baseConfidence: number;
+  readonly confidencePerPoint: number;
+  readonly maxConfidence: number;
+  readonly minPoints: number;
+  /** §5.6's stated limitation: a first charge this close to the start of the
+   *  imported window cannot be told apart from a pre-existing subscription, so
+   *  confidence is halved and the finding says so. */
+  readonly earlyWindowDays: number;
+}
+
+export interface LapsedConfig {
+  readonly minOccurrences: number;
+  /** §5.7 uses `2 ×`, where §5.2's liveness uses `1.5 ×`. The gap between them is
+   *  hysteresis rather than an inconsistency: a series that is merely late stops
+   *  counting as active without immediately being announced as cancelled. */
+  readonly cadenceMultiple: number;
 }
 
 export interface AnalyzerConfig {
   readonly global: GlobalConfig;
   readonly recurrence: RecurrenceConfig;
+  readonly duplicate: DuplicateConfig;
+  readonly priceCreep: PriceCreepConfig;
+  readonly trial: TrialConfig;
+  readonly lapsed: LapsedConfig;
 }
 
 export const DEFAULT_CONFIG: AnalyzerConfig = {
@@ -118,6 +204,8 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     // The top of the Medium band. §5.1 says "capped at Medium", which is a band
     // and not a number, so the cap is the highest confidence still inside it.
     llmDependentConfidenceCap: 0.79,
+    snapshotWarnRows: 250_000,
+    snapshotMaxRows: 1_000_000,
   },
   recurrence: {
     cadences: [
@@ -140,7 +228,6 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     annualPairMinDays: 355,
     annualPairMaxDays: 375,
     livenessCadenceMultiple: 1.5,
-    lapsedCadenceMultiple: 2,
     weightRegularity: 0.45,
     weightCount: 0.3,
     weightAmountStability: 0.25,
@@ -150,6 +237,36 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     twoOccurrenceConfidenceCap: 0.45,
     threeOccurrenceConfidenceCap: 0.7,
     priceStepConfirmationDays: 60,
+    priceStepMinDeltaCents: 50,
+  },
+  duplicate: {
+    sameMerchantEnabled: true,
+    categoryOverlapEnabled: true,
+    sameMerchantConfidence: 0.85,
+    categoryOverlapConfidence: 0.6,
+  },
+  priceCreep: {
+    minStepDeltaCents: 50,
+    minAnnualisedDeltaCents: 500,
+    confirmedConfidenceCap: 0.9,
+    unconfirmedConfidenceCap: 0.7,
+  },
+  trial: {
+    authorizationMaxCents: 150,
+    authorizationMinDaysBefore: 5,
+    authorizationMaxDaysBefore: 35,
+    trialLengthsDays: [7, 14, 30, 90],
+    trialLengthToleranceDays: 3,
+    trialMarkers: ['TRIAL', 'FREE TRIAL', 'INTRO OFFER', 'INTRO RATE'],
+    baseConfidence: 0.3,
+    confidencePerPoint: 0.15,
+    maxConfidence: 0.85,
+    minPoints: 2,
+    earlyWindowDays: 45,
+  },
+  lapsed: {
+    minOccurrences: 3,
+    cadenceMultiple: 2,
   },
 };
 
@@ -163,6 +280,10 @@ export function resolveConfig(override: ConfigOverride = {}): AnalyzerConfig {
   return {
     global: { ...DEFAULT_CONFIG.global, ...override.global },
     recurrence: { ...DEFAULT_CONFIG.recurrence, ...override.recurrence },
+    duplicate: { ...DEFAULT_CONFIG.duplicate, ...override.duplicate },
+    priceCreep: { ...DEFAULT_CONFIG.priceCreep, ...override.priceCreep },
+    trial: { ...DEFAULT_CONFIG.trial, ...override.trial },
+    lapsed: { ...DEFAULT_CONFIG.lapsed, ...override.lapsed },
   };
 }
 

@@ -4,3 +4,8 @@ export * from './lib/config.js';
 export * from './lib/cadence.js';
 export * from './lib/finding.js';
 export * from './lib/recurrence.js';
+export * from './lib/duplicate.js';
+export * from './lib/price-creep.js';
+export * from './lib/trial.js';
+export * from './lib/lapsed.js';
+export * from './lib/analyze.js';

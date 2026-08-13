@@ -21,15 +21,18 @@ behind it and `libs/shared/api-client` genuinely generated from the emitted cont
 with its duplicate and near-duplicate dispositions, the warning strip, the commit gate, the
 inline column mapper over `POST /api/format-profiles/preview`, and the import history. Also as
 of 2026-08-11, `libs/ledgerline/analyzers` exists with §5.1's shared finding contract, §7.4's
-config-and-hash machinery, and the **recurrence rule** (§5.2, §5.3) that §5.4–§5.7 build on.
+config-and-hash machinery, and **five of §5's nine rules** — recurrence (§5.2, §5.3) and the
+four that build on the series it produces: duplicate and overlap (§5.4), price creep (§5.5),
+trial conversions (§5.6) and cancellation confirmation (§5.7). `analyze()` composes them over
+one snapshot with §2.2's row guard.
 
-PDF ingest, the LLM stage of §4.2, **§5.4–§5.11's eight remaining rules**, §2.6's transfer
+PDF ingest, the LLM stage of §4.2, **§5.8–§5.11's four remaining rules**, §2.6's transfer
 matcher, §2.7's job **runner**, the analysis and findings endpoints of §2.3 and the other six
 pages of §6 are **not** built. Nothing yet *runs* the analyzers: there is no `buildSnapshot()`,
-no finding persistence and no `POST /api/analysis/run`, so §5.2's series exist as a tested pure
-function and have never been computed over stored data.
-`docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b and §9c
-list the amendments implementation made to this document.
+no finding persistence and no `POST /api/analysis/run`, so every rule above is a tested pure
+function that has never been computed over stored data.
+`docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b, §9c and
+§9d list the amendments implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1193,6 +1196,28 @@ monthly fit outright rather than fitting it with a larger `k`, so a subscription
 and resumed produces no series at all. That fails toward silence rather than toward a wrong
 cadence, which is the direction §5.1's noise argument prefers — but it is a real miss, and
 `recurrence.spec.ts` pins it.
+
+## 9d. Amendments from implementation — 2026-08-11 (§5.4–§5.7)
+
+Building the four rules that consume §5.2's series found one place where two sections
+interact badly enough to hide §5.5's own worked example, and three places where a rule is
+silent on something it cannot avoid deciding.
+
+| § | Amendment | Why |
+|---|---|---|
+| 5.5 | **A price step is detected over the charge sequence, not over §5.2's amount clusters**, with its own "different price level" threshold (default $0.50) separate from the clustering tolerance. | Deriving steps from pass 1's clusters is the tempting reading — pass 2 merges them precisely because they are one subscription over time — but it silently bounds the smallest detectable step at `max(5%, $1.00)`. That hides **the example §5.5 uses to justify its own noise floor**: a $3.80 rise on a $200/month subscription is 1.9%, under the clustering tolerance, so it never becomes a step and the floor stated in cents never gets to judge it. §5.5 defines a step as "an amount change that **holds** for a cadence-appropriate number of consecutive occurrences", which is a property of the sequence; implementing it that way makes the section's own example work. A level shorter than the requirement *inside* the series is absorbed as proration noise; a short level at the *end* is the new price and is reported unconfirmed. |
+| 5.2 | **`amount_stability` is measured over the newest price level that actually held**, not simply the newest. | §5.2 defines it as the CV "within its current price step". Once steps are sequence-derived, the newest level is often a single charge — and one charge has a coefficient of variation of exactly zero, which reports a series whose amount wobbles every month as perfectly stable and pushes it a band higher than the evidence supports. |
+| 5.6 | **Halving confidence in the pre-window blind spot may not push a finding under §5.1's suppression threshold.** It floors at the bottom of the Low band. | §5.6 says confidence is halved and "The UI says so on the finding **rather than hiding it**" — but halving hides it, and in the ordinary case rather than a corner: the minimum emittable score is two points, which is 0.60, and 0.60 halved is 0.30 against a suppression threshold of 0.35. Taken literally the two sentences contradict each other for every two-point finding. |
+| 5.6 | **`impact_kind` is `visibility`.** §5.6 does not state one. | `savings` is the intuitive reading — a converted trial is the classic "cancel this" case — but its impact would be the series' whole annual cost, and §5.4 already claims a duplicate series' annual cost as `savings` while §5.5 claims its price delta. Two of those three can describe one series, and §7.3 forbids two findings claiming the same dollars as `savings`. §5.1's three examples of savings pointedly do not include a converted trial. |
+
+Two more resolutions worth naming, both of which fill a silence rather than change a rule.
+§5.4's category overlap reads the **merchant's** `overlap_group` first and the charges'
+categories second, because a series has a merchant but no single category and §3.1 puts the
+column on both tables; the category path is dead today, since §9a records that
+`SEED_CATEGORIES` leaves `overlap_group` unset on every row. And §5.7 emits **zero** impact
+with the former cost in the detail, because a lapsed series is not money being spent and
+claiming its cost would inflate every total with subscriptions that already stopped — which is
+also what makes that rule's exemption from the $25 floor load-bearing rather than a nicety.
 
 ## 10. Open discrepancies — recorded, not resolved
 

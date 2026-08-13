@@ -438,8 +438,8 @@ describe('analyzeRecurrence', () => {
   });
 
   it('takes its thresholds from the config rather than from constants (§7.4)', () => {
-    // Widening the amount tolerance is enough to make two price tiers one cluster
-    // from the start — proof the number is read, not compiled in.
+    // Raising the level threshold above the actual rise makes the two prices one
+    // level — proof the number is read at run time, not compiled in.
     const transactions = [...monthly(6, -1000, 1), ...monthly(6, -1400, 7)];
 
     const tight = analyzeRecurrence(snapshotOf(transactions), DEFAULT_CONFIG);
@@ -447,7 +447,7 @@ describe('analyzeRecurrence', () => {
 
     const loose = analyzeRecurrence(
       snapshotOf(transactions),
-      resolveConfig({ recurrence: { amountTolerancePercent: 0.9 } }),
+      resolveConfig({ recurrence: { priceStepMinDeltaCents: 100_000 } }),
     );
     expect(loose.series[0].priceSteps).toHaveLength(0);
   });
