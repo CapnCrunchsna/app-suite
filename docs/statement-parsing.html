@@ -109,177 +109,98 @@
 
 <main>
 <h1>Statement parsing — what is built, how to run it, how to add a bank</h1>
-<p class="meta"><span class="tag">Plan</span> 2026-07-27 · Game Development · Version ?</p>
+<p class="meta"><span class="tag">plans</span> 2026-08-04</p>
 <p>Implementation notes for the CSV ingest path: the three libs it lives in, the format-profile<br>
 schema, the CLI, the places this code deliberately departs from <code>ledgerline-spec.md</code>, and an<br>
 honest list of what has never been run against a real statement. Companion to the spec, which<br>
 remains the contract; where this document and the spec disagree, the disagreements are listed<br>
-in <a href="#s5">§5</a> and are deliberate.<br>
-## 1. Status<br>
-Built: the <code>ingest → detect → parse → normalize</code> half of <a href="#s2">§2.5</a>'s pipeline, for <strong>CSV only</strong>.<br>
-| Piece | State |<br>
-|---|---|<br>
-| Nx workspace, <code>libs/ledgerline/{domain,parsing,normalize}</code> with <a href="#s2">§2.2</a> tags and <code>depConstraints</code> | done, lint-enforced |<br>
-| <code>collapse_v1</code> and the dedupe key (<a href="#s3">§3.3</a>) | done, frozen, golden-tested |<br>
-| Money as signed integer cents; ISO dates; <code>effective_date</code> (<a href="#s3">§3.1</a>, §7.1) | done |<br>
-| Header-signature detection and format profiles (<a href="#s2">§2.5</a> <code>detect</code>) | done |<br>
-| <code>NodeCsvParser</code> (<a href="#s2">§2.5</a> <code>parse</code>) | done |<br>
-| Seven-stage merchant chain (<a href="#s4">§4.1</a>), deterministic stages only | done |<br>
-| <code>ParserPort</code> seam (<a href="#s2">§2.5</a>) | done, one implementation registered |<br>
-| Running-balance reconciliation (<a href="#s6">§6.1</a>), plus a sign-plausibility check for deposit accounts | done |<br>
-| PDF ingest | <strong>not built</strong> — v0.4 |<br>
-| UI (<a href="#s6">§6</a>) | Angular shell scaffolded since — wireframe only, no pages. See <code>apps/ledgerline-ui/README.md</code>. |<br>
-| SQLite schema (<a href="#s3">§3.1</a>, <a href="#s3">§3.2</a>), idempotent re-import (<a href="#s3">§3.3</a>), the API (<a href="#s2">§2.3</a>) | built since, 2026-08-06, in <code>libs/ledgerline/data</code> and <code>apps/ledgerline-api</code> |<br>
-| LLM stage of <a href="#s4">§4.2</a>, the analyzers of <a href="#s5">§5</a> | <strong>not built</strong> — out of scope for this build |<br>
-<strong>Nothing in these three libs writes anywhere</strong>, and that is still true now that a database<br>
-exists. Every entry point here takes values and returns values, per <a href="#s2">§2.1</a>'s "libs compute; the<br>
-app persists"; <code>libs/ledgerline/data</code> is the only lib that knows a store exists, and <a href="#s2">§2.2</a>'s<br>
-boundary lint refuses a <code>parsing → data</code> or <code>normalize → data</code> edge outright. The composition<br>
-root that joins them is <code>apps/ledgerline-api</code>.<br>
-## 2. Running it<br>
-```bash<br>
-npm install<br>
-npm run build<br>
-<code>`</code><br>
-Parse a statement:<br>
-```bash<br>
-node tools/parse-statement.mjs fixtures/statements/northgate-checking-2026-01.csv<br>
-<code>`</code><br>
-Useful flags: <code>--json</code> for the full machine-readable result (including each row's <code>dedupeKey</code><br>
-and normalized merchant), <code>--trace &lt;n&gt;</code> to print the per-stage normalization trace for one row,<br>
-<code>--profile &lt;id|path&gt;</code> to force a profile instead of matching on the header signature, and<br>
-<code>--account &lt;id&gt;</code> to set the account id that dedupe keys are computed against.<br>
-The full pipeline — boundary lint, typecheck, tests — is:<br>
-```bash<br>
-npm run check<br>
-<code>`</code><br>
-<code>lint</code> is part of that pipeline on purpose. <a href="#s2">§2.2</a> calls the module boundaries "the single most<br>
-load-bearing piece of the design", and notes that "a lint rule that nobody runs is not<br>
-enforcement".<br>
-## 3. Where real statements go<br>
-<code>data/</code> and <code>*.sqlite</code> are already in <code>.gitignore</code>. **Put real statements in <code>data/</code>**, never in<br>
-<code>fixtures/</code> — everything in <code>fixtures/</code> is committed. The files under <code>fixtures/statements/</code> are<br>
-synthetic and contain no real financial data.<br>
-## 4. Format profiles<br>
-A profile is JSON in <code>profiles/</code>, keyed on the hash of the header row. Fields mirror the<br>
-<code>format_profile</code> table in <a href="#s3">§3.1</a>, so persisting one later is a column-for-column write.<br>
-| Field | Meaning |<br>
-|---|---|<br>
-| <code>id</code> | Unique. Used by <code>--profile</code> and recorded on the parse result. |<br>
-| <code>institution</code> | Display only. |<br>
-| <code>accountTypeHint</code> | <code>checking</code> · <code>savings</code> · <code>credit_card</code> · <code>null</code>. |<br>
-| <code>headerSignature</code> | sha256 of the normalized header tokens. Generated — do not type it by hand. |<br>
-| <code>headerTokens</code> | The normalized tokens, kept for fuzzy matching and diagnostics. |<br>
-| <code>hasHeader</code> | <code>false</code> means address every column by index. |<br>
-| <code>delimiter</code> | One character. |<br>
-| <code>skipLines</code> | Preamble rows to drop before the header. Blank lines do not count. |<br>
-| <code>dateFormat</code> | Explicit, never sniffed. Tokens: <code>YYYY</code> <code>YY</code> <code>MMM</code> <code>MM</code> <code>M</code> <code>DD</code> <code>D</code>, any literal separators. |<br>
-| <code>amountMode</code> | <code>single</code> (one signed column) or <code>debit_credit</code> (two unsigned columns). |<br>
-| <code>signConvention</code> | <code>as_is</code> or <code>invert</code>, applied <em>after</em> the mode produces a signed number. |<br>
-| <code>columnMap</code> | Role → column. A bare string is a header name, a bare number is a zero-based index. |<br>
-| <code>pendingValues</code> | Values in the status column meaning "not settled". Compared case-insensitively. |<br>
-Roles: <code>transactionDate</code>, <code>postedDate</code>, <code>description</code>, <code>amount</code>, <code>debit</code>, <code>credit</code>, <code>balance</code>,<br>
-<code>status</code>. <code>description</code> is required, and at least one of <code>transactionDate</code> / <code>postedDate</code>.<br>
-### The sign convention, which is the part that matters<br>
-<a href="#s3">§3.1</a> requires <strong>negative = money leaving the account</strong>, uniformly across checking and credit<br>
-cards. Banks do not agree, and the profile is where the disagreement is absorbed so that nothing<br>
-downstream ever asks which bank a row came from.<br>
-The two axes compose rather than multiplying into per-bank cases:<br>
-1. <code>amountMode</code> builds a signed number — <code>single</code> takes the column as-is; <code>debit_credit</code> computes <code>|credit| − |debit|</code>.<br>
-2. <code>signConvention: invert</code> flips it when the bank's idea of positive is the opposite of ours.<br>
-A checking export that prints a purchase as <code>-18.75</code> is <code>single</code> + <code>as_is</code>. A credit-card export<br>
-that prints the same purchase as <code>18.75</code> and a payment as <code>-500.00</code> is <code>single</code> + <code>invert</code>. The<br>
-bundled fixtures cover both, plus a <code>debit_credit</code> credit union, and a test asserts that a<br>
-$500 card payment comes out as <code>−50000</code> in checking and <code>+50000</code> on the card — equal and<br>
-opposite, which is what <a href="#s2">§2.6</a>'s transfer matching needs.<br>
-### Adding a bank<br>
-Point the tool at the file. An unrecognized header exits with the signature, the located header<br>
-line, sample rows, any similar known profiles, and a filled-in starter profile:<br>
-```bash<br>
-node tools/parse-statement.mjs data/statements/my-bank-2026-01.csv<br>
-<code>`</code><br>
-Fill in the <code>CHANGE ME</code> fields, save under <code>profiles/</code>, and re-run. **Check the reconciliation<br>
-line.** If the file has a balance column and the profile is right, you get:<br>
-<code>`</code><br>
-✓ running balance reconciles across 11 rows (ascending order)<br>
-  the amount column is mapped correctly and no rows are missing<br>
-  (this does not verify signConvention; balances look plausible for the account type)<br>
-<code>`</code><br>
-That check is the reason to map <code>balance</code> even though it is optional — <a href="#s2">§2.5</a> notes that a<br>
-silently misparsed amount column "poisons every downstream finding, and it is very hard to<br>
-notice after the fact". Row order is tried both ways, so you do not need to know whether your<br>
-bank exports newest-first.<br>
-### What reconciliation cannot tell you<br>
-**It cannot verify <code>signConvention</code>,** and it is worth understanding why before trusting a<br>
-green line. <code>invert</code> is applied to the balance as well as the amount — it has to be, or a<br>
-credit-card export would never reconcile — so both sides flip together and<br>
-<code>(−b[n]) − (−b[n−1]) === −a[n]</code> holds exactly as well as the correct orientation. **A profile<br>
-with the convention backwards reconciles perfectly and inverts every number in the app.**<br>
-The separate check for that is <code>sign_convention_suspect</code>, and it only has signal on deposit<br>
-accounts: a checking or savings balance is money you have, so if most parsed balances come out<br>
-negative the profile is inverted — an account is not overdrawn for a whole statement. Credit<br>
-cards are deliberately excluded, because a card balance is a debt that different institutions<br>
-print with different signs and a genuine credit balance after a refund is legal; <a href="#s3">§3.1</a> fixes the<br>
-sign of <code>amount_cents</code>, not of <code>balance_cents</code>.<br>
-So for a <strong>credit card</strong> the sign convention is the one thing you have to eyeball. Confirm that<br>
-purchases came out negative and payments positive — the table the CLI prints shows both.<br>
-Detection <strong>never auto-applies a profile it is not certain about.</strong> A near match is offered as a<br>
-suggestion with a similarity score and nothing else; per plan question 2, confirmation is what<br>
-stops a one-column header change from silently re-mapping an amount column.<br>
-## 5. Where the code and the spec differ<br>
-<strong>Nowhere</strong>, for the parsing path. Building the persistence path later found one place where<br>
-the spec contradicts <em>itself</em> — <a href="#s3">§3.3</a>'s near-duplicate predicate cannot catch <a href="#s3">§3.3</a>'s own<br>
-pending-to-posted example — which is recorded in <code>ledgerline-spec.md</code> §10 and left open rather<br>
-than silently widened.<br>
-Building this found four places where the spec was wrong or unimplementable as<br>
-worded; all four were amended in the spec on 2026-08-04 rather than worked around here. See<br>
-[<code>ledgerline-spec.md</code> §9](ledgerline-spec.md) for the list and the reasoning — in short:<br>
-<code>ParserPort.parse</code> returning <code>RawRow[]</code> could not satisfy <a href="#s6">§6.1</a>'s own review screen; stage 1's<br>
-punctuation stripping would have destroyed the markers stage 2 matches on; stage 4's URL rule<br>
-resolved <code>NETFLIX.COM 866-579-7172 CA</code> to <code>CA</code>; and <code>collapse_v1</code>'s delete-semantics hashed<br>
-<code>AMAZON - PRIME</code> differently from <code>AMAZON PRIME</code>.<br>
-That last one was amended <strong>before the first import</strong>, which is the only moment it was free.<br>
-<code>collapse_v1</code> now substitutes punctuation with a space rather than deleting it, folds<br>
-diacritics, and trims after truncating. No row has ever been keyed under the old wording, so<br>
-the name still refers to exactly one definition. **From the first stored row onward that stops<br>
-being true**, and any further change means shipping <code>collapseV2</code> beside it plus a migration<br>
-that recomputes every key in one transaction.<br>
-### One implementation choice the spec leaves open<br>
-**<code>collapse_v1</code> lives in <code>domain</code>, not next to the <a href="#s4">§4</a> chain.** The spec says where the dedupe<br>
-<em>stage</em> runs (<a href="#s2">§2.5</a>: in <code>data</code>) but not where the function lives. Putting it in <code>domain</code> falls<br>
-out of the boundary table: <a href="#s2">§2.2</a> lets <code>type:data-access</code> depend only on <code>type:domain</code>, so <code>data</code><br>
-<em>cannot</em> reach the normalization chain even if someone wanted it to. That makes the separation<br>
-<a href="#s3">§3.3</a> demands a property of the module graph rather than a convention someone has to remember —<br>
-which matters, because <a href="#s3">§3.3</a> calls it "the correctness condition [...] most likely to be<br>
-violated by accident."<br>
-## 6. What has never been run against a real statement<br>
-Per §7.6 — "nothing in <a href="#s5">§5</a> has been run against a real statement" — the same honesty applies here,<br>
-and more sharply, because <strong>no real CSV was available when this was written</strong>. What that does and<br>
-does not mean:<br>
-**Validated against synthetic fixtures only, and therefore encoding my assumptions about how<br>
-banks behave rather than how yours actually does:**<br>
-- The three bundled profiles and the shapes they represent. They were written alongside the fixtures, so they prove the <em>mechanism</em> absorbs disagreement — not that any real bank matches one of them.<br>
-- Preamble detection, delimiter guessing, and header location.<br>
-- The processor-prefix table, the state-code list and the reference-debris patterns in <a href="#s4">§4.1</a>'s stages. These were derived from the three example descriptors in the spec plus common knowledge, and are the single most likely thing to need extending on contact with a real file.<br>
-<strong>Genuinely validated, because it does not depend on a bank:</strong><br>
-- The money path: no float anywhere, exact integer sums, every negative form banks print, and loud refusal of ambiguous non-US formatting.<br>
-- Date parsing against a declared format, including rejection of impossible calendar dates and the demonstration that <code>01/02/2026</code> reads differently under <code>MM/DD/YYYY</code> and <code>DD/MM/YYYY</code>.<br>
-- <code>collapse_v1</code> golden values, and the test that growing the normalization chain changes <code>description_normalized</code> and leaves the dedupe input untouched — the <a href="#s3">§3.3</a> regression.<br>
-- The module boundaries, verified by a deliberate violation that lint rejected.<br>
-<strong>Uncalibrated numbers</strong>, both marked in the code:<br>
-| Constant | Value | Where |<br>
-|---|---|---|<br>
-| <code>SIGNATURE_SUGGESTION_FLOOR</code> | 0.5 | <code>parsing/detect.ts</code> — only gates what is <em>offered</em>, never what is applied |<br>
-| <code>FUZZY_SIMILARITY_FLOOR</code> | 0.72 | <code>normalize/alias.ts</code> — set conservatively on purpose |<br>
-The fuzzy floor is worth understanding before tuning: trigram similarity catches *truncation and<br>
-decoration*, which is how descriptors actually vary — <code>BLUE BOTTLE COFFE</code> against<br>
-<code>BLUE BOTTLE COFFEE</code> scores ~0.85. It does not catch typos; <code>STARBUKS</code> against <code>STARBUCKS</code> scores<br>
-~0.58 and stays below the floor deliberately, because a wrong merge is invisible in the findings<br>
-while a missed one is one click in the review queue.<br>
-<strong>The first thing to do with a real statement</strong> is run the CLI over it and read four things: the<br>
-reconciliation verdict, the row count, the warnings, and — for a credit card — whether purchases<br>
-came out negative. The first three catch most of the ways this goes wrong; the fourth catches<br>
-the one reconciliation is structurally blind to.</p>
+in <a href="#s5">§5</a> and are deliberate.</p>
+<h2 id="s1">1. Status</h2>
+<p>Built: the <code>ingest → detect → parse → normalize</code> half of <a href="#s2">§2.5</a>'s pipeline, for <strong>CSV only</strong>.</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Piece</th><th>State</th></tr>
+<tr><td>Nx workspace, <code>libs/ledgerline/{domain,parsing,normalize}</code> with <a href="#s2">§2.2</a> tags and <code>depConstraints</code></td><td>done, lint-enforced</td></tr>
+<tr><td><code>collapse_v1</code> and the dedupe key (<a href="#s3">§3.3</a>)</td><td>done, frozen, golden-tested</td></tr>
+<tr><td>Money as signed integer cents; ISO dates; <code>effective_date</code> (<a href="#s3">§3.1</a>, §7.1)</td><td>done</td></tr>
+<tr><td>Header-signature detection and format profiles (<a href="#s2">§2.5</a> <code>detect</code>)</td><td>done</td></tr>
+<tr><td><code>NodeCsvParser</code> (<a href="#s2">§2.5</a> <code>parse</code>)</td><td>done</td></tr>
+<tr><td>Seven-stage merchant chain (<a href="#s4">§4.1</a>), deterministic stages only</td><td>done</td></tr>
+<tr><td><code>ParserPort</code> seam (<a href="#s2">§2.5</a>)</td><td>done, one implementation registered</td></tr>
+<tr><td>Running-balance reconciliation (<a href="#s6">§6.1</a>), plus a sign-plausibility check for deposit accounts</td><td>done</td></tr>
+<tr><td>PDF ingest</td><td><strong>not built</strong> — v0.4</td></tr>
+<tr><td>UI (<a href="#s6">§6</a>)</td><td>Angular shell scaffolded since — wireframe only, no pages. See <code>apps/ledgerline-ui/README.md</code>.</td></tr>
+<tr><td>SQLite schema (<a href="#s3">§3.1</a>, <a href="#s3">§3.2</a>), idempotent re-import (<a href="#s3">§3.3</a>), the API (<a href="#s2">§2.3</a>)</td><td>built since, 2026-08-06, in <code>libs/ledgerline/data</code> and <code>apps/ledgerline-api</code></td></tr>
+<tr><td>LLM stage of <a href="#s4">§4.2</a>, the analyzers of <a href="#s5">§5</a></td><td><strong>not built</strong> — out of scope for this build</td></tr>
+</table></div>
+<p><strong>Nothing in these three libs writes anywhere</strong>, and that is still true now that a database exists. Every entry point here takes values and returns values, per <a href="#s2">§2.1</a>'s "libs compute; the app persists"; <code>libs/ledgerline/data</code> is the only lib that knows a store exists, and <a href="#s2">§2.2</a>'s boundary lint refuses a <code>parsing → data</code> or <code>normalize → data</code> edge outright. The composition root that joins them is <code>apps/ledgerline-api</code>.</p>
+<h2 id="s2">2. Running it</h2>
+<pre><code>npm install
+npm run build</code></pre>
+<p>Parse a statement:</p>
+<pre><code>node tools/parse-statement.mjs fixtures/statements/northgate-checking-2026-01.csv</code></pre>
+<p>Useful flags: <code>--json</code> for the full machine-readable result (including each row's <code>dedupeKey</code> and normalized merchant), <code>--trace &lt;n&gt;</code> to print the per-stage normalization trace for one row, <code>--profile &lt;id|path&gt;</code> to force a profile instead of matching on the header signature, and <code>--account &lt;id&gt;</code> to set the account id that dedupe keys are computed against.</p>
+<p>The full pipeline — boundary lint, typecheck, tests — is:</p>
+<pre><code>npm run check</code></pre>
+<p><code>lint</code> is part of that pipeline on purpose. <a href="#s2">§2.2</a> calls the module boundaries "the single most load-bearing piece of the design", and notes that "a lint rule that nobody runs is not enforcement".</p>
+<h2 id="s3">3. Where real statements go</h2>
+<p><code>data/</code> and <code>*.sqlite</code> are already in <code>.gitignore</code>. **Put real statements in <code>data/</code>**, never in <code>fixtures/</code> — everything in <code>fixtures/</code> is committed. The files under <code>fixtures/statements/</code> are synthetic and contain no real financial data.</p>
+<h2 id="s4">4. Format profiles</h2>
+<p>A profile is JSON in <code>profiles/</code>, keyed on the hash of the header row. Fields mirror the <code>format_profile</code> table in <a href="#s3">§3.1</a>, so persisting one later is a column-for-column write.</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td><code>id</code></td><td>Unique. Used by <code>--profile</code> and recorded on the parse result.</td></tr>
+<tr><td><code>institution</code></td><td>Display only.</td></tr>
+<tr><td><code>accountTypeHint</code></td><td><code>checking</code> · <code>savings</code> · <code>credit_card</code> · <code>null</code>.</td></tr>
+<tr><td><code>headerSignature</code></td><td>sha256 of the normalized header tokens. Generated — do not type it by hand.</td></tr>
+<tr><td><code>headerTokens</code></td><td>The normalized tokens, kept for fuzzy matching and diagnostics.</td></tr>
+<tr><td><code>hasHeader</code></td><td><code>false</code> means address every column by index.</td></tr>
+<tr><td><code>delimiter</code></td><td>One character.</td></tr>
+<tr><td><code>skipLines</code></td><td>Preamble rows to drop before the header. Blank lines do not count.</td></tr>
+<tr><td><code>dateFormat</code></td><td>Explicit, never sniffed. Tokens: <code>YYYY</code> <code>YY</code> <code>MMM</code> <code>MM</code> <code>M</code> <code>DD</code> <code>D</code>, any literal separators.</td></tr>
+<tr><td><code>amountMode</code></td><td><code>single</code> (one signed column) or <code>debit_credit</code> (two unsigned columns).</td></tr>
+<tr><td><code>signConvention</code></td><td><code>as_is</code> or <code>invert</code>, applied <em>after</em> the mode produces a signed number.</td></tr>
+<tr><td><code>columnMap</code></td><td>Role → column. A bare string is a header name, a bare number is a zero-based index.</td></tr>
+<tr><td><code>pendingValues</code></td><td>Values in the status column meaning "not settled". Compared case-insensitively.</td></tr>
+</table></div>
+<p>Roles: <code>transactionDate</code>, <code>postedDate</code>, <code>description</code>, <code>amount</code>, <code>debit</code>, <code>credit</code>, <code>balance</code>, <code>status</code>. <code>description</code> is required, and at least one of <code>transactionDate</code> / <code>postedDate</code>.</p>
+<h3>The sign convention, which is the part that matters</h3>
+<p><a href="#s3">§3.1</a> requires <strong>negative = money leaving the account</strong>, uniformly across checking and credit cards. Banks do not agree, and the profile is where the disagreement is absorbed so that nothing downstream ever asks which bank a row came from.</p>
+<p>The two axes compose rather than multiplying into per-bank cases:</p>
+<ol><li><code>amountMode</code> builds a signed number — <code>single</code> takes the column as-is; <code>debit_credit</code> computes <code>|credit| − |debit|</code>.</li><li><code>signConvention: invert</code> flips it when the bank's idea of positive is the opposite of ours.</li></ol>
+<p>A checking export that prints a purchase as <code>-18.75</code> is <code>single</code> + <code>as_is</code>. A credit-card export that prints the same purchase as <code>18.75</code> and a payment as <code>-500.00</code> is <code>single</code> + <code>invert</code>. The bundled fixtures cover both, plus a <code>debit_credit</code> credit union, and a test asserts that a $500 card payment comes out as <code>−50000</code> in checking and <code>+50000</code> on the card — equal and opposite, which is what <a href="#s2">§2.6</a>'s transfer matching needs.</p>
+<h3>Adding a bank</h3>
+<p>Point the tool at the file. An unrecognized header exits with the signature, the located header line, sample rows, any similar known profiles, and a filled-in starter profile:</p>
+<pre><code>node tools/parse-statement.mjs data/statements/my-bank-2026-01.csv</code></pre>
+<p>Fill in the <code>CHANGE ME</code> fields, save under <code>profiles/</code>, and re-run. <strong>Check the reconciliation line.</strong> If the file has a balance column and the profile is right, you get:</p>
+<pre><code>✓ running balance reconciles across 11 rows (ascending order)
+  the amount column is mapped correctly and no rows are missing
+  (this does not verify signConvention; balances look plausible for the account type)</code></pre>
+<p>That check is the reason to map <code>balance</code> even though it is optional — <a href="#s2">§2.5</a> notes that a silently misparsed amount column "poisons every downstream finding, and it is very hard to notice after the fact". Row order is tried both ways, so you do not need to know whether your bank exports newest-first.</p>
+<h3>What reconciliation cannot tell you</h3>
+<p>**It cannot verify <code>signConvention</code>,** and it is worth understanding why before trusting a green line. <code>invert</code> is applied to the balance as well as the amount — it has to be, or a credit-card export would never reconcile — so both sides flip together and <code>(−b[n]) − (−b[n−1]) === −a[n]</code> holds exactly as well as the correct orientation. <strong>A profile with the convention backwards reconciles perfectly and inverts every number in the app.</strong></p>
+<p>The separate check for that is <code>sign_convention_suspect</code>, and it only has signal on deposit accounts: a checking or savings balance is money you have, so if most parsed balances come out negative the profile is inverted — an account is not overdrawn for a whole statement. Credit cards are deliberately excluded, because a card balance is a debt that different institutions print with different signs and a genuine credit balance after a refund is legal; <a href="#s3">§3.1</a> fixes the sign of <code>amount_cents</code>, not of <code>balance_cents</code>.</p>
+<p>So for a <strong>credit card</strong> the sign convention is the one thing you have to eyeball. Confirm that purchases came out negative and payments positive — the table the CLI prints shows both.</p>
+<p>Detection <strong>never auto-applies a profile it is not certain about.</strong> A near match is offered as a suggestion with a similarity score and nothing else; per plan question 2, confirmation is what stops a one-column header change from silently re-mapping an amount column.</p>
+<h2 id="s5">5. Where the code and the spec differ</h2>
+<p><strong>Nowhere</strong>, for the parsing path. Building the persistence path later found one place where the spec contradicts <em>itself</em> — <a href="#s3">§3.3</a>'s near-duplicate predicate cannot catch <a href="#s3">§3.3</a>'s own pending-to-posted example — which is recorded in <code>ledgerline-spec.md</code> §10 and left open rather than silently widened.</p>
+<p>Building this found four places where the spec was wrong or unimplementable as worded; all four were amended in the spec on 2026-08-04 rather than worked around here. See [<code>ledgerline-spec.md</code> §9](ledgerline-spec.md) for the list and the reasoning — in short: <code>ParserPort.parse</code> returning <code>RawRow[]</code> could not satisfy <a href="#s6">§6.1</a>'s own review screen; stage 1's punctuation stripping would have destroyed the markers stage 2 matches on; stage 4's URL rule resolved <code>NETFLIX.COM 866-579-7172 CA</code> to <code>CA</code>; and <code>collapse_v1</code>'s delete-semantics hashed <code>AMAZON - PRIME</code> differently from <code>AMAZON PRIME</code>.</p>
+<p>That last one was amended <strong>before the first import</strong>, which is the only moment it was free. <code>collapse_v1</code> now substitutes punctuation with a space rather than deleting it, folds diacritics, and trims after truncating. No row has ever been keyed under the old wording, so the name still refers to exactly one definition. <strong>From the first stored row onward that stops being true</strong>, and any further change means shipping <code>collapseV2</code> beside it plus a migration that recomputes every key in one transaction.</p>
+<h3>One implementation choice the spec leaves open</h3>
+<p>**<code>collapse_v1</code> lives in <code>domain</code>, not next to the <a href="#s4">§4</a> chain.** The spec says where the dedupe <em>stage</em> runs (<a href="#s2">§2.5</a>: in <code>data</code>) but not where the function lives. Putting it in <code>domain</code> falls out of the boundary table: <a href="#s2">§2.2</a> lets <code>type:data-access</code> depend only on <code>type:domain</code>, so <code>data</code> <em>cannot</em> reach the normalization chain even if someone wanted it to. That makes the separation <a href="#s3">§3.3</a> demands a property of the module graph rather than a convention someone has to remember — which matters, because <a href="#s3">§3.3</a> calls it "the correctness condition [...] most likely to be violated by accident."</p>
+<h2 id="s6">6. What has never been run against a real statement</h2>
+<p>Per §7.6 — "nothing in <a href="#s5">§5</a> has been run against a real statement" — the same honesty applies here, and more sharply, because <strong>no real CSV was available when this was written</strong>. What that does and does not mean:</p>
+<p><strong>Validated against synthetic fixtures only, and therefore encoding my assumptions about how banks behave rather than how yours actually does:</strong></p>
+<ul><li>The three bundled profiles and the shapes they represent. They were written alongside the fixtures, so they prove the <em>mechanism</em> absorbs disagreement — not that any real bank matches one of them.</li><li>Preamble detection, delimiter guessing, and header location.</li><li>The processor-prefix table, the state-code list and the reference-debris patterns in <a href="#s4">§4.1</a>'s stages. These were derived from the three example descriptors in the spec plus common knowledge, and are the single most likely thing to need extending on contact with a real file.</li></ul>
+<p><strong>Genuinely validated, because it does not depend on a bank:</strong></p>
+<ul><li>The money path: no float anywhere, exact integer sums, every negative form banks print, and loud refusal of ambiguous non-US formatting.</li><li>Date parsing against a declared format, including rejection of impossible calendar dates and the demonstration that <code>01/02/2026</code> reads differently under <code>MM/DD/YYYY</code> and <code>DD/MM/YYYY</code>.</li><li><code>collapse_v1</code> golden values, and the test that growing the normalization chain changes <code>description_normalized</code> and leaves the dedupe input untouched — the <a href="#s3">§3.3</a> regression.</li><li>The module boundaries, verified by a deliberate violation that lint rejected.</li></ul>
+<p><strong>Uncalibrated numbers</strong>, both marked in the code:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Constant</th><th>Value</th><th>Where</th></tr>
+<tr><td><code>SIGNATURE_SUGGESTION_FLOOR</code></td><td>0.5</td><td><code>parsing/detect.ts</code> — only gates what is <em>offered</em>, never what is applied</td></tr>
+<tr><td><code>FUZZY_SIMILARITY_FLOOR</code></td><td>0.72</td><td><code>normalize/alias.ts</code> — set conservatively on purpose</td></tr>
+</table></div>
+<p>The fuzzy floor is worth understanding before tuning: trigram similarity catches <em>truncation and decoration</em>, which is how descriptors actually vary — <code>BLUE BOTTLE COFFE</code> against <code>BLUE BOTTLE COFFEE</code> scores ~0.85. It does not catch typos; <code>STARBUKS</code> against <code>STARBUCKS</code> scores ~0.58 and stays below the floor deliberately, because a wrong merge is invisible in the findings while a missed one is one click in the review queue.</p>
+<p><strong>The first thing to do with a real statement</strong> is run the CLI over it and read four things: the reconciliation verdict, the row count, the warnings, and — for a credit card — whether purchases came out negative. The first three catch most of the ways this goes wrong; the fourth catches the one reconciliation is structurally blind to.</p>
 </main>
 
 <footer>
