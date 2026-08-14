@@ -13,6 +13,8 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { buildSnapshot } from './analysis/snapshot.js';
+import type { Snapshot } from './analysis/snapshot.js';
 import { commitImport } from './import/commit.js';
 import type { CommitDeps, CommitImportInput, CommitImportResult } from './import/commit.js';
 import { planImport } from './import/plan.js';
@@ -24,6 +26,8 @@ import type { Database } from './database.js';
 import { applyMigrations } from './migrations/runner.js';
 import type { MigrationOutcome } from './migrations/runner.js';
 import { AccountRepository } from './repositories/accounts.js';
+import { AnalysisRepository } from './repositories/analysis.js';
+import { FindingRepository } from './repositories/findings.js';
 import { FormatProfileRepository } from './repositories/format-profiles.js';
 import { ImportRepository } from './repositories/imports.js';
 import { JobRepository } from './repositories/jobs.js';
@@ -47,6 +51,8 @@ export class LedgerlineStore {
   readonly transactions: TransactionRepository;
   readonly settings: SettingsRepository;
   readonly jobs: JobRepository;
+  readonly findings: FindingRepository;
+  readonly analysis: AnalysisRepository;
   readonly migrations: MigrationOutcome;
 
   private constructor(
@@ -62,6 +68,8 @@ export class LedgerlineStore {
     this.transactions = new TransactionRepository(db, clock, this.tombstones);
     this.settings = new SettingsRepository(db, clock);
     this.jobs = new JobRepository(db, clock);
+    this.findings = new FindingRepository(db, clock);
+    this.analysis = new AnalysisRepository(db, clock, this.tombstones);
   }
 
   static open(options: LedgerlineStoreOptions): LedgerlineStore {
@@ -80,6 +88,15 @@ export class LedgerlineStore {
 
   commitImport(input: CommitImportInput): CommitImportResult {
     return commitImport(this.commitDeps(), input);
+  }
+
+  /**
+   * §2.2's "**one snapshot per run, not one per analyzer**", made structural: the
+   * only way to get one is to ask the store for it, and the caller passes the
+   * same object to every rule.
+   */
+  buildSnapshot(): Snapshot {
+    return buildSnapshot(this.db);
   }
 
   private commitDeps(): CommitDeps {

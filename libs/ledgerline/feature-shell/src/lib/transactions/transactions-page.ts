@@ -74,6 +74,19 @@ const PAGE_SIZES = [25, 100, 250, 500] as const;
  *  frame's estimate. */
 const ESTIMATED_DETAIL_HEIGHT = 240;
 
+/**
+ * §2.7's job poll. The runner holds a short window before it starts, so the first
+ * read almost always finds the job still `queued` — which is the correct thing to
+ * show, not a reason to poll faster.
+ *
+ * The budget is generous because the job's second half is a full analysis over
+ * every transaction (§2.7), and it is a budget rather than a timeout: running out
+ * leaves the last reported state on screen and stops asking. A job that outlives
+ * it is still in `job`, and `GET /api/jobs` still lists it.
+ */
+const RENORMALIZE_POLL_INTERVAL_MS = 500;
+const RENORMALIZE_POLL_ATTEMPTS = 120;
+
 interface EditState {
   readonly transactionId: string;
   readonly kind: 'merchant' | 'category';
@@ -491,17 +504,37 @@ export class TransactionsPage {
    * §6.3: corrections "enqueue a coalesced re-normalize job (§2.7); the UI shows
    * its progress rather than blocking."
    *
-   * One read, not a poll loop. The job runner is separate work (§2.7), so nothing
-   * currently moves a job out of `queued` and a loop would spin forever on a
-   * progress bar that cannot advance. Showing the queued job honestly is what this
-   * page owes the user today.
+   * A real loop now that §2.7's runner exists — until this was built there was
+   * nothing to poll for, and the page said so rather than animating a bar that
+   * could not move. It ends on a terminal state or on the attempt budget, and the
+   * budget is what keeps it a poll rather than a spin: a job that stops reporting
+   * leaves the last state it did report on screen, which is more use than a
+   * progress bar that keeps promising.
+   *
+   * The page is not blocked while this runs — `write` has already re-read the
+   * table and cleared `busy`. When the job finishes it re-reads once more, because
+   * a re-normalize is precisely the thing that changes which merchant the rows on
+   * screen belong to (§4.3).
    */
   private async pollRenormalize(jobId?: string): Promise<void> {
     if (!jobId) return;
-    try {
-      this.renormalizeJob.set(await this.api.getJob(jobId));
-    } catch {
-      this.renormalizeJob.set(null);
+
+    for (let attempt = 0; attempt < RENORMALIZE_POLL_ATTEMPTS; attempt += 1) {
+      let job: Job;
+      try {
+        job = await this.api.getJob(jobId);
+      } catch {
+        this.renormalizeJob.set(null);
+        return;
+      }
+
+      this.renormalizeJob.set(job);
+      if (job.state === 'succeeded' || job.state === 'failed') {
+        if (job.state === 'succeeded') this.revision.update((value) => value + 1);
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, RENORMALIZE_POLL_INTERVAL_MS));
     }
   }
 

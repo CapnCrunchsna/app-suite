@@ -19,6 +19,9 @@
  * is).
  */
 
+import { normalizeBatch, SEED_MERCHANT_KEYS } from '@metrum/ledgerline-normalize';
+import type { MerchantAlias } from '@metrum/ledgerline-normalize';
+
 import type { LedgerlineContext } from './context.js';
 
 /**
@@ -80,10 +83,10 @@ export function writeUserMerchantAlias(
 /**
  * Enqueue the coalesced re-normalize job (§2.7).
  *
- * Enqueue only — the runner is separate work. §2.7's debounce is a UI concern
- * ("Merchant corrections in the UI are debounced 5 seconds and batched"); the
- * coalescing that makes eight corrections one job is the queue's, and it is in
- * `JobRepository.enqueueCoalesced`.
+ * Enqueue only; `runRenormalize` below is what the job runner calls. §2.7's
+ * debounce is a UI concern ("Merchant corrections in the UI are debounced 5
+ * seconds and batched"); the coalescing that makes eight corrections one job is
+ * the queue's, and it is in `JobRepository.enqueueCoalesced`.
  */
 export function enqueueRenormalize(
   context: LedgerlineContext,
@@ -97,5 +100,142 @@ export function enqueueRenormalize(
     }`,
   });
 
+  // After the response, not during it (§6.3: "the UI shows its progress rather
+  // than blocking"). The drain is itself coalesced, so eight corrections in one
+  // tick book one drain over one merged job.
+  context.jobRunner.schedule();
+
   return { id: job.id, coalesced };
+}
+
+export interface RenormalizeResult {
+  readonly descriptorsConsidered: number;
+  readonly transactionsRepointed: number;
+  readonly merchantsAffected: number;
+}
+
+/**
+ * §4.3's second half: reapply the chain across the affected historical
+ * transactions.
+ *
+ * "So fixing `SPOTIFYUSA` once retroactively merges four years of charges into
+ * one series" — the retroactive part is this function, and it is why the payload
+ * carries **alias keys and not only transaction ids**. The ids are the rows the
+ * user was looking at; the keys are every row that spells the merchant the same
+ * way, including the four years of them nobody selected. §2.7 calls this being
+ * incremental: "only transactions whose current `description_normalized` falls
+ * in the affected alias key-space are re-resolved."
+ *
+ * ## Only `merchant_id` moves
+ *
+ * The chain is deterministic from `description_raw`, and a merchant correction
+ * changes the *alias table*, not the chain — so `description_normalized` comes
+ * back identical by construction and re-writing it would be a no-op that stamps
+ * `updated_at` on every row. `merchant_id` is the column an alias decides, and it
+ * is the only one written. That also keeps `dedupe_key` untouched, which §3.3
+ * requires absolutely: the key is computed from the raw descriptor through the
+ * frozen `collapse_v1`, and a re-normalize that moved it would re-key rows the
+ * merge rule has already reasoned about.
+ *
+ * Internal transfers and excluded rows are re-pointed too. They are hidden from
+ * §6.3's table by default, not deleted, and leaving them on a stale merchant
+ * would mean un-excluding a row later resurrects a correction the user already
+ * made.
+ */
+export function runRenormalize(
+  context: LedgerlineContext,
+  payload: RenormalizePayload,
+): RenormalizeResult {
+  const descriptors = affectedDescriptors(context, payload);
+  if (descriptors.length === 0) {
+    return { descriptorsConsidered: 0, transactionsRepointed: 0, merchantsAffected: 0 };
+  }
+
+  const aliases: MerchantAlias[] = context.store.merchants.listAliases().map((alias) => ({
+    aliasKey: alias.aliasKey,
+    merchantId: alias.merchantId,
+    matchType: alias.matchType,
+    confidence: alias.confidence ?? 1,
+    source: alias.source,
+  }));
+
+  // §4.1's chain runs over the *raw* descriptor, never the normalized one — the
+  // normalized form is the chain's own output and feeding it back in would apply
+  // stages 1–5 twice. One representative raw descriptor per normalized key is
+  // enough, because they all normalize to that key by definition.
+  const samples = rawSamplesFor(context, descriptors);
+  const resolved = normalizeBatch(
+    samples.map((sample) => sample.descriptionRaw),
+    { aliases, knownMerchantKeys: SEED_MERCHANT_KEYS, trace: false },
+  );
+
+  const merchants = new Set<string>();
+  let repointed = 0;
+
+  samples.forEach((sample, index) => {
+    const resolution = resolved[index].resolution;
+    if (resolution.kind !== 'alias') return;
+
+    const applied = context.store.transactions.applyBulk(
+      {
+        descriptorsNormalized: [sample.descriptionNormalized],
+        includeInternalTransfers: true,
+        includeExcluded: true,
+      },
+      { merchantId: resolution.merchantId },
+    );
+
+    if (applied.matched > 0) {
+      merchants.add(resolution.merchantId);
+      repointed += applied.matched;
+    }
+  });
+
+  return {
+    descriptorsConsidered: descriptors.length,
+    transactionsRepointed: repointed,
+    merchantsAffected: merchants.size,
+  };
+}
+
+/**
+ * The key-space one coalesced job covers.
+ *
+ * The union of the payload's alias keys and the current descriptors of the rows
+ * it named. Both halves are needed: a key with no rows yet is still worth
+ * carrying (a later import may bring some), and a transaction id whose descriptor
+ * the payload never mentioned is a row the user corrected directly.
+ */
+function affectedDescriptors(
+  context: LedgerlineContext,
+  payload: RenormalizePayload,
+): readonly string[] {
+  const keys = new Set(payload.aliasKeys.filter((key) => key.trim() !== ''));
+
+  for (const id of payload.transactionIds) {
+    const transaction = context.store.transactions.get(id);
+    if (transaction) keys.add(transaction.descriptionNormalized);
+  }
+
+  return [...keys];
+}
+
+function rawSamplesFor(
+  context: LedgerlineContext,
+  descriptors: readonly string[],
+): readonly { descriptionNormalized: string; descriptionRaw: string }[] {
+  const samples: { descriptionNormalized: string; descriptionRaw: string }[] = [];
+
+  for (const descriptionNormalized of descriptors) {
+    const page = context.store.transactions.search({
+      descriptorsNormalized: [descriptionNormalized],
+      includeInternalTransfers: true,
+      includeExcluded: true,
+      limit: 1,
+    });
+    const row = page.rows[0]?.transaction;
+    if (row) samples.push({ descriptionNormalized, descriptionRaw: row.descriptionRaw });
+  }
+
+  return samples;
 }

@@ -33,6 +33,15 @@ export const IMPORT_STATUSES = [
   'failed',
 ] as const;
 export const JOB_STATES = ['queued', 'running', 'succeeded', 'failed'] as const;
+/** §5.1's bands. `suppressed` is a band a finding can be *scored* into and is
+ *  therefore never emitted — it is here because the column can hold it, not
+ *  because a card can show it. */
+export const FINDING_BANDS = ['high', 'medium', 'low', 'suppressed'] as const;
+/** §5.1's run lifecycle, distinct from the user's own verdict below. */
+export const FINDING_STATUSES = ['active', 'resolved', 'suppressed'] as const;
+export const FINDING_USER_STATUSES = ['acknowledged', 'snoozed', 'dismissed'] as const;
+export const IMPACT_KINDS = ['savings', 'visibility'] as const;
+export const DISMISSAL_SCOPES = ['merchant_rule', 'rule'] as const;
 export const ROW_STATUSES = ['posted', 'pending'] as const;
 export const PARSE_SOURCES = ['csv', 'pdf', 'llm'] as const;
 export const PARSE_STATUSES = ['ok', 'error'] as const;
@@ -697,8 +706,137 @@ const category = {
   },
 } as const;
 
-/** §2.7's queue row. The runner is separate work; this is what
- *  `GET /api/jobs/:id` reports while the UI polls. */
+// --------------------------------------------------- findings (§5.1, §6.4) ---
+
+/**
+ * §5.1's finding, plus the two things only a read can know.
+ *
+ * `status` is the run lifecycle — `active`, `resolved` when a previous run
+ * produced it and this one did not, `suppressed` when a standing `dismissal_rule`
+ * covers it. `userStatus` is the separate per-finding verdict from
+ * `finding_state`, and the two are independent by §3.1's design: a finding can be
+ * dismissed and then resolve, or be resolved and still carry the dismissal that
+ * will apply if it comes back.
+ *
+ * `detail` is a free-shaped object because each rule's payload is its own — a
+ * price step, a duplicate set, a trial's corroboration. `additionalProperties`
+ * is on for that reason, and it is the one place in this file where the schema
+ * deliberately does not pin the wire format: pinning it would mean re-declaring
+ * five rules' detail shapes here and re-declaring them again for §5.8–§5.11.
+ */
+const finding = {
+  $id: 'Finding',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    ruleId: { type: 'string' },
+    ruleVersion: { type: 'string' },
+    /** §7.4: the thresholds this finding was computed under. */
+    configHash: { type: 'string' },
+    /** `rule_id + subject_type + subject_id` — what the upsert keys on (§5.1). */
+    naturalKey: { type: 'string' },
+    subjectType: { type: 'string' },
+    subjectId: { type: 'string' },
+    title: { type: 'string' },
+    detail: { type: 'object', additionalProperties: true },
+    confidence: { type: 'number' },
+    band: { type: 'string', enum: FINDING_BANDS },
+    /** §5.1 and §7.3: only `savings` sums into a headline. */
+    impactKind: { type: 'string', enum: IMPACT_KINDS },
+    impactMonthlyCents: { type: 'integer' },
+    impactAnnualCents: { type: 'integer' },
+    /** §7.5: shown as a badge, never branched on by a rule. */
+    llmDependent: { type: 'boolean' },
+    evidenceHash: { type: 'string' },
+    /** §5.1's explicit evidence, from `finding_evidence`. */
+    evidenceTransactionIds: { type: 'array', items: { type: 'string' } },
+    /** Never re-stamped by a re-run: the age of the problem, not of the row. */
+    firstDetectedAt: { type: 'string' },
+    status: { type: 'string', enum: FINDING_STATUSES },
+    userStatus: { type: ['string', 'null'], enum: [...FINDING_USER_STATUSES, null] },
+    snoozeUntil: nullableString,
+    /** §5.1: the evidence hash moved since the dismissal — "changed since you
+     *  dismissed this". */
+    changedSinceDismissal: { type: 'boolean' },
+    /** §5.1's other resurfacing reason: a threshold changed under it. */
+    reEvaluated: { type: 'boolean' },
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+  },
+} as const;
+
+const findingPage = {
+  $id: 'FindingPage',
+  type: 'object',
+  properties: {
+    rows: { type: 'array', items: ref('Finding') },
+    total: { type: 'integer' },
+    limit: { type: 'integer' },
+    offset: { type: 'integer' },
+  },
+} as const;
+
+/** §6.4's first headline number, from `recurring_series`. */
+const subscriptionTotals = {
+  $id: 'SubscriptionTotals',
+  type: 'object',
+  properties: {
+    activeCount: { type: 'integer' },
+    lapsedCount: { type: 'integer' },
+    monthlyCents: { type: 'integer' },
+    annualCents: { type: 'integer' },
+  },
+} as const;
+
+/**
+ * §6.4's top strip: "active subscriptions and their monthly/annual total, **total
+ * flagged annual savings** (`impact_kind = savings` only — see §5.1), and
+ * unreviewed finding count."
+ *
+ * There is deliberately no field totalling everything. §7.3: "Two findings may
+ * never claim the same dollars as `savings`", and the counterpart to that rule is
+ * that visibility findings never join the sum at all — a wire field holding the
+ * combined number would be one `+` away from being rendered.
+ */
+const findingsSummary = {
+  $id: 'FindingsSummary',
+  type: 'object',
+  properties: {
+    subscriptions: ref('SubscriptionTotals'),
+    savingsAnnualCents: { type: 'integer' },
+    savingsMonthlyCents: { type: 'integer' },
+    activeFindingCount: { type: 'integer' },
+    /** No `finding_state` row at all — never acknowledged, snoozed or dismissed. */
+    unreviewedCount: { type: 'integer' },
+    countsByRule: { type: 'object', additionalProperties: { type: 'integer' } },
+    countsByBand: { type: 'object', additionalProperties: { type: 'integer' } },
+    lastRunAt: nullableString,
+    lastRunConfigHash: nullableString,
+    lastRunSnapshotRows: nullableInteger,
+    /** §7.4: the hash a run started *now* would record. Differs from
+     *  `lastRunConfigHash` exactly when Settings has moved a threshold since. */
+    configHash: { type: 'string' },
+  },
+} as const;
+
+/** §5.1's standing dismissals — the two scopes that are not per-finding (§3.1). */
+const dismissalRule = {
+  $id: 'DismissalRule',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    scope: { type: 'string', enum: DISMISSAL_SCOPES },
+    ruleId: { type: 'string' },
+    /** Null for `rule` scope, and §3.1's CHECK constraint enforces the pairing. */
+    merchantId: nullableString,
+    reason: nullableString,
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+  },
+} as const;
+
+/** §2.7's queue row. `GET /api/jobs/:id` is what the UI polls while the
+ *  in-process runner works through it. */
 const job = {
   $id: 'Job',
   type: 'object',
@@ -792,6 +930,14 @@ const SHARED = [
   allRequired(merchant),
   allRequired(category),
   allRequired(job),
+
+  // §5.1 and §6.4. `finding.detail` is the one free-shaped field on the wire and
+  // stays required: every finding has a payload, even when it is `{}`.
+  allRequired(finding),
+  allRequired(findingPage),
+  allRequired(subscriptionTotals),
+  allRequired(findingsSummary),
+  allRequired(dismissalRule),
   // Both halves of a bulk request. Every field optional, by design.
   transactionFilter,
   transactionBulkChange,

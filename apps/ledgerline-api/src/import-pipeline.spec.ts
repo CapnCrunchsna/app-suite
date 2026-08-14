@@ -19,6 +19,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { FastifyInstance } from 'fastify';
 
+import { MIGRATIONS } from '@metrum/ledgerline-data';
+
 import { API_HOST, DEFAULT_API_PORT } from './lib/config.js';
 import { createContext } from './lib/context.js';
 import type { LedgerlineContext } from './lib/context.js';
@@ -170,7 +172,14 @@ describe('ledgerline-api import pipeline', () => {
   describe('boot', () => {
     it('loads every shipped profile without complaint', async () => {
       const response = await app.inject({ method: 'GET', url: '/api/health' });
-      expect(response.json()).toMatchObject({ ok: true, schemaVersion: 1, profileLoadErrors: [] });
+      // The version is asserted rather than ignored: `/api/health` reports it so
+      // a boot against a database the migrations did not reach is visible, and a
+      // test that accepted any number would not notice one that never ran.
+      expect(response.json()).toMatchObject({
+        ok: true,
+        schemaVersion: MIGRATIONS[MIGRATIONS.length - 1].version,
+        profileLoadErrors: [],
+      });
     });
 
     it('binds 127.0.0.1, not 0.0.0.0', () => {

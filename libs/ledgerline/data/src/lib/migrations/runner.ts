@@ -35,6 +35,7 @@ export interface Migration {
 /** In order. Append; never renumber, never edit one that has shipped. */
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: '001-initial-schema' },
+  { version: 2, name: '002-finding-state-dismissal-context' },
 ];
 
 /**

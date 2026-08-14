@@ -17,7 +17,19 @@ import type { Clock } from '../clock.js';
 import type { Database } from '../database.js';
 import type { TombstoneRecord } from '../records.js';
 
-export type TombstoneEntity = 'account' | 'statement_import' | 'transaction' | 'raw_row';
+/**
+ * A closed set rather than a string, so the re-index (§3.4) has a fixed list of
+ * entity types to route on. `recurring_series` joined it when analysis started
+ * writing: a re-run that re-groups a merchant's charges deletes the superseded
+ * series, and a watermark query cannot see that any more than it can see a
+ * deleted import.
+ */
+export type TombstoneEntity =
+  | 'account'
+  | 'statement_import'
+  | 'transaction'
+  | 'raw_row'
+  | 'recurring_series';
 
 interface TombstoneRow {
   id: string;

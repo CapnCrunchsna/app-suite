@@ -8,6 +8,7 @@
     "@metrum/ledgerline-domain": "*",
     "@metrum/ledgerline-parsing": "*",
     "@metrum/ledgerline-normalize": "*",
+    "@metrum/ledgerline-analyzers": "*",
     "@metrum/ledgerline-data": "*",
     "@fastify/multipart": "^9.4.0",
     "@fastify/swagger": "^9.8.1",

@@ -13,8 +13,8 @@
   <span class="notice__text">{{ notice() }}</span>
   @let job = renormalizeJob(); @if (job) {
   <span class="notice__job" [attr.data-state]="job.state">
-    re-normalize {{ job.state }} @if (job.state === 'queued') { · the job runner is not built yet,
-    so it stays queued } @else { · {{ job.progress }}% }
+    re-normalize {{ job.state }} @if (job.state === 'running') { · {{ job.progress }}% } @if
+    (job.message) { · {{ job.message }} }
   </span>
   }
   <button type="button" class="notice__dismiss" (click)="dismissNotice()" aria-label="Dismiss">

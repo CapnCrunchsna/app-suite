@@ -588,6 +588,304 @@
           "updatedAt"
         ]
       },
+      "Finding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "type": "string"
+          },
+          "configHash": {
+            "type": "string"
+          },
+          "naturalKey": {
+            "type": "string"
+          },
+          "subjectType": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "band": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "suppressed"
+            ]
+          },
+          "impactKind": {
+            "type": "string",
+            "enum": [
+              "savings",
+              "visibility"
+            ]
+          },
+          "impactMonthlyCents": {
+            "type": "integer"
+          },
+          "impactAnnualCents": {
+            "type": "integer"
+          },
+          "llmDependent": {
+            "type": "boolean"
+          },
+          "evidenceHash": {
+            "type": "string"
+          },
+          "evidenceTransactionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "firstDetectedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "resolved",
+              "suppressed"
+            ]
+          },
+          "userStatus": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "enum": [
+              "acknowledged",
+              "snoozed",
+              "dismissed",
+              null
+            ]
+          },
+          "snoozeUntil": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changedSinceDismissal": {
+            "type": "boolean"
+          },
+          "reEvaluated": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ruleId",
+          "ruleVersion",
+          "configHash",
+          "naturalKey",
+          "subjectType",
+          "subjectId",
+          "title",
+          "detail",
+          "confidence",
+          "band",
+          "impactKind",
+          "impactMonthlyCents",
+          "impactAnnualCents",
+          "llmDependent",
+          "evidenceHash",
+          "evidenceTransactionIds",
+          "firstDetectedAt",
+          "status",
+          "userStatus",
+          "snoozeUntil",
+          "changedSinceDismissal",
+          "reEvaluated",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "FindingPage": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "total",
+          "limit",
+          "offset"
+        ]
+      },
+      "SubscriptionTotals": {
+        "type": "object",
+        "properties": {
+          "activeCount": {
+            "type": "integer"
+          },
+          "lapsedCount": {
+            "type": "integer"
+          },
+          "monthlyCents": {
+            "type": "integer"
+          },
+          "annualCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activeCount",
+          "lapsedCount",
+          "monthlyCents",
+          "annualCents"
+        ]
+      },
+      "FindingsSummary": {
+        "type": "object",
+        "properties": {
+          "subscriptions": {
+            "$ref": "#/components/schemas/SubscriptionTotals"
+          },
+          "savingsAnnualCents": {
+            "type": "integer"
+          },
+          "savingsMonthlyCents": {
+            "type": "integer"
+          },
+          "activeFindingCount": {
+            "type": "integer"
+          },
+          "unreviewedCount": {
+            "type": "integer"
+          },
+          "countsByRule": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "countsByBand": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "lastRunAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastRunConfigHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastRunSnapshotRows": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "configHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscriptions",
+          "savingsAnnualCents",
+          "savingsMonthlyCents",
+          "activeFindingCount",
+          "unreviewedCount",
+          "countsByRule",
+          "countsByBand",
+          "lastRunAt",
+          "lastRunConfigHash",
+          "lastRunSnapshotRows",
+          "configHash"
+        ]
+      },
+      "DismissalRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "merchant_rule",
+              "rule"
+            ]
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "ruleId",
+          "merchantId",
+          "reason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "TransactionFilter": {
         "type": "object",
         "properties": {
@@ -3810,6 +4108,814 @@
         }
       }
     },
+    "/api/analysis/run": {
+      "post": {
+        "operationId": "runAnalysis",
+        "summary": "Enqueue an analysis run",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Spec 2.7: enqueues and returns a job id; poll `GET /api/jobs/:id`. Runs of this kind coalesce, so two requests in flight are one run.",
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/findings": {
+      "get": {
+        "operationId": "listFindings",
+        "summary": "List findings with spec 6.4’s filters",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Grouped by rule and sorted by annual impact descending (spec 6.4). Dismissed and snoozed findings are hidden by default and return the moment their evidence hash or the config hash moves (spec 5.1).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "ruleIds",
+            "required": false,
+            "description": "Comma-separated rule ids"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "bands",
+            "required": false,
+            "description": "Comma-separated confidence bands (high, medium, low)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "statuses",
+            "required": false,
+            "description": "Comma-separated lifecycle statuses (active, resolved, suppressed). Defaults to active."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "accountIds",
+            "required": false,
+            "description": "Comma-separated account ids, matched through finding_evidence"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "savings",
+                "visibility"
+              ]
+            },
+            "in": "query",
+            "name": "impactKind",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "minAnnualImpactCents",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "visible",
+                "hidden",
+                "all"
+              ],
+              "default": "visible"
+            },
+            "in": "query",
+            "name": "visibility",
+            "required": false,
+            "description": "Whether to include findings the user has dismissed or snoozed"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/findings/summary": {
+      "get": {
+        "operationId": "getFindingsSummary",
+        "summary": "Spec 6.4’s three headline numbers",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Active subscriptions and their monthly/annual total, total flagged annual savings (`impact_kind = savings` only — spec 5.1 and 7.3), and the unreviewed count. Takes the same filters as the list so the headline and the cards describe one set.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "ruleIds",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "bands",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "accountIds",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "minAnnualImpactCents",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingsSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/findings/{id}/state": {
+      "post": {
+        "operationId": "setFindingState",
+        "summary": "Acknowledge, snooze or dismiss one finding",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Spec 5.1’s per-finding scope. A dismissal stores the finding’s evidence hash and the config hash in force, which is what makes it stick — and what makes it lift when the price changes or a lapsed series resumes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "acknowledged",
+                      "snoozed",
+                      "dismissed"
+                    ]
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "snoozeDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3650,
+                    "description": "Snooze length in days. Defaults to 90 (spec 5.1)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dismissal-rules": {
+      "get": {
+        "operationId": "listDismissalRules",
+        "summary": "Standing merchant-scoped and rule-scoped dismissals",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Spec 5.1’s second and third dismissal scopes, applied at emit time.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DismissalRule"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createDismissalRule",
+        "summary": "Dismiss a rule, or a rule for one merchant",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Applied at emit time (spec 3.1), so findings it covers become `suppressed` on the next run rather than being deleted. Idempotent on (scope, ruleId, merchantId).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "scope",
+                  "ruleId"
+                ],
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "merchant_rule",
+                      "rule"
+                    ]
+                  },
+                  "ruleId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "merchantId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Required for `merchant_rule`, rejected for `rule`"
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissalRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dismissal-rules/{id}": {
+      "delete": {
+        "operationId": "deleteDismissalRule",
+        "summary": "Lift a standing dismissal",
+        "tags": [
+          "analysis"
+        ],
+        "description": "The findings it suppressed return to `active` on the next run — their rows were never deleted, so `first_detected_at` and any per-finding state survive (spec 5.1).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "deleted"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/data/backup": {
       "post": {
         "operationId": "backupData",
@@ -3951,6 +5057,10 @@
     {
       "name": "jobs",
       "description": "Long-running work and its progress"
+    },
+    {
+      "name": "analysis",
+      "description": "Analysis runs, findings and their dismissals"
     },
     {
       "name": "data",

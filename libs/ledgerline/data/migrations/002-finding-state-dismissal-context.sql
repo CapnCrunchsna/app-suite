@@ -1,0 +1,20 @@
+-- §5.1 names two different reasons a dismissed finding comes back, and asks that
+-- they be told apart: "if the price changes or a lapsed series resumes, the hash
+-- changes and the finding returns flagged **'changed since you dismissed this,'**
+-- with a diff. [...] A `rule_version` or `config_hash` bump also resurfaces
+-- findings, grouped separately as 're-evaluated with an improved rule' so the user
+-- knows why their dismissal was reopened."
+--
+-- The evidence hash answers the first and cannot answer the second: §5.1 fixes its
+-- input as `(rule_id, subject_id, amount rounded to the nearest dollar,
+-- cadence_label, series_status)`, and deliberately so — a hash that absorbed the
+-- config would make every threshold edit read as "the price changed", which is the
+-- opposite of the distinction being asked for. So the config hash at the moment of
+-- dismissal has to be recorded alongside it, and §3.1's `finding_state` had nowhere
+-- to put it.
+--
+-- Nullable, because rows written before this column existed have no answer and
+-- inventing one would resurface every dismissal already on file as
+-- "re-evaluated". A NULL reads as "dismissed before this was recorded", and the
+-- read path treats it as matching whatever the finding currently carries.
+ALTER TABLE finding_state ADD COLUMN dismissed_config_hash TEXT;

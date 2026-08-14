@@ -18,11 +18,17 @@ import { SEED_ALIASES, SEED_CATEGORIES, SEED_MERCHANTS } from '@metrum/ledgerlin
 import { createNodeCsvParser, loadProfile } from '@metrum/ledgerline-parsing';
 import type { ColumnRef, ColumnRole, FormatProfile, ParserPort } from '@metrum/ledgerline-parsing';
 
+import { JobRunner } from './job-runner.js';
+
 export interface LedgerlineContext {
   readonly store: LedgerlineStore;
   /** Registered in §2.5's priority order. Only the CSV implementation exists;
    *  `NodePdfParser` slots in ahead of nothing, which is the point of the port. */
   readonly parsers: readonly ParserPort[];
+  /** §2.7's in-process consumer. Here rather than inside `store` because what a
+   *  job *does* is run the §4 chain and the §5 rules, and `data` may reach
+   *  neither (§2.2) — the queue is a table, the runner is composition. */
+  readonly jobRunner: JobRunner;
   readonly profileLoadErrors: readonly string[];
   close(): void;
 }
@@ -38,6 +44,12 @@ export function createContext(options: CreateContextOptions): LedgerlineContext 
   seedMerchants(store);
   const profileLoadErrors = options.profilesDir ? seedProfiles(store, options.profilesDir) : [];
 
+  // A job left `running` by a process that died is not running anywhere (§2.7:
+  // the queue is a table, the runner is this process). Returning it to the queue
+  // at boot is what makes an interrupted re-normalize finish instead of showing
+  // a spinner nothing will ever advance.
+  store.jobs.requeueStranded();
+
   // The resolver is injected rather than looked up, which is what keeps
   // `parsing` pure: profiles live in `format_profile` and `type:parsing` may not
   // reach `type:data-access`.
@@ -46,12 +58,20 @@ export function createContext(options: CreateContextOptions): LedgerlineContext 
     return record ? toFormatProfile(record) : null;
   });
 
-  return {
+  // The runner takes the context it runs jobs against, and the context holds the
+  // runner — a handler re-runs the whole §4 chain and the whole of §5, so it
+  // needs everything. Built in two steps with the field mutable only here, which
+  // is cheaper than a two-phase factory every caller would have to know about.
+  const context: { -readonly [K in keyof LedgerlineContext]: LedgerlineContext[K] } = {
     store,
     parsers: [csvParser],
+    jobRunner: undefined as unknown as JobRunner,
     profileLoadErrors,
     close: () => store.close(),
   };
+  context.jobRunner = new JobRunner(context);
+
+  return context;
 }
 
 /**

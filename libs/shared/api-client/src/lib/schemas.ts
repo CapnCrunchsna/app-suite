@@ -147,6 +147,72 @@ export interface Job {
   readonly updatedAt: string;
 }
 
+export interface Finding {
+  readonly id: string;
+  readonly ruleId: string;
+  readonly ruleVersion: string;
+  readonly configHash: string;
+  readonly naturalKey: string;
+  readonly subjectType: string;
+  readonly subjectId: string;
+  readonly title: string;
+  readonly detail: Record<string, unknown>;
+  readonly confidence: number;
+  readonly band: 'high' | 'medium' | 'low' | 'suppressed';
+  readonly impactKind: 'savings' | 'visibility';
+  readonly impactMonthlyCents: number;
+  readonly impactAnnualCents: number;
+  readonly llmDependent: boolean;
+  readonly evidenceHash: string;
+  readonly evidenceTransactionIds: string[];
+  readonly firstDetectedAt: string;
+  readonly status: 'active' | 'resolved' | 'suppressed';
+  readonly userStatus: 'acknowledged' | 'snoozed' | 'dismissed' | null;
+  readonly snoozeUntil: string | null;
+  readonly changedSinceDismissal: boolean;
+  readonly reEvaluated: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface FindingPage {
+  readonly rows: Finding[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+export interface SubscriptionTotals {
+  readonly activeCount: number;
+  readonly lapsedCount: number;
+  readonly monthlyCents: number;
+  readonly annualCents: number;
+}
+
+export interface FindingsSummary {
+  readonly subscriptions: SubscriptionTotals;
+  readonly savingsAnnualCents: number;
+  readonly savingsMonthlyCents: number;
+  readonly activeFindingCount: number;
+  readonly unreviewedCount: number;
+  readonly countsByRule: Record<string, unknown>;
+  readonly countsByBand: Record<string, unknown>;
+  readonly lastRunAt: string | null;
+  readonly lastRunConfigHash: string | null;
+  readonly lastRunSnapshotRows: number | null;
+  readonly configHash: string;
+}
+
+export interface DismissalRule {
+  readonly id: string;
+  readonly scope: 'merchant_rule' | 'rule';
+  readonly ruleId: string;
+  readonly merchantId: string | null;
+  readonly reason: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 export interface TransactionFilter {
   readonly accountIds?: string[];
   readonly merchantIds?: string[];

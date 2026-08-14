@@ -1219,6 +1219,35 @@ with the former cost in the detail, because a lapsed series is not money being s
 claiming its cost would inflate every total with subscriptions that already stopped — which is
 also what makes that rule's exemption from the $25 floor load-bearing rather than a nicety.
 
+## 9e. Amendments from implementation — 2026-08-14 (§5.1, §2.7)
+
+Wiring the analyzers to the app — §2.7's job runner, `buildSnapshot()`, finding persistence and
+§2.3's analysis endpoints — ran §5's rules over stored data for the first time. Five places
+needed a decision this document does not make. Four are silences being filled; one is a column
+that §3.1 does not have and §5.1 requires.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 | **`finding_state` gains `dismissed_config_hash`** (migration `002`). | §5.1 names two different reasons a dismissed finding comes back and asks that they be told apart — "changed since you dismissed this" for a moved evidence hash, and "re-evaluated with an improved rule", *"grouped separately"*, for a `config_hash` bump. The evidence hash cannot answer the second, and deliberately so: §5.1 fixes its inputs as `(rule_id, subject_id, amount, cadence_label, series_status)`, and a hash that absorbed the config would make every threshold edit read as a price change. So the config in force **at the moment of dismissal** has to be recorded, and §3.1's `finding_state` had nowhere to put it. Nullable, so a row written before the column existed does not resurface as "re-evaluated" on the strength of having no answer. |
+| 5.1 | **A finding covered by a standing `dismissal_rule` is `suppressed`, a third lifecycle status alongside `active` and `resolved`.** | §5.1 gives absence exactly one meaning — "a finding present in the previous run but absent from the current one becomes `resolved`" — and §3.1 makes `dismissal_rule` "a standing filter applied at emit time", which produces absence from the emitted set. Taken together, dismissing a rule would mark its findings `resolved`, which is a claim about *the data* ("this stopped being true") being used to record a claim about *the user* ("stop telling me"). The two then become indistinguishable, and deleting a dismissal rule reads exactly like a cancelled subscription coming back. `suppressed` keeps the run's numbers current on a finding nobody is being shown, which is what makes lifting the rule restore precisely what it hid — `first_detected_at` included. |
+| 2.7 | **The in-process runner holds a short window (250 ms, uncalibrated) before it drains.** | §2.7 asks for two things that only look like one. Coalescing — "a second renormalize request while one is queued merges into it rather than stacking" — requires a job to *stay* queued long enough to be found, and a runner that drains on the next tick gives it no such window. §2.7's own answer is a debounce, but it puts it in the UI: "Merchant corrections in the UI are debounced 5 seconds and batched." That covers the batching path and nothing else — a run of individual `PATCH /api/transactions/:id` corrections arrives as a run of requests however patient the page is, and each one would otherwise mean its own re-normalize **and its own full analysis**, which is the outcome the coalescing sentence exists to prevent. The window is far shorter than five seconds because it has a smaller job to do: the UI's debounce makes eight clicks one request, this one only has to make several requests one run. |
+| 5.1 | **A series that a run stops producing is deleted with a tombstone, not resolved.** | §5.1's lifecycle is written about findings and `recurring_series` is not one. A finding that stops being true is information; a series that stops being produced is not a subscription that ended — §5.2 marks that one `lapsed` and still emits it. It is a series whose charges were re-grouped, almost always because a merchant correction merged two spellings (§4.3), and keeping the superseded row would show §6.5 a duplicate and hand §5.4's same-merchant multiplicity rule a finding built out of the user's own correction. The cost is real and is accepted rather than overlooked: §6.5's three user-owned columns — `cancellation_url`, `notes`, `user_status` — go with a series that re-groups. They survive every ordinary re-run, because §5.2's series id is derived from merchant, account and anchor date precisely so that it is stable. |
+| 3.1 | **`recurring_series.cadence_days` and `cadences_per_year` hold fractional values despite being declared INTEGER**, as does `confidence` despite being declared TEXT. | §5.2's cadence table is fractional by design — `monthly` is 30.44 days and `weekly` is 52.18 a year, because a calendar month is not 30 days and a year is not 52 weeks — and §5.5's annualization multiplies by those figures. SQLite's INTEGER affinity stores a REAL it cannot losslessly narrow as a REAL, and TEXT affinity round-trips a number through its shortest decimal form, so every value survives and the repository converts at the boundary. Nothing is broken today. It is recorded because §3.4 plans an Elasticsearch re-index, and a mapping generated from these declared types would truncate `cadence_days` to 30 and turn a subscription's annual cost into a number 1.4% wrong — silently, and only for the calendar cadences. |
+
+One further silence was left where it was found. §5.1 says a `rule_version` bump resurfaces a
+dismissal alongside a `config_hash` bump, but every rule currently sets `rule_version` to its own
+`rule_id`, so the two are one test in practice. That is the analyzers' business rather than this
+phase's, and inventing a version string here would have been a number nobody reviewed.
+
+The dataset these rules first ran over is generated in `apps/ledgerline-api/src/analysis-api.spec.ts`
+rather than committed to `fixtures/`, and it is worth saying why, because §7.6 is about exactly
+this. §5 needs *years* — a fitted series is three or more charges at a cadence, a price step has
+to hold, and "lapsed" is measured in multiples of a cadence against §7.2's coverage end. The
+committed fixtures are three statements covering two months and produce no series at all. The
+generated statements are posted through `POST /api/imports` like any other file, so coverage comes
+from `statement_import` and the merchant ids come from §4's chain — but they remain **synthetic**,
+and §7.6's calibration against a hand-labelled year of real statements has still not happened.
+
 ## 10. Open discrepancies — recorded, not resolved
 
 Building the persistence and import-commit path on 2026-08-06 found one place where this

@@ -1,11 +1,13 @@
 /**
  * The `job` table (§2.7) — "the queue is a table, not a broker."
  *
- * This is the queue's *storage*, not its runner. §2.7 has two producers
- * (`POST /api/jobs/renormalize`, `POST /api/analysis/run`) and one consumer that
- * runs in-process; only enqueueing and reading are needed for a merchant
- * correction to honestly report "re-normalize queued", and the runner is separate
- * work. Nothing here executes anything.
+ * This is the queue's *storage*, and now also the four state transitions its
+ * consumer needs. What is still deliberately absent is the consumer itself:
+ * §2.7's jobs "run in-process", and what they run is re-normalization (§4.3's
+ * chain) and analysis (§5) — neither of which `data` may reach, since
+ * `type:data-access` may depend on `type:domain` and nothing else (§2.2). So the
+ * runner lives in the composition root and this file hands it a claim, a progress
+ * report and two ways to finish. Nothing here executes anything.
  */
 
 import { newStamp } from './stamp.js';
@@ -68,9 +70,10 @@ interface JobRow {
   updated_at: string;
 }
 
-const SELECT = `SELECT id, kind, state, progress, message, payload_json, result_json,
-                       finished_at, created_at, updated_at
-                  FROM job`;
+const COLUMNS = `id, kind, state, progress, message, payload_json, result_json,
+                 finished_at, created_at, updated_at`;
+
+const SELECT = `SELECT ${COLUMNS} FROM job`;
 
 function toJob(row: JobRow): JobRecord {
   return {
@@ -159,6 +162,104 @@ export class JobRepository {
 
       return { job: this.getOrThrow(stamp.id), coalesced: false };
     })();
+  }
+
+  // ------------------------------------------------------- the consumer side ---
+
+  /**
+   * Take the oldest queued job and mark it `running`, or return null.
+   *
+   * The select and the update are one statement, not a read followed by a write.
+   * §2.7's coalescing depends on `queued` meaning "not yet read": a job claimed in
+   * two steps is a job another request can merge into after its payload has been
+   * taken, and that addition is then silently lost. `UPDATE ... WHERE id = (SELECT
+   * ...)` closes the gap even before the surrounding transaction does.
+   *
+   * FIFO by `created_at`. A coalesced job keeps the created_at of the request that
+   * opened it, so merging into a queued job does not push it to the back of the
+   * line behind work that arrived later.
+   */
+  claimNext(): JobRecord | null {
+    const claimed = this.db
+      .prepare<[string], JobRow>(
+        `UPDATE job
+            SET state = 'running', updated_at = ?
+          WHERE id = (SELECT id FROM job WHERE state = 'queued' ORDER BY created_at, id LIMIT 1)
+        RETURNING ${COLUMNS}`,
+      )
+      .get(this.clock.now());
+
+    // The enqueue message survives the claim. It is the one the UI is already
+    // showing ("re-normalizing 47 transactions"), and replacing it with "running"
+    // would trade a sentence about the work for a restatement of `state`.
+    return claimed ? toJob(claimed) : null;
+  }
+
+  /** §2.7: "`GET /api/jobs/:id` reports `{ state, progress, message, result }`;
+   *  the UI polls." This is what moves the first two while the work runs. */
+  reportProgress(id: string, progress: number, message?: string | null): void {
+    this.db
+      .prepare(
+        'UPDATE job SET progress = ?, message = COALESCE(?, message), updated_at = ? WHERE id = ?',
+      )
+      .run(Math.max(0, Math.min(100, Math.round(progress))), message ?? null, this.clock.now(), id);
+  }
+
+  succeed(id: string, result: unknown, message?: string | null): JobRecord {
+    const now = this.clock.now();
+    this.db
+      .prepare(
+        `UPDATE job
+            SET state = 'succeeded', progress = 100, message = COALESCE(?, message),
+                result_json = ?, finished_at = ?, updated_at = ?
+          WHERE id = ?`,
+      )
+      .run(message ?? null, JSON.stringify(result ?? null), now, now, id);
+    return this.getOrThrow(id);
+  }
+
+  /**
+   * A failed job keeps whatever progress it reached rather than being reset.
+   *
+   * "Failed at 60%" tells the user which half of a re-normalize landed; "failed at
+   * 0%" says it never started, which would be a lie about a job that rewrote four
+   * hundred rows before it threw.
+   */
+  fail(id: string, message: string): JobRecord {
+    const now = this.clock.now();
+    this.db
+      .prepare(
+        `UPDATE job SET state = 'failed', message = ?, finished_at = ?, updated_at = ? WHERE id = ?`,
+      )
+      .run(message, now, now, id);
+    return this.getOrThrow(id);
+  }
+
+  countQueued(): number {
+    return (
+      this.db
+        .prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM job WHERE state = 'queued'`)
+        .get()?.n ?? 0
+    );
+  }
+
+  /**
+   * §2.7's queue survives a restart; a job that was `running` when the process
+   * died does not. Returning it to `queued` at boot is what makes an interrupted
+   * re-normalize resume rather than sit as a permanent spinner — the work is
+   * idempotent (re-resolving an alias to the same merchant writes the same row),
+   * which is what makes re-running it safe.
+   */
+  requeueStranded(): number {
+    const now = this.clock.now();
+    return this.db
+      .prepare(
+        `UPDATE job
+            SET state = 'queued', progress = 0,
+                message = 'requeued after restart', updated_at = ?
+          WHERE state = 'running'`,
+      )
+      .run(now).changes;
   }
 
   private getOrThrow(id: string): JobRecord {

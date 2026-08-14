@@ -22,6 +22,10 @@ import type {
   Merchant,
   Category,
   Job,
+  Finding,
+  FindingPage,
+  FindingsSummary,
+  DismissalRule,
   TransactionFilter,
   TransactionBulkChange,
   TransactionBulkResult,
@@ -190,6 +194,46 @@ export interface ListJobsQuery {
 }
 
 export type ListJobsResponse = Job[];
+
+export interface ListFindingsQuery {
+  readonly ruleIds?: string;
+  readonly bands?: string;
+  readonly statuses?: string;
+  readonly accountIds?: string;
+  readonly impactKind?: 'savings' | 'visibility';
+  readonly minAnnualImpactCents?: number;
+  readonly visibility?: 'visible' | 'hidden' | 'all';
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+export interface GetFindingsSummaryQuery {
+  readonly ruleIds?: string;
+  readonly bands?: string;
+  readonly accountIds?: string;
+  readonly minAnnualImpactCents?: number;
+}
+
+export type SetFindingStateBody = {
+  readonly status: 'acknowledged' | 'snoozed' | 'dismissed';
+  readonly reason?: string | null;
+  /** Snooze length in days. Defaults to 90 (spec 5.1). */
+  readonly snoozeDays?: number;
+};
+
+export type ListDismissalRulesResponse = DismissalRule[];
+
+export type CreateDismissalRuleBody = {
+  readonly scope: 'merchant_rule' | 'rule';
+  readonly ruleId: string;
+  /** Required for `merchant_rule`, rejected for `rule` */
+  readonly merchantId?: string | null;
+  readonly reason?: string | null;
+};
+
+export type DeleteDismissalRuleResponse = {
+  readonly deleted: boolean;
+};
 
 export type BackupDataResponse = {
   readonly path?: string;
@@ -416,6 +460,80 @@ export class LedgerlineApi {
   listJobs(query: ListJobsQuery = {}): Promise<ListJobsResponse> {
     return this.request<ListJobsResponse>('GET', `/api/jobs`, {
       query,
+    });
+  }
+
+  /**
+   * Enqueue an analysis run
+   *
+   * Spec 2.7: enqueues and returns a job id; poll `GET /api/jobs/:id`. Runs of this kind coalesce, so two requests in flight are one run.
+   */
+  runAnalysis(): Promise<Job> {
+    return this.request<Job>('POST', `/api/analysis/run`, {
+    });
+  }
+
+  /**
+   * List findings with spec 6.4’s filters
+   *
+   * Grouped by rule and sorted by annual impact descending (spec 6.4). Dismissed and snoozed findings are hidden by default and return the moment their evidence hash or the config hash moves (spec 5.1).
+   */
+  listFindings(query: ListFindingsQuery = {}): Promise<FindingPage> {
+    return this.request<FindingPage>('GET', `/api/findings`, {
+      query,
+    });
+  }
+
+  /**
+   * Spec 6.4’s three headline numbers
+   *
+   * Active subscriptions and their monthly/annual total, total flagged annual savings (`impact_kind = savings` only — spec 5.1 and 7.3), and the unreviewed count. Takes the same filters as the list so the headline and the cards describe one set.
+   */
+  getFindingsSummary(query: GetFindingsSummaryQuery = {}): Promise<FindingsSummary> {
+    return this.request<FindingsSummary>('GET', `/api/findings/summary`, {
+      query,
+    });
+  }
+
+  /**
+   * Acknowledge, snooze or dismiss one finding
+   *
+   * Spec 5.1’s per-finding scope. A dismissal stores the finding’s evidence hash and the config hash in force, which is what makes it stick — and what makes it lift when the price changes or a lapsed series resumes.
+   */
+  setFindingState(id: string, body: SetFindingStateBody): Promise<Finding> {
+    return this.request<Finding>('POST', `/api/findings/${encodeURIComponent(String(id))}/state`, {
+      body,
+    });
+  }
+
+  /**
+   * Standing merchant-scoped and rule-scoped dismissals
+   *
+   * Spec 5.1’s second and third dismissal scopes, applied at emit time.
+   */
+  listDismissalRules(): Promise<ListDismissalRulesResponse> {
+    return this.request<ListDismissalRulesResponse>('GET', `/api/dismissal-rules`, {
+    });
+  }
+
+  /**
+   * Dismiss a rule, or a rule for one merchant
+   *
+   * Applied at emit time (spec 3.1), so findings it covers become `suppressed` on the next run rather than being deleted. Idempotent on (scope, ruleId, merchantId).
+   */
+  createDismissalRule(body: CreateDismissalRuleBody): Promise<DismissalRule> {
+    return this.request<DismissalRule>('POST', `/api/dismissal-rules`, {
+      body,
+    });
+  }
+
+  /**
+   * Lift a standing dismissal
+   *
+   * The findings it suppressed return to `active` on the next run — their rows were never deleted, so `first_detected_at` and any per-finding state survive (spec 5.1).
+   */
+  deleteDismissalRule(id: string): Promise<DeleteDismissalRuleResponse> {
+    return this.request<DeleteDismissalRuleResponse>('DELETE', `/api/dismissal-rules/${encodeURIComponent(String(id))}`, {
     });
   }
 

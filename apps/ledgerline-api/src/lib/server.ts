@@ -16,6 +16,7 @@ import swagger from '@fastify/swagger';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 
+import { SnapshotTooLargeError } from '@metrum/ledgerline-analyzers';
 import { MixedDedupeKeyVersionError, ZeroAmountRowError } from '@metrum/ledgerline-data';
 
 import { DEV_ORIGINS } from './config.js';
@@ -24,6 +25,7 @@ import type { LedgerlineContext } from './context.js';
 import { ImportNotReadyError } from './import-service.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerDataRoutes } from './routes/data.js';
+import { registerFindingRoutes } from './routes/findings.js';
 import { registerFormatProfileRoutes } from './routes/format-profiles.js';
 import { registerImportRoutes } from './routes/imports.js';
 import { registerJobRoutes } from './routes/jobs.js';
@@ -62,6 +64,10 @@ export const OPENAPI_DOCUMENT = {
     },
     { name: 'merchants', description: 'Canonical merchants and categories' },
     { name: 'jobs', description: 'Long-running work and its progress' },
+    {
+      name: 'analysis',
+      description: 'Analysis runs, findings and their dismissals',
+    },
     { name: 'data', description: 'Backup and export' },
   ],
 };
@@ -140,6 +146,12 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
     if (error instanceof ImportNotReadyError) {
       return reply.code(409).send({ error: 'import_not_ready', message: error.message });
     }
+    // §2.2's hard ceiling. The message names the fix — scope the run to a date
+    // range — and 422 rather than 500 because the request was well formed and the
+    // dataset is the thing that has to change.
+    if (error instanceof SnapshotTooLargeError) {
+      return reply.code(422).send({ error: 'snapshot_too_large', message: error.message });
+    }
     if (error.validation) {
       return reply.code(400).send({ error: 'bad_request', message: error.message });
     }
@@ -182,6 +194,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerTransactionRoutes(app, options.context);
   registerMerchantRoutes(app, options.context);
   registerJobRoutes(app, options.context);
+  registerFindingRoutes(app, options.context);
   registerDataRoutes(app, options.context, options.config);
 
   await app.ready();
