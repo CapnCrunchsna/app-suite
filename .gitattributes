@@ -1,0 +1,25 @@
+# Normalise line endings here rather than relying on core.autocrlf.
+#
+# The Git for Windows installer sets core.autocrlf=true in the SYSTEM gitconfig
+# (C:/Program Files/Git/etc/gitconfig), so on this machine every checkout, clone, reset and
+# branch switch rewrote text files to CRLF. The object store was always LF — the damage was
+# entirely on the working-tree side, which is why the tree was inconsistent: files the Node
+# scripts had just written were LF, and the same files were CRLF again after the next
+# checkout touched them.
+#
+# On 2026-08-11 that took down the artifact pipeline twice from one root cause (recorded in
+# the workspace repo at 86ae308). The generator scripts split on '\n', so a \r survived on
+# every line, and \r is a line terminator both in a JS regex and inside a JS string literal:
+# md-to-html.mjs looped forever appending <p></p> until it died of OOM, and new-artifact.mjs
+# wrote a raw \r into a registry shard, leaving the string literal unterminated so the whole
+# dashboard, the checker and the generator itself all failed to read any shard.
+#
+# .gitattributes overrides core.autocrlf, so this holds per-repo without touching the user's
+# global or system git config. Each repo here needs its own copy — attribute lookup stops at
+# the repo root, so the workspace file does not reach the nested track repos.
+* text=auto eol=lf
+
+# Exception: cmd.exe can mis-parse a batch file with LF-only line endings, so these stay
+# CRLF. games/chip-away/android/gradlew.bat ships from the Gradle wrapper that way.
+*.bat text eol=crlf
+*.cmd text eol=crlf
