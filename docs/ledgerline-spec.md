@@ -7,6 +7,12 @@ contract. Everything here must be true of the code in this repository at this co
 concept, the locked decisions, the roadmap and the open questions live in the companion plan
 artifact, `artifacts/plans/ledgerline-design.md`.
 
+**Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
+(Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
+§4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9e
+amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
+
 ## 1. Status and provenance
 
 **Status: partially implemented.** The Nx workspace exists with its §2.2 tags and boundary
