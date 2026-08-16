@@ -20,7 +20,6 @@ inside it.
 - **Edgeline** — Angular UI + Python API/jobs; server datastore **Elasticsearch** (revisit the
   existing Postgres implementation spec before build).
 
-## Stack defaults (inherited, restated)
-- UI: Angular + TypeScript; shared `ui`, generated `api-client`.
-- Server datastore: Elasticsearch. On-device mobile data: SQLite.
+## Cross-project conventions
+- A shared `ui` library and a generated `api-client` library.
 - Backends serve pure JSON APIs; UIs consume generated TypeScript clients.
