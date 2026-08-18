@@ -30,15 +30,18 @@ of 2026-08-11, `libs/ledgerline/analyzers` exists with §5.1's shared finding co
 config-and-hash machinery, and **five of §5's nine rules** — recurrence (§5.2, §5.3) and the
 four that build on the series it produces: duplicate and overlap (§5.4), price creep (§5.5),
 trial conversions (§5.6) and cancellation confirmation (§5.7). `analyze()` composes them over
-one snapshot with §2.2's row guard.
+one snapshot with §2.2's row guard. As of 2026-08-14 those rules **run over stored data**:
+§2.7's in-process job runner, `buildSnapshot()`, finding and series persistence with §5.1's
+upsert-by-natural-key lifecycle, and §2.3's `POST /api/analysis/run`, `GET /api/findings`,
+`GET /api/findings/summary`, `POST /api/findings/:id/state` and `/api/dismissal-rules`.
 
-PDF ingest, the LLM stage of §4.2, **§5.8–§5.11's four remaining rules**, §2.6's transfer
-matcher, §2.7's job **runner**, the analysis and findings endpoints of §2.3 and the other six
-pages of §6 are **not** built. Nothing yet *runs* the analyzers: there is no `buildSnapshot()`,
-no finding persistence and no `POST /api/analysis/run`, so every rule above is a tested pure
-function that has never been computed over stored data.
-`docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b, §9c and
-§9d list the amendments implementation made to this document.
+PDF ingest, the LLM stage of §4.2, **§5.8–§5.11's four remaining rules** and §2.6's transfer
+matcher are **not** built, nor are the account-coverage, merge, merchant-alias, review-queue,
+transfer, series, insights, ask and settings endpoints of §2.3, nor **six of §6's eight pages** —
+only §6.1's Import and §6.3's Transactions exist, so the findings the analyzers now produce have
+nowhere to appear.
+`docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b, §9c, §9d
+and §9e list the amendments implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
