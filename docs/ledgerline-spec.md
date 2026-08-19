@@ -33,13 +33,16 @@ trial conversions (§5.6) and cancellation confirmation (§5.7). `analyze()` com
 one snapshot with §2.2's row guard. As of 2026-08-14 those rules **run over stored data**:
 §2.7's in-process job runner, `buildSnapshot()`, finding and series persistence with §5.1's
 upsert-by-natural-key lifecycle, and §2.3's `POST /api/analysis/run`, `GET /api/findings`,
-`GET /api/findings/summary`, `POST /api/findings/:id/state` and `/api/dismissal-rules`.
+`GET /api/findings/summary`, `POST /api/findings/:id/state` and `/api/dismissal-rules`. As of
+2026-08-19 §6.4's **Findings page** — the one §6 calls the hero — is built on those endpoints,
+with the three headline numbers, per-rule grouping, the three-scope dismissal picker and inline
+evidence; it is where the app now opens.
 
 PDF ingest, the LLM stage of §4.2, **§5.8–§5.11's four remaining rules** and §2.6's transfer
 matcher are **not** built, nor are the account-coverage, merge, merchant-alias, review-queue,
-transfer, series, insights, ask and settings endpoints of §2.3, nor **six of §6's eight pages** —
-only §6.1's Import and §6.3's Transactions exist, so the findings the analyzers now produce have
-nowhere to appear.
+transfer, series, insights, ask and settings endpoints of §2.3, nor **five of §6's eight pages**.
+§6.1's Import, §6.3's Transactions and §6.4's Findings exist; §6.5's Subscriptions is the one
+the Findings page's "Open subscription" action currently names rather than navigates to.
 `docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b, §9c, §9d
 and §9e list the amendments implementation made to this document.
 

@@ -1,0 +1,88 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+}
+
+.strip {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+
+.figure__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.figure__value {
+  font-size: 1.55rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+/* The one number §6.4 calls the justification for the app. */
+.figure--headline .figure__value {
+  color: var(--accent-2, #34d399);
+}
+
+.figure__sub {
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+}
+
+.run {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: auto;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.run__line {
+  font-variant-numeric: tabular-nums;
+}
+
+/* §7.4: a config change means the stored findings were scored under thresholds
+ * that no longer apply. Saying so beats showing a number that looks current. */
+.run__stale {
+  color: #d9b878;
+  max-width: 260px;
+  text-align: right;
+}
+
+.run__button {
+  margin-top: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent, #2dd4bf);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgb(45 212 191 / 12%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

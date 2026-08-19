@@ -20,12 +20,18 @@ export const ledgerlineRoutes: Routes = [
     loadComponent: () => import('./imports/imports-page.js').then((module) => module.ImportsPage),
   },
   {
+    path: 'findings',
+    title: 'Findings · Ledgerline',
+    loadComponent: () =>
+      import('./findings/findings-page.js').then((module) => module.FindingsPage),
+  },
+  {
     path: 'transactions',
     title: 'Transactions · Ledgerline',
     loadComponent: () =>
       import('./transactions/transactions-page.js').then((module) => module.TransactionsPage),
   },
-  // §6.3 is the first page that renders stored data, so it is where the app opens
-  // until §6.4's Findings page — the one §6 calls the hero — exists.
-  { path: '', pathMatch: 'full', redirectTo: 'transactions' },
+  // §6.4 is the page §6 calls the hero — the three numbers that justify the app —
+  // so it is where the app opens now that it exists.
+  { path: '', pathMatch: 'full', redirectTo: 'findings' },
 ];

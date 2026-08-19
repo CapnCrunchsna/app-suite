@@ -7,7 +7,7 @@ const SECTIONS = [
   { label: 'Import', path: 'imports' },
   { label: 'Accounts', path: null },
   { label: 'Transactions', path: 'transactions' },
-  { label: 'Findings', path: null },
+  { label: 'Findings', path: 'findings' },
   { label: 'Subscriptions', path: null },
   { label: 'Insights', path: null },
   { label: 'Ask', path: null },

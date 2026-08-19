@@ -1,0 +1,80 @@
+<ui-panel heading="Findings">
+  <ll-findings-summary [summary]="summary()" [busy]="running()" (runRequested)="runAnalysis()" />
+</ui-panel>
+
+@if (notice()) {
+<div class="notice" role="status">
+  <span class="notice__text">{{ notice() }}</span>
+  <button type="button" class="notice__dismiss" (click)="dismissNotice()" aria-label="Dismiss">
+    ×
+  </button>
+</div>
+}
+
+<ui-panel>
+  <ll-finding-filters
+    [accounts]="accounts()"
+    [rules]="ruleIds()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+  />
+</ui-panel>
+
+@if (page.error()) {
+<ui-panel>
+  <div class="failure" role="alert">
+    <p class="failure__text">
+      Could not reach the API. It binds <code>127.0.0.1:4310</code> and has to be running:
+      <code>npx nx serve ledgerline-api</code>
+    </p>
+    <p class="failure__detail">{{ $any(page.error()).message }}</p>
+    <button type="button" class="button" (click)="reload()">Try again</button>
+  </div>
+</ui-panel>
+} @else {
+<div class="toolbar">
+  <span class="toolbar__count">
+    {{ total() }} {{ total() === 1 ? 'finding' : 'findings' }} @if (groups().length > 0) { · {{
+    groups().length }} {{ groups().length === 1 ? 'rule' : 'rules' }} }
+  </span>
+  @if (page.isLoading()) {
+  <span class="toolbar__status">loading…</span>
+  } @else if (busy()) {
+  <span class="toolbar__status">saving…</span>
+  }
+</div>
+
+@for (group of groups(); track group.ruleId) {
+<section class="group">
+  <header class="group__head">
+    <h2 class="group__rule">{{ group.ruleId }}</h2>
+    <span class="group__count">
+      {{ group.findings.length }} {{ group.findings.length === 1 ? 'finding' : 'findings' }}
+    </span>
+    <span class="group__total">{{ formatGroupTotal(group.annualCents) }}</span>
+  </header>
+
+  <div class="group__cards">
+    @for (finding of group.findings; track finding.id) {
+    <ll-finding-card
+      [finding]="finding"
+      [merchantName]="merchantNameFor(finding)"
+      [busy]="busy()"
+      (acted)="onAction($event)"
+      (openSubscription)="onOpenSubscription($event)"
+    />
+    }
+  </div>
+</section>
+} @empty {
+<ui-panel>
+  <p class="empty">
+    @if (page.isLoading()) { Loading findings… } @else if (summary()?.lastRunAt) { Nothing matches
+    these filters. The last run found {{ summary()?.activeFindingCount }} active {{
+    summary()?.activeFindingCount === 1 ? 'finding' : 'findings' }} in total. } @else { No analysis
+    has run yet. <strong>Run analysis</strong> above — and note that §5 needs <em>years</em> of
+    statements before it can say much: a series is three or more charges at a cadence, a price step
+    has to hold, and a lapse is measured in multiples of a cadence. }
+  </p>
+</ui-panel>
+} }

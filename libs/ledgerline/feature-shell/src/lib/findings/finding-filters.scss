@@ -1,0 +1,89 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+}
+
+.filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 140px;
+}
+
+.filters__field--narrow {
+  min-width: 96px;
+}
+
+.filters__label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.filters__input {
+  padding: 4px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: var(--bg, #0a1517);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.filters__input--invalid {
+  border-color: #e0796a;
+}
+
+.filters__bands {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 2px 10px 6px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+}
+
+.filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.filters__reset {
+  padding: 5px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.filters__warning {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.74rem;
+  color: #d9b878;
+}

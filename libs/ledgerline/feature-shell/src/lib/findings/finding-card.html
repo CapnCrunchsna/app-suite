@@ -1,0 +1,131 @@
+@let f = finding();
+
+<article
+  class="card"
+  [class.card--acknowledged]="f.userStatus === 'acknowledged'"
+  [class.card--snoozed]="f.userStatus === 'snoozed'"
+  [attr.data-rule]="f.ruleId"
+>
+  <!-- §5.1's two resurface reasons, kept apart. The evidence hash moved (the
+       money changed) versus the config hash moved (the rule changed). -->
+  @if (f.changedSinceDismissal) {
+  <p class="banner banner--changed" role="status">
+    <strong>Changed since you dismissed this.</strong>
+    The amount or the series' status moved, so it is back.
+  </p>
+  } @if (f.reEvaluated) {
+  <p class="banner banner--reevaluated" role="status">
+    <strong>Re-evaluated with an improved rule.</strong>
+    A threshold changed, not your money — this is the same finding scored again.
+  </p>
+  }
+
+  <header class="card__head">
+    <h3 class="card__title">{{ f.title }}</h3>
+
+    <span class="card__chips">
+      <span class="chip chip--band" [attr.data-band]="f.band">{{ bandLabel() }}</span>
+      @if (f.llmDependent) {
+      <span
+        class="chip chip--llm"
+        title="A model helped group this. §2.4 caps such a finding at Medium confidence however strong it looks."
+      >
+        AI-assisted grouping
+      </span>
+      } @if (f.impactKind === 'visibility') {
+      <span
+        class="chip chip--visibility"
+        title="Money you are already spending knowingly. Shown per finding and never added to the savings headline (§7.3)."
+      >
+        visibility
+      </span>
+      } @if (f.userStatus) {
+      <span class="chip chip--state">{{ f.userStatus }}</span>
+      }
+    </span>
+  </header>
+
+  <p class="card__money">
+    <span class="card__annual">{{ formatCents(f.impactAnnualCents) }}</span>
+    <span class="card__per">/yr</span>
+    <span class="card__monthly">{{ formatCents(f.impactMonthlyCents) }}/mo</span>
+    @if (f.snoozeUntil) {
+    <span class="card__snoozed">snoozed until {{ f.snoozeUntil }}</span>
+    }
+  </p>
+
+  <ll-finding-evidence [finding]="f" />
+
+  <footer class="card__actions">
+    <button
+      type="button"
+      class="action"
+      (click)="act({ kind: 'acknowledge' })"
+      [disabled]="busy()"
+      title="Seen it. The finding stays, marked as reviewed."
+    >
+      Acknowledge
+    </button>
+
+    <button
+      type="button"
+      class="action"
+      (click)="act({ kind: 'snooze' })"
+      [disabled]="busy()"
+      title="Yes, I know — deal with it later. 90 days (§5.1)."
+    >
+      Snooze 90 days
+    </button>
+
+    <span class="action__group">
+      <button
+        type="button"
+        class="action action--dismiss"
+        (click)="togglePicker()"
+        [disabled]="busy()"
+        [attr.aria-expanded]="picking()"
+      >
+        Dismiss ▾
+      </button>
+
+      @if (picking()) {
+      <!-- Three scopes, three destinations. "This finding" is per-finding user
+             state; the other two write a standing rule that filters findings
+             which do not exist yet (§3.1). -->
+      <span class="picker" role="group" aria-label="Dismiss scope">
+        <button type="button" class="picker__option" (click)="act({ kind: 'dismiss_finding' })">
+          <span class="picker__label">Just this finding</span>
+          <span class="picker__hint">Comes back if the amount or status changes.</span>
+        </button>
+
+        @if (canScopeToMerchant()) {
+        <button type="button" class="picker__option" (click)="act({ kind: 'dismiss_merchant' })">
+          <span class="picker__label">This rule for {{ merchantName() }}</span>
+          <span class="picker__hint">A standing filter, applied to future runs too.</span>
+        </button>
+        }
+
+        <button type="button" class="picker__option" (click)="act({ kind: 'dismiss_rule' })">
+          <span class="picker__label">This rule entirely</span>
+          <span class="picker__hint">Stops every finding this rule would ever emit.</span>
+        </button>
+      </span>
+      }
+    </span>
+
+    @if (isSeries()) {
+    <button
+      type="button"
+      class="action action--open"
+      (click)="openSubscription.emit(f)"
+      title="Open this subscription on the Subscriptions page."
+    >
+      Open subscription
+    </button>
+    }
+
+    <span class="card__rule" [title]="'Rule ' + f.ruleVersion + ', config ' + f.configHash">
+      {{ f.ruleId }}
+    </span>
+  </footer>
+</article>

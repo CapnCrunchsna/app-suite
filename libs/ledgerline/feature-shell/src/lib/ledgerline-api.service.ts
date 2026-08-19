@@ -27,15 +27,23 @@ import type {
   Category,
   CommitImportBody,
   CommitResult,
+  CreateDismissalRuleBody,
   CreateFormatProfileBody,
   DeleteImportResult,
+  DismissalRule,
+  Finding,
+  FindingPage,
+  FindingsSummary,
   FormatProfile,
   FormatProfilePreview,
+  GetFindingsSummaryQuery,
   ImportReview,
   Job,
+  ListFindingsQuery,
   ListTransactionsQuery,
   Merchant,
   PreviewFormatProfileBody,
+  SetFindingStateBody,
   StatementImport,
   Transaction,
   TransactionBulkChange,
@@ -201,5 +209,52 @@ export class LedgerlineApiService {
   /** Saves the mapping. Deliberately does not re-parse — that is `updateImport`. */
   createFormatProfile(body: CreateFormatProfileBody): Promise<FormatProfile> {
     return this.api.createFormatProfile(body);
+  }
+
+  // ------------------------------------------------------------- §6.4 ---
+
+  /** §2.7: enqueues and returns a job; the UI polls `getJob` rather than
+   *  blocking on a run that reads every transaction in the database. */
+  runAnalysis(): Promise<Job> {
+    return this.api.runAnalysis();
+  }
+
+  listFindings(query: ListFindingsQuery): Promise<FindingPage> {
+    return this.api.listFindings(query);
+  }
+
+  /**
+   * §6.4's three headline numbers.
+   *
+   * Taken from the API rather than summed from the page's own rows, and not
+   * only to save arithmetic: §5.1 admits **`savings` alone** into the headline,
+   * the rows the page holds are one filtered page of many, and a total computed
+   * from them would be wrong by every finding the user has filtered out or not
+   * scrolled to.
+   */
+  getFindingsSummary(query: GetFindingsSummaryQuery): Promise<FindingsSummary> {
+    return this.api.getFindingsSummary(query);
+  }
+
+  /** §5.1's per-finding user state — acknowledge, snooze, or dismiss *this one*. */
+  setFindingState(id: string, body: SetFindingStateBody): Promise<Finding> {
+    return this.api.setFindingState(id, body);
+  }
+
+  /**
+   * §5.1's other two dismissal scopes, which are a different table and a
+   * different lifecycle (§3.1): a standing filter applied at emit time rather
+   * than user state on one finding.
+   */
+  listDismissalRules(): Promise<DismissalRule[]> {
+    return this.api.listDismissalRules();
+  }
+
+  createDismissalRule(body: CreateDismissalRuleBody): Promise<DismissalRule> {
+    return this.api.createDismissalRule(body);
+  }
+
+  deleteDismissalRule(id: string): Promise<{ readonly deleted?: boolean }> {
+    return this.api.deleteDismissalRule(id);
   }
 }

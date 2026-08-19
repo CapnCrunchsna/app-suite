@@ -1,0 +1,59 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.evidence {
+  padding: 9px 11px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+  background: var(--bg, #0a1517);
+}
+
+.evidence__caption {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.evidence__count {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Two columns rather than a table: the rows are label/value pairs, and a <dl>
+ * says that without needing a header row a mini-table would have to justify. */
+.evidence__rows {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.evidence__label {
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.evidence__value {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.evidence__value--up {
+  color: #eda596;
+}
+
+.evidence__value--down {
+  color: var(--accent-2, #34d399);
+}

@@ -1,0 +1,223 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 9px;
+  background: var(--surface, #0f2124);
+}
+
+/* A finding the user has dealt with stays on the page but stops competing for
+ * attention with the ones they have not. */
+.card--acknowledged,
+.card--snoozed {
+  opacity: 0.62;
+}
+
+/* -------------------------------------------------------- resurfacing --- */
+
+.banner {
+  margin: 0;
+  padding: 8px 11px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  border-left: 3px solid;
+}
+
+/* The money moved. */
+.banner--changed {
+  border-color: #b08b4f;
+  background: rgb(176 139 79 / 10%);
+  color: #d9b878;
+}
+
+/* The rule moved. Visually distinct from the above on purpose — §5.1 groups
+ * these separately because they mean different things. */
+.banner--reevaluated {
+  border-color: var(--accent, #2dd4bf);
+  background: rgb(45 212 191 / 8%);
+  color: var(--accent, #2dd4bf);
+}
+
+/* -------------------------------------------------------------- head --- */
+
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card__title {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  padding: 1px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 10px;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.chip--band[data-band='high'] {
+  border-color: var(--accent-2, #34d399);
+  color: var(--accent-2, #34d399);
+}
+
+.chip--band[data-band='medium'] {
+  border-color: #b08b4f;
+  color: #d9b878;
+}
+
+.chip--band[data-band='low'] {
+  opacity: 0.8;
+}
+
+.chip--llm {
+  border-color: #8b7fd4;
+  color: #b3a8ee;
+}
+
+.chip--state {
+  background: rgb(31 74 71 / 45%);
+  text-transform: capitalize;
+}
+
+/* ------------------------------------------------------------- money --- */
+
+.card__money {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.card__annual {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.card__per,
+.card__monthly,
+.card__snoozed {
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.card__per {
+  margin-left: -6px;
+}
+
+/* ----------------------------------------------------------- actions --- */
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action {
+  padding: 5px 11px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent, #2dd4bf);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.action--dismiss:hover:not(:disabled) {
+  border-color: #e0796a;
+  color: #eda596;
+}
+
+.action__group {
+  position: relative;
+}
+
+/* --------------------------------------------------------- the picker --- */
+
+.picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 7px;
+  background: var(--surface-2, #143034);
+  box-shadow: var(--shadow, 0 1px 3px rgb(0 0 0 / 50%));
+  overflow: hidden;
+}
+
+.picker__option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 11px;
+  border: 0;
+  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: rgb(45 212 191 / 10%);
+  }
+}
+
+.picker__label {
+  font-size: 0.8rem;
+}
+
+/* The scopes differ in blast radius, and the hint is where that is said. */
+.picker__hint {
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.card__rule {
+  margin-left: auto;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+}
