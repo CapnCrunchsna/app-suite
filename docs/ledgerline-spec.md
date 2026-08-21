@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9f
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9g
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -44,15 +44,26 @@ stage runs on every commit and at the head of every analysis run — so a credit
 stops being counted as spending. The page carries §6.2's coverage bar, its four account
 actions, and the Possible Transfers queue with both rows, the score's reasons and the dollar
 effect of confirming. `GET /api/accounts/:id/coverage`, `POST /api/accounts/:id/merge` and
-§2.3's three transfer endpoints are behind it.
+§2.3's three transfer endpoints are behind it. Also as of 2026-08-21 **§5 is complete**: the
+four remaining rules — fees and interest (§5.8), outlier charges (§5.9), category trends
+(§5.10) and high-frequency small spend (§5.11) — are built alongside the five that were, and
+`analyze()` composes all nine over one snapshot. They need no UI work of their own: §6.4 groups
+by rule, so they appear on the Findings page as they are.
 
-PDF ingest, the LLM stage of §4.2 and **§5.8–§5.11's four remaining rules** are **not** built,
-nor are the merchant-alias, review-queue, series, insights, ask and settings endpoints of §2.3,
-nor **four of §6's eight pages**. §6.1's Import, §6.2's Accounts, §6.3's Transactions and
-§6.4's Findings exist; §6.5's Subscriptions is the one the Findings page's "Open subscription"
-action currently names rather than navigates to. `docs/statement-parsing.md` records what has
-and has not been validated. §9, §9a, §9b, §9c, §9d, §9e and §9f list the amendments
-implementation made to this document.
+**Two of those four are correct and silent on today's data**, and §9g says why in full: §5.10
+and §5.11 restrict themselves to §7.2's fully-covered months, which almost nothing qualifies as
+while `period_start`/`period_end` come from row dates rather than a declared statement period
+(§9f); and §5.10 additionally needs a `category_id`, which nothing assigns yet. Both fire, and
+produce the numbers those sections describe, once given data that clears those two gates.
+
+PDF ingest, the LLM stage of §4.2, **the rule-based categorizer of §2.5's `normalize` stage**
+and **the parser's declared-period reading** are **not** built, nor are the merchant-alias,
+review-queue, series, insights, ask and settings endpoints of §2.3, nor **four of §6's eight
+pages**. §6.1's Import, §6.2's Accounts, §6.3's Transactions and §6.4's Findings exist; §6.5's
+Subscriptions is the one the Findings page's "Open subscription" action currently names rather
+than navigates to. `docs/statement-parsing.md` records what has and has not been validated.
+§9, §9a, §9b, §9c, §9d, §9e, §9f and §9g list the amendments implementation made to this
+document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1304,6 +1315,51 @@ of the nine: it *writes* `is_internal_transfer`, which every rule in §5 reads a
 on §6.4 sums over, so a snapshot taken before it is stale by construction. Running the rules
 against it would price a $500 credit-card payment as spending, publish the number, and correct
 it only on the next run. Two loads, and the second is what makes the first correct.
+
+## 9g. Amendments from implementation — 2026-08-21 (§5.8–§5.11)
+
+Building the four remaining rules completed §5's nine. Each is specified in more detail than
+§5.2–§5.7 were, so most of what follows is not a gap in the design but a case two branches of
+one rule both cover — and §5.1 is unambiguous about which cost matters: "False-positive volume
+is the failure mode that gets a tool like this abandoned." Four of the six below were found by
+running the rules over two years of generated statements and reading what came out.
+
+| § | Amendment | Why |
+|---|---|---|
+| 5.9 | **The global branch needs a minimum sample (50) before it will take a percentile.** | §5.9 sets one for the merchant branch (5) and the category branch (15) and none for this one. A 99th percentile over six debits **is** the largest of them by construction, so without a floor the rule announces "the largest charges of 2026" to anyone who bought a laptop — the same vacuous output §5.9 rewrote this branch to avoid, arrived at from the other direction. |
+| 5.9 | **The percentile is taken over the filtered candidates, not over every debit.** | §5.9's conditions — above the 99th percentile, above $200, not in a recurring series, not an internal transfer — read as one list describing the debits being ranked, and the order the filters are applied in decides whether the branch works at all. A household's twelve rent payments occupy the entire top of the distribution, so a percentile taken *before* excluding them sits above every one-off charge — and the one-off charge at a merchant with no history is the only thing this branch exists to find. Confirmed against the corpus: with rent inside the percentile, a $1,900 charge in a year of $2,200 rents is invisible. |
+| 5.9 | **A charge flagged by both its merchant and its category is reported once, against the merchant.** | §5.9 lists the two as separate branches and does not say what happens when they agree. On real data they agree constantly — any category with one dominant merchant produces every finding twice. Over the corpus this was 15 findings where 8 were meant: the same seven charges as "$164 at Trader Joe's" and again as "$164 at Groceries". The merchant survives because it is the more specific comparison and the better sentence. |
+| 5.10 | **A climb is a maximal run of increases, found once and measured end to end.** | §5.10 says "three consecutive monthly increases" and caps emission at five climbs. A category that rises for eight months satisfies that test in six overlapping windows, so one sustained climb fills the whole budget with one story — and each card reports an arbitrary three months of a longer rise. Making the run the unit fixes both: two separate climbs in a year remain two runs, and the reported figure is the whole rise. |
+| 5.8 | **The rollup's impact is the avoidable subset; the total travels in the detail.** | §5.8 asks for "**one rollup finding per account**" and, in the same breath, for recurring maintenance fees to be "the part that carries `impact_kind = savings`; the rest is `visibility`". A `Finding` carries one `impact_kind`, so both cannot hold literally. Putting only the avoidable subset in the impact satisfies §7.3 exactly — the headline gets the money a waiver could recover and nothing else — while the full total stays on the card. An account with nothing avoidable emits the same one card as `visibility` with the total as its impact, because otherwise §5.1's $25 floor would suppress a real $340/yr fee total for having no recoverable part. |
+| 5.11 | **A category that is one qualifying merchant restated is not a second finding.** | §5.11 says "Merchants **or** categories" and both are worth having: the merchant answers "how much at this one place", the category answers "how much on this kind of thing". They are the same finding when the category is one frequent merchant. Suppressed by the dominance test §5.10 already uses, at the same 80%. A category made of thirty small merchants — none frequent enough alone — survives, and is exactly the case the category half exists for. |
+
+Two smaller decisions. **`fees.v1` annualizes over the span between the first and last fee**,
+not over the account's coverage: a card with two years of statements and one $35 fee in its
+first month must not report $420/yr. And **§5.8's reversal netting is left as literal as that
+section states it** — same account, same amount, inside 60 days — rather than narrowed to
+credits that also look like reversals. It can over-net: an unrelated $35 deposit inside the
+window cancels a real fee. That direction is the one §5.8 chose and says why, because "a
+refunded fee that still shows in an annual total is the kind of error that costs the whole tool
+its credibility" and a missing line item is not.
+
+**Two of the four cannot fire on today's data, and neither is a defect in them.** §5.10 and
+§5.11 are gated on §7.2's fully-covered months, and §9f already recorded why almost no month
+qualifies: `period_start` and `period_end` are the first and last row dates the parser saw, so
+an ordinary statement running the 3rd to the 30th does not span its month. §5.10 needs a
+category as well, and nothing assigns one — §2.5's `normalize` stage lists "Category assigned by
+rule, then optionally by LLM" and only the merchant half is built. Both were confirmed by
+running the rules over the corpus: with statements extended to the month boundary and categories
+applied through §6.3's bulk path, both fire and produce the numbers §5.10 and §5.11 describe.
+**Until the parser reads a declared statement period and the categorizer exists, those two rules
+are correct and silent.**
+
+The corpus is generated rather than committed, for the reason §9e gives and §7.6 insists on: it
+is synthetic, and §7.6's calibration against a hand-labelled year of real statements has still
+not happened. What it demonstrated is that the rules run over the real pipeline and that §7.3
+holds with a new `savings` emitter in the set — the headline came to exactly the sum of the
+three savings findings, with `micro.v1`'s $1,459/yr and `outlier.v1`'s $4,120 correctly outside
+it. `micro.v1` reproduced §5.11's own illustration, $1,459/yr for coffee, out of the §4 chain's
+own merchant grouping rather than a hand-built fixture.
 
 ## 10. Open discrepancies — recorded, not resolved
 

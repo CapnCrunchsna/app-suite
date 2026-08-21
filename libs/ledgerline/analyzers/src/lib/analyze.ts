@@ -28,10 +28,14 @@ import type { AnalyzerConfig } from './config.js';
 import { configHash } from './config.js';
 import type { Finding, FindingRollup, RuleEmission } from './finding.js';
 import { DUPLICATE_RULE_ID, analyzeDuplicates } from './duplicate.js';
+import { FEES_RULE_ID, analyzeFees } from './fees.js';
 import { LAPSED_RULE_ID, analyzeLapsed } from './lapsed.js';
+import { MICRO_RULE_ID, analyzeMicroSpend } from './micro.js';
+import { OUTLIER_RULE_ID, analyzeOutliers } from './outlier.js';
 import { PRICE_CREEP_RULE_ID, analyzePriceCreep } from './price-creep.js';
 import { RECURRENCE_RULE_ID, analyzeRecurrence } from './recurrence.js';
 import type { RecurringSeries } from './recurrence.js';
+import { TREND_RULE_ID, analyzeTrends } from './trend.js';
 import { TRIAL_RULE_ID, analyzeTrials } from './trial.js';
 import type { Snapshot } from './snapshot.js';
 
@@ -83,12 +87,27 @@ export function analyze(snapshot: Snapshot, config: AnalyzerConfig): AnalysisRes
   });
   const lapsed = analyzeLapsed(snapshot, series, config);
 
+  // §5.8–§5.11 read transactions rather than series, so they are independent of
+  // the ordering constraint above. `outlier.v1` and `trend.v1` take the series
+  // anyway — not to build on them, but to *exclude* them: §5.9 leaves recurring
+  // charges out of its "largest in the window" list because the expected large
+  // payments are exactly what would fill it, and §5.10 skips categories one
+  // subscription dominates because §5.2 and §5.5 cover those better.
+  const fees = analyzeFees(snapshot, config);
+  const outliers = analyzeOutliers(snapshot, series, config);
+  const trends = analyzeTrends(snapshot, series, config);
+  const micro = analyzeMicroSpend(snapshot, config);
+
   const emissions: readonly RuleEmission[] = [
     recurrence.emission,
     priceCreep.emission,
     duplicates,
     trials,
     lapsed,
+    fees,
+    outliers,
+    trends,
+    micro,
   ];
 
   return {
@@ -104,6 +123,10 @@ export function analyze(snapshot: Snapshot, config: AnalyzerConfig): AnalysisRes
       [DUPLICATE_RULE_ID]: DUPLICATE_RULE_ID,
       [TRIAL_RULE_ID]: TRIAL_RULE_ID,
       [LAPSED_RULE_ID]: LAPSED_RULE_ID,
+      [FEES_RULE_ID]: FEES_RULE_ID,
+      [OUTLIER_RULE_ID]: OUTLIER_RULE_ID,
+      [TREND_RULE_ID]: TREND_RULE_ID,
+      [MICRO_RULE_ID]: MICRO_RULE_ID,
     },
     snapshotRows,
     warning:

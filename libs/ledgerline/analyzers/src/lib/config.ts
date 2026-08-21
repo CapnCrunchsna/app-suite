@@ -258,6 +258,119 @@ export interface AnalyzerConfig {
   readonly trial: TrialConfig;
   readonly lapsed: LapsedConfig;
   readonly transfers: TransferConfig;
+  readonly fees: FeesConfig;
+  readonly outlier: OutlierConfig;
+  readonly trend: TrendConfig;
+  readonly micro: MicroConfig;
+}
+
+/** §5.8. The keyword lists are data for the usual §7.4 reason and for one more:
+ *  they are the part of this rule most likely to be wrong about a bank nobody
+ *  has imported yet, and adding a keyword should not be a code change. */
+export interface FeesConfig {
+  /** §5.8's list, matched **whole-token** against `description_normalized`. A
+   *  substring test would make `NSF` match `TRANSFERS` and `ATM` match `ATMOS`. */
+  readonly keywords: readonly string[];
+  /**
+   * §5.8's exclusions. `INTEREST CHECKING` and `INTEREST EARNED` are account
+   * descriptors rather than fees; the disqualifying tokens rule out a match
+   * outright, because a line reading `LATE FEE REVERSAL` is the opposite of a
+   * late fee.
+   */
+  readonly excludedPhrases: readonly string[];
+  readonly disqualifyingTokens: readonly string[];
+  /** §5.8: "A fee credited back within 60 days at the same account and amount is
+   *  netted to zero." */
+  readonly reversalWindowDays: number;
+  /**
+   * The avoidable subset — §5.8's "recurring maintenance fees [...] they usually
+   * have a fee-waiver condition". A keyword from this list seen at least
+   * `avoidableMinOccurrences` times on one account is the part that carries
+   * `impact_kind = savings`.
+   */
+  readonly avoidableKeywords: readonly string[];
+  readonly avoidableMinOccurrences: number;
+  /** §5.8: "Confidence **0.95** on a keyword hit, **0.75** on a category-only
+   *  hit." */
+  readonly keywordConfidence: number;
+  readonly categoryOnlyConfidence: number;
+}
+
+export interface OutlierConfig {
+  /** §5.9's sample sizes. A distribution needs members before a charge can be
+   *  unlike them. */
+  readonly merchantMinSamples: number;
+  readonly categoryMinSamples: number;
+  /** §5.9: "flag `|z| > 3.5`". */
+  readonly zThreshold: number;
+  /** §5.9's `MAD = 0` fallback: "anything above `3 × median`". */
+  readonly steadyMultiple: number;
+  /**
+   * §5.9's absolute floor, and the reason it is on *every* branch: "a coffee shop
+   * with a $6.40 median and a $0.50 MAD flags a $9.80 latte at z = 4.6, and the
+   * MAD=0 fallback flags a $7 transit fare against a $2 median."
+   */
+  readonly minExcessCents: number;
+  /** §5.9's global branch, for the one-off large charge at a merchant with no
+   *  history — which has no distribution to be an outlier in. */
+  readonly globalPercentile: number;
+  readonly globalMinCents: number;
+  readonly globalTopN: number;
+  /**
+   * The window needs this many candidates before a 99th percentile means
+   * anything. §5.9 sets a minimum sample for the merchant branch (5) and the
+   * category branch (15) and none for this one — but a 99th percentile over six
+   * debits *is* the largest of them by construction, so without a floor here the
+   * rule emits a "largest charges" rollup for any account holding one charge over
+   * $200. Recorded in §9g.
+   */
+  readonly globalMinSamples: number;
+  readonly zConfidenceBase: number;
+  readonly zConfidencePerPoint: number;
+  readonly zConfidenceMax: number;
+  readonly steadyConfidence: number;
+  readonly globalConfidence: number;
+}
+
+export interface TrendConfig {
+  /** §5.10's spike: "exceeds its trailing three-month average by **both** >40%
+   *  *and* >$75 **of excess**" — both, because a percentage alone flags a $12
+   *  category and a dollar amount alone flags every large category every month. */
+  readonly trailingMonths: number;
+  readonly spikePercent: number;
+  readonly spikeExcessCents: number;
+  /** §5.10's climb: three consecutive increases totalling >25% and >$50/month. */
+  readonly climbMonths: number;
+  readonly climbPercent: number;
+  readonly climbRiseCents: number;
+  /**
+   * The volatility test that keeps an ordinary random walk from reading as a
+   * trend. §5.10: three consecutive increases happen "about one window in eight;
+   * across thirty categories and a year of windows that is roughly twenty-five
+   * spurious climbs per run."
+   */
+  readonly climbMadMultiple: number;
+  /** §5.10: a category dominated by one recurring series is §5.2's and §5.5's
+   *  business, and they cover it better. */
+  readonly seriesDominanceFraction: number;
+  /** §5.10's own caps, tighter than §5.1's budget of 25. */
+  readonly maxSpikes: number;
+  readonly maxClimbs: number;
+  readonly spikeConfidence: number;
+  readonly climbConfidence: number;
+}
+
+export interface MicroConfig {
+  /** §5.11: "averaging ≥8 transactions per month across fully-covered months, at
+   *  a median ≤$15". */
+  readonly minPerMonth: number;
+  readonly maxMedianCents: number;
+  /** Fully-covered months needed before an average over them means anything. */
+  readonly minMonths: number;
+  /** A category that is one qualifying merchant restated is not a second finding.
+   *  Same shape as §5.10's dominance test, and there for the same reason. */
+  readonly merchantDominanceFraction: number;
+  readonly confidence: number;
 }
 
 export const DEFAULT_CONFIG: AnalyzerConfig = {
@@ -373,6 +486,79 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
       'OF',
     ],
   },
+  fees: {
+    // §5.8's list, verbatim.
+    keywords: [
+      'INTEREST CHARGE',
+      'CASH ADVANCE FEE',
+      'LATE FEE',
+      'ANNUAL MEMBERSHIP FEE',
+      'OVERDRAFT',
+      'NSF',
+      'RETURNED ITEM',
+      'FOREIGN TRANSACTION',
+      'ATM FEE',
+      'MONTHLY MAINTENANCE',
+      'MINIMUM BALANCE',
+    ],
+    excludedPhrases: ['INTEREST CHECKING', 'INTEREST EARNED'],
+    disqualifyingTokens: ['REFUND', 'REVERSAL', 'CREDIT', 'WAIVED', 'ADJUSTMENT'],
+    reversalWindowDays: 60,
+    avoidableKeywords: ['MONTHLY MAINTENANCE', 'MINIMUM BALANCE'],
+    // Twice is what makes it "recurring" rather than a one-off a waiver would not
+    // have prevented.
+    avoidableMinOccurrences: 2,
+    keywordConfidence: 0.95,
+    categoryOnlyConfidence: 0.75,
+  },
+  outlier: {
+    merchantMinSamples: 5,
+    categoryMinSamples: 15,
+    zThreshold: 3.5,
+    steadyMultiple: 3,
+    minExcessCents: 2500,
+    globalPercentile: 0.99,
+    globalMinCents: 20_000,
+    globalTopN: 10,
+    globalMinSamples: 50,
+    // Confidence rises with how far past the threshold the charge sits, so a
+    // z of 12 does not present identically to a z of 3.6.
+    zConfidenceBase: 0.6,
+    zConfidencePerPoint: 0.05,
+    zConfidenceMax: 0.9,
+    // A perfectly steady charge that tripled is arithmetic, but the absence of
+    // dispersion means there is no distribution vouching for it.
+    steadyConfidence: 0.7,
+    // "The ten largest debits in this window" is a fact about the data rather
+    // than an inference from it.
+    globalConfidence: 0.9,
+  },
+  trend: {
+    trailingMonths: 3,
+    spikePercent: 0.4,
+    spikeExcessCents: 7500,
+    climbMonths: 3,
+    climbPercent: 0.25,
+    climbRiseCents: 5000,
+    climbMadMultiple: 2,
+    seriesDominanceFraction: 0.8,
+    maxSpikes: 5,
+    maxClimbs: 5,
+    spikeConfidence: 0.7,
+    // Lower than a spike: a climb is a claim about direction over three months,
+    // where a spike is a claim about one month against the three before it.
+    climbConfidence: 0.6,
+  },
+  micro: {
+    minPerMonth: 8,
+    maxMedianCents: 1500,
+    minMonths: 3,
+    merchantDominanceFraction: 0.8,
+    // §5.11 attaches no judgment and infers nothing: the finding *is* the
+    // annualized arithmetic, so the only doubt is whether the merchant grouping
+    // is right — which is §4's business and is what `llm_dependent` reports.
+    confidence: 0.9,
+  },
 };
 
 /** A partial override, as Settings would supply it. One level of nesting, which
@@ -390,6 +576,10 @@ export function resolveConfig(override: ConfigOverride = {}): AnalyzerConfig {
     trial: { ...DEFAULT_CONFIG.trial, ...override.trial },
     lapsed: { ...DEFAULT_CONFIG.lapsed, ...override.lapsed },
     transfers: { ...DEFAULT_CONFIG.transfers, ...override.transfers },
+    fees: { ...DEFAULT_CONFIG.fees, ...override.fees },
+    outlier: { ...DEFAULT_CONFIG.outlier, ...override.outlier },
+    trend: { ...DEFAULT_CONFIG.trend, ...override.trend },
+    micro: { ...DEFAULT_CONFIG.micro, ...override.micro },
   };
 }
 
