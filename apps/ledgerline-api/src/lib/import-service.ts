@@ -31,6 +31,7 @@ import {
 
 import { toFormatProfile } from './context.js';
 import type { LedgerlineContext } from './context.js';
+import { runTransferLinking } from './transfer-service.js';
 
 export interface UploadedFile {
   readonly filename: string;
@@ -530,11 +531,29 @@ export function commitStagedImport(
 
   const { rows } = buildIncomingRows(context, importId);
 
-  return context.store.commitImport({
+  const committed = context.store.commitImport({
     importId,
     accountId: record.accountId,
     rows,
     resolutions: request.resolutions,
     allowZeroAmountRows: request.allowZeroAmountRows,
   });
+
+  /**
+   * §2.5's `link`, in the position that table puts it: after `store`, because a
+   * cross-account counterpart has to be in the database before it can be matched
+   * against, and before `analyze`, which is a separate job.
+   *
+   * Run on every commit rather than only on an analysis run, and the second
+   * statement of a pair is why: importing a card statement is the moment last
+   * month's checking payment stops being unexplained spending. Leaving it until
+   * someone presses Run Analysis would mean the Transactions page shows a $500
+   * purchase in between.
+   *
+   * Skipped on a re-commit that inserted nothing (`POST /commit` is idempotent
+   * per §2.3) — there is no new row for a pass to find.
+   */
+  if (!committed.alreadyCommitted) runTransferLinking(context);
+
+  return committed;
 }

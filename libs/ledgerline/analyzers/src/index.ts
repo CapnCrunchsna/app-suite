@@ -8,4 +8,5 @@ export * from './lib/duplicate.js';
 export * from './lib/price-creep.js';
 export * from './lib/trial.js';
 export * from './lib/lapsed.js';
+export * from './lib/transfers.js';
 export * from './lib/analyze.js';

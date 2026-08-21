@@ -187,6 +187,69 @@ export interface LapsedConfig {
   readonly cadenceMultiple: number;
 }
 
+/**
+ * §2.6's internal-transfer matcher.
+ *
+ * Every number below is transcribed from that section's scoring table and its
+ * candidate window, and lives here rather than in `transfers.ts` for the reason at
+ * the top of this file — but the stakes are higher here than for any §5 threshold.
+ * §2.6's own argument is an asymmetry: "A false link removes money from every
+ * total invisibly; a false negative leaves a number that is visibly too big." The
+ * dial that decides which of those you get is `autoLinkScore`, and it is data so
+ * that moving it is a recorded, hashed decision rather than an edit somebody
+ * notices three months of wrong headlines later.
+ */
+export interface TransferConfig {
+  /** §2.6's keyword list, matched as substrings of `description_normalized` —
+   *  which §4.1's stages 1–5 have already uppercased and space-collapsed. */
+  readonly keywords: readonly string[];
+  /**
+   * §2.6's candidate window: `−1 ≤ (c.effective_date − d.effective_date) ≤ 7`.
+   * "Money leaves before it lands, and one day of posting-order noise is normal.
+   * Seven days covers ACH settlement across a holiday weekend; ±3 loses the common
+   * case."
+   */
+  readonly windowMinDays: number;
+  readonly windowMaxDays: number;
+  /** The gap that earns the corroborating point, which is the ±3 the design
+   *  session wanted as a *predicate* — kept as a signal instead. */
+  readonly closeGapDays: number;
+
+  readonly pointsKeywordBothSides: number;
+  readonly pointsCounterpartyLast4: number;
+  readonly pointsCreditCardInstitution: number;
+  readonly pointsCloseGap: number;
+  /** §2.6's "Learning": confirming a proposal writes a `transfer_rule` that scores
+   *  this much on subsequent runs, so a monthly card payment is confirmed once and
+   *  auto-links thereafter. */
+  readonly pointsLearnedRule: number;
+  /** The two negative signals, both worth −2 in §2.6. */
+  readonly pointsRecurringSpendSeries: number;
+  readonly pointsSpendCategory: number;
+
+  /** §2.6's dispositions. `≥ autoLinkScore` links silently; `≥ proposeScore` goes
+   *  to §6.2's queue and is **not** excluded from spend until confirmed; below
+   *  that, nothing. */
+  readonly autoLinkScore: number;
+  readonly proposeScore: number;
+
+  /** §2.6's partial-payment pass: "a single credit in B against a set of ≤3 debits
+   *  in A inside the window summing exactly to it". */
+  readonly maxPartialParts: number;
+  /** A ceiling on the debits one credit is tried against, so the subset search
+   *  stays bounded. `C(24, 3)` is 2,024 combinations, which is nothing; an
+   *  uncapped pool over a busy account is not. */
+  readonly maxPartialCandidates: number;
+
+  /** How an institution name is looked for inside a descriptor. A bank calls
+   *  itself "Cardinal Bank" and prints `ONLINE PMT CARDINAL CARD`, so the whole
+   *  string rarely appears and a token test is the only one that fires. */
+  readonly institutionTokenMinLength: number;
+  /** Tokens too generic to identify anyone. Without these, every institution
+   *  matches every card descriptor through the word `CARD`. */
+  readonly institutionStopWords: readonly string[];
+}
+
 export interface AnalyzerConfig {
   readonly global: GlobalConfig;
   readonly recurrence: RecurrenceConfig;
@@ -194,6 +257,7 @@ export interface AnalyzerConfig {
   readonly priceCreep: PriceCreepConfig;
   readonly trial: TrialConfig;
   readonly lapsed: LapsedConfig;
+  readonly transfers: TransferConfig;
 }
 
 export const DEFAULT_CONFIG: AnalyzerConfig = {
@@ -268,6 +332,47 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     minOccurrences: 3,
     cadenceMultiple: 2,
   },
+  transfers: {
+    keywords: [
+      'TRANSFER',
+      'XFER',
+      'ONLINE PMT',
+      'AUTOPAY',
+      'PAYMENT THANK YOU',
+      'E-PAYMENT',
+      'ACH PMT',
+    ],
+    windowMinDays: -1,
+    windowMaxDays: 7,
+    closeGapDays: 3,
+    pointsKeywordBothSides: 3,
+    pointsCounterpartyLast4: 2,
+    pointsCreditCardInstitution: 2,
+    pointsCloseGap: 1,
+    pointsLearnedRule: 3,
+    pointsRecurringSpendSeries: -2,
+    pointsSpendCategory: -2,
+    autoLinkScore: 5,
+    proposeScore: 2,
+    maxPartialParts: 3,
+    maxPartialCandidates: 24,
+    institutionTokenMinLength: 4,
+    institutionStopWords: [
+      'BANK',
+      'CARD',
+      'CREDIT',
+      'UNION',
+      'FEDERAL',
+      'NATIONAL',
+      'SAVINGS',
+      'TRUST',
+      'FINANCIAL',
+      'SERVICES',
+      'THE',
+      'AND',
+      'OF',
+    ],
+  },
 };
 
 /** A partial override, as Settings would supply it. One level of nesting, which
@@ -284,6 +389,7 @@ export function resolveConfig(override: ConfigOverride = {}): AnalyzerConfig {
     priceCreep: { ...DEFAULT_CONFIG.priceCreep, ...override.priceCreep },
     trial: { ...DEFAULT_CONFIG.trial, ...override.trial },
     lapsed: { ...DEFAULT_CONFIG.lapsed, ...override.lapsed },
+    transfers: { ...DEFAULT_CONFIG.transfers, ...override.transfers },
   };
 }
 

@@ -1,0 +1,148 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: var(--radius, 10px);
+  background: var(--surface-2, #143034);
+}
+
+/* Archived is dimmed rather than hidden: §6.2 makes archive the destructive
+ * action, and a subscription still billing when an account was closed is exactly
+ * the history worth keeping visible. */
+.card--archived {
+  opacity: 0.6;
+}
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.card__identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.card__name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.card__archived {
+  padding: 1px 6px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 400;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.card__subtitle {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.card__count {
+  font-size: 0.76rem;
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- actions --- */
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.action {
+  padding: 4px 9px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &:not(:disabled):hover {
+    border-color: var(--accent, #2dd4bf);
+  }
+}
+
+.action--current {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.action--archive:not(:disabled):hover {
+  border-color: #e0796a;
+  color: #e0796a;
+}
+
+/* -------------------------------------------------------------- editor --- */
+
+.editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 8px;
+  background: var(--surface, #0f2124);
+}
+
+.editor__label {
+  font-size: 0.74rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.editor__input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.editor--merge {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* The sentence that has to be read before an irreversible sweep. */
+.editor__warning {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: #e0b46a;
+}

@@ -27,6 +27,9 @@ function charge(
     effectiveDate,
     amountCents,
     descriptionNormalized: 'NETFLIX',
+    // Verbatim, and no §5 rule may group on it — it is on the projection for
+    // §2.6's `last4` signal alone. See `snapshot.ts`.
+    descriptionRaw: 'NETFLIX',
     merchantId: 'netflix',
     categoryId: null,
     isPending: false,

@@ -32,6 +32,7 @@ import { registerJobRoutes } from './routes/jobs.js';
 import { registerMerchantRoutes } from './routes/merchants.js';
 import { registerSharedSchemas } from './routes/schemas.js';
 import { registerTransactionRoutes } from './routes/transactions.js';
+import { registerTransferRoutes } from './routes/transfers.js';
 
 /** A statement CSV is small; a bank export of ten years is still under a few MB.
  *  The cap is here so a mis-drop cannot buffer an arbitrary file into memory. */
@@ -63,6 +64,10 @@ export const OPENAPI_DOCUMENT = {
       description: 'Filter, search and edit transactions',
     },
     { name: 'merchants', description: 'Canonical merchants and categories' },
+    {
+      name: 'transfers',
+      description: 'Internal transfer links and the queue of pairs awaiting a decision',
+    },
     { name: 'jobs', description: 'Long-running work and its progress' },
     {
       name: 'analysis',
@@ -192,6 +197,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerFormatProfileRoutes(app, options.context);
   registerAccountRoutes(app, options.context);
   registerTransactionRoutes(app, options.context);
+  registerTransferRoutes(app, options.context);
   registerMerchantRoutes(app, options.context);
   registerJobRoutes(app, options.context);
   registerFindingRoutes(app, options.context);

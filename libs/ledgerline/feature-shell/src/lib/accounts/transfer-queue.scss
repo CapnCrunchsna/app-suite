@@ -1,0 +1,202 @@
+/* Dark-first, per §6, on the host app's custom properties. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.queue__empty {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ---------------------------------------------------------------- pair --- */
+
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: var(--radius, 10px);
+  background: var(--surface-2, #143034);
+}
+
+/* An auto-link has already moved money; the queue says so rather than looking
+ * the same as a pair that has not. */
+.pair--auto {
+  border-left: 3px solid var(--accent, #2dd4bf);
+}
+
+.pair__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.pair__amount {
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pair__state {
+  font-size: 0.72rem;
+  color: #e0b46a;
+}
+
+.pair__state--auto {
+  color: var(--accent, #2dd4bf);
+}
+
+.pair__kind {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.pair__score {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- rows --- */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 88px minmax(90px, 130px) 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 3px 0;
+  font-size: 0.78rem;
+}
+
+.row--credit {
+  border-top: 1px dashed var(--border, #1f4a47);
+  padding-top: 5px;
+}
+
+.row__date {
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+}
+
+.row__account {
+  color: var(--text-dim, #7ea8a1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The verbatim statement line, so the decision is made against what the bank
+ * printed rather than against a normalized key. */
+.row__descriptor {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.74rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__amount {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------- reasons --- */
+
+.reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.reasons--none {
+  font-style: italic;
+}
+
+.reason {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.reason__points {
+  color: var(--accent, #2dd4bf);
+  font-variant-numeric: tabular-nums;
+}
+
+.reason--negative .reason__points {
+  color: #e0796a;
+}
+
+/* ---------------------------------------------------------------- foot --- */
+
+.pair__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.effect {
+  flex: 1 1 auto;
+  font-size: 0.74rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.button {
+  padding: 5px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &:not(:disabled):hover {
+    border-color: var(--accent, #2dd4bf);
+  }
+}
+
+.button--confirm:not(:disabled):hover {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.button--reject:not(:disabled):hover {
+  border-color: #e0796a;
+  color: #e0796a;
+}

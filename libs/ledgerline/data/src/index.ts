@@ -16,3 +16,4 @@ export * from './lib/repositories/merchants.js';
 export * from './lib/repositories/settings.js';
 export * from './lib/repositories/tombstones.js';
 export * from './lib/repositories/transactions.js';
+export * from './lib/repositories/transfers.js';

@@ -1,0 +1,100 @@
+@let acc = account();
+
+<article class="card" [class.card--archived]="!acc.isActive">
+  <header class="card__head">
+    <div class="card__identity">
+      <h3 class="card__name">
+        {{ acc.displayName }}
+        @if (!acc.isActive) {
+          <span class="card__archived">archived</span>
+        }
+      </h3>
+      <p class="card__subtitle">{{ subtitle() }}</p>
+    </div>
+
+    @if (transactionCount() !== null) {
+      <span class="card__count">
+        {{ transactionCount() }} {{ transactionCount() === 1 ? 'transaction' : 'transactions' }}
+      </span>
+    }
+  </header>
+
+  <ll-coverage-bar [coverage]="coverage()" />
+
+  <footer class="card__actions">
+    <button type="button" class="action" [disabled]="busy()" (click)="openName()">Rename</button>
+    <button type="button" class="action" [disabled]="busy()" (click)="openType()">Set type</button>
+    @if (mergeCandidates().length > 0) {
+      <button type="button" class="action" [disabled]="busy()" (click)="openMerge()">Merge</button>
+    }
+    <button
+      type="button"
+      class="action action--archive"
+      [disabled]="busy()"
+      (click)="toggleArchive()"
+    >
+      {{ acc.isActive ? 'Archive' : 'Unarchive' }}
+    </button>
+  </footer>
+
+  @switch (editing()) {
+    @case ('name') {
+      <div class="editor">
+        <label class="editor__label" [attr.for]="'name-' + acc.id">Account name</label>
+        <input
+          class="editor__input"
+          [id]="'name-' + acc.id"
+          type="text"
+          [value]="draftName()"
+          (input)="onNameInput($event)"
+        />
+        <button type="button" class="action" (click)="submitName()">Save</button>
+        <button type="button" class="action" (click)="close()">Cancel</button>
+      </div>
+    }
+
+    @case ('type') {
+      <div class="editor">
+        <span class="editor__label">Account type</span>
+        @for (type of types; track type) {
+          <button
+            type="button"
+            class="action"
+            [class.action--current]="type === acc.accountType"
+            (click)="submitType(type)"
+          >
+            {{ typeLabel[type] }}
+          </button>
+        }
+        <button type="button" class="action" (click)="close()">Cancel</button>
+      </div>
+    }
+
+    @case ('merge') {
+      <div class="editor editor--merge">
+        <label class="editor__label" [attr.for]="'merge-' + acc.id">Merge into this account</label>
+        <select class="editor__input" [id]="'merge-' + acc.id" (change)="onMergeSelect($event)">
+          <option value="">Choose an account…</option>
+          @for (candidate of mergeCandidates(); track candidate.id) {
+            <option [value]="candidate.id">{{ candidate.displayName }}</option>
+          }
+        </select>
+
+        @if (mergeTarget(); as target) {
+          <p class="editor__warning">
+            Every transaction and statement in <strong>{{ target.displayName }}</strong> moves to
+            <strong>{{ acc.displayName }}</strong
+            >, and {{ target.displayName }} is archived. This re-points history; it does not
+            deduplicate it — rows the two accounts both hold stay as separate rows, so delete the
+            redundant import afterwards. There is no undo.
+          </p>
+        }
+
+        <button type="button" class="action" [disabled]="mergeSource() === ''" (click)="submitMerge()">
+          Merge
+        </button>
+        <button type="button" class="action" (click)="close()">Cancel</button>
+      </div>
+    }
+  }
+</article>

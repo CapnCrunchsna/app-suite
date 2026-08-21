@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9e
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9f
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -36,15 +36,23 @@ upsert-by-natural-key lifecycle, and §2.3's `POST /api/analysis/run`, `GET /api
 `GET /api/findings/summary`, `POST /api/findings/:id/state` and `/api/dismissal-rules`. As of
 2026-08-19 §6.4's **Findings page** — the one §6 calls the hero — is built on those endpoints,
 with the three headline numbers, per-rule grouping, the three-scope dismissal picker and inline
-evidence; it is where the app now opens.
+evidence; it is where the app now opens. As of 2026-08-21 **§2.6's transfer matcher runs**, and
+§6.2's **Accounts page** is built for the half of it that needs a human: the matcher is a pure
+function in `analyzers` with §2.6's scoring table, its bipartite assignment and its
+partial-payment pass, `transfer_link` / `transfer_rule` persistence in `data`, and the link
+stage runs on every commit and at the head of every analysis run — so a credit-card payment
+stops being counted as spending. The page carries §6.2's coverage bar, its four account
+actions, and the Possible Transfers queue with both rows, the score's reasons and the dollar
+effect of confirming. `GET /api/accounts/:id/coverage`, `POST /api/accounts/:id/merge` and
+§2.3's three transfer endpoints are behind it.
 
-PDF ingest, the LLM stage of §4.2, **§5.8–§5.11's four remaining rules** and §2.6's transfer
-matcher are **not** built, nor are the account-coverage, merge, merchant-alias, review-queue,
-transfer, series, insights, ask and settings endpoints of §2.3, nor **five of §6's eight pages**.
-§6.1's Import, §6.3's Transactions and §6.4's Findings exist; §6.5's Subscriptions is the one
-the Findings page's "Open subscription" action currently names rather than navigates to.
-`docs/statement-parsing.md` records what has and has not been validated. §9, §9a, §9b, §9c, §9d
-and §9e list the amendments implementation made to this document.
+PDF ingest, the LLM stage of §4.2 and **§5.8–§5.11's four remaining rules** are **not** built,
+nor are the merchant-alias, review-queue, series, insights, ask and settings endpoints of §2.3,
+nor **four of §6's eight pages**. §6.1's Import, §6.2's Accounts, §6.3's Transactions and
+§6.4's Findings exist; §6.5's Subscriptions is the one the Findings page's "Open subscription"
+action currently names rather than navigates to. `docs/statement-parsing.md` records what has
+and has not been validated. §9, §9a, §9b, §9c, §9d, §9e and §9f list the amendments
+implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1259,6 +1267,43 @@ committed fixtures are three statements covering two months and produce no serie
 generated statements are posted through `POST /api/imports` like any other file, so coverage comes
 from `statement_import` and the merchant ids come from §4's chain — but they remain **synthetic**,
 and §7.6's calibration against a hand-labelled year of real statements has still not happened.
+
+## 9f. Amendments from implementation — 2026-08-21 (§2.6, §6.2)
+
+Building §2.6's transfer matcher and §6.2's Accounts page together — the matcher because
+nothing was setting `is_internal_transfer`, the page because §2.6's middle band has nowhere
+else to appear — needed six decisions this document does not make. Two are columns the schema
+does not have, one is a signal that turned out to be unreachable as specified, and three are
+silences.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 | **`transfer_link` gains `detail_json`** (migration `003`). | §6.2 asks the queue to show "proposed pairs with both rows, **the score's reasons**, and the dollar effect of confirming", and §3.1's `transfer_link` carries the score and nothing that explains it. The reasons are the half that matters: a queue of unexplained pairs gets confirmed by reflex, and confirming by reflex is §2.6's false-link path with extra steps. They cannot be recomputed at read time either — §2.6's signals are read off the snapshot *as it was when the pass ran*, and a merchant correction, a later import or the series a subsequent analysis produced all move them, so a re-derived explanation would show a user reasons that are not the reasons the pair was offered under. Free-shaped JSON, exactly as `finding.detail_json` is; nullable, because a row written before the column existed has no answer and inventing one would put words in the matcher's mouth. |
+| 3.1 | **A link *group* is `(credit_transaction_id, state)`, and confirm and reject act on the group.** | §3.1 models a link as one debit and one credit; §2.6's partial-payment pass produces one credit against up to three debits, which is therefore two or three rows. `ix_transfer_link_credit` already exists and reads them back in one lookup, so the credit is the natural identity — and half a split payment linked and half not is a state no total could be computed from. The **state** is part of the key rather than the credit alone because one credit can legitimately carry a pair the user rejected last month *and* a different pair this run proposed; grouping on the credit alone would silently merge a live proposal with a dead rejection. |
+| 2.2 | **The analysis snapshot gains `description_raw`**, for §2.6's `last4` signal alone. | §2.6 scores +2 when "either descriptor contains the other account's `last4`", and §4.1's stage 3 strips masked account numbers on the way to a merchant key — `ONLINE PMT CARDINAL CARD XXXX9012` reaches `description_normalized` as `ONLINE PMT CARDINAL CARD`. The corroborator was therefore unreachable as written: not weakened, *never able to fire*. The projection in `analyzers/src/lib/snapshot.ts` documents itself as "a strict subset of what the table stores", and this widens it deliberately, with the constraint stated on the field: **no §5 rule may group, cluster or total on it.** Grouping on the raw descriptor is what normalization exists to prevent — four spellings of one merchant become four series — and it is here for substring *evidence* about one pair of rows. |
+| 7.2 | **§6.2's coverage bar has three states — covered, partial, missing — not two.** | §7.2 makes a month covered only when "a committed import's `[period_start, period_end]` spans it". The periods this app holds are the **first and last row dates the parser saw** (`node-csv-parser.ts` fills them from the parsed rows; no format profile reads a statement's declared period), so an ordinary January statement running the 3rd to the 30th does not span January. Collapsing that into "missing" would be the inverse of the mistake §7.2's own commentary warns about — a red cell over a statement sitting in the database. Collapsing it into "covered" would promise §5.10 and §5.11 a complete month they are entitled to refuse. `partial` is the honest third answer, and it is precisely the state those two rules decline to compute over, so naming it on the bar tells the user why a finding is absent. The strict boolean stays on the wire as `covered` and is what every analyzer's own `coveredMonths` agrees with; `state` is presentation. **The underlying gap is not fixed here**: making the bar mostly green needs the parser to read a declared period, which is parser work and a profile field. |
+| 2.6 | **The partial-payment pass applies the propose floor.** | §2.6 says the second pass "always proposes, never auto-links" and is silent on whether a group still has to clear `score ≥ 2`. It does. Arithmetic is much weaker evidence on this path than on the first: an exact-amount one-to-one match is already a coincidence worth scoring, while *any* three debits in a week that happen to total a credit qualify for the subset search. A group with no corroborating signal at all is exactly the noise §2.6's asymmetry says to leave out, so the floor applies and the disposition is a constant rather than a comparison. |
+| 6.2 | **An account merge re-points history; it does not deduplicate it.** | §6.2 asks for "merge two accounts", which in practice is one account imported twice under two names — so the two very often hold the same rows. They cannot be merged away: §3.3's `dedupe_key` hashes the **account id** into its material, so one charge in two accounts has two different keys, the merge rule cannot see them as the same row, and §3.2's `UNIQUE (account_id, dedupe_key, occurrence_index)` never even fires on the re-point. Recomputing the keys would be a rewrite of frozen key material, which §3.3 permits only through a migration inside one transaction. So the duplicates survive and the user deletes the redundant import, which §3.3 already does precisely. The endpoint and the page both say so before the merge runs. |
+
+Three smaller shapes, decided rather than asked. **`GET /api/transfers` is added to §2.3**,
+which names the three *verbs* — propose, confirm, delete — and no read; §6.2 then requires a
+queue "with both rows, the score's reasons, and the dollar effect", and a queue that cannot be
+listed is the same "nowhere to appear" problem §6.4 was built to fix. **`POST
+/api/transfers/propose` is synchronous**, unlike `POST /api/analysis/run`: both read the whole
+snapshot, but this one then runs a single bucketed pass rather than nine rules over it, and
+§6.2's queue is what the user is standing in front of when they press the button — a job id
+would make them poll for a list that is already computed. And **`DELETE /api/transfers/:id`
+sets state `rejected` rather than deleting the row**, because a deleted row is one the next
+pass re-proposes; "no, that is not a transfer" has to be a durable answer rather than one said
+once a month forever.
+
+Finally, an analysis run now loads **two** snapshots, and that is not a violation of §2.2's
+"one snapshot per run, not one per analyzer". That rule is about the nine rules sharing one
+load — "nine independent loads would be nine times the query cost". The link stage is not one
+of the nine: it *writes* `is_internal_transfer`, which every rule in §5 reads and every number
+on §6.4 sums over, so a snapshot taken before it is stale by construction. Running the rules
+against it would price a $500 credit-card payment as spending, publish the number, and correct
+it only on the next run. Two loads, and the second is what makes the first correct.
 
 ## 10. Open discrepancies — recorded, not resolved
 

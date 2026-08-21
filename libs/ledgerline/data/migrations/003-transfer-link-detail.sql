@@ -1,0 +1,22 @@
+-- §6.2 asks the Possible Transfers queue to show "proposed pairs with both rows,
+-- **the score's reasons**, and the dollar effect of confirming". §3.1's
+-- `transfer_link` carries the score and nothing that explains it, and the reasons
+-- are the half that matters: a queue of unexplained pairs gets confirmed by
+-- reflex, and confirming by reflex is exactly the false-link path §2.6's whole
+-- design is arranged to avoid.
+--
+-- The reasons cannot be recomputed at read time, and that is why this is a column
+-- rather than a derivation. §2.6's signals are read off the snapshot as it was
+-- when the pass ran — a merchant correction, a later import, or the series a
+-- subsequent analysis produced all move them. A queue that re-derived its
+-- explanation would show a user reasons for confirming that are not the reasons
+-- the link was proposed under.
+--
+-- Free-shaped JSON, exactly as `finding.detail_json` is and for the same reason:
+-- the payload is the matcher's, the reader renders it, and pinning its shape here
+-- would mean declaring §2.6's scoring table a second time in SQL.
+--
+-- Nullable, because a link written before this column existed has no answer and
+-- inventing one would put words in the matcher's mouth. The read path shows the
+-- score alone in that case. Recorded in §9f.
+ALTER TABLE transfer_link ADD COLUMN detail_json TEXT;

@@ -65,6 +65,10 @@ export interface SnapshotTransaction {
   readonly effectiveDate: string;
   readonly amountCents: number;
   readonly descriptionNormalized: string;
+  /** The verbatim statement line. Carried for §2.6's `last4` signal alone —
+   *  §4.1's stage 3 strips masked account numbers, so the normalized column
+   *  cannot answer "does this descriptor name the other account". */
+  readonly descriptionRaw: string;
   readonly merchantId: string | null;
   readonly categoryId: string | null;
   readonly isPending: boolean;
@@ -119,6 +123,7 @@ interface TransactionRow {
   account_id: string;
   effective_date: string;
   amount_cents: number;
+  description_raw: string;
   description_normalized: string;
   merchant_id: string | null;
   category_id: string | null;
@@ -226,7 +231,7 @@ function loadAccounts(db: Database): SnapshotAccount[] {
 function loadTransactions(db: Database): SnapshotTransaction[] {
   return db
     .prepare<[], TransactionRow>(
-      `SELECT id, account_id, effective_date, amount_cents, description_normalized,
+      `SELECT id, account_id, effective_date, amount_cents, description_raw, description_normalized,
               merchant_id, category_id, is_pending, is_internal_transfer, is_excluded,
               refund_pair_id, transfer_pair_id
          FROM "transaction"
@@ -238,6 +243,7 @@ function loadTransactions(db: Database): SnapshotTransaction[] {
       accountId: row.account_id,
       effectiveDate: row.effective_date,
       amountCents: row.amount_cents,
+      descriptionRaw: row.description_raw,
       descriptionNormalized: row.description_normalized,
       merchantId: row.merchant_id,
       categoryId: row.category_id,

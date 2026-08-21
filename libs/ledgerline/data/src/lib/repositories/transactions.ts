@@ -635,6 +635,49 @@ export class TransactionRepository {
     })();
   }
 
+  /**
+   * §2.6's "What this cannot do", counted per account for §6.2.
+   *
+   * "A transfer to an account not in the system has no counterpart and will never
+   * link, so it counts as spend. The Accounts page says so where coverage is
+   * incomplete; there is no algorithmic fix, only importing the other side." This
+   * is the number that lets the page say it: transfer-worded debits carrying no
+   * link at all.
+   *
+   * The keywords arrive as an argument rather than living here, and that is §7.4
+   * doing its job across a boundary — they are `config.transfers.keywords` in
+   * `analyzers`, hashed into `config_hash`, and `type:data-access` may not import
+   * that lib. A copy in this file would be a second list to keep in step, which
+   * is precisely the failure §7.4's "no analyzer reads a module-level constant"
+   * exists to prevent.
+   *
+   * A `rejected` link still counts the row as unmatched: the user has said that
+   * *pair* is not a transfer, which leaves the question of where the money went
+   * exactly where it was.
+   */
+  countUnlinkedTransferDebits(accountId: string, keywords: readonly string[]): number {
+    if (keywords.length === 0) return 0;
+
+    const matches = keywords.map(() => `t.description_normalized LIKE ? ESCAPE '\\'`).join(' OR ');
+
+    return (
+      this.db
+        .prepare<unknown[], { n: number }>(
+          `SELECT COUNT(*) AS n
+             FROM "transaction" AS t
+            WHERE t.account_id = ?
+              AND t.amount_cents < 0
+              AND t.is_pending = 0
+              AND t.is_excluded = 0
+              AND (${matches})
+              AND NOT EXISTS (
+                    SELECT 1 FROM transfer_link AS l
+                     WHERE l.debit_transaction_id = t.id AND l.state <> 'rejected')`,
+        )
+        .get(accountId, ...keywords.map(likeTerm))?.n ?? 0
+    );
+  }
+
   countForAccount(accountId: string): number {
     return (
       this.db

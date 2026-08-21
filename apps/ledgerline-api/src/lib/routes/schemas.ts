@@ -42,6 +42,14 @@ export const FINDING_STATUSES = ['active', 'resolved', 'suppressed'] as const;
 export const FINDING_USER_STATUSES = ['acknowledged', 'snoozed', 'dismissed'] as const;
 export const IMPACT_KINDS = ['savings', 'visibility'] as const;
 export const DISMISSAL_SCOPES = ['merchant_rule', 'rule'] as const;
+/** §3.1's `transfer_link.state`. `auto` and `proposed` belong to the run;
+ *  `confirmed` and `rejected` are the user's and no run overwrites them. */
+export const TRANSFER_LINK_STATES = ['proposed', 'confirmed', 'rejected', 'auto'] as const;
+/** §2.6's two passes. `partial` never auto-links, whatever it scores. */
+export const TRANSFER_MATCH_KINDS = ['one_to_one', 'partial'] as const;
+/** §6.2's coverage bar. `partial` is a month a statement touches but does not
+ *  provably span — see `CoverageMonth`. */
+export const COVERAGE_STATES = ['covered', 'partial', 'missing'] as const;
 export const ROW_STATUSES = ['posted', 'pending'] as const;
 export const PARSE_SOURCES = ['csv', 'pdf', 'llm'] as const;
 export const PARSE_STATUSES = ['ok', 'error'] as const;
@@ -835,6 +843,168 @@ const dismissalRule = {
   },
 } as const;
 
+// ------------------------------------------------- accounts (§6.2, §7.2) ---
+
+/** One committed import's span. §7.2 makes coverage a fact about *statements*,
+ *  so the import that proves a month is named alongside it. */
+const coveragePeriod = {
+  $id: 'CoveragePeriod',
+  type: 'object',
+  properties: {
+    importId: { type: 'string' },
+    sourceFilename: { type: 'string' },
+    start: { type: 'string' },
+    end: { type: 'string' },
+  },
+} as const;
+
+/**
+ * One cell of §6.2's coverage bar.
+ *
+ * Three states, because the periods this app holds are the first and last row
+ * dates the parser saw rather than a declared statement period — so an ordinary
+ * January statement running the 3rd to the 30th fails spec 7.2's spanning test
+ * while plainly being January's statement. `partial` is the honest answer, and
+ * it is precisely what spec 5.10 and 5.11 refuse to compute over.
+ */
+const coverageMonth = {
+  $id: 'CoverageMonth',
+  type: 'object',
+  properties: {
+    month: { type: 'string', description: '`YYYY-MM`' },
+    state: { type: 'string', enum: COVERAGE_STATES },
+    /** Spec 7.2, unweakened: a *single* committed import spans the whole month.
+     *  Two half-month statements leave the middle unproven. */
+    covered: { type: 'boolean' },
+    /** A covered month with no rows and an uncovered month with no rows look
+     *  identical without this, and they are the two cases the bar exists to
+     *  tell apart. */
+    transactionCount: { type: 'integer' },
+  },
+} as const;
+
+/**
+ * §6.2's coverage bar, and the precondition for trusting anything on §6.4.
+ *
+ * "Gaps are visible at a glance, which matters because most findings degrade
+ * quietly with missing months and because §5.10 and §5.11 refuse to compute over
+ * partial months at all."
+ */
+const accountCoverage = {
+  $id: 'AccountCoverage',
+  type: 'object',
+  properties: {
+    accountId: { type: 'string' },
+    periods: { type: 'array', items: ref('CoveragePeriod') },
+    /** Contiguous from the first month with a statement or a row to the last, so
+     *  a gap is an empty cell rather than an absent one. */
+    months: { type: 'array', items: ref('CoverageMonth') },
+    coverageStart: nullableString,
+    /** §7.2's reference point for every liveness and lapse test in §5. */
+    coverageEnd: nullableString,
+    /** Months inside the span with no statement touching them at all. */
+    gapMonths: { type: 'array', items: { type: 'string' } },
+    /** Months a statement touches but does not provably span. */
+    partialMonths: { type: 'array', items: { type: 'string' } },
+    transactionCount: { type: 'integer' },
+    /** §2.6's "What this cannot do": transfer-shaped debits in this account whose
+     *  counterpart is not in the system, and which therefore count as spend. */
+    unmatchedTransferCount: { type: 'integer' },
+  },
+} as const;
+
+const accountMergeResult = {
+  $id: 'AccountMergeResult',
+  type: 'object',
+  properties: {
+    targetAccountId: { type: 'string' },
+    sourceAccountId: { type: 'string' },
+    transactionsMoved: { type: 'integer' },
+    importsMoved: { type: 'integer' },
+    /** §3.2's `UNIQUE (account_id, dedupe_key, occurrence_index)` forces a
+     *  renumber where both accounts held the same row. */
+    occurrencesRenumbered: { type: 'integer' },
+    seriesMoved: { type: 'integer' },
+    evidenceMoved: { type: 'integer' },
+    /** Links whose two sides now sit in one account, and are therefore not
+     *  transfers at all. */
+    selfLinksRemoved: { type: 'integer' },
+  },
+} as const;
+
+// ------------------------------------------- internal transfers (§2.6, §6.2) ---
+
+/** One line of §6.2's "the score's reasons". */
+const transferReason = {
+  $id: 'TransferReason',
+  type: 'object',
+  properties: {
+    signal: { type: 'string', description: 'Stable code from spec 2.6’s scoring table' },
+    points: { type: 'integer' },
+    detail: { type: 'string' },
+  },
+} as const;
+
+/**
+ * A transfer link as §6.2's queue reads it.
+ *
+ * Both rows travel with it rather than as ids to fetch: §6.2 asks for "proposed
+ * pairs with **both rows**, the score's reasons, and the dollar effect of
+ * confirming", and a queue whose rows arrive one round trip later is a queue
+ * confirmed against a spinner.
+ *
+ * `debits` is an array because §2.6's partial-payment pass matches one credit
+ * against up to three debits. `id` names the whole group; confirming or rejecting
+ * acts on all of it.
+ */
+const transferLink = {
+  $id: 'TransferLink',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    state: { type: 'string', enum: TRANSFER_LINK_STATES },
+    /** `one_to_one`, or `partial` for spec 2.6’s second pass — which always
+     *  proposes and never auto-links. */
+    kind: { type: 'string', enum: TRANSFER_MATCH_KINDS },
+    score: { type: 'integer' },
+    reasons: { type: 'array', items: ref('TransferReason') },
+    debits: { type: 'array', items: ref('Transaction') },
+    credit: ref('Transaction'),
+    debitAccount: nullableObject(account),
+    creditAccount: nullableObject(account),
+    /** Magnitude of the money that moved, in integer cents (spec 7.3). */
+    amountCents: { type: 'integer' },
+    /**
+     * §6.2's "dollar effect of confirming": the debit total, which is what stops
+     * counting as spending. Not the debit plus the credit — that is the same
+     * money twice.
+     */
+    spendReductionCents: { type: 'integer' },
+    /** Days from the debit to the credit. Negative means the credit landed
+     *  first, which spec 2.6 allows one day of. */
+    dayGapDays: { type: 'integer' },
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+  },
+} as const;
+
+/** What a link pass did. `proposed` is the number the user has to act on: spec
+ *  2.6 leaves a proposal counted as spend until it is confirmed. */
+const transferProposeResult = {
+  $id: 'TransferProposeResult',
+  type: 'object',
+  properties: {
+    autoLinked: { type: 'integer' },
+    proposed: { type: 'integer' },
+    ignored: { type: 'integer' },
+    inserted: { type: 'integer' },
+    updated: { type: 'integer' },
+    withdrawn: { type: 'integer' },
+    flagged: { type: 'integer' },
+    unflagged: { type: 'integer' },
+  },
+} as const;
+
 /** §2.7's queue row. `GET /api/jobs/:id` is what the UI polls while the
  *  in-process runner works through it. */
 const job = {
@@ -938,6 +1108,16 @@ const SHARED = [
   allRequired(subscriptionTotals),
   allRequired(findingsSummary),
   allRequired(dismissalRule),
+
+  // §6.2's two halves: the coverage bar and the Possible Transfers queue.
+  allRequired(coveragePeriod),
+  allRequired(coverageMonth),
+  allRequired(accountCoverage),
+  allRequired(accountMergeResult),
+  allRequired(transferReason),
+  allRequired(transferLink),
+  allRequired(transferProposeResult),
+
   // Both halves of a bulk request. Every field optional, by design.
   transactionFilter,
   transactionBulkChange,

@@ -6,7 +6,7 @@
  * here means adding the Findings page is a change to this file and one line in the
  * shell's rail, not a change to the shell's route table every time.
  *
- * Lazy, via `loadComponent`. Eight pages of which two are built; eagerly
+ * Lazy, via `loadComponent`. Eight pages of which four are built; eagerly
  * importing the lot would put every page's code in the initial bundle for the
  * sake of the one the user opened.
  */
@@ -18,6 +18,12 @@ export const ledgerlineRoutes: Routes = [
     path: 'imports',
     title: 'Import · Ledgerline',
     loadComponent: () => import('./imports/imports-page.js').then((module) => module.ImportsPage),
+  },
+  {
+    path: 'accounts',
+    title: 'Accounts · Ledgerline',
+    loadComponent: () =>
+      import('./accounts/accounts-page.js').then((module) => module.AccountsPage),
   },
   {
     path: 'findings',

@@ -26,6 +26,10 @@ import type {
   FindingPage,
   FindingsSummary,
   DismissalRule,
+  AccountCoverage,
+  AccountMergeResult,
+  TransferLink,
+  TransferProposeResult,
   TransactionFilter,
   TransactionBulkChange,
   TransactionBulkResult,
@@ -158,6 +162,10 @@ export type UpdateAccountBody = {
   readonly isActive?: boolean;
 };
 
+export type MergeAccountBody = {
+  readonly sourceAccountId: string;
+};
+
 export interface ListTransactionsQuery {
   readonly accountIds?: string;
   readonly merchantIds?: string;
@@ -184,6 +192,13 @@ export type BulkUpdateTransactionsBody = {
   readonly filter: TransactionFilter;
   readonly change?: TransactionBulkChange;
 };
+
+export interface ListTransfersQuery {
+  readonly states?: string;
+  readonly accountIds?: string;
+}
+
+export type ListTransfersResponse = TransferLink[];
 
 export type ListMerchantsResponse = Merchant[];
 
@@ -387,6 +402,27 @@ export class LedgerlineApi {
   }
 
   /**
+   * Per-month statement coverage for spec 6.2’s coverage bar
+   *
+   * A month is covered when a single committed import’s `[period_start, period_end]` spans it (spec 7.2). Derived from statements rather than from transaction dates: an account can be covered for a month in which nothing was spent, and reading that as a missing statement is what turns a quiet month into a lapsed subscription.
+   */
+  getAccountCoverage(id: string): Promise<AccountCoverage> {
+    return this.request<AccountCoverage>('GET', `/api/accounts/${encodeURIComponent(String(id))}/coverage`, {
+    });
+  }
+
+  /**
+   * Merge another account into this one
+   *
+   * Re-points transactions, imports, series and finding evidence, then archives the source (spec 6.2). **Re-points history; does not deduplicate it.** Spec 3.3’s `dedupe_key` hashes the account id, so the same charge in two accounts has two keys and the merge rule cannot see them as one row — delete the redundant import afterwards, which spec 3.3 already does exactly.
+   */
+  mergeAccount(id: string, body: MergeAccountBody): Promise<AccountMergeResult> {
+    return this.request<AccountMergeResult>('POST', `/api/accounts/${encodeURIComponent(String(id))}/merge`, {
+      body,
+    });
+  }
+
+  /**
    * Filter, search and paginate transactions
    *
    * Internal transfers are excluded unless asked for — a credit-card payment is not spending (spec 6.3). `hasFinding` comes from `finding_evidence` (spec 2.3).
@@ -427,6 +463,47 @@ export class LedgerlineApi {
     return this.request<TransactionBulkResult>('POST', `/api/transactions/bulk`, {
       query,
       body,
+    });
+  }
+
+  /**
+   * Spec 6.2’s Possible Transfers queue
+   *
+   * Defaults to the pairs awaiting a decision. A `proposed` pair is **not** excluded from spend until it is confirmed (spec 2.6), so this list is the difference between the totals on screen and the totals the user would get by agreeing with all of it.
+   */
+  listTransfers(query: ListTransfersQuery = {}): Promise<ListTransfersResponse> {
+    return this.request<ListTransfersResponse>('GET', `/api/transfers`, {
+      query,
+    });
+  }
+
+  /**
+   * Re-run spec 2.6’s matcher over everything
+   *
+   * Replaces every machine-owned link: pairs scoring at or above the auto threshold are linked and leave the spend totals, the rest go to spec 6.2’s queue, and a link this pass no longer produces is withdrawn. Confirmed and rejected links are untouched.
+   */
+  proposeTransfers(): Promise<TransferProposeResult> {
+    return this.request<TransferProposeResult>('POST', `/api/transfers/propose`, {
+    });
+  }
+
+  /**
+   * Confirm a proposed transfer
+   *
+   * Both sides leave every spend total, and spec 2.6’s learning writes a `transfer_rule` so the same pairing auto-links next month. Reversible: `DELETE /api/transfers/:id` puts it all back. A partial payment (spec 2.6’s second pass) is confirmed as a whole group and teaches no rule.
+   */
+  confirmTransfer(id: string): Promise<TransferLink> {
+    return this.request<TransferLink>('POST', `/api/transfers/${encodeURIComponent(String(id))}/confirm`, {
+    });
+  }
+
+  /**
+   * Reject a transfer link, or undo a confirmed one
+   *
+   * Sets state `rejected` rather than deleting the row, so the decision survives the next pass — a deleted row is one the matcher re-proposes. Any flags the link set are cleared, which puts the money back into the spend totals. Reversible with `POST /api/transfers/:id/confirm`.
+   */
+  rejectTransfer(id: string): Promise<TransferLink> {
+    return this.request<TransferLink>('DELETE', `/api/transfers/${encodeURIComponent(String(id))}`, {
     });
   }
 

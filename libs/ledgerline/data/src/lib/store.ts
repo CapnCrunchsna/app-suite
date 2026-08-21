@@ -35,6 +35,7 @@ import { MerchantRepository } from './repositories/merchants.js';
 import { SettingsRepository } from './repositories/settings.js';
 import { TombstoneRepository } from './repositories/tombstones.js';
 import { TransactionRepository } from './repositories/transactions.js';
+import { TransferRepository } from './repositories/transfers.js';
 
 export interface LedgerlineStoreOptions {
   /** A path, or `:memory:`. */
@@ -53,6 +54,8 @@ export class LedgerlineStore {
   readonly jobs: JobRepository;
   readonly findings: FindingRepository;
   readonly analysis: AnalysisRepository;
+  /** §2.6's `transfer_link` / `transfer_rule`, and the flags a live link sets. */
+  readonly transfers: TransferRepository;
   readonly migrations: MigrationOutcome;
 
   private constructor(
@@ -70,6 +73,7 @@ export class LedgerlineStore {
     this.jobs = new JobRepository(db, clock);
     this.findings = new FindingRepository(db, clock);
     this.analysis = new AnalysisRepository(db, clock, this.tombstones);
+    this.transfers = new TransferRepository(db, clock);
   }
 
   static open(options: LedgerlineStoreOptions): LedgerlineStore {

@@ -1,0 +1,89 @@
+<ui-panel heading="Possible transfers">
+  <div class="queue-head">
+    <p class="queue-head__text">
+      @if (proposedCount() > 0) {
+        {{ proposedCount() }}
+        {{ proposedCount() === 1 ? 'pair is' : 'pairs are' }}
+        waiting on you, holding
+        <strong>{{ formatCents(pendingCents()) }}</strong>
+        of spending that may not be spending. A proposal keeps counting as spend until you
+        confirm it — that is deliberate, because a wrong link takes money out of every total
+        without saying so, while a missed one just leaves a number that is visibly too big.
+      } @else {
+        Nothing is waiting on you. Pairs certain enough to link were linked without asking, and
+        are listed below so the silent half stays reviewable.
+      }
+    </p>
+    <button type="button" class="button" [disabled]="scanning() || busy()" (click)="scan()">
+      {{ scanning() ? 'Scanning…' : 'Scan for transfers' }}
+    </button>
+  </div>
+
+  <ll-transfer-queue
+    [links]="transfers()"
+    [busy]="busy()"
+    [loading]="loading()"
+    (decided)="onTransferDecision($event)"
+  />
+</ui-panel>
+
+@if (notice()) {
+  <div class="notice" role="status">
+    <span class="notice__text">{{ notice() }}</span>
+    <button type="button" class="notice__dismiss" (click)="dismissNotice()" aria-label="Dismiss">
+      ×
+    </button>
+  </div>
+}
+
+@if (failure()) {
+  <ui-panel>
+    <div class="failure" role="alert">
+      <p class="failure__text">
+        Could not reach the API. It binds <code>127.0.0.1:4310</code> and has to be running:
+        <code>npx nx serve ledgerline-api</code>
+      </p>
+      <p class="failure__detail">{{ $any(failure()).message }}</p>
+      <button type="button" class="button" (click)="reload()">Try again</button>
+    </div>
+  </ui-panel>
+} @else {
+  <ui-panel heading="Accounts">
+    <div class="toolbar">
+      <span class="toolbar__count">
+        {{ accounts().length }} {{ accounts().length === 1 ? 'account' : 'accounts' }}
+      </span>
+      @if (archivedCount() > 0) {
+        <button type="button" class="toolbar__toggle" (click)="toggleArchived()">
+          {{ showArchived() ? 'Hide' : 'Show' }} {{ archivedCount() }} archived
+        </button>
+      }
+      @if (loading()) {
+        <span class="toolbar__status">loading…</span>
+      } @else if (busy()) {
+        <span class="toolbar__status">saving…</span>
+      }
+    </div>
+
+    <div class="cards">
+      @for (account of accounts(); track account.id) {
+        <ll-account-card
+          [account]="account"
+          [coverage]="coverageFor(account)"
+          [mergeCandidates]="mergeCandidatesFor(account)"
+          [busy]="busy()"
+          (acted)="onAccountAction($event)"
+        />
+      } @empty {
+        <p class="empty">
+          @if (loading()) {
+            Loading accounts…
+          } @else {
+            No accounts yet. <strong>Import</strong> a statement — the account is guessed from the
+            filename and the statement header, and confirmed before anything is committed.
+          }
+        </p>
+      }
+    </div>
+  </ui-panel>
+}

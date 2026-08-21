@@ -1,0 +1,111 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+/* Cells grow to fill the row but never past `max-width`, so the strip reads as a
+ * bar at both ends of the range this app has to cover: two months of fixtures do
+ * not render as a speck, and ten years of statements do not shrink a month below
+ * the width that makes a gap scannable — which is the one thing §6.2 asks of it. */
+.cell {
+  position: relative;
+  flex: 1 1 14px;
+  min-width: 10px;
+  max-width: 40px;
+  height: 22px;
+  border-radius: 2px;
+  cursor: default;
+}
+
+.cell--covered {
+  background: var(--accent, #2dd4bf);
+}
+
+/* Hatched rather than a third flat colour, so "partial" reads as incomplete at a
+ * glance instead of as a second kind of present. §6.6 renders partial months the
+ * same way for the same reason. */
+.cell--partial {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--accent, #2dd4bf) 0 2px,
+    transparent 2px 4px
+  );
+  border: 1px solid var(--accent, #2dd4bf);
+}
+
+.cell--missing {
+  background: var(--surface-2, #143034);
+  border: 1px solid var(--border, #1f4a47);
+}
+
+.bar__legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* The strip's range, stated once instead of on every cell. */
+.bar__span {
+  margin-right: 4px;
+  color: var(--text, #dcefeb);
+}
+
+.swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+
+  &:not(:first-child) {
+    margin-left: 8px;
+  }
+}
+
+.swatch--covered {
+  background: var(--accent, #2dd4bf);
+}
+
+.swatch--partial {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--accent, #2dd4bf) 0 2px,
+    transparent 2px 4px
+  );
+  border: 1px solid var(--accent, #2dd4bf);
+}
+
+.swatch--missing {
+  background: var(--surface-2, #143034);
+  border: 1px solid var(--border, #1f4a47);
+}
+
+.bar__end {
+  margin-left: 4px;
+}
+
+.bar__empty {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.bar__warning {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: #e0b46a;
+}

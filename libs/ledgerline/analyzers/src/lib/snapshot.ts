@@ -67,6 +67,25 @@ export interface SnapshotTransaction {
   readonly effectiveDate: string;
   readonly amountCents: number;
   readonly descriptionNormalized: string;
+  /**
+   * The statement line as the bank printed it, uppercased nowhere and stripped
+   * of nothing.
+   *
+   * Present for exactly one signal, and it is not a convenience. §2.6 scores +2
+   * when "either descriptor contains the other account's `last4`" — and §4.1's
+   * stage 3 removes masked account numbers on the way to a merchant key, which
+   * is correct for grouping charges and fatal for this test:
+   * `ONLINE PMT CARDINAL CARD XXXX9012` normalizes to `ONLINE PMT CARDINAL
+   * CARD`, so the digits §2.6 wants to match are gone before any rule sees them.
+   * The corroborator would be dead on arrival against the normalized column
+   * alone. Recorded in §9f.
+   *
+   * **No §5 rule may group, cluster or total on this.** Grouping on the raw
+   * descriptor is what normalization exists to prevent — four spellings of one
+   * merchant become four series. It is here for substring *evidence* about a
+   * pair of rows, and nothing else.
+   */
+  readonly descriptionRaw: string;
   readonly merchantId: string | null;
   readonly categoryId: string | null;
   readonly isPending: boolean;

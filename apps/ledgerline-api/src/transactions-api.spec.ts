@@ -43,6 +43,9 @@ interface TransactionShape {
   categorySource: string | null;
   isPending: boolean;
   isInternalTransfer: boolean;
+  /** Null on a row a user marked by hand; set on one a `transfer_link` claims
+   *  (§2.6). The difference is what stops a run clearing somebody's edit. */
+  transferPairId: string | null;
   isExcluded: boolean;
   dedupeKeyVersion: string;
 }
@@ -199,14 +202,29 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
   // ------------------------------------------------------------- filters ---
 
   describe('filters', () => {
-    it('returns every committed row by default', async () => {
-      expect((await search('limit=1000')).total).toBe(24);
+    it('returns every committed row by default, less the pair §2.6 linked', async () => {
+      // 24 rows are committed. Two of them are the $500 card payment — the
+      // checking debit and the card's own credit — which §2.6's matcher links
+      // automatically at commit, and §6.3 keeps off the screen unless asked for.
+      // That gap between 22 and 24 is the whole of what this feature does to
+      // this page, so it is stated here once and assumed below.
+      expect((await search('limit=1000')).total).toBe(22);
+      expect((await search('includeInternalTransfers=true&limit=1000')).total).toBe(24);
     });
 
     it('filters by account', async () => {
-      expect((await search(`accountIds=${checkingId}&limit=1000`)).total).toBe(16);
-      expect((await search(`accountIds=${cardId}&limit=1000`)).total).toBe(8);
-      expect((await search(`accountIds=${checkingId},${cardId}&limit=1000`)).total).toBe(24);
+      expect((await search(`accountIds=${checkingId}&limit=1000`)).total).toBe(15);
+      expect((await search(`accountIds=${cardId}&limit=1000`)).total).toBe(7);
+      expect((await search(`accountIds=${checkingId},${cardId}&limit=1000`)).total).toBe(22);
+
+      // One linked row on each side, which is what a transfer *is* — the same
+      // money leaving one account and arriving in another.
+      expect(
+        (await search(`accountIds=${checkingId}&includeInternalTransfers=true&limit=1000`)).total,
+      ).toBe(16);
+      expect(
+        (await search(`accountIds=${cardId}&includeInternalTransfers=true&limit=1000`)).total,
+      ).toBe(8);
     });
 
     it('filters by date range on effective_date, not posted_date', async () => {
@@ -214,7 +232,7 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
       // range that ends on 01/31 must include a row that *posted* in February and
       // must be chosen by its transaction date (§7.1).
       const january = await search('from=2026-01-01&to=2026-01-31&limit=1000');
-      expect(january.total).toBe(20);
+      expect(january.total).toBe(18);
 
       const february = await search('from=2026-02-01&to=2026-02-28&limit=1000');
       expect(february.total).toBe(4);
@@ -264,7 +282,7 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
       expect(pending.total).toBe(1);
       expect(pending.rows[0].transaction.descriptionRaw).toContain('UBER TRIP');
 
-      expect((await search('isPending=false&limit=1000')).total).toBe(23);
+      expect((await search('isPending=false&limit=1000')).total).toBe(21);
     });
 
     it('filters by has-finding through finding_evidence', async () => {
@@ -272,21 +290,30 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
       // answer and still the assertion worth making: the filter reads
       // `finding_evidence` rather than a column on the row (§2.3).
       expect((await search('hasFinding=true&limit=1000')).total).toBe(0);
-      expect((await search('hasFinding=false&limit=1000')).total).toBe(24);
+      expect((await search('hasFinding=false&limit=1000')).total).toBe(22);
     });
 
-    it('hides internal transfers unless asked, and never by accident', async () => {
-      const payment = await oneRow(`q=ONLINE PMT CARDINAL&accountIds=${checkingId}`);
+    it('hides the transfer §2.6 linked, and the one marked by hand', async () => {
+      // §6.3's toggle is off by default: a credit-card payment is not spending,
+      // and showing it by default double-counts on screen what §2.6 keeps out of
+      // the totals. Nothing was clicked to get this — the pair was linked when
+      // the second statement was committed.
+      const payment = await oneRow(
+        `q=ONLINE PMT CARDINAL&includeInternalTransfers=true&accountIds=${checkingId}`,
+      );
+      expect(payment.isInternalTransfer).toBe(true);
+      expect(payment.transferPairId).not.toBeNull();
+
+      // A hand-marked row is the same filter and a different provenance: §6.3's
+      // inline edit still works, and carries no pair id because no link claims it.
+      const zelle = await oneRow(`q=ZELLE&accountIds=${checkingId}`);
       await app.inject({
         method: 'PATCH',
-        url: `/api/transactions/${payment.id}`,
+        url: `/api/transactions/${zelle.id}`,
         payload: { isInternalTransfer: true },
       });
 
-      // §6.3's toggle is off by default: a credit-card payment is not spending,
-      // and showing it by default double-counts on screen what §2.6 keeps out of
-      // the totals.
-      expect((await search('limit=1000')).total).toBe(23);
+      expect((await search('limit=1000')).total).toBe(21);
       expect((await search('includeInternalTransfers=true&limit=1000')).total).toBe(24);
     });
 
@@ -298,8 +325,8 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
         payload: { isExcluded: true },
       });
 
-      expect((await search('limit=1000')).total).toBe(23);
-      expect((await search('includeExcluded=true&limit=1000')).total).toBe(24);
+      expect((await search('limit=1000')).total).toBe(21);
+      expect((await search('includeExcluded=true&limit=1000')).total).toBe(22);
     });
   });
 
@@ -346,11 +373,11 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
       const second = await search('limit=10&offset=10&sort=date_asc');
       const third = await search('limit=10&offset=20&sort=date_asc');
 
-      expect([first.rows.length, second.rows.length, third.rows.length]).toEqual([10, 10, 4]);
-      expect(first.total).toBe(24);
+      expect([first.rows.length, second.rows.length, third.rows.length]).toEqual([10, 10, 2]);
+      expect(first.total).toBe(22);
 
       const ids = [...first.rows, ...second.rows, ...third.rows].map((row) => row.transaction.id);
-      expect(new Set(ids).size).toBe(24);
+      expect(new Set(ids).size).toBe(22);
     });
 
     it('orders by effective_date, and never by posted_date (§7.1)', async () => {
@@ -500,7 +527,12 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
     });
 
     it('marks an internal transfer and excludes from analysis independently', async () => {
-      const row = await oneRow(`q=PAYMENT THANK YOU&accountIds=${cardId}`);
+      // Already linked by §2.6, so reaching it needs the toggle. The point of the
+      // test is unchanged: the two flags are separate columns and a write to one
+      // does not disturb the other.
+      const row = await oneRow(
+        `q=PAYMENT THANK YOU&includeInternalTransfers=true&accountIds=${cardId}`,
+      );
 
       const transfer = await app.inject({
         method: 'PATCH',
@@ -653,13 +685,9 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
     });
 
     it('honours the internal-transfer default so the count matches the table', async () => {
-      const payment = await oneRow(`q=ONLINE PMT CARDINAL&accountIds=${checkingId}`);
-      await app.inject({
-        method: 'PATCH',
-        url: `/api/transactions/${payment.id}`,
-        payload: { isInternalTransfer: true },
-      });
-
+      // The card payment is linked, so it is out of the table and must be out of
+      // the count too — "apply to all N matching" is a promise about the rows the
+      // user can see.
       const hidden = await bulk({ q: 'ONLINE PMT CARDINAL' }, {}, { dryRun: true });
       expect(hidden.body.matchCount).toBe(0);
 
@@ -690,18 +718,21 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
     });
 
     it('marks internal transfers in bulk', async () => {
+      // Two rows §2.6 did not link — the Zelle payment out and the payroll
+      // deposit in — because the bulk path has to reach rows the matcher never
+      // claimed. This is §6.3's escape hatch for a transfer whose counterpart is
+      // not in the system, which §2.6 says the algorithm cannot ever find.
       const applied = await bulk(
         {
-          descriptorsNormalized: ['ONLINE PMT CARDINAL CARD', 'PAYMENT THANK YOU - WEB'],
+          descriptorsNormalized: ['ZELLE TO JORDAN P REF', 'PAYROLL DIRECT DEP MERIDIAN LLC'],
         },
         { isInternalTransfer: true },
       );
 
       expect(applied.body.updated).toBe(2);
-      // Both sides of the card payment are now out of the default view, which is
-      // the whole point: §2.6 keeps the pair out of spend totals, and §6.3 keeps
-      // it off the screen unless asked for.
-      expect((await search('limit=1000')).total).toBe(22);
+      // 22 visible less these two: the pair §2.6 linked was already out.
+      expect((await search('limit=1000')).total).toBe(20);
+      expect((await search('includeInternalTransfers=true&limit=1000')).total).toBe(24);
     });
 
     it('refuses a merchant that does not exist rather than nulling the column', async () => {

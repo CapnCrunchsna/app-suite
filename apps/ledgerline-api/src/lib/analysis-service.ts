@@ -38,6 +38,8 @@ import type {
 } from '@metrum/ledgerline-data';
 
 import type { LedgerlineContext } from './context.js';
+import { runTransferLinking } from './transfer-service.js';
+import type { TransferLinkSummary } from './transfer-service.js';
 
 /** Where Settings writes §7.4's override. One key, because the override is one
  *  object: a per-threshold key would let two of them disagree about which
@@ -52,6 +54,8 @@ export interface AnalysisRunSummary {
   readonly findingsSuppressed: number;
   readonly findingsResolved: number;
   readonly seriesCount: number;
+  /** §2.6's link pass, which runs first — see `runAnalysis`. */
+  readonly transfers: TransferLinkSummary;
   /** §2.2's soft ceiling, or a rule-level note. Null on an unremarkable run. */
   readonly warning: string | null;
 }
@@ -69,12 +73,19 @@ export function currentConfigHash(context: LedgerlineContext): string {
 }
 
 /**
- * Run every rule over one snapshot and write the result.
+ * Run §2.6's link pass and then every rule, and write both results.
  *
  * `report` is §2.7's progress channel; the phases are coarse on purpose. The two
  * that take real time are the snapshot load and the rules themselves, and
  * inventing a percentage inside `analyze()` would mean either threading a
  * callback through five pure functions or guessing.
+ *
+ * **Linking runs first, and the snapshot is loaded after it.** §2.5's pipeline
+ * puts `link` before `analyze` and this is why the order is load-bearing rather
+ * than tidy: an auto-link sets `is_internal_transfer`, every rule in §5 filters on
+ * that column, and §6.4's headline is a sum over what they emit. Running the rules
+ * first would price a $500 credit-card payment as spending, publish the number,
+ * and correct it only on the next run.
  */
 export function runAnalysis(
   context: LedgerlineContext,
@@ -82,7 +93,10 @@ export function runAnalysis(
 ): AnalysisRunSummary {
   const config = resolveAnalyzerConfig(context);
 
-  report(5, 'loading the snapshot');
+  report(5, 'linking internal transfers');
+  const transfers = runTransferLinking(context);
+
+  report(15, 'loading the snapshot');
   const snapshot = context.store.buildSnapshot();
 
   report(25, `analyzing ${snapshot.transactions.length} transactions`);
@@ -109,9 +123,9 @@ export function runAnalysis(
   const applied = context.store.findings.applyRun({ runId: run.id, findings });
   const series = context.store.analysis.replaceSeries(result.series.map(toSeriesInput));
 
-  const finished = finishRun(context, run, result, applied, series);
+  const finished = finishRun(context, run, result, applied, series, transfers);
 
-  report(100, summaryMessage(applied.inserted + applied.updated, applied.resolved));
+  report(100, summaryMessage(applied.inserted + applied.updated, applied.resolved, transfers));
 
   return {
     runId: finished.id,
@@ -121,13 +135,33 @@ export function runAnalysis(
     findingsSuppressed: applied.suppressed,
     findingsResolved: applied.resolved,
     seriesCount: result.series.length,
+    transfers,
     warning: result.warning,
   };
 }
 
-function summaryMessage(upserted: number, resolved: number): string {
-  const findings = `${upserted} finding${upserted === 1 ? '' : 's'}`;
-  return resolved === 0 ? findings : `${findings}, ${resolved} resolved`;
+/**
+ * What the job's `message` says when it lands.
+ *
+ * The proposals get a clause of their own because they are the one outcome that
+ * needs a human: §2.6 leaves a proposed pair counted as spend until confirmed, so
+ * a run that produced four of them has told the user their totals are knowably too
+ * high and where to go about it.
+ */
+function summaryMessage(
+  upserted: number,
+  resolved: number,
+  transfers: TransferLinkSummary,
+): string {
+  const parts = [`${upserted} finding${upserted === 1 ? '' : 's'}`];
+  if (resolved > 0) parts.push(`${resolved} resolved`);
+  if (transfers.autoLinked > 0) parts.push(`${transfers.autoLinked} transfers linked`);
+  if (transfers.proposed > 0) {
+    parts.push(
+      `${transfers.proposed} possible transfer${transfers.proposed === 1 ? '' : 's'} to review`,
+    );
+  }
+  return parts.join(', ');
 }
 
 function finishRun(
@@ -136,6 +170,7 @@ function finishRun(
   result: ReturnType<typeof analyze>,
   applied: { inserted: number; updated: number; resolved: number; suppressed: number },
   series: { inserted: number; updated: number; removed: number },
+  transfers: TransferLinkSummary,
 ): AnalysisRunRecord {
   return context.store.analysis.finish(run.id, {
     ruleVersions: result.ruleVersions,
@@ -148,6 +183,7 @@ function finishRun(
       // as findings, because a rollup is a statement about what was *not*
       // emitted and has no natural key to upsert on.
       rollups: result.rollups,
+      transfers,
       warning: result.warning,
     },
   });

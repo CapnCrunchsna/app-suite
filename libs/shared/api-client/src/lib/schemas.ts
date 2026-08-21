@@ -213,6 +213,99 @@ export interface DismissalRule {
   readonly updatedAt: string;
 }
 
+export interface CoveragePeriod {
+  readonly importId: string;
+  readonly sourceFilename: string;
+  readonly start: string;
+  readonly end: string;
+}
+
+export interface CoverageMonth {
+  /** `YYYY-MM` */
+  readonly month: string;
+  readonly state: 'covered' | 'partial' | 'missing';
+  readonly covered: boolean;
+  readonly transactionCount: number;
+}
+
+export interface AccountCoverage {
+  readonly accountId: string;
+  readonly periods: CoveragePeriod[];
+  readonly months: CoverageMonth[];
+  readonly coverageStart: string | null;
+  readonly coverageEnd: string | null;
+  readonly gapMonths: string[];
+  readonly partialMonths: string[];
+  readonly transactionCount: number;
+  readonly unmatchedTransferCount: number;
+}
+
+export interface AccountMergeResult {
+  readonly targetAccountId: string;
+  readonly sourceAccountId: string;
+  readonly transactionsMoved: number;
+  readonly importsMoved: number;
+  readonly occurrencesRenumbered: number;
+  readonly seriesMoved: number;
+  readonly evidenceMoved: number;
+  readonly selfLinksRemoved: number;
+}
+
+export interface TransferReason {
+  /** Stable code from spec 2.6’s scoring table */
+  readonly signal: string;
+  readonly points: number;
+  readonly detail: string;
+}
+
+export interface TransferLink {
+  readonly id: string;
+  readonly state: 'proposed' | 'confirmed' | 'rejected' | 'auto';
+  readonly kind: 'one_to_one' | 'partial';
+  readonly score: number;
+  readonly reasons: TransferReason[];
+  readonly debits: Transaction[];
+  readonly credit: Transaction;
+  readonly debitAccount: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly institution: string | null;
+    readonly accountType: 'checking' | 'savings' | 'credit_card';
+    readonly last4: string | null;
+    readonly currency: string;
+    readonly isActive: boolean;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+  } | null;
+  readonly creditAccount: {
+    readonly id: string;
+    readonly displayName: string;
+    readonly institution: string | null;
+    readonly accountType: 'checking' | 'savings' | 'credit_card';
+    readonly last4: string | null;
+    readonly currency: string;
+    readonly isActive: boolean;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+  } | null;
+  readonly amountCents: number;
+  readonly spendReductionCents: number;
+  readonly dayGapDays: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface TransferProposeResult {
+  readonly autoLinked: number;
+  readonly proposed: number;
+  readonly ignored: number;
+  readonly inserted: number;
+  readonly updated: number;
+  readonly withdrawn: number;
+  readonly flagged: number;
+  readonly unflagged: number;
+}
+
 export interface TransactionFilter {
   readonly accountIds?: string[];
   readonly merchantIds?: string[];

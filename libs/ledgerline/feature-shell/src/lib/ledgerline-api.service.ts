@@ -22,6 +22,8 @@ import {
 } from '@metrum/api-client';
 import type {
   Account,
+  AccountCoverage,
+  AccountMergeResult,
   ApiError,
   BulkUpdateTransactionsBody,
   Category,
@@ -41,7 +43,9 @@ import type {
   Job,
   ListFindingsQuery,
   ListTransactionsQuery,
+  ListTransfersQuery,
   Merchant,
+  MergeAccountBody,
   PreviewFormatProfileBody,
   SetFindingStateBody,
   StatementImport,
@@ -51,6 +55,9 @@ import type {
   TransactionDetail,
   TransactionFilter,
   TransactionPage,
+  TransferLink,
+  TransferProposeResult,
+  UpdateAccountBody,
   UpdateImportBody,
   UploadResult,
 } from '@metrum/api-client';
@@ -114,6 +121,40 @@ export class LedgerlineApiService {
 
   listAccounts(): Promise<Account[]> {
     return this.api.listAccounts();
+  }
+
+  // ------------------------------------------------------------- §6.2 ---
+
+  updateAccount(id: string, body: UpdateAccountBody): Promise<Account> {
+    return this.api.updateAccount(id, body);
+  }
+
+  /** §6.2's coverage bar. Statement periods, never transaction dates (§7.2). */
+  getAccountCoverage(id: string): Promise<AccountCoverage> {
+    return this.api.getAccountCoverage(id);
+  }
+
+  mergeAccount(id: string, body: MergeAccountBody): Promise<AccountMergeResult> {
+    return this.api.mergeAccount(id, body);
+  }
+
+  /** §6.2's Possible Transfers queue (§2.6). */
+  listTransfers(query: ListTransfersQuery = {}): Promise<TransferLink[]> {
+    return this.api.listTransfers(query);
+  }
+
+  /** Re-runs §2.6's matcher over everything and returns what moved. */
+  proposeTransfers(): Promise<TransferProposeResult> {
+    return this.api.proposeTransfers();
+  }
+
+  confirmTransfer(id: string): Promise<TransferLink> {
+    return this.api.confirmTransfer(id);
+  }
+
+  /** Rejects a proposal, or undoes a confirmed link. Reversible by `confirm`. */
+  rejectTransfer(id: string): Promise<TransferLink> {
+    return this.api.rejectTransfer(id);
   }
 
   listMerchants(): Promise<Merchant[]> {

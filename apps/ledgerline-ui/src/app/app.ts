@@ -5,7 +5,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
  *  a rail item that routes nowhere is a link to a blank screen. */
 const SECTIONS = [
   { label: 'Import', path: 'imports' },
-  { label: 'Accounts', path: null },
+  { label: 'Accounts', path: 'accounts' },
   { label: 'Transactions', path: 'transactions' },
   { label: 'Findings', path: 'findings' },
   { label: 'Subscriptions', path: null },
