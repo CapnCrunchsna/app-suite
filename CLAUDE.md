@@ -23,3 +23,20 @@ inside it.
 ## Cross-project conventions
 - A shared `ui` library and a generated `api-client` library.
 - Backends serve pure JSON APIs; UIs consume generated TypeScript clients.
+
+## Worktrees: never `npm install` in one
+
+A worktree under `.claude/worktrees/` shares the root `node_modules` for free — it sits inside
+the repo, so Node's resolver walks up and finds it. `npm install` there would read the
+`workspaces` field, treat the worktree as its own install root, and re-materialize half a
+gigabyte.
+
+The one thing a worktree does *not* inherit is npm's links to this workspace's **own** packages:
+`node_modules/@metrum/*` hold absolute paths into the main checkout, so a cross-package import
+compiles the wrong copy of the source — silently, with both symptoms pointing elsewhere. The
+`SessionStart` hook repairs that before anything can run. **A worktree created mid-session has
+not been through that hook**, so run it by hand there, from the worktree root:
+
+```bash
+node ../../../../scripts/link-workspace-packages.mjs
+```

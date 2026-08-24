@@ -130,7 +130,10 @@ in <a href="#s5">§5</a> and are deliberate.</p>
 <tr><td>PDF ingest</td><td><strong>not built</strong> — v0.4</td></tr>
 <tr><td>UI (<a href="#s6">§6</a>)</td><td>Angular shell scaffolded since — wireframe only, no pages. See <code>apps/ledgerline-ui/README.md</code>.</td></tr>
 <tr><td>SQLite schema (<a href="#s3">§3.1</a>, <a href="#s3">§3.2</a>), idempotent re-import (<a href="#s3">§3.3</a>), the API (<a href="#s2">§2.3</a>)</td><td>built since, 2026-08-06, in <code>libs/ledgerline/data</code> and <code>apps/ledgerline-api</code></td></tr>
-<tr><td>LLM stage of <a href="#s4">§4.2</a>, the analyzers of <a href="#s5">§5</a></td><td><strong>not built</strong> — out of scope for this build</td></tr>
+<tr><td>Declared statement periods (<code>periodPattern</code>, §7.2)</td><td>built since, 2026-08-23; spec §9h</td></tr>
+<tr><td>LLM stage of <a href="#s4">§4.2</a></td><td><strong>not built</strong></td></tr>
+<tr><td>The analyzers of <a href="#s5">§5</a></td><td>built since — all nine rules, out of scope for <em>this</em> document</td></tr>
+<tr><td>Rule-based categorization (<a href="#s2">§2.5</a> <code>normalize</code>)</td><td>built since, 2026-08-23 — a merchant's <code>default_category_id</code>; spec §9h</td></tr>
 </table></div>
 <p><strong>Nothing in these three libs writes anywhere</strong>, and that is still true now that a database exists. Every entry point here takes values and returns values, per <a href="#s2">§2.1</a>'s "libs compute; the app persists"; <code>libs/ledgerline/data</code> is the only lib that knows a store exists, and <a href="#s2">§2.2</a>'s boundary lint refuses a <code>parsing → data</code> or <code>normalize → data</code> edge outright. The composition root that joins them is <code>apps/ledgerline-api</code>.</p>
 <h2 id="s2">2. Running it</h2>
@@ -157,12 +160,21 @@ npm run build</code></pre>
 <tr><td><code>delimiter</code></td><td>One character.</td></tr>
 <tr><td><code>skipLines</code></td><td>Preamble rows to drop before the header. Blank lines do not count.</td></tr>
 <tr><td><code>dateFormat</code></td><td>Explicit, never sniffed. Tokens: <code>YYYY</code> <code>YY</code> <code>MMM</code> <code>MM</code> <code>M</code> <code>DD</code> <code>D</code>, any literal separators.</td></tr>
+<tr><td><code>periodPattern</code></td><td>Optional regex with <strong>two capture groups</strong> — period start, then end — matched against the preamble lines <code>skipLines</code> names. Omit for a bank that declares no period.</td></tr>
 <tr><td><code>amountMode</code></td><td><code>single</code> (one signed column) or <code>debit_credit</code> (two unsigned columns).</td></tr>
 <tr><td><code>signConvention</code></td><td><code>as_is</code> or <code>invert</code>, applied <em>after</em> the mode produces a signed number.</td></tr>
 <tr><td><code>columnMap</code></td><td>Role → column. A bare string is a header name, a bare number is a zero-based index.</td></tr>
 <tr><td><code>pendingValues</code></td><td>Values in the status column meaning "not settled". Compared case-insensitively.</td></tr>
 </table></div>
 <p>Roles: <code>transactionDate</code>, <code>postedDate</code>, <code>description</code>, <code>amount</code>, <code>debit</code>, <code>credit</code>, <code>balance</code>, <code>status</code>. <code>description</code> is required, and at least one of <code>transactionDate</code> / <code>postedDate</code>.</p>
+<h3>The declared statement period, which is what coverage is made of</h3>
+<p><code>periodPattern</code> is how <code>statement_import.period_start</code>/<code>period_end</code> stop being a guess. §7.2 makes a month covered only when a committed import's period <strong>spans</strong> it, and a period derived from the first and last row a statement happens to contain never spans an ordinary month — the January statement in <code>fixtures/</code> runs the 3rd to the 30th. That gap is why <a href="#s5">§5.10</a>'s <code>trend.v1</code> and <a href="#s5">§5.11</a>'s <code>micro.v1</code> shipped correct and emitting nothing; spec §9h is where it was closed.</p>
+<pre><code>"skipLines": 3,
+"dateFormat": "MM/DD/YYYY",
+"periodPattern": "Statement Period:\s*(\S+)\s*-\s*(\S+)"</code></pre>
+<p>Three things to know when writing one:</p>
+<ul><li><strong>The pattern locates the dates; <code>dateFormat</code> reads them.</strong> Keep the groups loose (<code>(\S+)</code>) rather than spelling the date shape twice — the copy inside the pattern is the one nothing validates, and the two drift the first time a bank changes separator.</li><li><strong>It is matched against the preamble only</strong> — the <code>skipLines</code> rows above the header, by raw line text. A profile with <code>skipLines: 0</code> has nothing to search, and <code>validateProfile</code> warns.</li><li><strong>A malformed pattern is refused, not ignored.</strong> No pattern means "fall back to row dates", which is correct for most banks; a pattern that fails to compile or has fewer than two groups is a typo, and letting it fall back silently would hide it behind behaviour that looks fine. A pattern that compiles but matches nothing in a given file, or captures dates that do not read as <code>dateFormat</code>, falls back <strong>with a <code>declared_period_unreadable</code> warning</strong> on the review screen.</li></ul>
+<p>Rows outside the declared period are kept and flagged (<code>rows_outside_period</code>), which is <a href="#s6">§6.1</a>'s "dates outside the detected period" — a check that was vacuous while the period came from those same rows.</p>
 <h3>The sign convention, which is the part that matters</h3>
 <p><a href="#s3">§3.1</a> requires <strong>negative = money leaving the account</strong>, uniformly across checking and credit cards. Banks do not agree, and the profile is where the disagreement is absorbed so that nothing downstream ever asks which bank a row came from.</p>
 <p>The two axes compose rather than multiplying into per-bank cases:</p>
