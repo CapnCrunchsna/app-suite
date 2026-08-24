@@ -44,20 +44,23 @@ export interface CoveragePeriod {
 /**
  * One cell of §6.2's coverage bar.
  *
- * Three states, not two, and the middle one is the point. §7.2 makes a month
- * covered only when "a committed import's `[period_start, period_end]` spans
- * it" — but the periods this app actually holds are the **first and last row
- * dates** the parser saw, because no format profile reads a statement's declared
- * period. A perfectly ordinary January statement whose first charge is the 3rd
- * and whose last is the 30th therefore fails §7.2's test.
+ * Three states, not two, and `partial` is no longer the common one. §7.2 makes a
+ * month covered only when "a committed import's `[period_start, period_end]`
+ * spans it", and a profile carrying a `periodPattern` now fills those two from
+ * the period the statement *declares* rather than from its first and last row —
+ * so an ordinary January statement running the 3rd to the 30th spans January
+ * (§9h). Until that landed, essentially every cell was `partial` (§9f), and §5.10
+ * and §5.11 had no month they were willing to compute over.
  *
- * Collapsing that into "missing" would be the inverse of the mistake §7.2's own
- * commentary warns about: it would paint a red cell over a month whose statement
- * is sitting in the database. Collapsing it into "covered" would quietly promise
- * §5.10 and §5.11 a complete month they are entitled to refuse. `partial` is the
- * honest third answer, and it is exactly the state those two rules decline to
- * compute over — so naming it on the bar tells the user why a finding is absent.
- * Recorded in §9f.
+ * The state stays because the case does. Two half-month statements, a mid-cycle
+ * export, or a bank whose preamble no profile reads yet all produce a month a
+ * statement touches without spanning. Collapsing that into "missing" would be the
+ * inverse of the mistake §7.2's own commentary warns about: a red cell over a
+ * month whose statement is sitting in the database. Collapsing it into "covered"
+ * would quietly promise §5.10 and §5.11 a complete month they are entitled to
+ * refuse. `partial` is the honest third answer, and it is exactly the state those
+ * two rules decline to compute over — so naming it on the bar tells the user why
+ * a finding is absent.
  */
 export type CoverageState = 'covered' | 'partial' | 'missing';
 

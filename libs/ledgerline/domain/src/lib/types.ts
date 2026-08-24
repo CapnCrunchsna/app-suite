@@ -83,6 +83,13 @@ export type ParseWarningKind =
   | 'signature_mismatch'
   /** The parsed balances imply the profile's `signConvention` is backwards. */
   | 'sign_convention_suspect'
+  /** The profile declares a `periodPattern` but the preamble did not yield a
+   *  usable `[start, end]`. The period falls back to the row dates, which is what
+   *  it was before any profile read a declared period — silently, without this. */
+  | 'declared_period_unreadable'
+  /** §6.1's review strip: "dates outside the detected period". Only meaningful
+   *  once the period is *declared* rather than derived from those same rows. */
+  | 'rows_outside_period'
   /** A non-fatal complaint from `validateProfile`. */
   | 'profile_warning';
 
@@ -150,9 +157,20 @@ export interface ParseResult {
   readonly parserVersion: string;
   readonly profileId: string | null;
   readonly headerSignature: string | null;
-  /** Min/max `effectiveDate` across parsed rows. `statement_import.period_start` and
-   *  `period_end` (§3.1) — which §7.2's coverage calculation depends on. */
+  /**
+   * `statement_import.period_start` and `period_end` (§3.1) — what §7.2's coverage
+   * calculation depends on.
+   *
+   * The **declared** statement period when the profile carries a `periodPattern`
+   * and the preamble yields one; min/max `effectiveDate` across the parsed rows
+   * otherwise. The distinction is the whole of §7.2: a January statement running
+   * the 3rd to the 30th covers January only if the file says so, and the row dates
+   * can never say so. Recorded in §9h.
+   */
   readonly periodStart: string | null;
   readonly periodEnd: string | null;
+  /** True when the two above came from the file's own declaration rather than from
+   *  its rows. §6.1 shows it; §7.2 is the reason it matters. */
+  readonly periodDeclared: boolean;
   readonly balanceCheck: BalanceCheck;
 }

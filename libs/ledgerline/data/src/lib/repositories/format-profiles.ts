@@ -29,6 +29,9 @@ export interface FormatProfileInput {
   readonly skipLines: number;
   readonly columnMapJson: string;
   readonly dateFormat: string;
+  /** The regex that reads the bank's declared statement period out of the
+   *  preamble; `null` for an export that declares none (§9h). */
+  readonly periodPattern: string | null;
   readonly amountMode: 'single' | 'debit_credit';
   readonly signConvention: 'as_is' | 'invert';
   readonly pendingValues: readonly string[];
@@ -39,7 +42,8 @@ export interface FormatProfileInput {
 
 const SELECT = `SELECT id, institution, account_type_hint, header_signature, header_tokens_json,
                        has_header, delimiter, skip_lines, column_map_json, date_format,
-                       amount_mode, sign_convention, pending_values_json, currency, version, source
+                       period_pattern, amount_mode, sign_convention, pending_values_json,
+                       currency, version, source
                   FROM format_profile`;
 
 export class FormatProfileRepository {
@@ -54,9 +58,9 @@ export class FormatProfileRepository {
       .prepare(
         `INSERT INTO format_profile
            (id, institution, account_type_hint, header_signature, header_tokens_json, has_header,
-            delimiter, skip_lines, column_map_json, date_format, amount_mode, sign_convention,
-            pending_values_json, currency, version, source, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            delimiter, skip_lines, column_map_json, date_format, period_pattern, amount_mode,
+            sign_convention, pending_values_json, currency, version, source, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET
            institution = excluded.institution,
            account_type_hint = excluded.account_type_hint,
@@ -67,6 +71,7 @@ export class FormatProfileRepository {
            skip_lines = excluded.skip_lines,
            column_map_json = excluded.column_map_json,
            date_format = excluded.date_format,
+           period_pattern = excluded.period_pattern,
            amount_mode = excluded.amount_mode,
            sign_convention = excluded.sign_convention,
            pending_values_json = excluded.pending_values_json,
@@ -86,6 +91,7 @@ export class FormatProfileRepository {
         input.skipLines,
         input.columnMapJson,
         input.dateFormat,
+        input.periodPattern,
         input.amountMode,
         input.signConvention,
         JSON.stringify(input.pendingValues),

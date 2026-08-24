@@ -370,7 +370,7 @@ export interface RawRowRecord {
 }
 
 export interface ParseWarning {
-  readonly kind: 'zero_amount' | 'pending_row' | 'balance_mismatch' | 'balance_unavailable' | 'unparsed_row' | 'duplicate_in_file' | 'empty_description' | 'header_only' | 'signature_mismatch' | 'sign_convention_suspect' | 'profile_warning';
+  readonly kind: 'zero_amount' | 'pending_row' | 'balance_mismatch' | 'balance_unavailable' | 'unparsed_row' | 'duplicate_in_file' | 'empty_description' | 'header_only' | 'signature_mismatch' | 'sign_convention_suspect' | 'declared_period_unreadable' | 'rows_outside_period' | 'profile_warning';
   readonly message: string;
   readonly rowIndex?: number;
   readonly lineNumber?: number;
@@ -494,6 +494,7 @@ export interface FormatProfile {
   readonly delimiter: string;
   readonly skipLines: number;
   readonly dateFormat: string;
+  readonly periodPattern: string | null;
   readonly amountMode: 'single' | 'debit_credit';
   readonly signConvention: 'as_is' | 'invert';
   readonly columnMap: ColumnMap;
@@ -511,6 +512,7 @@ export interface FormatProfileDraft {
   readonly delimiter?: string;
   readonly skipLines?: number;
   readonly dateFormat: string;
+  readonly periodPattern?: string | null;
   readonly amountMode?: 'single' | 'debit_credit';
   readonly signConvention?: 'as_is' | 'invert';
   readonly columnMap: ColumnMap;

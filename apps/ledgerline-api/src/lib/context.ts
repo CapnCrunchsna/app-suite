@@ -98,6 +98,11 @@ function seedMerchants(store: LedgerlineStore): void {
       canonicalName: merchant.displayName.toUpperCase(),
       displayName: merchant.displayName,
       isKnownSubscription: merchant.isKnownSubscription,
+      // §2.5's `normalize` stage: "Category assigned by rule". The rule is the
+      // merchant's own default, and this is the column that carries it — without
+      // it `transaction.category_id` is never populated by anything and §5.10 has
+      // nothing to trend (§9g, §9h).
+      defaultCategoryId: merchant.defaultCategoryId,
     });
   }
 
@@ -110,6 +115,23 @@ function seedMerchants(store: LedgerlineStore): void {
       source: alias.source,
     });
   }
+
+  /**
+   * The rows that were committed before the seed set had categories.
+   *
+   * §6.1 refuses a re-parse on a committed import, and rightly — but this is not
+   * a re-parse. The categorizer is a property of the merchant, the merchant was
+   * resolved when those rows landed, and the answer for a two-year-old row is the
+   * same answer it would get today. Leaving them uncategorized would mean §5.10
+   * trended only whatever was imported after this commit, and a coverage bar that
+   * went green over months with no categories in them.
+   *
+   * At boot rather than behind an endpoint because it is idempotent and matches
+   * nothing on the second call: `category_source IS NULL` excludes both the rows a
+   * rule already did and the ones a human cleared on purpose. A backfill nobody
+   * has to remember to run is one that has actually run. Recorded in §9h.
+   */
+  store.transactions.applyMerchantDefaultCategories();
 }
 
 /**
@@ -157,6 +179,7 @@ function seedProfiles(store: LedgerlineStore, profilesDir: string): string[] {
       skipLines: loaded.profile.skipLines,
       columnMapJson: JSON.stringify(loaded.profile.columnMap),
       dateFormat: loaded.profile.dateFormat,
+      periodPattern: loaded.profile.periodPattern,
       amountMode: loaded.profile.amountMode,
       signConvention: loaded.profile.signConvention,
       pendingValues: loaded.profile.pendingValues,
@@ -183,6 +206,7 @@ export function toFormatProfile(record: FormatProfileRecord): FormatProfile {
     delimiter: record.delimiter,
     skipLines: record.skipLines,
     dateFormat: record.dateFormat,
+    periodPattern: record.periodPattern,
     amountMode: record.amountMode,
     signConvention: record.signConvention,
     columnMap: JSON.parse(record.columnMapJson) as Partial<Record<ColumnRole, ColumnRef>>,

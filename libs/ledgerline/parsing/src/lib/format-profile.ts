@@ -65,6 +65,24 @@ export interface FormatProfile {
   readonly skipLines: number;
   /** Explicit, never sniffed — see the note in `domain/dates.ts`. */
   readonly dateFormat: string;
+  /**
+   * How this bank writes its statement period in the preamble, as a regular
+   * expression with **two capture groups**: start, then end.
+   *
+   * `null` for a file that declares no period — `profiles/cardinal-card.json` has
+   * `skipLines: 0` and no preamble at all — in which case the period falls back to
+   * the first and last row dates, which is what it always was. Optional is
+   * therefore not a convenience: most exports have nothing to read here.
+   *
+   * The pattern locates the dates; **`dateFormat` reads them**. Writing the date
+   * shape into the pattern as well would be two sources of truth for one fact, and
+   * the one in the pattern is the one nothing validates. `PERIOD_PATTERN_GROUPS`
+   * below is enforced by `validateProfile`.
+   *
+   * Matched against the raw text of the preamble lines only — the `skipLines` rows
+   * above the header, never the data. Recorded in §9h.
+   */
+  readonly periodPattern: string | null;
   readonly amountMode: AmountMode;
   readonly signConvention: SignConvention;
   readonly columnMap: Partial<Record<ColumnRole, ColumnRef>>;
@@ -134,6 +152,15 @@ export function validateProfile(profile: FormatProfile): ProfileValidation {
     }
   }
 
+  errors.push(...periodPatternErrors(profile));
+
+  if (profile.periodPattern !== null && profile.skipLines === 0) {
+    warnings.push(
+      'periodPattern is set but skipLines is 0 — the pattern is matched against preamble lines ' +
+        'only, so there is nothing for it to read and the period will fall back to row dates'
+    );
+  }
+
   if (!profile.hasHeader) {
     for (const [role, ref] of Object.entries(map)) {
       if (ref && ref.by === 'header') {
@@ -158,6 +185,63 @@ export function validateProfile(profile: FormatProfile): ProfileValidation {
   }
 
   return { ok: errors.length === 0, errors, warnings };
+}
+
+/** Start and end, in that order. */
+export const PERIOD_PATTERN_GROUPS = 2;
+
+/**
+ * Compile a profile's `periodPattern`, or say why it cannot be one.
+ *
+ * Shared by `validateProfile` and the parser so that "is this pattern usable" has
+ * one answer. A profile that reaches the parser has already been validated, so the
+ * parser's call cannot fail — but a *silent* second opinion is how the two drift.
+ */
+export function compilePeriodPattern(
+  pattern: string
+): { ok: true; regex: RegExp } | { ok: false; reason: string } {
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern);
+  } catch (cause) {
+    return { ok: false, reason: `is not a valid regular expression (${(cause as Error).message})` };
+  }
+
+  // `new RegExp(source + '|')` matches the empty string and still reports the
+  // group count, which is the only way to count groups without parsing the
+  // pattern by hand.
+  const groups = (new RegExp(`${regex.source}|`).exec('')?.length ?? 1) - 1;
+  if (groups < PERIOD_PATTERN_GROUPS) {
+    return {
+      ok: false,
+      reason:
+        `needs ${PERIOD_PATTERN_GROUPS} capture groups — the period start and the period end — ` +
+        `but has ${groups}`,
+    };
+  }
+
+  return { ok: true, regex };
+}
+
+/**
+ * A malformed period pattern is an error here, never a silent fallback.
+ *
+ * The fallback to row dates is the *designed* answer for a profile that declares
+ * no period. Reusing it for a profile that declares one badly would hide a typo
+ * behind behaviour indistinguishable from correctness — and the symptom, months
+ * that will not go green on §6.2's bar, points at the coverage rule rather than at
+ * the profile. This function is why `periodPattern` is refused eagerly, in the
+ * same breath as a missing amount column.
+ */
+function periodPatternErrors(profile: FormatProfile): string[] {
+  if (profile.periodPattern === null) return [];
+
+  if (profile.periodPattern.trim() === '') {
+    return ['periodPattern is empty — use null for a file that declares no period'];
+  }
+
+  const compiled = compilePeriodPattern(profile.periodPattern);
+  return compiled.ok ? [] : [`periodPattern ${compiled.reason}`];
 }
 
 /** Build a syntactically valid sample for a format so the format itself can be

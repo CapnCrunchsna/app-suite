@@ -54,6 +54,9 @@ interface FormatProfileDraft {
   delimiter?: string;
   skipLines?: number;
   dateFormat: string;
+  /** Omitted means "keep whatever the profile being updated already had"; an
+   *  explicit `null` clears it. See `toCandidate`. */
+  periodPattern?: string | null;
   amountMode?: 'single' | 'debit_credit';
   signConvention?: 'as_is' | 'invert';
   columnMap: Partial<Record<ColumnRole, ColumnRef>>;
@@ -122,8 +125,21 @@ function readFileShape(
   };
 }
 
-/** The draft, plus what the file supplies, as the profile the parser takes. */
-function toCandidate(draft: FormatProfileDraft, shape: FileShape, id: string): FormatProfile {
+/**
+ * The draft, plus what the file supplies, as the profile the parser takes.
+ *
+ * `carriedPeriodPattern` is the one field the mapper has no control for yet
+ * (§9h). Letting an omitted field mean "null" would quietly delete a working
+ * profile's declared period the first time anyone re-saved its column mapping —
+ * and the symptom would be months going grey on §6.2's bar weeks later, with the
+ * mapping edit long forgotten. Omitted keeps; an explicit `null` clears.
+ */
+function toCandidate(
+  draft: FormatProfileDraft,
+  shape: FileShape,
+  id: string,
+  carriedPeriodPattern: string | null = null,
+): FormatProfile {
   return {
     id,
     institution: draft.institution,
@@ -134,6 +150,8 @@ function toCandidate(draft: FormatProfileDraft, shape: FileShape, id: string): F
     delimiter: draft.delimiter ?? shape.delimiter,
     skipLines: draft.skipLines ?? shape.skipLines,
     dateFormat: draft.dateFormat,
+    periodPattern:
+      draft.periodPattern === undefined ? carriedPeriodPattern : draft.periodPattern,
     amountMode: draft.amountMode ?? 'single',
     signConvention: draft.signConvention ?? 'as_is',
     columnMap: draft.columnMap,
@@ -220,7 +238,13 @@ export function registerFormatProfileRoutes(
         return reply.code(422).send({ error: 'undetectable', message: read.reason });
       }
 
-      const candidate = toCandidate(draft, read.shape, draft.id ?? 'preview');
+      const candidate = toCandidate(
+        draft,
+        read.shape,
+        draft.id ?? 'preview',
+        context.store.formatProfiles.findByHeaderSignature(read.shape.headerSignature)
+          ?.periodPattern ?? null,
+      );
 
       /** Everything the mapper needs about the file, regardless of how the draft
        *  fared — the grid stays populated while the mapping is still wrong. */
@@ -351,7 +375,7 @@ export function registerFormatProfileRoutes(
         existing?.id ??
         `${slug(draft.institution)}-${read.shape.headerSignature.slice(0, 8)}`;
 
-      const candidate = toCandidate(draft, read.shape, id);
+      const candidate = toCandidate(draft, read.shape, id, existing?.periodPattern ?? null);
       const validation = validateProfile(candidate);
 
       if (!validation.ok) {
@@ -386,6 +410,7 @@ export function registerFormatProfileRoutes(
         skipLines: candidate.skipLines,
         columnMapJson: JSON.stringify(candidate.columnMap),
         dateFormat: candidate.dateFormat,
+        periodPattern: candidate.periodPattern,
         amountMode: candidate.amountMode,
         signConvention: candidate.signConvention,
         pendingValues: candidate.pendingValues,

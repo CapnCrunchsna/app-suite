@@ -265,6 +265,11 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
 
     it('filters by category', async () => {
       const row = await oneRow(`q=SHELL OIL&accountIds=${checkingId}`);
+      // Not zero: §2.5's rule already categorized the Uber and Lyft rows from
+      // their merchants' defaults (§9h). The filter is what is under test, so the
+      // assertion is relative to what the rule left rather than to a fixed count.
+      const before = await search('categoryIds=transport&limit=1000');
+
       await app.inject({
         method: 'PATCH',
         url: `/api/transactions/${row.id}`,
@@ -272,8 +277,39 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
       });
 
       const transport = await search('categoryIds=transport&limit=1000');
-      expect(transport.total).toBe(1);
-      expect(transport.rows[0].transaction.id).toBe(row.id);
+      expect(transport.total).toBe(before.total + 1);
+      expect(transport.rows.some((r) => r.transaction.id === row.id)).toBe(true);
+      expect(transport.rows.every((r) => r.transaction.categoryId === 'transport')).toBe(true);
+    });
+
+    /**
+     * §2.5's `normalize` stage, second half: "Category assigned by rule."
+     *
+     * The rule is one line — a resolved merchant's `default_category_id` becomes
+     * the row's category, stamped `rule` — and until §9h nothing implemented it,
+     * so `transaction.category_id` was null on every row ever imported and §5.10's
+     * `trend.v1` had nothing to trend (§9g).
+     */
+    it('assigns a category from the resolved merchant at import (§2.5, §9h)', async () => {
+      const netflix = await search('merchantIds=netflix&limit=1000');
+      expect(netflix.total).toBeGreaterThan(0);
+      expect(
+        netflix.rows.every(
+          (row) =>
+            row.transaction.categoryId === 'entertainment' &&
+            row.transaction.categorySource === 'rule'
+        )
+      ).toBe(true);
+
+      // A provisional merchant has no default, and a rule with no answer says
+      // nothing rather than guessing one.
+      const provisional = await search(`q=BLUE BOTTLE&accountIds=${checkingId}&limit=1000`);
+      expect(provisional.total).toBeGreaterThan(0);
+      expect(
+        provisional.rows.every(
+          (row) => row.transaction.categoryId === null && row.transaction.categorySource === null
+        )
+      ).toBe(true);
     });
 
     it('filters by pending', async () => {

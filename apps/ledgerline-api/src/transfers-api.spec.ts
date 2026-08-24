@@ -621,16 +621,43 @@ describe('ledgerline-api transfers and accounts (§2.6, §6.2)', () => {
         'northgate-checking-2026-02.csv',
       ]);
 
-      // The periods are the parser's, and the parser fills them from the first
-      // and last row it saw — January's statement runs the 3rd to the 30th. So
-      // §7.2's spanning test fails on a perfectly ordinary month, and the bar
-      // says `partial` rather than lying in either direction. §9f.
-      expect(bar.coverageStart).toBe('2026-01-03');
+      // The periods are the ones the statements *declare* — January's preamble
+      // says 01/01–01/31 even though its rows run the 3rd to the 30th — so §7.2's
+      // spanning test passes on an ordinary month and the bar goes green. Before
+      // the parser read a declared period these were `partial`, and §5.10 and
+      // §5.11 had no month they were willing to compute over (§9f, §9g, §9h).
+      expect(bar.coverageStart).toBe('2026-01-01');
       // §7.2's reference point for every liveness and lapse test in §5.
-      expect(bar.coverageEnd).toBe('2026-02-14');
-      expect(bar.months.every((month) => month.state === 'partial')).toBe(true);
-      expect(bar.months.every((month) => month.covered)).toBe(false);
+      expect(bar.coverageEnd).toBe('2026-02-28');
+      expect(bar.months.every((month) => month.state === 'covered')).toBe(true);
+      expect(bar.months.every((month) => month.covered)).toBe(true);
       expect(bar.gapMonths).toEqual([]);
+      expect(bar.partialMonths).toEqual([]);
+    });
+
+    /**
+     * §7.2 stays strict, and `partial` stays a real state (§9h).
+     *
+     * Two half-month statements, each declaring its own half honestly. §7.2 wants
+     * "a committed import" — singular — to span the month, and neither does. The
+     * fix in §9h makes more months genuinely covered; it does not move this test,
+     * and a statement that really is half a month is still a thing that happens.
+     */
+    it('still says partial when no single statement spans the month (§7.2)', async () => {
+      await importFixture('northgate-checking-2026-01-part-a.csv', checkingId);
+      await importFixture('northgate-checking-2026-01-part-b.csv', checkingId);
+
+      const bar = await coverage(checkingId);
+      expect(bar.months.map((month) => `${month.month}:${month.state}`)).toEqual([
+        '2026-01:partial',
+      ]);
+      expect(bar.months.every((month) => month.covered)).toBe(false);
+      expect(bar.partialMonths).toEqual(['2026-01']);
+      // The union of the two does cover January, and §7.2 declines to say so on
+      // purpose: the middle is unproven, and two statements that overlap are not
+      // evidence that nothing is missing between them.
+      expect(bar.coverageStart).toBe('2026-01-01');
+      expect(bar.coverageEnd).toBe('2026-01-31');
     });
 
     it('says covered when a statement really does span the month (§7.2)', async () => {
@@ -666,13 +693,12 @@ describe('ledgerline-api transfers and accounts (§2.6, §6.2)', () => {
       const bar = await coverage(checkingId);
       // Contiguous cells, so the hole is visible at a glance — which is §6.2's
       // stated reason for the bar existing. February and March have no statement
-      // at all; January and April have one that does not reach both month
-      // boundaries, which is what every real statement looks like.
+      // at all; January and April each have one that declares the whole month.
       expect(bar.months.map((month) => `${month.month}:${month.state}`)).toEqual([
-        '2026-01:partial',
+        '2026-01:covered',
         '2026-02:missing',
         '2026-03:missing',
-        '2026-04:partial',
+        '2026-04:covered',
       ]);
       expect(bar.gapMonths).toEqual(['2026-02', '2026-03']);
     });
@@ -707,7 +733,9 @@ describe('ledgerline-api transfers and accounts (§2.6, §6.2)', () => {
       });
 
       const bar = await coverage(checkingId);
-      expect(bar.coverageEnd).toBe('2026-01-30');
+      // January's declared end, not February's — the February file was uploaded
+      // and reviewed, and §7.2 counts a *committed* import.
+      expect(bar.coverageEnd).toBe('2026-01-31');
       expect(bar.months.map((month) => month.month)).toEqual(['2026-01']);
     });
 

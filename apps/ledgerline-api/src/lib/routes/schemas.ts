@@ -78,6 +78,8 @@ export const PARSE_WARNING_KINDS = [
   'header_only',
   'signature_mismatch',
   'sign_convention_suspect',
+  'declared_period_unreadable',
+  'rows_outside_period',
   'profile_warning',
 ] as const;
 export const BALANCE_CHECK_KINDS = ['unavailable', 'reconciled', 'mismatch'] as const;
@@ -555,6 +557,10 @@ const formatProfile = {
      *  numbers and address blocks more often than not. */
     skipLines: { type: 'integer' },
     dateFormat: { type: 'string' },
+    /** Regex with two capture groups — start, then end — read against the preamble
+     *  lines `skipLines` names. `null` for an export that declares no period, which
+     *  is most of them; the period then falls back to row dates (§7.2, §9h). */
+    periodPattern: nullableString,
     amountMode: { type: 'string', enum: AMOUNT_MODES },
     signConvention: { type: 'string', enum: SIGN_CONVENTIONS },
     columnMap: ref('ColumnMap'),
@@ -597,6 +603,10 @@ const formatProfileDraft = {
      *  eye. */
     skipLines: { type: 'integer', minimum: 0 },
     dateFormat: { type: 'string', minLength: 1 },
+    /** Omitted keeps whatever the profile being updated already had; `null` clears
+     *  it. The mapper has no control for this yet, and an omitted field silently
+     *  meaning "clear" would drop a working profile's period on the next save. */
+    periodPattern: { type: ['string', 'null'] },
     amountMode: { type: 'string', enum: AMOUNT_MODES },
     signConvention: { type: 'string', enum: SIGN_CONVENTIONS },
     columnMap: ref('ColumnMap'),
@@ -861,11 +871,13 @@ const coveragePeriod = {
 /**
  * One cell of §6.2's coverage bar.
  *
- * Three states, because the periods this app holds are the first and last row
- * dates the parser saw rather than a declared statement period — so an ordinary
- * January statement running the 3rd to the 30th fails spec 7.2's spanning test
- * while plainly being January's statement. `partial` is the honest answer, and
- * it is precisely what spec 5.10 and 5.11 refuse to compute over.
+ * Three states, and `partial` is no longer the common case. A profile that
+ * carries a `periodPattern` reads the period the statement *declares*, so an
+ * ordinary January statement running the 3rd to the 30th now spans January and
+ * goes green (§9h). `partial` stays because a statement genuinely covering half a
+ * month is still a real thing — a mid-cycle export, or a bank whose preamble this
+ * app cannot read yet — and it is precisely what spec 5.10 and 5.11 refuse to
+ * compute over.
  */
 const coverageMonth = {
   $id: 'CoverageMonth',

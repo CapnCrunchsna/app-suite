@@ -1,0 +1,23 @@
+-- §7.2 makes a month covered when "a committed import's `[period_start,
+-- period_end]` spans it". Until this column existed no profile could read a
+-- statement's *declared* period, so those two came from the first and last row
+-- dates the parser saw — and an ordinary January statement running the 3rd to the
+-- 30th does not span January. `fullyCoveredMonths` was therefore empty for
+-- essentially every real account, which is why §5.10's `trend.v1` and §5.11's
+-- `micro.v1` shipped correct and silent (§9f, §9g).
+--
+-- The fix is a fact about the *file*, so it belongs on the profile beside
+-- `skip_lines` and `date_format`: a regular expression with two capture groups —
+-- start, then end — matched against the preamble lines `skip_lines` already
+-- names. The pattern locates the dates; `date_format` reads them, because writing
+-- the date shape into the pattern as well would be two sources of truth for one
+-- fact and the one in the pattern is the one nothing validates.
+--
+-- Nullable, and that is not a convenience. Most exports declare no period at all:
+-- `profiles/cardinal-card.json` and `profiles/harbor-savings.json` both have
+-- `skip_lines = 0` and no preamble to read. A profile with no pattern falls back
+-- to the row-date derivation, which is exactly what every profile did before.
+-- A pattern that is present but malformed is refused by `validateProfile` instead
+-- — a silent fallback there would hide a typo behind behaviour indistinguishable
+-- from correctness. Recorded in §9h.
+ALTER TABLE format_profile ADD COLUMN period_pattern TEXT;

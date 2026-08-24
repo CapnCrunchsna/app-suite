@@ -90,6 +90,8 @@ function importFile(
     descriptionRaw: row.description,
     descriptionNormalized: collapseV1(row.description),
     merchantId: row.merchantId ?? null,
+    categoryId: null,
+    categorySource: null,
     isPending: row.pending ?? false,
   }));
 
@@ -333,6 +335,8 @@ describe('import', () => {
           descriptionRaw: 'BLUE BOTTLE COFFEE',
           descriptionNormalized: 'BLUE BOTTLE COFFEE',
           merchantId: null,
+          categoryId: null,
+          categorySource: null,
           isPending: false,
         },
       ]);
@@ -398,6 +402,8 @@ describe('import', () => {
           descriptionRaw: 'TRADER JOES 0198',
           descriptionNormalized: 'TRADER JOES',
           merchantId: null,
+          categoryId: null,
+          categorySource: null,
           isPending: false,
         },
       ]);
@@ -694,6 +700,8 @@ describe('import', () => {
         descriptionRaw: row.description,
         descriptionNormalized: collapseV1(row.description),
         merchantId: null,
+        categoryId: null,
+        categorySource: null,
         isPending: false,
       }));
 

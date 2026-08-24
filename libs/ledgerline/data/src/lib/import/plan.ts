@@ -15,7 +15,7 @@ import { collapseV1, dedupeKey, daysBetweenIso } from '@metrum/ledgerline-domain
 import type { Currency } from '@metrum/ledgerline-domain';
 
 import type { TransactionRepository } from '../repositories/transactions.js';
-import type { TransactionRecord } from '../records.js';
+import type { ProvenanceSource, TransactionRecord } from '../records.js';
 
 /**
  * One parsed row, already normalized by the composition root.
@@ -38,6 +38,19 @@ export interface IncomingRow {
   readonly descriptionRaw: string;
   readonly descriptionNormalized: string;
   readonly merchantId: string | null;
+  /**
+   * §2.5's `normalize` stage assigns a category "by rule", and the rule is the
+   * resolved merchant's `default_category_id`. Resolved in the composition root
+   * alongside `merchantId`, for the same reason: `data` may not reach the §4
+   * chain that produced either (§2.2).
+   *
+   * `null` is ordinary — a provisional merchant has no default, and a row whose
+   * descriptor resolved to nothing has no merchant at all.
+   */
+  readonly categoryId: string | null;
+  /** §4.3's vocabulary. `'rule'` for everything this path assigns; a `'user'`
+   *  category is written by §6.3's edit and outranks it permanently. */
+  readonly categorySource: ProvenanceSource | null;
   readonly isPending: boolean;
 }
 

@@ -1,6 +1,7 @@
 export * from './lib/csv-reader.js';
 export * from './lib/format-signature.js';
 export * from './lib/format-profile.js';
+export * from './lib/statement-period.js';
 export * from './lib/profile-io.js';
 export * from './lib/balance-check.js';
 export * from './lib/node-csv-parser.js';

@@ -329,9 +329,31 @@ export function buildIncomingRows(
     { aliases, knownMerchantKeys: SEED_MERCHANT_KEYS, trace: false },
   );
 
+  // One lookup per distinct merchant rather than one per row: a statement is
+  // hundreds of rows over a dozen merchants, and the default category is a
+  // property of the merchant.
+  const defaultCategories = new Map<string, string | null>();
+  const defaultCategoryFor = (merchantId: string | null): string | null => {
+    if (merchantId === null) return null;
+    if (!defaultCategories.has(merchantId)) {
+      defaultCategories.set(
+        merchantId,
+        context.store.merchants.get(merchantId)?.defaultCategoryId ?? null,
+      );
+    }
+    return defaultCategories.get(merchantId) ?? null;
+  };
+
   const rows = hydrated.map((entry, index) => {
     const result = normalized[index];
     const merchantId = resolveMerchant(context, result.resolution);
+    // §2.5's `normalize` stage, second half: "Category assigned by rule, then
+    // optionally by LLM." The rule is the resolved merchant's own default, which
+    // is why it is computed here beside the merchant and not in a stage of its
+    // own — there is no category question that the merchant has not already
+    // answered. §4.2's LLM half is still unbuilt, and `category_source` is what
+    // will tell the two apart when it lands.
+    const categoryId = defaultCategoryFor(merchantId);
 
     return {
       rowIndex: entry.row.rowIndex,
@@ -346,6 +368,8 @@ export function buildIncomingRows(
       descriptionRaw: entry.row.descriptionRaw,
       descriptionNormalized: result.descriptionNormalized,
       merchantId,
+      categoryId,
+      categorySource: categoryId === null ? null : ('rule' as const),
       isPending: entry.row.status === 'pending',
     } satisfies IncomingRow;
   });

@@ -122,6 +122,17 @@ export function loadProfile(raw: unknown): ProfileLoad {
     }
   }
 
+  // Absent or null means "this bank declares no period", which is the common case
+  // and a designed one. Anything else present is a typo, and rounding a typo to
+  // null here would restore exactly the silent fallback §9h exists to remove.
+  if (
+    raw.periodPattern !== undefined &&
+    raw.periodPattern !== null &&
+    typeof raw.periodPattern !== 'string'
+  ) {
+    errors.push('periodPattern must be a regular-expression string, or null/absent');
+  }
+
   const pendingValues = Array.isArray(raw.pendingValues)
     ? raw.pendingValues.filter((v): v is string => typeof v === 'string')
     : ['pending'];
@@ -142,6 +153,7 @@ export function loadProfile(raw: unknown): ProfileLoad {
     delimiter: typeof raw.delimiter === 'string' ? raw.delimiter : ',',
     skipLines: typeof raw.skipLines === 'number' && raw.skipLines >= 0 ? Math.trunc(raw.skipLines) : 0,
     dateFormat,
+    periodPattern: typeof raw.periodPattern === 'string' ? raw.periodPattern : null,
     amountMode,
     signConvention,
     columnMap,

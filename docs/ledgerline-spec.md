@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9g
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9h
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -50,19 +50,25 @@ four remaining rules — fees and interest (§5.8), outlier charges (§5.9), cat
 `analyze()` composes all nine over one snapshot. They need no UI work of their own: §6.4 groups
 by rule, so they appear on the Findings page as they are.
 
-**Two of those four are correct and silent on today's data**, and §9g says why in full: §5.10
-and §5.11 restrict themselves to §7.2's fully-covered months, which almost nothing qualifies as
-while `period_start`/`period_end` come from row dates rather than a declared statement period
-(§9f); and §5.10 additionally needs a `category_id`, which nothing assigns yet. Both fire, and
-produce the numbers those sections describe, once given data that clears those two gates.
+As of 2026-08-23 **§5.10's `trend.v1` and §5.11's `micro.v1` are no longer silent**, because the
+two pipeline stages they were starved by now feed them. §9g recorded that both rules were
+correct and emitted nothing: they restrict themselves to §7.2's fully-covered months, which
+almost nothing qualified as while `period_start`/`period_end` came from row dates rather than a
+declared statement period (§9f), and §5.10 additionally needs a `category_id`, which nothing
+assigned. **The parser now reads a declared period** — an optional `period_pattern` on
+`format_profile`, matched against the preamble — and **§2.5's `normalize` stage now assigns a
+category by rule**, from the resolved merchant's `default_category_id`, stamped
+`category_source = 'rule'` with §4.3's `user` precedence honoured on every path. Neither rule
+changed; both fire over a multi-year corpus and produce the numbers §5.10 and §5.11 describe,
+and §6.2's coverage bar, which rendered every month `partial`, now goes green on an ordinary
+statement. §9h records the six decisions this took.
 
-PDF ingest, the LLM stage of §4.2, **the rule-based categorizer of §2.5's `normalize` stage**
-and **the parser's declared-period reading** are **not** built, nor are the merchant-alias,
+PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
 review-queue, series, insights, ask and settings endpoints of §2.3, nor **four of §6's eight
 pages**. §6.1's Import, §6.2's Accounts, §6.3's Transactions and §6.4's Findings exist; §6.5's
 Subscriptions is the one the Findings page's "Open subscription" action currently names rather
 than navigates to. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f and §9g list the amendments implementation made to this
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g and §9h list the amendments implementation made to this
 document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -1360,6 +1366,50 @@ holds with a new `savings` emitter in the set — the headline came to exactly t
 three savings findings, with `micro.v1`'s $1,459/yr and `outlier.v1`'s $4,120 correctly outside
 it. `micro.v1` reproduced §5.11's own illustration, $1,459/yr for coffee, out of the §4 chain's
 own merchant grouping rather than a hand-built fixture.
+
+## 9h. Amendments from implementation — 2026-08-23 (§2.5, §7.2)
+
+Closing the two gaps §9f and §9g diagnosed — the parser never read a declared statement period,
+and nothing assigned a category — made §5.10's `trend.v1` and §5.11's `micro.v1` emit. Neither
+rule changed. Both were already correct; they were starved, and this is the food. The work
+needed six decisions this document does not make: two are a field the schema does not have, one
+is a filter §4.3 implies without naming, and three are silences.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 | **`format_profile` gains `period_pattern`** (migration `004`), a regex with two capture groups matched against the preamble. | §7.2 makes a month covered when a committed import's `[period_start, period_end]` spans it, and §9f recorded that those two were the first and last **row dates** — so an ordinary January statement running the 3rd to the 30th did not span January, `fullyCoveredMonths` was empty for essentially every account, and the two rules gated on it were correct and silent. Where the fix belongs is not a judgment call: the period is a fact about *this bank's export*, printed above the header in the same block as the account number, and §2.5 already makes the profile "where every bank's disagreement gets absorbed". Scanning the preamble rather than the file keeps the search bounded to the handful of lines `skip_lines` already names and stops a pattern reading a period out of a transaction descriptor. |
+| 3.1 | **The pattern locates the dates; `date_format` reads them.** | The obvious pattern spells the date shape out — `(\d{2}/\d{2}/\d{4})` — and that is two sources of truth for one fact, of which the copy inside the regex is the one nothing validates. `01/02/2026` is two different days depending on the bank and the string does not say which, which is the whole argument in `domain/dates.ts`; the profile already answers it once, in `date_format`, and the period is parsed through `parseDateToIso` against that answer like every row date. Keeping the groups loose also means a bank changing `-` to `to` is a one-token profile edit rather than a rewrite. |
+| 2.5 | **Optional, and a *malformed* pattern is an error rather than a fallback.** | Most exports declare nothing: `profiles/cardinal-card.json` and `profiles/harbor-savings.json` both have `skip_lines: 0` and no preamble at all, so the row-date derivation stays and stays correct — it is the designed answer for a file with no declaration, not a legacy path. What must not share that answer is a pattern that was *supposed* to work: a typo falling back silently produces behaviour indistinguishable from correctness, and the symptom surfaces weeks later as months that will not go green, pointing at §7.2 rather than at the profile. `validateProfile` refuses it eagerly, beside a missing amount column. A pattern that compiles but finds nothing in a given file, or captures dates that do not read as `date_format`, is the third case — the profile is fine and this file is not — so it falls back **with a warning** rather than failing the import. |
+| 2.5 | **The rule-based categorizer is one line: a resolved merchant's `default_category_id` is the transaction's category, stamped `category_source = 'rule'`.** | §2.5's `normalize` stage says "Category assigned by rule, then optionally by LLM" and specifies neither. The temptation is a keyword table — a second chain over the descriptor, with its own precedence and its own disagreements with §4 about what a row's merchant is. There is no need: the §4 chain already answers the hard question, `merchant_canonical.default_category_id` is already in the schema and already on the wire, and a category is a property of the merchant. The seed set carries the ids; a provisional merchant has no default and the rule says nothing rather than guessing. §7.6 governs every assignment exactly as it governs the merchant list itself. |
+| 4.3 | **`TransactionQuery` gains `excludeUserCategorized`, and the re-normalize sweep uses it.** | §4.3 makes a user correction "permanent and beats everything", and the one place a rule could quietly overrule it is §2.7's re-normalize: a merchant correction repoints four years of history, and under this amendment the merchant's default category rides along. On a row the user categorized by hand it must not. A filter rather than a conditional `UPDATE`, because "which rows" is a filter question and because the merchant half of the same sweep still has to touch **every** row — a hand-picked category is not a reason to leave a merchant wrong. Two passes over one descriptor, selecting two different sets, says §4.3's precedence out loud instead of encoding it in SQL. |
+| 4.3 | **A correction that lands on a merchant with no default *clears* the rule's category rather than keeping it.** | The alternative strands the old answer: a row moved from a merchant defaulting to `dining` onto one with no default would keep trending as `dining` under §5.10 forever, and the user's evidence that it was wrong is exactly the correction they just made. The rule now says nothing about that row, and saying nothing is a real answer — `category_source` returns to null and the row is uncategorized, which is where it would have started had the correct merchant resolved first. A `user` category is untouched either way. |
+
+**§7.2 is unchanged, and `partial` is not.** This amendment makes more months *genuinely*
+covered; it does not weaken the spanning test, which §9f already considered and rejected
+weakening. §6.2's bar keeps all three states because the middle case is real — two half-month
+statements of one month leave the middle unproven and §7.2 declines to guess, a mid-cycle export
+covers what it covers, and a bank whose preamble no profile reads yet still lands on row dates.
+What changes is the frequency: `partial` was every cell and is now the exception.
+
+**Three smaller calls.** A **backwards declared period** — end before start — is treated as a
+non-match and warned about, never silently swapped: which capture group is the start is the
+profile's own claim, so a reversed pair means the profile is wrong about its file, and a period
+that ends before it starts costs the import all of its coverage rather than some of it.
+**§6.1's "dates outside the detected period" is now implemented** (`rows_outside_period`), and
+only became askable here: against a period derived from the same rows it was true by
+construction. The rows are kept — a late-posting charge is real — and the warning says coverage
+is claimed for the declared window only. And **only `user` is protected from re-categorization**,
+not everything §4.3 ranks above `rule`: nothing writes a `seed` category today, and §4.2's `llm`
+stage when it lands must *lose* to a rule rather than beat it, so a general precedence ladder
+here would be wrong in one direction or the other. `category_source` is what a later amendment
+will read to make that call properly.
+
+**The backfill question, decided both ways.** §6.1 refuses a re-parse on a committed import, so
+neither gap fixes itself for statements already in the database — and leaving that ambiguous was
+not an option. The two answers differ because the two backfills do:
+
+- **Categories are backfilled, automatically.** The categorizer is a property of the merchant, the merchant was resolved when those rows were committed, and the answer for a two-year-old row is the answer it would get today — so there is nothing to re-derive and no file to re-read. It runs in the composition root beside the seeding, guarded on `category_source IS NULL`, which excludes both the rows a rule already did and the ones a human deliberately cleared. Idempotent, so the second boot matches nothing. A backfill nobody has to remember to run is one that has actually run.
+- **Periods are not.** That one *is* a re-read of the stored bytes, and it would rewrite the reviewed period of an import a human already accepted — a second, narrower re-parse path beside the one §6.1 refuses, with the same objection against it. The honest answer is the one §3.3 already makes exact and lossless: delete the import and re-import the file. `DELETE /api/imports/:id` exists, and re-uploading is idempotent by file hash. Recorded here so that a coverage bar with old grey cells in it is a known state with a known remedy rather than a mystery.
 
 ## 10. Open discrepancies — recorded, not resolved
 

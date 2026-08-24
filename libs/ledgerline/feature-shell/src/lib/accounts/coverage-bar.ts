@@ -13,16 +13,20 @@
  * rendered as *evidence* rather than decoration: one cell per month with no gaps
  * in the strip itself, and a legend that says what each state means.
  *
- * ## Three states, and the middle one is the honest one
+ * ## Three states, and the middle one is no longer the common one
  *
- * §7.2 makes a month covered only when a committed import's period spans it. The
- * periods this app holds are the first and last row dates the parser saw — no
- * format profile reads a statement's declared period — so an ordinary January
- * statement running the 3rd to the 30th does not span January. Painting that red
- * would claim a statement is missing when it is sitting in the database; painting
- * it green would promise §5.10 and §5.11 a complete month they are entitled to
- * refuse. `partial` is the third answer, and the legend explains it rather than
- * leaving a colour to be guessed at. See §9f.
+ * §7.2 makes a month covered only when a committed import's period spans it. A
+ * profile that carries a `periodPattern` reads the period the statement itself
+ * declares, so an ordinary January statement running the 3rd to the 30th now
+ * spans January and the cell goes green (§9h). Before that, the periods were the
+ * first and last row dates and almost every cell was `partial` (§9f).
+ *
+ * `partial` stays, because it is still the honest answer for a statement that
+ * genuinely covers half a month — a mid-cycle export, two halves of one month, or
+ * a bank whose preamble no profile reads yet. Painting those red would claim a
+ * statement is missing when it is sitting in the database; painting them green
+ * would promise §5.10 and §5.11 a complete month they are entitled to refuse. The
+ * legend explains it rather than leaving a colour to be guessed at.
  *
  * Presentational. It renders what it is given and fetches nothing.
  */

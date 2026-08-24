@@ -262,6 +262,7 @@ function main() {
           dedupeKeyVersion: DEDUPE_KEY_VERSION,
           periodStart: result.periodStart,
           periodEnd: result.periodEnd,
+          periodDeclared: result.periodDeclared,
           parser: result.parser,
           parserVersion: result.parserVersion,
           balanceCheck: result.balanceCheck,
@@ -290,7 +291,7 @@ function main() {
 
   console.log(`\n  ${basename(filePath)}`);
   console.log(`  profile ${profile.id} · ${profile.institution} · ${profile.accountTypeHint ?? 'unknown type'}`);
-  console.log(`  ${result.rows.length} rows parsed, ${result.errors.length} failed · period ${result.periodStart ?? '—'} → ${result.periodEnd ?? '—'}\n`);
+  console.log(`  ${result.rows.length} rows parsed, ${result.errors.length} failed · period ${result.periodStart ?? '—'} → ${result.periodEnd ?? '—'} (${result.periodDeclared ? 'declared by the statement' : 'from row dates'})\n`);
 
   console.log(
     `  ${pad('DATE', 11)}${padStart('AMOUNT', 12)}  ${pad('MERCHANT', 34)}${pad('RAW DESCRIPTOR', 40)}`

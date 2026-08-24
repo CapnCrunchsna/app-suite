@@ -23,7 +23,10 @@ Built: the `ingest → detect → parse → normalize` half of §2.5's pipeline,
 | PDF ingest | **not built** — v0.4 |
 | UI (§6) | Angular shell scaffolded since — wireframe only, no pages. See `apps/ledgerline-ui/README.md`. |
 | SQLite schema (§3.1, §3.2), idempotent re-import (§3.3), the API (§2.3) | built since, 2026-08-06, in `libs/ledgerline/data` and `apps/ledgerline-api` |
-| LLM stage of §4.2, the analyzers of §5 | **not built** — out of scope for this build |
+| Declared statement periods (`periodPattern`, §7.2) | built since, 2026-08-23; spec §9h |
+| LLM stage of §4.2 | **not built** |
+| The analyzers of §5 | built since — all nine rules, out of scope for *this* document |
+| Rule-based categorization (§2.5 `normalize`) | built since, 2026-08-23 — a merchant's `default_category_id`; spec §9h |
 
 **Nothing in these three libs writes anywhere**, and that is still true now that a database
 exists. Every entry point here takes values and returns values, per §2.1's "libs compute; the
@@ -81,6 +84,7 @@ A profile is JSON in `profiles/`, keyed on the hash of the header row. Fields mi
 | `delimiter` | One character. |
 | `skipLines` | Preamble rows to drop before the header. Blank lines do not count. |
 | `dateFormat` | Explicit, never sniffed. Tokens: `YYYY` `YY` `MMM` `MM` `M` `DD` `D`, any literal separators. |
+| `periodPattern` | Optional regex with **two capture groups** — period start, then end — matched against the preamble lines `skipLines` names. Omit for a bank that declares no period. |
 | `amountMode` | `single` (one signed column) or `debit_credit` (two unsigned columns). |
 | `signConvention` | `as_is` or `invert`, applied *after* the mode produces a signed number. |
 | `columnMap` | Role → column. A bare string is a header name, a bare number is a zero-based index. |
@@ -88,6 +92,38 @@ A profile is JSON in `profiles/`, keyed on the hash of the header row. Fields mi
 
 Roles: `transactionDate`, `postedDate`, `description`, `amount`, `debit`, `credit`, `balance`,
 `status`. `description` is required, and at least one of `transactionDate` / `postedDate`.
+
+### The declared statement period, which is what coverage is made of
+
+`periodPattern` is how `statement_import.period_start`/`period_end` stop being a guess. §7.2
+makes a month covered only when a committed import's period **spans** it, and a period derived
+from the first and last row a statement happens to contain never spans an ordinary month — the
+January statement in `fixtures/` runs the 3rd to the 30th. That gap is why §5.10's `trend.v1`
+and §5.11's `micro.v1` shipped correct and emitting nothing; spec §9h is where it was closed.
+
+```json
+"skipLines": 3,
+"dateFormat": "MM/DD/YYYY",
+"periodPattern": "Statement Period:\s*(\S+)\s*-\s*(\S+)"
+```
+
+Three things to know when writing one:
+
+- **The pattern locates the dates; `dateFormat` reads them.** Keep the groups loose (`(\S+)`)
+  rather than spelling the date shape twice — the copy inside the pattern is the one nothing
+  validates, and the two drift the first time a bank changes separator.
+- **It is matched against the preamble only** — the `skipLines` rows above the header, by raw
+  line text. A profile with `skipLines: 0` has nothing to search, and `validateProfile` warns.
+- **A malformed pattern is refused, not ignored.** No pattern means "fall back to row dates",
+  which is correct for most banks; a pattern that fails to compile or has fewer than two groups
+  is a typo, and letting it fall back silently would hide it behind behaviour that looks fine.
+  A pattern that compiles but matches nothing in a given file, or captures dates that do not
+  read as `dateFormat`, falls back **with a `declared_period_unreadable` warning** on the
+  review screen.
+
+Rows outside the declared period are kept and flagged (`rows_outside_period`), which is §6.1's
+"dates outside the detected period" — a check that was vacuous while the period came from those
+same rows.
 
 ### The sign convention, which is the part that matters
 

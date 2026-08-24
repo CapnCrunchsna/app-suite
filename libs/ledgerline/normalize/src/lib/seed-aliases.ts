@@ -9,7 +9,9 @@
  *
  * `is_known_subscription` on `merchant_canonical` (§3.1) is what §5.2 reads for its
  * confidence bonus; it is recorded here alongside each entry so the merchant rows can
- * be seeded from the same source when the schema lands.
+ * be seeded from the same source when the schema lands. `default_category_id` is
+ * carried the same way, and is the whole of §2.5's rule-based categorizer — see the
+ * note on `SeedMerchant.defaultCategoryId`.
  */
 
 import type { MerchantAlias } from './alias.js';
@@ -18,25 +20,53 @@ export interface SeedMerchant {
   readonly merchantId: string;
   readonly displayName: string;
   readonly isKnownSubscription: boolean;
+  /**
+   * `merchant_canonical.default_category_id` (§3.1) — and, through it, the whole
+   * of §2.5's "**Category assigned by rule**, then optionally by LLM".
+   *
+   * The rule is one line long on purpose: *a resolved merchant's default category
+   * is the transaction's category, recorded as `category_source = 'rule'`*. There
+   * is no keyword table, no second chain, and nothing that could disagree with §4
+   * about what a row's merchant is — the merchant chain already answers the hard
+   * question, and a category is a property of the merchant it produced. §4.2's LLM
+   * stage is what the ids below are *not* an attempt to be.
+   *
+   * An id from `SEED_CATEGORIES`, never a free string: `default_category_id` is a
+   * real foreign key, and the composition root upserts the categories before the
+   * merchants precisely so it resolves.
+   *
+   * §7.6 applies to every assignment here exactly as it does to the merchant set
+   * itself — these are starting points, not a taxonomy, and the first real corpus
+   * is what settles them. A user correction outranks all of it (§4.3).
+   */
+  readonly defaultCategoryId: string | null;
 }
 
+/**
+ * The streaming four sit in `entertainment` rather than `subscriptions`, and the
+ * split is deliberate. §5.10 excludes any category dominated >80% by a single
+ * recurring series, so a catch-all `subscriptions` category would be excluded from
+ * category trends about as often as it was populated — the trend would be the
+ * subscription, which §5.2 and §5.5 already tell better. Splitting media from
+ * tooling leaves both halves as things a spending trend can be *about*.
+ */
 export const SEED_MERCHANTS: readonly SeedMerchant[] = [
-  { merchantId: 'netflix', displayName: 'Netflix', isKnownSubscription: true },
-  { merchantId: 'spotify', displayName: 'Spotify', isKnownSubscription: true },
-  { merchantId: 'hulu', displayName: 'Hulu', isKnownSubscription: true },
-  { merchantId: 'disney-plus', displayName: 'Disney+', isKnownSubscription: true },
-  { merchantId: 'amazon-prime', displayName: 'Amazon Prime', isKnownSubscription: true },
-  { merchantId: 'apple', displayName: 'Apple', isKnownSubscription: true },
-  { merchantId: 'google', displayName: 'Google', isKnownSubscription: true },
-  { merchantId: 'microsoft', displayName: 'Microsoft', isKnownSubscription: true },
-  { merchantId: 'dropbox', displayName: 'Dropbox', isKnownSubscription: true },
-  { merchantId: 'adobe', displayName: 'Adobe', isKnownSubscription: true },
-  { merchantId: 'amazon', displayName: 'Amazon', isKnownSubscription: false },
-  { merchantId: 'starbucks', displayName: 'Starbucks', isKnownSubscription: false },
-  { merchantId: 'uber', displayName: 'Uber', isKnownSubscription: false },
-  { merchantId: 'lyft', displayName: 'Lyft', isKnownSubscription: false },
-  { merchantId: 'costco', displayName: 'Costco', isKnownSubscription: false },
-  { merchantId: 'target', displayName: 'Target', isKnownSubscription: false },
+  { merchantId: 'netflix', displayName: 'Netflix', isKnownSubscription: true, defaultCategoryId: 'entertainment' },
+  { merchantId: 'spotify', displayName: 'Spotify', isKnownSubscription: true, defaultCategoryId: 'entertainment' },
+  { merchantId: 'hulu', displayName: 'Hulu', isKnownSubscription: true, defaultCategoryId: 'entertainment' },
+  { merchantId: 'disney-plus', displayName: 'Disney+', isKnownSubscription: true, defaultCategoryId: 'entertainment' },
+  { merchantId: 'amazon-prime', displayName: 'Amazon Prime', isKnownSubscription: true, defaultCategoryId: 'subscriptions' },
+  { merchantId: 'apple', displayName: 'Apple', isKnownSubscription: true, defaultCategoryId: 'subscriptions' },
+  { merchantId: 'google', displayName: 'Google', isKnownSubscription: true, defaultCategoryId: 'subscriptions' },
+  { merchantId: 'microsoft', displayName: 'Microsoft', isKnownSubscription: true, defaultCategoryId: 'subscriptions' },
+  { merchantId: 'dropbox', displayName: 'Dropbox', isKnownSubscription: true, defaultCategoryId: 'subscriptions' },
+  { merchantId: 'adobe', displayName: 'Adobe', isKnownSubscription: true, defaultCategoryId: 'subscriptions' },
+  { merchantId: 'amazon', displayName: 'Amazon', isKnownSubscription: false, defaultCategoryId: 'shopping' },
+  { merchantId: 'starbucks', displayName: 'Starbucks', isKnownSubscription: false, defaultCategoryId: 'dining' },
+  { merchantId: 'uber', displayName: 'Uber', isKnownSubscription: false, defaultCategoryId: 'transport' },
+  { merchantId: 'lyft', displayName: 'Lyft', isKnownSubscription: false, defaultCategoryId: 'transport' },
+  { merchantId: 'costco', displayName: 'Costco', isKnownSubscription: false, defaultCategoryId: 'groceries' },
+  { merchantId: 'target', displayName: 'Target', isKnownSubscription: false, defaultCategoryId: 'shopping' },
 ];
 
 /**

@@ -809,6 +809,69 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
       ]);
     });
 
+    /**
+     * §2.5's rule-based category follows the merchant it came from, and §4.3's
+     * `user` outranks it permanently (§9h).
+     *
+     * Both halves matter. Leaving the old category behind would strand `Spotify`'s
+     * `entertainment` on rows that are now Apple, and §5.10 would keep trending a
+     * category those rows no longer belong to. Overwriting a hand-picked category
+     * would make §4.3's "permanent and beats everything" false the first time a
+     * merchant correction swept past it.
+     */
+    it('moves a rule’s category with the merchant, and never a user’s (§4.3, §9h)', async () => {
+      const spotifyRows = (
+        (
+          await app.inject({ method: 'GET', url: '/api/transactions?merchantIds=spotify&limit=1000' })
+        ).json() as {
+          rows: { transaction: { id: string; categoryId: string | null; categorySource: string | null } }[];
+        }
+      ).rows.map((row) => row.transaction);
+
+      expect(spotifyRows.length).toBeGreaterThan(1);
+      expect(spotifyRows.every((row) => row.categoryId === 'entertainment')).toBe(true);
+      expect(spotifyRows.every((row) => row.categorySource === 'rule')).toBe(true);
+
+      // One row the user categorizes by hand, against the rule's answer.
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/transactions/${spotifyRows[0].id}`,
+        payload: { categoryId: 'groceries' },
+      });
+
+      // Then a merchant correction sweeps the whole descriptor onto Apple, whose
+      // own default is `subscriptions`.
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/transactions/${spotifyRows[1].id}`,
+        payload: { merchantId: 'apple' },
+      });
+      context.jobRunner.drain();
+
+      const after = (
+        (
+          await app.inject({ method: 'GET', url: '/api/transactions?merchantIds=apple&limit=1000' })
+        ).json() as {
+          rows: { transaction: { id: string; categoryId: string | null; categorySource: string | null } }[];
+        }
+      ).rows.map((row) => row.transaction);
+
+      const byId = new Map(after.map((row) => [row.id, row]));
+      expect(byId.get(spotifyRows[0].id)).toMatchObject({
+        categoryId: 'groceries',
+        categorySource: 'user',
+      });
+      expect(byId.get(spotifyRows[1].id)).toMatchObject({
+        categoryId: 'subscriptions',
+        categorySource: 'rule',
+      });
+      expect(
+        after
+          .filter((row) => row.id !== spotifyRows[0].id)
+          .every((row) => row.categoryId === 'subscriptions'),
+      ).toBe(true);
+    });
+
     it('records a failed job rather than throwing out of the queue', async () => {
       // §2.7's `job.kind` is a free-text column so a third kind needs no
       // migration, which means the runner can meet one it has no handler for.

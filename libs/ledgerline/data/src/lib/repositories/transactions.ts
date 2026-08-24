@@ -78,6 +78,18 @@ export interface TransactionQuery {
    *  what §2.6 was built to keep out of the totals. */
   readonly includeInternalTransfers?: boolean;
   readonly includeExcluded?: boolean;
+  /**
+   * Drop rows a human has categorized — `category_source = 'user'`.
+   *
+   * §4.3's precedence in the one place a rule could quietly overrule it: the
+   * re-normalize sweep (§2.7) repoints a corrected merchant across four years of
+   * history, and the merchant's default category rides along. On a row the user
+   * categorized by hand, it must not. A filter rather than a conditional UPDATE
+   * because "which rows" is a filter question, and because the merchant half of
+   * the same sweep still has to touch every row — a user's category is not a
+   * reason to leave their merchant wrong.
+   */
+  readonly excludeUserCategorized?: boolean;
   /** Full-text across raw and normalized descriptors (§6.3). */
   readonly text?: string;
   readonly sort?: TransactionSort;
@@ -479,6 +491,9 @@ export class TransactionRepository {
     if (!query.includeExcluded) {
       where.push('t.is_excluded = 0');
     }
+    if (query.excludeUserCategorized) {
+      where.push(`(t.category_source IS NULL OR t.category_source <> 'user')`);
+    }
     if (query.text) {
       where.push(
         `(t.description_raw LIKE ? ESCAPE '\\' OR t.description_normalized LIKE ? ESCAPE '\\')`,
@@ -633,6 +648,47 @@ export class TransactionRepository {
 
       return { matched: ids.length, transactionIds: ids };
     })();
+  }
+
+  /**
+   * Apply §2.5's rule-based category to rows that predate the rule.
+   *
+   * The categorizer is a property of the merchant, and the merchant was already
+   * resolved when those rows were committed — so the answer for a row imported
+   * before the rule existed is the same answer it would get today, and there is
+   * nothing to re-derive. Without this, a category only ever appears on rows
+   * imported *after* the seed set grew a `default_category_id`, which would leave
+   * §5.10 trending a fraction of the history and §7.2's coverage the only visible
+   * half of the fix.
+   *
+   * **`category_source IS NULL` is the whole guard, and it is stricter than
+   * "not user".** A row whose category the user cleared by hand carries
+   * `category_source = 'user'` with a null `category_id` (§6.3 writes both), and
+   * re-filling it would be this sweep overruling a deliberate deletion every time
+   * the process restarts. Rows a rule already categorized are equally left alone —
+   * re-asserting them would stamp `updated_at` across the table for nothing.
+   *
+   * Idempotent, which is why it can run at boot: the second call matches no rows.
+   */
+  applyMerchantDefaultCategories(): number {
+    const result = this.db
+      .prepare(
+        `UPDATE "transaction"
+            SET category_id = (SELECT m.default_category_id
+                                 FROM merchant_canonical AS m
+                                WHERE m.id = "transaction".merchant_id),
+                category_source = 'rule',
+                updated_at = ?
+          WHERE category_source IS NULL
+            AND merchant_id IS NOT NULL
+            AND EXISTS (SELECT 1
+                          FROM merchant_canonical AS m
+                         WHERE m.id = "transaction".merchant_id
+                           AND m.default_category_id IS NOT NULL)`,
+      )
+      .run(this.clock.now());
+
+    return result.changes;
   }
 
   /**

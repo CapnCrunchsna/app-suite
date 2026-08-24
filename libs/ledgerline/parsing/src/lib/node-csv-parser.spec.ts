@@ -40,8 +40,20 @@ describe('northgate checking — single signed amount column, preamble, status c
   it('produces ISO dates and an effective date', () => {
     expect(result.rows[0].transactionDate).toBe('2026-01-03');
     expect(result.rows[0].effectiveDate).toBe('2026-01-03');
-    expect(result.periodStart).toBe('2026-01-03');
-    expect(result.periodEnd).toBe('2026-01-30');
+  });
+
+  /**
+   * The whole of §7.2's gate, in four lines. The rows run the 3rd to the 30th;
+   * the statement says January, and January is what coverage has to be measured
+   * against — otherwise §5.10 and §5.11 have no fully-covered month to compute
+   * over and stay correct and silent (§9f, §9g, §9h).
+   */
+  it('reads the period the statement declares, not the span of its rows', () => {
+    expect(result.periodStart).toBe('2026-01-01');
+    expect(result.periodEnd).toBe('2026-01-31');
+    expect(result.periodDeclared).toBe(true);
+    expect(result.warnings.some((w) => w.kind === 'declared_period_unreadable')).toBe(false);
+    expect(result.warnings.some((w) => w.kind === 'rows_outside_period')).toBe(false);
   });
 
   it('keeps outflows negative and inflows positive', () => {
@@ -224,6 +236,125 @@ describe('format detection', () => {
     if (detection.kind === 'needs_mapping') {
       expect(detection.suggestions[0]?.profile.id).toBe('northgate-checking-v1');
       expect(detection.suggestions[0]?.similarity).toBeGreaterThan(0.5);
+    }
+  });
+});
+
+/**
+ * §7.2's gate, from the parser's side (§9h).
+ *
+ * The row-date derivation is still here and still correct — it is what a profile
+ * with no pattern gets, and most banks declare nothing. What these pin is that a
+ * declared period **wins**, that a pattern which promised something and delivered
+ * nothing **says so** rather than reverting silently, and that a malformed pattern
+ * is refused before it ever parses a file.
+ */
+describe('declared statement periods (§7.2, §9h)', () => {
+  /** The pattern the Cardinal export has no preamble for. */
+  const WITH_PATTERN = (pattern: string): FormatProfile => ({
+    ...NORTHGATE,
+    periodPattern: pattern,
+  });
+
+  it('falls back to row dates when the profile declares no pattern', () => {
+    const result = parseCsvWithProfile({
+      text: CHECKING_CSV,
+      profile: { ...NORTHGATE, periodPattern: null },
+    });
+
+    expect(result.periodStart).toBe('2026-01-03');
+    expect(result.periodEnd).toBe('2026-01-30');
+    expect(result.periodDeclared).toBe(false);
+    // Silent, because declaring nothing is the designed case: a warning on every
+    // Cardinal import would train the reviewer to ignore the strip.
+    expect(result.warnings.some((w) => w.kind === 'declared_period_unreadable')).toBe(false);
+  });
+
+  it('falls back with a warning when the pattern matches nothing in the preamble', () => {
+    const result = parseCsvWithProfile({
+      text: CHECKING_CSV,
+      profile: WITH_PATTERN('Billing Cycle:\\s*(\\S+)\\s*-\\s*(\\S+)'),
+    });
+
+    expect(result.periodStart).toBe('2026-01-03');
+    expect(result.periodDeclared).toBe(false);
+    const warning = result.warnings.find((w) => w.kind === 'declared_period_unreadable');
+    expect(warning?.message).toContain('preamble');
+  });
+
+  it('falls back with a warning when the captured dates are not in the profile’s format', () => {
+    const result = parseCsvWithProfile({
+      text: CHECKING_CSV,
+      // The dates are `MM/DD/YYYY`; reading them as `YYYY-MM-DD` must fail loudly
+      // rather than guess. This is `domain/dates.ts`'s whole argument.
+      profile: { ...WITH_PATTERN('Statement Period:\\s*(\\S+)\\s*-\\s*(\\S+)'), dateFormat: 'YYYY-MM-DD' },
+    });
+
+    expect(result.periodDeclared).toBe(false);
+    expect(
+      result.warnings.find((w) => w.kind === 'declared_period_unreadable')?.message
+    ).toContain('YYYY-MM-DD');
+  });
+
+  it('refuses a period that ends before it starts rather than swapping the ends', () => {
+    // Which capture group is the start is the profile's claim, so a backwards
+    // pair is a profile that is wrong about its own file. Swapping silently would
+    // be guessing; leaving it would cost the import all of its coverage, because
+    // no month lies inside an empty range.
+    const backwards = CHECKING_CSV.replace(
+      'Statement Period: 01/01/2026 - 01/31/2026',
+      'Statement Period: 01/31/2026 - 01/01/2026'
+    );
+    const result = parseCsvWithProfile({ text: backwards, profile: NORTHGATE });
+
+    expect(result.periodDeclared).toBe(false);
+    expect(result.periodStart).toBe('2026-01-03');
+    expect(
+      result.warnings.find((w) => w.kind === 'declared_period_unreadable')?.message
+    ).toContain('ends before it starts');
+  });
+
+  it('flags rows outside the declared period without dropping them (§6.1)', () => {
+    // A statement declaring one week of a month it plainly holds more of.
+    const narrowed = CHECKING_CSV.replace(
+      'Statement Period: 01/01/2026 - 01/31/2026',
+      'Statement Period: 01/05/2026 - 01/12/2026'
+    );
+    const result = parseCsvWithProfile({ text: narrowed, profile: NORTHGATE });
+
+    expect(result.rows).toHaveLength(12);
+    expect(result.periodStart).toBe('2026-01-05');
+    expect(result.periodEnd).toBe('2026-01-12');
+    expect(result.warnings.find((w) => w.kind === 'rows_outside_period')?.message).toContain(
+      '2026-01-05 to 2026-01-12'
+    );
+  });
+
+  it('refuses a malformed pattern eagerly, rather than falling back to row dates', () => {
+    expect(validateProfile(WITH_PATTERN('Statement Period: (')).ok).toBe(false);
+    // One group is a pattern that found a date and cannot say which end it is.
+    expect(validateProfile(WITH_PATTERN('Statement Period:\\s*(\\S+)')).errors.join(' ')).toContain(
+      'capture groups'
+    );
+    expect(validateProfile(WITH_PATTERN('')).ok).toBe(false);
+    expect(() =>
+      parseCsvWithProfile({ text: CHECKING_CSV, profile: WITH_PATTERN('(') })
+    ).toThrow(ProfileApplicationError);
+  });
+
+  it('warns when a pattern is set on a profile with no preamble to read', () => {
+    const validation = validateProfile({ ...CARDINAL, periodPattern: '(\\S+) - (\\S+)' });
+    expect(validation.ok).toBe(true);
+    expect(validation.warnings.join(' ')).toContain('skipLines');
+  });
+
+  it('leaves the shipped profiles that declare nothing alone', () => {
+    for (const [profile, text] of [
+      [CARDINAL, CARD_CSV],
+      [HARBOR, SAVINGS_CSV],
+    ] as const) {
+      expect(profile.periodPattern).toBeNull();
+      expect(parseCsvWithProfile({ text, profile }).periodDeclared).toBe(false);
     }
   });
 });

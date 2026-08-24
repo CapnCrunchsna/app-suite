@@ -148,6 +148,7 @@ const PROFILES: FormatProfile[] = [
     delimiter: ',',
     skipLines: 3,
     dateFormat: 'MM/DD/YYYY',
+    periodPattern: 'Statement Period:\\s*(\\S+)\\s*-\\s*(\\S+)',
     amountMode: 'single',
     signConvention: 'as_is',
     columnMap: {

@@ -126,16 +126,28 @@ export interface RenormalizeResult {
  * incremental: "only transactions whose current `description_normalized` falls
  * in the affected alias key-space are re-resolved."
  *
- * ## Only `merchant_id` moves
+ * ## `merchant_id` moves, and the category it decides moves with it
  *
  * The chain is deterministic from `description_raw`, and a merchant correction
  * changes the *alias table*, not the chain — so `description_normalized` comes
  * back identical by construction and re-writing it would be a no-op that stamps
- * `updated_at` on every row. `merchant_id` is the column an alias decides, and it
- * is the only one written. That also keeps `dedupe_key` untouched, which §3.3
+ * `updated_at` on every row. That keeps `dedupe_key` untouched, which §3.3
  * requires absolutely: the key is computed from the raw descriptor through the
  * frozen `collapse_v1`, and a re-normalize that moved it would re-key rows the
  * merge rule has already reasoned about.
+ *
+ * `category_id` moves because §2.5's rule *is* the merchant's default category:
+ * a correction that repointed a row from a merchant defaulting to `dining` to one
+ * defaulting to `groceries` and left `dining` behind would strand the old answer
+ * on the new merchant, and §5.10 would keep trending a category the row no longer
+ * belongs to. The new merchant having **no** default is the same statement — the
+ * rule now says nothing, so the rule's answer is cleared rather than kept.
+ *
+ * **A `user` category is never touched.** §4.3 puts `user` above every other
+ * source and calls a correction "permanent"; `category_source` is what records
+ * which is which, and `excludeUserCategorized` is the filter that honours it. The
+ * merchant on those rows still moves — a hand-picked category is not a reason to
+ * leave a merchant wrong.
  *
  * Internal transfers and excluded rows are re-pointed too. They are hidden from
  * §6.3's table by default, not deleted, and leaving them on a stale merchant
@@ -176,13 +188,25 @@ export function runRenormalize(
     const resolution = resolved[index].resolution;
     if (resolution.kind !== 'alias') return;
 
-    const applied = context.store.transactions.applyBulk(
-      {
-        descriptorsNormalized: [sample.descriptionNormalized],
-        includeInternalTransfers: true,
-        includeExcluded: true,
-      },
-      { merchantId: resolution.merchantId },
+    const selector = {
+      descriptorsNormalized: [sample.descriptionNormalized],
+      includeInternalTransfers: true,
+      includeExcluded: true,
+    };
+
+    const applied = context.store.transactions.applyBulk(selector, {
+      merchantId: resolution.merchantId,
+    });
+
+    // Two passes over the same descriptor, because they select different sets:
+    // every row gets the corrected merchant, but only rows the rule owns get the
+    // merchant's category. One conditional UPDATE would have had to encode §4.3's
+    // precedence in SQL; two named filters say it out loud.
+    const categoryId =
+      context.store.merchants.get(resolution.merchantId)?.defaultCategoryId ?? null;
+    context.store.transactions.applyBulk(
+      { ...selector, excludeUserCategorized: true },
+      { categoryId, categorySource: categoryId === null ? null : 'rule' },
     );
 
     if (applied.matched > 0) {

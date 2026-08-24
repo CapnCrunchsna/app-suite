@@ -37,6 +37,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: '001-initial-schema' },
   { version: 2, name: '002-finding-state-dismissal-context' },
   { version: 3, name: '003-transfer-link-detail' },
+  { version: 4, name: '004-format-profile-period-pattern' },
 ];
 
 /**

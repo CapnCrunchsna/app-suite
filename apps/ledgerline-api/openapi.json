@@ -1559,6 +1559,8 @@
               "header_only",
               "signature_mismatch",
               "sign_convention_suspect",
+              "declared_period_unreadable",
+              "rows_outside_period",
               "profile_warning"
             ]
           },
@@ -2039,6 +2041,12 @@
           "dateFormat": {
             "type": "string"
           },
+          "periodPattern": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "amountMode": {
             "type": "string",
             "enum": [
@@ -2086,6 +2094,7 @@
           "delimiter",
           "skipLines",
           "dateFormat",
+          "periodPattern",
           "amountMode",
           "signConvention",
           "columnMap",
@@ -2137,6 +2146,12 @@
           "dateFormat": {
             "type": "string",
             "minLength": 1
+          },
+          "periodPattern": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "amountMode": {
             "type": "string",

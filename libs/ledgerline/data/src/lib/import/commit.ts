@@ -175,6 +175,8 @@ export function commitImport(deps: CommitDeps, input: CommitImportInput): Commit
         descriptionRaw: row.descriptionRaw,
         descriptionNormalized: row.descriptionNormalized,
         merchantId: row.merchantId,
+        categoryId: row.categoryId,
+        categorySource: row.categorySource,
         isPending: row.isPending,
         allowsZeroAmount: row.amountCents === 0 && !row.isPending,
         dedupeKey: planned.dedupeKey,

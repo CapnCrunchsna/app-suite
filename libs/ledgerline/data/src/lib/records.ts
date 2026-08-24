@@ -144,6 +144,9 @@ export interface FormatProfileRecord {
   readonly skipLines: number;
   readonly columnMapJson: string;
   readonly dateFormat: string;
+  /** The regex that reads this bank's declared statement period out of the
+   *  preamble, or `null` for an export that declares none (§9h). */
+  readonly periodPattern: string | null;
   readonly amountMode: 'single' | 'debit_credit';
   readonly signConvention: 'as_is' | 'invert';
   readonly pendingValues: readonly string[];
@@ -375,6 +378,7 @@ export interface FormatProfileRow {
   skip_lines: number;
   column_map_json: string;
   date_format: string;
+  period_pattern: string | null;
   amount_mode: 'single' | 'debit_credit';
   sign_convention: 'as_is' | 'invert';
   pending_values_json: string;
@@ -395,6 +399,7 @@ export function toFormatProfile(row: FormatProfileRow): FormatProfileRecord {
     skipLines: row.skip_lines,
     columnMapJson: row.column_map_json,
     dateFormat: row.date_format,
+    periodPattern: row.period_pattern,
     amountMode: row.amount_mode,
     signConvention: row.sign_convention,
     pendingValues: JSON.parse(row.pending_values_json) as string[],

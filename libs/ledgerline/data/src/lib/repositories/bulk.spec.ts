@@ -277,6 +277,114 @@ describe('TransactionRepository — the bulk correction surface (§6.3)', () => 
       expect(applied).toEqual({ matched: 0, transactionIds: [] });
       store.close();
     });
+
+    /**
+     * §4.3's precedence, as a filter (§9h).
+     *
+     * The re-normalize sweep repoints a corrected merchant across four years of
+     * history and the merchant's default category rides along. On a row the user
+     * categorized by hand it must not — but the *merchant* on that row still has
+     * to move, which is why this is a filter on one of two passes rather than a
+     * conditional write on one.
+     */
+    it('excludes user-categorized rows from a rule’s category, but not from its merchant', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+      store.merchants.upsertCategory({ id: 'dining', name: 'Dining & Coffee', kind: 'spend' });
+      store.merchants.upsertCategory({ id: 'groceries', name: 'Groceries', kind: 'spend' });
+
+      // Two of the three SPOTIFYUSA rows: one a rule categorized, one a human did.
+      store.transactions.update(inserted[0].id, {
+        categoryId: 'dining',
+        categorySource: 'rule',
+      });
+      store.transactions.update(inserted[1].id, {
+        categoryId: 'groceries',
+        categorySource: 'user',
+      });
+
+      const selector = { descriptorsNormalized: ['SPOTIFYUSA'] };
+      store.transactions.applyBulk(selector, { merchantId: 'spotify' });
+      const categorized = store.transactions.applyBulk(
+        { ...selector, excludeUserCategorized: true },
+        { categoryId: 'dining', categorySource: 'rule' },
+      );
+
+      expect(categorized.matched).toBe(2);
+      expect(categorized.transactionIds).not.toContain(inserted[1].id);
+
+      // The user's category survives; their row's merchant is corrected anyway.
+      expect(store.transactions.get(inserted[1].id)).toMatchObject({
+        merchantId: 'spotify',
+        categoryId: 'groceries',
+        categorySource: 'user',
+      });
+      expect(store.transactions.get(inserted[0].id)).toMatchObject({
+        merchantId: 'spotify',
+        categoryId: 'dining',
+        categorySource: 'rule',
+      });
+
+      store.close();
+    });
+  });
+
+  /**
+   * The backfill §9h decided to run, for rows committed before the seed merchants
+   * carried a `default_category_id` (§2.5's rule-based categorizer).
+   *
+   * §6.1 refuses a re-parse on a committed import, and this is not one: the
+   * merchant was already resolved when those rows landed, so the answer for a
+   * two-year-old row is the answer it would get today.
+   */
+  describe('applyMerchantDefaultCategories', () => {
+    it('fills only rows no source has spoken for, and is idempotent', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+      store.merchants.upsertCategory({ id: 'entertainment', name: 'Entertainment', kind: 'spend' });
+      store.merchants.upsertCategory({ id: 'groceries', name: 'Groceries', kind: 'spend' });
+      store.merchants.upsertSeed({
+        id: 'spotify',
+        canonicalName: 'SPOTIFY',
+        displayName: 'Spotify',
+        isKnownSubscription: true,
+        defaultCategoryId: 'entertainment',
+      });
+
+      // Three rows on the merchant: one untouched, one a human categorized, one a
+      // human deliberately *cleared* — which §6.3 records as a `user` source over
+      // a null category, and which re-filling would silently overrule.
+      store.transactions.applyBulk({ descriptorsNormalized: ['SPOTIFYUSA'] }, { merchantId: 'spotify' });
+      store.transactions.update(inserted[1].id, { categoryId: 'groceries', categorySource: 'user' });
+      store.transactions.update(inserted[2].id, { categoryId: null, categorySource: 'user' });
+
+      expect(store.transactions.applyMerchantDefaultCategories()).toBe(1);
+      expect(store.transactions.get(inserted[0].id)).toMatchObject({
+        categoryId: 'entertainment',
+        categorySource: 'rule',
+      });
+      expect(store.transactions.get(inserted[1].id)?.categoryId).toBe('groceries');
+      expect(store.transactions.get(inserted[2].id)?.categoryId).toBeNull();
+
+      // Idempotent, which is what lets it run at every boot.
+      expect(store.transactions.applyMerchantDefaultCategories()).toBe(0);
+
+      store.close();
+    });
+
+    it('leaves a row alone when its merchant has no default, and when it has none', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+      store.transactions.applyBulk({ descriptorsNormalized: ['SPOTIFYUSA'] }, { merchantId: 'spotify' });
+
+      // `spotify` is seeded here without a default; the coffee row has no merchant
+      // at all. A rule with no answer says nothing rather than guessing one.
+      expect(store.transactions.applyMerchantDefaultCategories()).toBe(0);
+      expect(store.transactions.get(inserted[0].id)?.categorySource).toBeNull();
+      expect(store.transactions.get(inserted[4].id)?.categoryId).toBeNull();
+
+      store.close();
+    });
   });
 });
 

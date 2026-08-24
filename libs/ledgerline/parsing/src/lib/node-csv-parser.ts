@@ -35,6 +35,7 @@ import type { CsvRecord } from './csv-reader.js';
 import { headerSignature, normalizeHeaderToken } from './format-signature.js';
 import { validateProfile } from './format-profile.js';
 import type { ColumnRole, FormatProfile } from './format-profile.js';
+import { checkRowsInPeriod, readDeclaredPeriod } from './statement-period.js';
 
 export const NODE_CSV_PARSER_ID = 'node-csv';
 export const NODE_CSV_PARSER_VERSION = '1.0.0';
@@ -119,7 +120,14 @@ export function parseCsvWithProfile(options: CsvParseOptions): ParseResult {
   const rows: RawRow[] = [];
 
   const records = parseCsv(text, profile.delimiter).filter((r) => !isBlankRecord(r));
+  const preamble = records.slice(0, profile.skipLines);
   const afterPreamble = records.slice(profile.skipLines);
+
+  // Read before the rows are parsed, because the answer does not depend on them —
+  // that independence is the entire point (§7.2, §9h). Its warnings join the strip
+  // in file order, above the per-row ones.
+  const declared = readDeclaredPeriod(preamble, profile);
+  warnings.push(...declared.warnings);
 
   let headerCells: readonly string[] | null = null;
   let dataRecords: readonly CsvRecord[] = afterPreamble;
@@ -280,6 +288,13 @@ export function parseCsvWithProfile(options: CsvParseOptions): ParseResult {
 
   const dates = rows.map((r) => r.effectiveDate).sort();
 
+  // §6.1's "dates outside the detected period", finally askable: against a period
+  // derived from these same dates it was true by construction.
+  if (declared.period) {
+    const outside = checkRowsInPeriod(dates, declared.period);
+    if (outside) warnings.push(outside);
+  }
+
   return {
     rows,
     errors,
@@ -288,8 +303,9 @@ export function parseCsvWithProfile(options: CsvParseOptions): ParseResult {
     parserVersion: NODE_CSV_PARSER_VERSION,
     profileId: profile.id,
     headerSignature: headerCells ? headerSignature(headerCells).signature : null,
-    periodStart: dates[0] ?? null,
-    periodEnd: dates[dates.length - 1] ?? null,
+    periodStart: declared.period?.start ?? dates[0] ?? null,
+    periodEnd: declared.period?.end ?? dates[dates.length - 1] ?? null,
+    periodDeclared: declared.period !== null,
     balanceCheck,
   };
 }
@@ -426,8 +442,11 @@ function emptyResult(
     parserVersion: NODE_CSV_PARSER_VERSION,
     profileId: profile.id,
     headerSignature: headerCells ? headerSignature(headerCells).signature : null,
+    // A file with no rows claims no coverage, declared period or not: §7.2 counts
+    // a *committed* import, and there is nothing here to commit.
     periodStart: null,
     periodEnd: null,
+    periodDeclared: false,
     balanceCheck: { kind: 'unavailable', reason: 'no rows parsed' },
   };
 }
