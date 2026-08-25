@@ -13,6 +13,10 @@
  * to. Keeping the frozen collapse and the key that uses it in `domain` makes the
  * separation §3.3 demands a consequence of the module graph rather than a convention
  * someone has to remember.
+ *
+ * It is exported from `@metrum/ledgerline-domain/node`, not from the root barrel, because
+ * `createHash` below is a Node builtin and the root barrel has to stay loadable in a
+ * browser bundle. `../node.ts` has the reasoning.
  */
 
 import { createHash } from 'node:crypto';

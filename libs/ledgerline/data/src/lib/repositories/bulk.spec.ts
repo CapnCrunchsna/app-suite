@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DEDUPE_KEY_VERSION, dedupeKey } from '@metrum/ledgerline-domain';
+import { DEDUPE_KEY_VERSION, dedupeKey } from '@metrum/ledgerline-domain/node';
 
 import { fixedClock } from '../clock.js';
 import { LedgerlineStore } from '../store.js';

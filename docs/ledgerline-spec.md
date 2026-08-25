@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9i
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9j
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -76,8 +76,8 @@ review-queue, insights, ask and settings endpoints of §2.3, nor **three of §6'
 §6.6's Insights, §6.7's Ask and §6.8's Settings. §6.1's Import, §6.2's Accounts, §6.3's
 Transactions, §6.4's Findings and §6.5's Subscriptions exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h and §9i list the amendments implementation made to
-this document.
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i and §9j list the amendments implementation made
+to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -190,6 +190,16 @@ Two constraints are load-bearing enough to have their own test: `type:analyzers`
 reach `type:llm` (§2.4's invariant depends on it) and `type:analyzers` must not reach
 `type:data-access` (§2.2's purity claim depends on it). A lint rule that nobody runs is not
 enforcement — the boundary lint is a required target in the default build pipeline.
+
+**Tags say which libs may meet. They say nothing about which runtime the code lands in.**
+`feature-shell` is allowed to depend on `domain` and should be — that is where `formatCents`
+lives. But `domain` also holds §3.3's dedupe key, which hashes with `node:crypto`, so a
+single `export *` barrel handed a Node builtin to every Angular page that wanted a number
+formatted. `domain` therefore ships **two entry points**: `@metrum/ledgerline-domain` is
+loadable in any runtime, and `@metrum/ledgerline-domain/node` is the half that is not. The
+split is by platform rather than by feature so the rule for a new file is mechanical — if it
+imports `node:*`, it goes behind `/node`. Nothing enforces that but the build, which is why
+`build` is one of the targets `npm run check` runs (§9j).
 
 **Analyzers as pure functions over a full snapshot.** A heavy household is six accounts ×
 120 months × ~80 transactions ≈ 58,000 transactions, which hydrates to roughly 60 MB of
@@ -1451,6 +1461,17 @@ and the reaction it is after: "sortable by annual cost, which is the view that p
 pay what for that?* reaction". Since `annualCents` is computed server-side from the stored
 `cadences_per_year`, sorting in the page would mean deriving it in the page as well — so the API
 returns the list in that order and the page renders what it was given.
+
+## 9j. Amendments from implementation — 2026-08-25 (§2.2)
+
+Two decisions from one bug. `nx build ledgerline-ui` had never been run by anything, and the
+first time it was, its production configuration failed — at the §6.5 commit that surfaced it
+and at every commit before it. The failure was real and the fix is a boundary, not a flag.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.2 | **`domain` ships two entry points, split by platform.** `@metrum/ledgerline-domain` is loadable in any runtime; `@metrum/ledgerline-domain/node` holds the half that is not, currently `dedupeKey` and `DEDUPE_KEY_VERSION`. | §2.2's hard rule for `domain` is "pure types and arithmetic, no I/O, no framework", and §3.3's key honours it — `createHash` is arithmetic over bytes, and the key lives in `domain` precisely so `data` can reach it without reaching the §4 normalization chain. What the tag graph cannot express is that a lib may legitimately *depend on* `domain` and still must never *load* half of it. One `export *` barrel put `node:crypto` in the import graph of all six §6 pages that import `formatCents`, and esbuild refused to resolve it for the browser. The entry point is named for the property that decides membership — reaches for `node:*` — rather than for the feature inside, so the next Node-only helper has an obvious home and each call site's import line says which half it asked for. Deliberately **not** `platform: 'node'` or a crypto polyfill: both ship a Node shim to a browser to support a function the browser must never call, which is this boundary violation with its only symptom removed. Nothing hashed changes — the material string, the field order and the literal separator §3.3 freezes are untouched, and `collapse.spec.ts`'s golden tests pin them unedited. |
+| 2.2 | **`build` joins `lint`, `typecheck` and `test` in `npm run check`.** | This section already says a lint rule nobody runs is not enforcement; a build nobody runs is the same claim. `check` ran three targets and never a build, and the Angular `test` target bundles a *test* harness rather than the app, so no command in the repo or the local loop exercised the production bundle — which is how a broken build survived unnoticed. All ten projects are green under `nx run-many -t build`, so on a clean tree the addition is a cached no-op, and in exchange it catches the one class of error the other three targets structurally cannot see: a module that lints, typechecks and tests cleanly and still cannot be bundled for the platform it ships to. It also makes `ledgerline-ui`'s initial bundle visible at 502.75 kB against a 500 kB warning budget — a warning, not a failure, and now one that is reported on every run instead of never. |
 
 ## 10. Open discrepancies — recorded, not resolved
 

@@ -11,7 +11,8 @@
  * client round-tripped, because the store can change in between.
  */
 
-import { collapseV1, dedupeKey, daysBetweenIso } from '@metrum/ledgerline-domain';
+import { collapseV1, daysBetweenIso } from '@metrum/ledgerline-domain';
+import { dedupeKey } from '@metrum/ledgerline-domain/node';
 import type { Currency } from '@metrum/ledgerline-domain';
 
 import type { TransactionRepository } from '../repositories/transactions.js';

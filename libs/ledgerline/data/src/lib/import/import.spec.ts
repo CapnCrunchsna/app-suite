@@ -11,7 +11,8 @@ import { createHash } from 'node:crypto';
 
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 
-import { collapseV1, dedupeKey } from '@metrum/ledgerline-domain';
+import { collapseV1 } from '@metrum/ledgerline-domain';
+import { dedupeKey } from '@metrum/ledgerline-domain/node';
 
 import { MixedDedupeKeyVersionError, ZeroAmountRowError } from './commit.js';
 import type { CommitImportResult, CommitResolution } from './commit.js';

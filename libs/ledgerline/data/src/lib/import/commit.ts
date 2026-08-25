@@ -11,7 +11,7 @@
  * that must not be written to at all rather than a row that must be skipped.
  */
 
-import { DEDUPE_KEY_VERSION } from '@metrum/ledgerline-domain';
+import { DEDUPE_KEY_VERSION } from '@metrum/ledgerline-domain/node';
 
 import { planImport } from './plan.js';
 import type { ImportPlan, IncomingRow, NearDuplicateResolution } from './plan.js';
