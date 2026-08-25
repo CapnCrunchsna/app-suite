@@ -759,6 +759,183 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
     });
   });
 
+  // ----------------------------------------------- §2.3's series endpoints ---
+
+  /**
+   * §6.5's ledger, over the series §5.2 actually fitted from the statements above.
+   *
+   * The invariant these exist to hold is the split between the two halves of a
+   * `recurring_series` row: §5.2 recomputes everything on every run, and §6.5 puts
+   * three fields on it that a human owns and a run must never overwrite.
+   */
+  describe('§2.3 the series endpoints (§6.5)', () => {
+    interface SeriesShape {
+      id: string;
+      merchantId: string;
+      cadenceLabel: string | null;
+      status: string;
+      userStatus: string | null;
+      effectiveStatus: string;
+      cancellationUrl: string | null;
+      notes: string | null;
+      amountCentsCurrent: number | null;
+      annualCents: number;
+      monthlyCents: number;
+      totalPaidCents: number;
+      occurrenceCount: number;
+      charges: { transactionId: string; amountCents: number; effectiveDate: string }[];
+      priceSteps: { at: string; fromCents: number; toCents: number; confirmed: boolean }[];
+    }
+
+    async function listSeries(): Promise<SeriesShape[]> {
+      const response = await app.inject({ method: 'GET', url: '/api/series' });
+      expect(response.statusCode).toBe(200);
+      return response.json() as SeriesShape[];
+    }
+
+    const patch = (id: string, body: Record<string, unknown>) =>
+      app.inject({ method: 'PATCH', url: `/api/series/${id}`, payload: body });
+
+    it('returns the fitted series with their charge history, richest first', async () => {
+      await analyze();
+      const series = await listSeries();
+
+      expect(series.length).toBeGreaterThan(0);
+      expect(series.map((s) => s.merchantId)).toContain('netflix');
+
+      // §6.5: sortable by annual cost, "the view that produces the *I pay what for
+      // that?* reaction" — so it is the order the list arrives in.
+      const annual = series.map((s) => s.annualCents);
+      expect([...annual].sort((a, b) => b - a)).toEqual(annual);
+
+      const netflix = series.find((s) => s.merchantId === 'netflix') as SeriesShape;
+      expect(netflix.cadenceLabel).toBe('monthly');
+      // §5.3's ordered charge list, stored by the run rather than re-derived (§9i).
+      expect(netflix.charges).toHaveLength(netflix.occurrenceCount);
+      expect(netflix.charges.map((c) => c.effectiveDate)).toEqual(
+        [...netflix.charges.map((c) => c.effectiveDate)].sort(),
+      );
+      // "Total paid to date" is the observed sum, not the annualized rate.
+      expect(netflix.totalPaidCents).toBe(
+        netflix.charges.reduce((sum, c) => sum + Math.abs(c.amountCents), 0),
+      );
+      // §5.2 pins the multiplier so the page and §6.4's headline cannot disagree.
+      expect(netflix.monthlyCents).toBe(Math.round(netflix.annualCents / 12));
+
+      // The one sign asymmetry on the wire, pinned so it cannot drift: the series
+      // amount is a magnitude (§5.2 derives it as a median price), while the charges
+      // it was fitted from are signed transactions (§3.1). Both figures are positive
+      // on screen, and only `totalPaidCents` has to do anything about it.
+      expect(netflix.amountCentsCurrent).toBeGreaterThan(0);
+      expect(netflix.charges.every((c) => c.amountCents < 0)).toBe(true);
+      expect(netflix.annualCents).toBe(Math.round((netflix.amountCentsCurrent as number) * 12));
+      expect(netflix.totalPaidCents).toBeGreaterThan(0);
+    });
+
+    it('records the price steps §5.5 derived, rather than re-deriving them', async () => {
+      await importPriceRise();
+      await analyze();
+
+      const netflix = (await listSeries()).find((s) => s.merchantId === 'netflix') as SeriesShape;
+      expect(netflix.priceSteps.length).toBeGreaterThan(0);
+      expect(netflix.priceSteps.at(-1)).toMatchObject({ fromCents: 1549, toCents: 1799 });
+    });
+
+    it('404s an unknown series, and returns one by id', async () => {
+      await analyze();
+      const [first] = await listSeries();
+
+      const found = await app.inject({ method: 'GET', url: `/api/series/${first.id}` });
+      expect(found.statusCode).toBe(200);
+      expect((found.json() as SeriesShape).id).toBe(first.id);
+
+      const missing = await app.inject({ method: 'GET', url: '/api/series/nope' });
+      expect(missing.statusCode).toBe(404);
+    });
+
+    it('lets a manual status beat the computed one, and lets it be cleared (§6.5)', async () => {
+      await analyze();
+      const active = (await listSeries()).find((s) => s.status === 'active') as SeriesShape;
+      expect(active).toBeDefined();
+
+      const cancelled = await patch(active.id, { userStatus: 'cancelled' });
+      expect(cancelled.statusCode).toBe(200);
+      expect(cancelled.json()).toMatchObject({
+        status: 'active',
+        userStatus: 'cancelled',
+        effectiveStatus: 'cancelled',
+      });
+
+      // An explicit null is a real value: it clears the override and hands the
+      // series back to §5.2. Omitting the field would have left it alone instead.
+      const restored = await patch(active.id, { userStatus: null });
+      expect(restored.json()).toMatchObject({ userStatus: null, effectiveStatus: 'active' });
+    });
+
+    it('writes only the fields the patch names', async () => {
+      await analyze();
+      const [target] = await listSeries();
+
+      await patch(target.id, { notes: 'cancel before the annual renewal' });
+      await patch(target.id, { cancellationUrl: 'https://example.com/account/cancel' });
+
+      const after = (await listSeries()).find((s) => s.id === target.id) as SeriesShape;
+      expect(after.notes).toBe('cancel before the annual renewal');
+      expect(after.cancellationUrl).toBe('https://example.com/account/cancel');
+
+      // Empty string is the field being cleared, not a second spelling of "no URL".
+      await patch(target.id, { cancellationUrl: '   ' });
+      const cleared = (await listSeries()).find((s) => s.id === target.id) as SeriesShape;
+      expect(cleared.cancellationUrl).toBeNull();
+      expect(cleared.notes).toBe('cancel before the annual renewal');
+    });
+
+    it('refuses a cancellation URL that is not http(s)', async () => {
+      await analyze();
+      const [target] = await listSeries();
+
+      // §6.5's drawer renders this as a link, so a stored `javascript:` URL would be
+      // one click from executing in the page.
+      for (const url of ['javascript:alert(1)', 'data:text/html,<script>', 'not a url']) {
+        const refused = await patch(target.id, { cancellationUrl: url });
+        expect(refused.statusCode).toBe(422);
+      }
+      const after = (await listSeries()).find((s) => s.id === target.id) as SeriesShape;
+      expect(after.cancellationUrl).toBeNull();
+    });
+
+    /**
+     * The whole reason the two halves are split. §5.2 recomputes a series on every
+     * run; §6.5's three fields are the user's and must survive that.
+     */
+    it('keeps the user’s fields across an analysis re-run, and refreshes the rest', async () => {
+      await analyze();
+      const before = (await listSeries()).find((s) => s.merchantId === 'netflix') as SeriesShape;
+
+      await patch(before.id, {
+        notes: 'shared with family',
+        cancellationUrl: 'https://netflix.com/cancel',
+        userStatus: 'cancelled',
+      });
+
+      // A third statement raises the price and adds three charges, so the computed
+      // half genuinely moves.
+      await importPriceRise();
+      await analyze();
+
+      const after = (await listSeries()).find((s) => s.merchantId === 'netflix') as SeriesShape;
+      expect(after.id).toBe(before.id);
+      expect(after).toMatchObject({
+        notes: 'shared with family',
+        cancellationUrl: 'https://netflix.com/cancel',
+        userStatus: 'cancelled',
+        effectiveStatus: 'cancelled',
+      });
+      expect(after.occurrenceCount).toBeGreaterThan(before.occurrenceCount);
+      expect(after.charges.length).toBe(after.occurrenceCount);
+    });
+  });
+
   // --------------------------------------------------------- §2.7's runner ---
 
   describe('§2.7 the job runner', () => {

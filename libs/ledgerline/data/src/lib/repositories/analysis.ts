@@ -29,6 +29,36 @@ import type { Database } from '../database.js';
 
 export type SeriesStatus = 'active' | 'lapsed' | 'cancelled';
 
+/**
+ * One charge in a series, as §5.2 fitted it.
+ *
+ * Restated here rather than imported from `analyzers`: a `type:data-access` lib may
+ * depend on `type:domain` and nothing else (§2.2), which is the same arrangement this
+ * lib already has with the parser's format profile. The composition root does the
+ * one-line conversion.
+ */
+export interface SeriesCharge {
+  readonly transactionId: string;
+  /** Signed, as stored — negative is money leaving (§3.1). */
+  readonly amountCents: number;
+  readonly effectiveDate: string;
+}
+
+/** One price change inside a series, as §5.5 derived it. Magnitudes, not signed
+ *  amounts — a price is a positive number. */
+export interface SeriesPriceStep {
+  /** Effective date of the first charge at the new price. */
+  readonly at: string;
+  readonly fromCents: number;
+  readonly toCents: number;
+  /** Positive for an increase. */
+  readonly deltaCents: number;
+  readonly occurrencesAtNewPrice: number;
+  /** §5.5: an unconfirmed step is reported at reduced confidence and labelled
+   *  "one charge at the new price" rather than withheld. */
+  readonly confirmed: boolean;
+}
+
 export interface AnalysisRunRecord {
   readonly id: string;
   readonly startedAt: string;
@@ -67,6 +97,26 @@ export interface SeriesInput {
   readonly status: SeriesStatus;
   readonly regularity: number | null;
   readonly confidence: number | null;
+  /**
+   * §5.3's "ordered charge list" and "price steps", carried rather than re-derived.
+   *
+   * §5.3 forbids re-deriving the series contract downstream, and a read-time
+   * derivation would answer with *today's* grouping rather than the run's — a
+   * merchant correction or a later import moves which charges a series is made of.
+   * §9f made the same call for `transfer_link.detail_json`. Recorded in §9i.
+   */
+  readonly charges: readonly SeriesCharge[];
+  readonly priceSteps: readonly SeriesPriceStep[];
+}
+
+/** §6.5's three user-owned columns, and only those. The computed half belongs to
+ *  `replaceSeries`, which never writes these after the insert. */
+export interface SeriesPatch {
+  /** §6.5's manual override. "A manual status always beats the computed one."
+   *  `null` clears it and hands the series back to §5.2's computed status. */
+  readonly userStatus?: SeriesStatus | null;
+  readonly cancellationUrl?: string | null;
+  readonly notes?: string | null;
 }
 
 export interface SeriesRecord extends SeriesInput {
@@ -124,6 +174,8 @@ interface SeriesRow {
   notes: string | null;
   regularity: number | null;
   confidence: string | null;
+  charges_json: string | null;
+  price_steps_json: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -136,7 +188,7 @@ const SELECT_SERIES = `SELECT id, merchant_id, account_id, cadence_days, cadence
                               cadences_per_year, amount_cents_current, amount_cents_first,
                               first_seen, last_seen, next_expected, occurrence_count, status,
                               user_status, cancellation_url, notes, regularity, confidence,
-                              created_at, updated_at
+                              charges_json, price_steps_json, created_at, updated_at
                          FROM recurring_series`;
 
 function toRun(row: AnalysisRunRow): AnalysisRunRecord {
@@ -155,6 +207,19 @@ function toRun(row: AnalysisRunRow): AnalysisRunRecord {
 
 /** §3.1 declares `recurring_series.confidence` TEXT, so SQLite stores the number
  *  as its decimal string; `String(n)` round-trips exactly through `Number`. */
+/** Malformed JSON in a derived column is a bad write, not a reason to fail every
+ *  read of the Subscriptions page. The summary still renders; the drawer shows no
+ *  history, which is what a null column means anyway. */
+function parseJsonArray<T>(json: string | null): readonly T[] {
+  if (json === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 function toSeries(row: SeriesRow): SeriesRecord {
   return {
     id: row.id,
@@ -175,6 +240,10 @@ function toSeries(row: SeriesRow): SeriesRecord {
     notes: row.notes,
     regularity: row.regularity,
     confidence: row.confidence === null ? null : Number(row.confidence),
+    // A row written before migration 005 has no history, and an empty list is the
+    // honest reading: this series carries none. The next run fills it in.
+    charges: parseJsonArray<SeriesCharge>(row.charges_json),
+    priceSteps: parseJsonArray<SeriesPriceStep>(row.price_steps_json),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -290,8 +359,8 @@ export class AnalysisRepository {
            (id, merchant_id, account_id, cadence_days, cadence_label, cadences_per_year,
             amount_cents_current, amount_cents_first, first_seen, last_seen, next_expected,
             occurrence_count, status, user_status, cancellation_url, notes, regularity,
-            confidence, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?)
+            confidence, charges_json, price_steps_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET
            merchant_id = excluded.merchant_id,
            account_id = excluded.account_id,
@@ -307,6 +376,8 @@ export class AnalysisRepository {
            status = excluded.status,
            regularity = excluded.regularity,
            confidence = excluded.confidence,
+           charges_json = excluded.charges_json,
+           price_steps_json = excluded.price_steps_json,
            updated_at = excluded.updated_at`,
       );
 
@@ -333,6 +404,8 @@ export class AnalysisRepository {
           entry.status,
           entry.regularity,
           entry.confidence === null ? null : String(entry.confidence),
+          JSON.stringify(entry.charges),
+          JSON.stringify(entry.priceSteps),
           now,
           now,
         );
@@ -348,6 +421,49 @@ export class AnalysisRepository {
 
       return { inserted, updated, removed: existing.size };
     })();
+  }
+
+  /**
+   * §6.5's three user-owned columns — the other half of the split this file's header
+   * describes, and the `patchSeries` it names.
+   *
+   * Only the columns the patch actually mentions are written, for the reason
+   * `TransactionRepository.applyBulk` gives: a read-then-write of every column would
+   * rewrite `notes` to the value it already had every time someone saved a URL, and
+   * would clobber a concurrent edit to a field this caller never mentioned.
+   *
+   * An explicit `null` for `userStatus` is a real value and clears the override,
+   * handing the series back to §5.2's computed status — which is why the three fields
+   * are optional rather than nullable-required. "Unset the override" and "leave the
+   * override alone" are different requests and must stay distinguishable.
+   *
+   * Returns `null` for an unknown id rather than throwing, so the route answers 404.
+   */
+  patchSeries(id: string, patch: SeriesPatch): SeriesRecord | null {
+    const assignments: string[] = [];
+    const values: unknown[] = [];
+
+    // A fixed column map, per §3.4: no caller string reaches SQL uninterpreted.
+    if (patch.userStatus !== undefined) {
+      assignments.push('user_status = ?');
+      values.push(patch.userStatus);
+    }
+    if (patch.cancellationUrl !== undefined) {
+      assignments.push('cancellation_url = ?');
+      values.push(patch.cancellationUrl);
+    }
+    if (patch.notes !== undefined) {
+      assignments.push('notes = ?');
+      values.push(patch.notes);
+    }
+
+    if (assignments.length === 0) return this.getSeries(id);
+
+    const changed = this.db
+      .prepare(`UPDATE recurring_series SET ${assignments.join(', ')}, updated_at = ? WHERE id = ?`)
+      .run(...values, this.clock.now(), id);
+
+    return changed.changes === 0 ? null : this.getSeries(id);
   }
 
   listSeries(): SeriesRecord[] {

@@ -8,7 +8,7 @@ const SECTIONS = [
   { label: 'Accounts', path: 'accounts' },
   { label: 'Transactions', path: 'transactions' },
   { label: 'Findings', path: 'findings' },
-  { label: 'Subscriptions', path: null },
+  { label: 'Subscriptions', path: 'subscriptions' },
   { label: 'Insights', path: null },
   { label: 'Ask', path: null },
   { label: 'Settings', path: null },

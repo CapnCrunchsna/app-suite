@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9h
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9i
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -63,13 +63,21 @@ changed; both fire over a multi-year corpus and produce the numbers §5.10 and �
 and §6.2's coverage bar, which rendered every month `partial`, now goes green on an ordinary
 statement. §9h records the six decisions this took.
 
+As of 2026-08-25 §6.5's **Subscriptions page** is built, on §2.3's three `/api/series` routes —
+the recurring ledger sorted by annual cost, the month strip, and the detail drawer with the
+charge history, the price-step table and §6.5's three user-owned fields, where "a manual status
+always beats the computed one" holds through to §6.4's headline. `recurring_series` now carries
+the charge list and price steps `recurrence.v1` had been computing and discarding (migration
+`005`), because §5.3 forbids re-deriving them downstream. §6.4's "Open subscription" action
+**navigates** rather than explaining its own absence.
+
 PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
-review-queue, series, insights, ask and settings endpoints of §2.3, nor **four of §6's eight
-pages**. §6.1's Import, §6.2's Accounts, §6.3's Transactions and §6.4's Findings exist; §6.5's
-Subscriptions is the one the Findings page's "Open subscription" action currently names rather
-than navigates to. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g and §9h list the amendments implementation made to this
-document.
+review-queue, insights, ask and settings endpoints of §2.3, nor **three of §6's eight pages** —
+§6.6's Insights, §6.7's Ask and §6.8's Settings. §6.1's Import, §6.2's Accounts, §6.3's
+Transactions, §6.4's Findings and §6.5's Subscriptions exist and are all reachable from the
+rail. `docs/statement-parsing.md` records what has and has not been validated.
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h and §9i list the amendments implementation made to
+this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1410,6 +1418,39 @@ not an option. The two answers differ because the two backfills do:
 
 - **Categories are backfilled, automatically.** The categorizer is a property of the merchant, the merchant was resolved when those rows were committed, and the answer for a two-year-old row is the answer it would get today — so there is nothing to re-derive and no file to re-read. It runs in the composition root beside the seeding, guarded on `category_source IS NULL`, which excludes both the rows a rule already did and the ones a human deliberately cleared. Idempotent, so the second boot matches nothing. A backfill nobody has to remember to run is one that has actually run.
 - **Periods are not.** That one *is* a re-read of the stored bytes, and it would rewrite the reviewed period of an import a human already accepted — a second, narrower re-parse path beside the one §6.1 refuses, with the same objection against it. The honest answer is the one §3.3 already makes exact and lossless: delete the import and re-import the file. `DELETE /api/imports/:id` exists, and re-uploading is idempotent by file hash. Recorded here so that a coverage bar with old grey cells in it is a known state with a known remedy rather than a mystery.
+
+## 9i. Amendments from implementation — 2026-08-25 (§6.5, §2.3)
+
+Building §6.5's Subscriptions page and the three `/api/series` routes behind it needed six
+decisions this document does not make. One is a column the schema does not have, one is a sign
+convention that is not guessable from the field names, and four are silences — three of them
+about what a *user* owns on a row every analysis run rewrites.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 | **`recurring_series` gains `charges_json` and `price_steps_json`** (migration `005`). | §6.5's drawer asks for "the full charge history as a chart with price-change markers" and "the price-step table", and §5.3 already makes both part of the series contract — "a series exposes ... the ordered charge list, and the **price steps** derived in §5.5". `recurrence.v1` computes both on every run; §3.1 stored the scalar summary and dropped them. Re-deriving at read time is what §9f refused in the identical case of `transfer_link.detail_json`, and §5.3 refuses it outright — "a second implementation of cadence inference is a second set of thresholds to keep in sync". It would also answer with *today's* grouping rather than the run's: a merchant correction (§4.3), a later import, or a re-run under a different `config_hash` all move which charges a series is made of, so the drawer would chart a history the series was never fitted from and mark steps the analyzer never found. Free-shaped JSON, as `finding.detail_json` is; nullable, because a row written before the column existed has no answer and the next run fills it in. |
+| 2.3 | **`amount_cents_current` is a magnitude; `charges[].amount_cents` is signed.** | Not guessable from the names, and getting it backwards is silent. §5.2 derives the series amount as "the median of the current price step", which is a price and therefore positive — the same convention §5.5 states for its steps. A charge is a transaction as stored, so it keeps §3.1's house convention where negative is money leaving. The consequence is that `annualCents` multiplies straight through and only `totalPaidCents` takes absolute values. Pinned by a test rather than left to a comment, because the failure mode is an annual figure that is negative, which also silently inverts the annual-cost ordering §6.5 is written around — two wrongs that agree with each other and so look right. |
+| 2.3 | **`GET /api/series` computes `annualCents`, `monthlyCents`, `totalPaidCents` and `effectiveStatus`.** | §5.2 already fixes the reason for the first three: "`cadences_per_year` is stored on the series, not recomputed per rule, so §5.5's `delta × cadences_per_year` and the Subscriptions page's annual totals cannot disagree." A client-side multiplication would put that arithmetic in a second place and hand §6.5's default sort a number the API never saw. `effectiveStatus` is `COALESCE(user_status, status)` — §6.5's "a manual status always beats the computed one", resolved once so the page and §6.4's headline cannot disagree about how many subscriptions are active. `totalPaidCents` is deliberately **not** derived from the rate: §6.5's "total paid to date" is the sum of the charges actually observed, which is a different number from `annualCents × years` for every series that has ever changed price or missed a month. |
+| 6.5 | **An omitted field on `PATCH /api/series/:id` is left alone; an explicit `null` clears it.** | §6.5 names three user fields and does not say how one is unset. The distinction is load-bearing for `user_status` specifically: its fourth state is not the absence of a preference but a distinct choice — *let §5.2 decide* — and a shape that could not express it would let a user override a status and never get back to the computed answer. So the three fields are optional rather than nullable-required, no schema `default` is declared (Fastify would apply it to the body and make omitted indistinguishable from deliberate, which is the trap §9b already recorded for the column mapper), and `patchSeries` writes only the columns the patch names. In the UI the same distinction is three buttons rather than a checkbox, and clicking the status already in force clears the override. |
+| 6.5 | **A user-entered `cancellation_url` must be `http` or `https`.** | §6.5 asks for "a user-entered cancellation URL" and the drawer renders it as a link, which makes a stored `javascript:` URL one click from executing inside the page. An allow-list of two schemes, not a blocklist: `javascript:`, `data:` and `vbscript:` are the ones anybody thinks of, and a blocklist is wrong the first time a browser ships a fourth. Empty and `null` are both accepted and both mean "no URL" — refusing them would leave a bad URL unremovable, and storing `''` would make "no URL" two values the page had to know about. |
+| 6.4 | **"Open subscription" deep-links on `subject_id`, and the target overrides its own filter.** | §6.4 lists the action and §6.5 describes the destination; nothing says how one reaches the other. No lookup is needed — a series finding's `subject_id` **is** the series id, by §5.1's natural key — so the link carries it as a query parameter and the page opens that row's drawer. The wrinkle is that §6.5's ledger defaults to what is live, while §5.7's findings are very often *about* a series that stopped charging: arriving on a page that has filtered away the row you asked for reads as a broken link. A selected row is therefore always in the list whatever the filter says, and is still honestly labelled as not live. |
+
+**Three smaller shapes.** §6.5's month strip places a subscription on the **modal day of its
+observed charges**, not on `next_expected`: §5.2 measures that projection against the account's
+coverage end, so for a lapsed series it is a date in the past that never happened, and for a
+weekly one there is no stable day of month at all. Ties break to the earlier day, which is the
+conservative reading for cash flow. All 31 cells render regardless of the current month's
+length, because shrinking the strip would move the same series between positions month to month
+and the shape staying put is the whole point. And the drawer's chart is deliberately **not
+zero-based** — a rise from $15.49 to $17.99 is 16%, and against a zero baseline that is two
+marks at the same height, which is the one thing the chart exists to show — so the axis frames
+the range the prices occupy and the caption states both bounds.
+
+Finally, **the ledger arrives sorted and the page does not re-sort it.** §6.5 names the ordering
+and the reaction it is after: "sortable by annual cost, which is the view that produces the *I
+pay what for that?* reaction". Since `annualCents` is computed server-side from the stored
+`cadences_per_year`, sorting in the page would mean deriving it in the page as well — so the API
+returns the list in that order and the page renders what it was given.
 
 ## 10. Open discrepancies — recorded, not resolved
 

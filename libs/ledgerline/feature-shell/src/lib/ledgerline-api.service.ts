@@ -47,6 +47,8 @@ import type {
   Merchant,
   MergeAccountBody,
   PreviewFormatProfileBody,
+  Series,
+  SeriesPatch,
   SetFindingStateBody,
   StatementImport,
   Transaction,
@@ -298,4 +300,30 @@ export class LedgerlineApiService {
   deleteDismissalRule(id: string): Promise<{ readonly deleted?: boolean }> {
     return this.api.deleteDismissalRule(id);
   }
+
+  // ------------------------------------------------------------- §6.5 ---
+
+  /**
+   * §6.5's recurring ledger, already sorted by annual cost.
+   *
+   * The sort is the API's rather than the page's because §6.5 names it as the
+   * default view — "sortable by annual cost, which is the view that produces the
+   * 'I pay *what* for that?' reaction" — and because `annualCents` is computed
+   * server-side from the stored `cadences_per_year` (§5.2), so re-sorting here
+   * would mean re-deriving it here too.
+   */
+  listSeries(): Promise<Series[]> {
+    return this.api.listSeries();
+  }
+
+  getSeries(id: string): Promise<Series> {
+    return this.api.getSeries(id);
+  }
+
+  /** §6.5's three user-owned fields. A manual status always beats the computed
+   *  one, and an omitted field is left alone rather than cleared. */
+  updateSeries(id: string, body: SeriesPatch): Promise<Series> {
+    return this.api.updateSeries(id, body);
+  }
 }
+

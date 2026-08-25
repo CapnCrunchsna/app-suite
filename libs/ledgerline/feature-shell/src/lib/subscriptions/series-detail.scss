@@ -1,0 +1,245 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 8px;
+  background: var(--surface-1, #0e2427);
+}
+
+.drawer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawer__title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text, #dcefeb);
+}
+
+.drawer__sub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.drawer__close {
+  border: 0;
+  background: none;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.drawer__close:hover {
+  color: var(--text, #dcefeb);
+}
+
+.section__title {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------------- chart --- */
+
+.chart__svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart__line {
+  stroke: var(--accent, #2dd4bf);
+  stroke-width: 1.5;
+}
+
+.chart__dot {
+  fill: var(--accent, #2dd4bf);
+}
+
+/* A price step is a vertical rule through the whole plot rather than a dot on the
+ * line, because it marks a moment the *series* changed, not one charge. */
+.chart__step {
+  stroke: var(--warn, #f0b429);
+  stroke-width: 1;
+}
+
+/* §5.5 reports an unconfirmed step at reduced confidence rather than withholding
+ * it, so it is drawn — dashed, which is the same "not settled yet" vocabulary the
+ * coverage bar uses for a partial month. */
+.chart__step--unconfirmed {
+  stroke-dasharray: 3 3;
+}
+
+.chart__caption {
+  margin: 6px 0 0;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------------- steps --- */
+
+.steps__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.steps__table th,
+.steps__table td {
+  padding: 5px 8px 5px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #1f4a47);
+}
+
+.steps__table th {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.steps__up {
+  color: var(--warn, #f0b429);
+}
+
+.steps__down {
+  color: var(--accent, #2dd4bf);
+}
+
+.steps__unconfirmed {
+  color: var(--text-dim, #7ea8a1);
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------- owned --- */
+
+.owned {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.field__row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field__input,
+.field__area {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.field__area {
+  resize: vertical;
+}
+
+.field__input:focus-visible,
+.field__area:focus-visible {
+  outline: 2px solid var(--accent, #2dd4bf);
+  outline-offset: 1px;
+}
+
+.field__open {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  color: var(--accent, #2dd4bf);
+}
+
+.field__hint {
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.override {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.override__computed,
+.override__note {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.override__buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.override__button {
+  padding: 4px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+.override__button:hover:not(:disabled) {
+  color: var(--text, #dcefeb);
+}
+
+.override__button--on {
+  border-color: var(--accent, #2dd4bf);
+  background: var(--accent, #2dd4bf);
+  color: var(--surface-1, #0e2427);
+  font-weight: 600;
+}
+
+.override__button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

@@ -57,6 +57,8 @@ export const DISPOSITIONS = ['insert', 'duplicate', 'near_duplicate'] as const;
 export const RESOLUTIONS = ['replace', 'keep_both', 'skip'] as const;
 export const AMOUNT_MODES = ['single', 'debit_credit'] as const;
 export const SIGN_CONVENTIONS = ['as_is', 'invert'] as const;
+/** `recurring_series.status` and its `user_status` override (§3.1, §6.5). */
+export const SERIES_STATUSES = ['active', 'lapsed', 'cancelled'] as const;
 export const COLUMN_ROLES = [
   'transactionDate',
   'postedDate',
@@ -801,6 +803,7 @@ const subscriptionTotals = {
   properties: {
     activeCount: { type: 'integer' },
     lapsedCount: { type: 'integer' },
+    /** `amountCentsCurrent × cadencesPerYear`, rounded once. What the ledger sorts on. */
     monthlyCents: { type: 'integer' },
     annualCents: { type: 'integer' },
   },
@@ -850,6 +853,114 @@ const dismissalRule = {
     reason: nullableString,
     createdAt: { type: 'string' },
     updatedAt: { type: 'string' },
+  },
+} as const;
+
+// ---------------------------------------------- series / subscriptions (§6.5) ---
+
+/** §5.3's ordered charge list, as stored by the run that fitted the series (§9i). */
+const seriesCharge = {
+  $id: 'SeriesCharge',
+  type: 'object',
+  properties: {
+    transactionId: { type: 'string' },
+    /** Signed, as stored — negative is money leaving (spec 3.1). */
+    amountCents: { type: 'integer' },
+    effectiveDate: { type: 'string' },
+  },
+} as const;
+
+/** §5.5's price steps. Magnitudes, not signed amounts — a price is a positive number. */
+const seriesPriceStep = {
+  $id: 'SeriesPriceStep',
+  type: 'object',
+  properties: {
+    at: { type: 'string', description: 'Effective date of the first charge at the new price' },
+    fromCents: { type: 'integer' },
+    toCents: { type: 'integer' },
+    deltaCents: { type: 'integer', description: 'Positive for an increase' },
+    occurrencesAtNewPrice: { type: 'integer' },
+    /** Spec 5.5: an unconfirmed step is shown at reduced confidence and labelled
+     *  "one charge at the new price" rather than withheld. */
+    confirmed: { type: 'boolean' },
+  },
+} as const;
+
+/**
+ * One recurring series — `recurring_series` (spec 3.1), as spec 6.5's page reads it.
+ *
+ * `monthlyCents`, `annualCents` and `totalPaidCents` are computed here rather than in
+ * the page, because spec 5.2 pins the reason: "`cadences_per_year` is stored on the
+ * series, not recomputed per rule, so spec 5.5's `delta × cadences_per_year` and the
+ * Subscriptions page's annual totals cannot disagree." A client-side multiplication
+ * would be a second place that arithmetic lives.
+ *
+ * `effectiveStatus` is `COALESCE(user_status, status)` — spec 6.5's "a manual status
+ * always beats the computed one", resolved once so the page and spec 6.4's headline
+ * cannot disagree either.
+ */
+const series = {
+  $id: 'Series',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    merchantId: { type: 'string' },
+    accountId: { type: 'string' },
+    /** Fractional: spec 5.2's table is monthly = 30.44 days, weekly = 7. */
+    cadenceDays: { type: ['number', 'null'] },
+    cadenceLabel: nullableString,
+    cadencesPerYear: { type: ['number', 'null'] },
+    /** A magnitude: spec 5.2 derives it as the median of the current price step.
+     *  `charges[].amountCents` is the signed one — see `SeriesCharge`. */
+    amountCentsCurrent: nullableInteger,
+    amountCentsFirst: nullableInteger,
+    firstSeen: nullableString,
+    lastSeen: nullableString,
+    /** Spec 5.2 measures liveness against the account's own coverage end, never the
+     *  wall clock — so this can legitimately be in the past. */
+    nextExpected: nullableString,
+    occurrenceCount: { type: 'integer' },
+    /** What spec 5.2 computed. */
+    status: { type: 'string', enum: SERIES_STATUSES },
+    /** Spec 6.5's manual override, or null when the user has not set one. */
+    userStatus: { type: ['string', 'null'], enum: [...SERIES_STATUSES, null] },
+    /** The one the page and every total use. */
+    effectiveStatus: { type: 'string', enum: SERIES_STATUSES },
+    cancellationUrl: nullableString,
+    notes: nullableString,
+    regularity: { type: ['number', 'null'] },
+    confidence: { type: ['number', 'null'] },
+    monthlyCents: { type: 'integer' },
+    annualCents: { type: 'integer' },
+    /** Spec 6.5's "total paid to date" — the sum of the charges actually observed,
+     *  not the annualized rate. */
+    totalPaidCents: { type: 'integer' },
+    charges: { type: 'array', items: ref('SeriesCharge') },
+    priceSteps: { type: 'array', items: ref('SeriesPriceStep') },
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+  },
+} as const;
+
+/**
+ * Spec 6.5's three user-owned fields.
+ *
+ * No `default` on any of them, for the reason stated above `formatProfileDraft`:
+ * Fastify applies schema defaults to the body, which makes an omitted field
+ * indistinguishable from a deliberate one — and here that difference is the whole
+ * point. Omitting `userStatus` leaves the override alone; sending `null` clears it and
+ * hands the series back to spec 5.2's computed status.
+ */
+const seriesPatch = {
+  $id: 'SeriesPatch',
+  type: 'object',
+  properties: {
+    userStatus: { type: ['string', 'null'], enum: [...SERIES_STATUSES, null] },
+    /** Rendered as a link by spec 6.5's drawer, so the route refuses any scheme other
+     *  than http/https — a stored `javascript:` URL would otherwise be one click from
+     *  running inside the page. */
+    cancellationUrl: nullableString,
+    notes: nullableString,
   },
 } as const;
 
@@ -1156,6 +1267,12 @@ const SHARED = [
   // The mapper. `columnRef` and `columnMap` are partial by nature — a role that is
   // not mapped is an absent key, which is what `Partial<Record<ColumnRole, ...>>`
   // means in `parsing`. `formatProfileDraft` is a request body.
+  // §6.5's ledger. `seriesPatch` is a request body, so it stays partial.
+  allRequired(seriesCharge),
+  allRequired(seriesPriceStep),
+  allRequired(series),
+  seriesPatch,
+
   columnRef,
   columnMap,
   allRequired(formatProfile),

@@ -37,6 +37,8 @@ import type {
   UploadResult,
   CommitResult,
   DeleteImportResult,
+  Series,
+  SeriesPatch,
   FormatProfile,
   FormatProfileDraft,
   FormatProfilePreview,
@@ -249,6 +251,8 @@ export type CreateDismissalRuleBody = {
 export type DeleteDismissalRuleResponse = {
   readonly deleted: boolean;
 };
+
+export type ListSeriesResponse = Series[];
 
 export type BackupDataResponse = {
   readonly path?: string;
@@ -611,6 +615,37 @@ export class LedgerlineApi {
    */
   deleteDismissalRule(id: string): Promise<DeleteDismissalRuleResponse> {
     return this.request<DeleteDismissalRuleResponse>('DELETE', `/api/dismissal-rules/${encodeURIComponent(String(id))}`, {
+    });
+  }
+
+  /**
+   * The recurring ledger behind spec 6.5’s Subscriptions page
+   *
+   * Every series spec 5.2 fitted, with its charge history and price steps as the run that produced it recorded them. Sorted by annual cost, descending — spec 6.5 calls that "the view that produces the *I pay what for that?* reaction", so it is the order the list arrives in rather than one the page has to ask for.
+   */
+  listSeries(): Promise<ListSeriesResponse> {
+    return this.request<ListSeriesResponse>('GET', `/api/series`, {
+    });
+  }
+
+  /**
+   * One series, with its full charge history
+   *
+   * The same shape the list returns. Spec 6.5’s detail drawer needs the charge history and the price-step table, and both travel on every series rather than behind a second request, because the drawer opens from a row the page already holds.
+   */
+  getSeries(id: string): Promise<Series> {
+    return this.request<Series>('GET', `/api/series/${encodeURIComponent(String(id))}`, {
+    });
+  }
+
+  /**
+   * Spec 6.5’s three user-owned fields
+   *
+   * The cancellation URL, the notes, and the manual status override — which always beats the computed one (spec 6.5). Omitting a field leaves it alone; sending `userStatus: null` clears the override and hands the series back to spec 5.2. Nothing here is recomputed by an analysis run: `replaceSeries` writes the other half of the row and never these three.
+   */
+  updateSeries(id: string, body: SeriesPatch): Promise<Series> {
+    return this.request<Series>('PATCH', `/api/series/${encodeURIComponent(String(id))}`, {
+      body,
     });
   }
 

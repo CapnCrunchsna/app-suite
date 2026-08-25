@@ -1,0 +1,27 @@
+-- §6.5's detail drawer asks for "the full charge history as a chart with price-change
+-- markers" and "the price-step table". §5.3 already makes both part of the series
+-- contract — "a series exposes ... the ordered charge list, and the **price steps**
+-- derived in §5.5" — and `recurrence.v1` computes both on every run. Persistence was
+-- the only place they were dropped: §3.1's `recurring_series` stores the scalar
+-- summary and nothing about the charges it was fitted from.
+--
+-- Re-deriving them at read time is the option this rejects, and §9f already made the
+-- argument in the identical case of `transfer_link.detail_json`. §5.3 is explicit that
+-- nothing downstream may re-derive the series contract, "a second implementation of
+-- cadence inference is a second set of thresholds to keep in sync" — and a read-time
+-- derivation would be exactly that, one page removed. It would also answer with
+-- *today's* grouping rather than the run's: a merchant correction (§4.3), a later
+-- import, or a re-run under a different `config_hash` all move which charges a series
+-- is made of, so the drawer would chart a history the series was never fitted from and
+-- mark price steps the analyzer never found.
+--
+-- Free-shaped JSON, exactly as `finding.detail_json` and `transfer_link.detail_json`
+-- are, and for the same reason: the payload is the analyzer's and pinning its shape
+-- here would restate §5.2's output contract a second time in SQL.
+--
+-- Nullable, because a row written before this column existed has no answer. The read
+-- path renders the summary alone in that case rather than inventing a history — and
+-- the next analysis run fills it in, since `replaceSeries` upserts every series it
+-- produces. Recorded in §9i.
+ALTER TABLE recurring_series ADD COLUMN charges_json TEXT;
+ALTER TABLE recurring_series ADD COLUMN price_steps_json TEXT;

@@ -1,0 +1,195 @@
+@let entry = series();
+@let range = amountRange();
+
+<section class="drawer" aria-labelledby="drawer-title">
+  <header class="drawer__head">
+    <div>
+      <h3 class="drawer__title" id="drawer-title">
+        {{ merchantName() ?? entry.merchantId }}
+      </h3>
+      <p class="drawer__sub">
+        {{ entry.cadenceLabel ?? 'no cadence fitted' }} ·
+        {{ formatCents(entry.amountCentsCurrent ?? 0) }} ·
+        {{ formatCents(entry.annualCents) }}/yr
+        @if (accountName()) {
+          · {{ accountName() }}
+        }
+      </p>
+    </div>
+    <button type="button" class="drawer__close" (click)="closed.emit()" aria-label="Close">
+      ×
+    </button>
+  </header>
+
+  <!-- §6.5: "the full charge history as a chart with price-change markers". -->
+  <section class="chart" aria-labelledby="chart-title">
+    <h4 class="section__title" id="chart-title">Charge history</h4>
+
+    @if (points().length === 0) {
+      <p class="empty">
+        No charge history stored for this series. Runs before the history column existed
+        recorded only the summary; the next analysis fills it in.
+      </p>
+    } @else {
+      <svg
+        class="chart__svg"
+        [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
+        role="img"
+        [attr.aria-label]="
+          entry.charges.length +
+          ' charges between ' +
+          entry.firstSeen +
+          ' and ' +
+          entry.lastSeen
+        "
+      >
+        @for (marker of stepMarkers(); track marker.step.at) {
+          <line
+            class="chart__step"
+            [class.chart__step--unconfirmed]="!marker.step.confirmed"
+            [attr.x1]="marker.x"
+            [attr.x2]="marker.x"
+            y1="0"
+            [attr.y2]="chartHeight"
+          >
+            <title>
+              {{ marker.step.at }}: {{ formatCents(marker.step.fromCents) }} →
+              {{ formatCents(marker.step.toCents) }}{{ marker.step.confirmed ? '' : ' (one charge at the new price)' }}
+            </title>
+          </line>
+        }
+
+        <path class="chart__line" [attr.d]="linePath()" fill="none" />
+
+        @for (point of points(); track point.charge.transactionId) {
+          <circle class="chart__dot" [attr.cx]="point.x" [attr.cy]="point.y" r="3">
+            <title>{{ chargeTitle(point.charge) }}</title>
+          </circle>
+        }
+      </svg>
+
+      @if (range) {
+        <p class="chart__caption">
+          {{ entry.charges.length }} charges, {{ entry.firstSeen }} to {{ entry.lastSeen }} ·
+          axis spans {{ formatCents(range.low) }}–{{ formatCents(range.high) }}, not from zero,
+          so a price step is visible rather than flattened.
+        </p>
+      }
+    }
+  </section>
+
+  <!-- §6.5: "the price-step table". §5.5 decided which steps are material. -->
+  <section class="steps" aria-labelledby="steps-title">
+    <h4 class="section__title" id="steps-title">Price steps</h4>
+
+    @if (entry.priceSteps.length === 0) {
+      <p class="empty">No price change detected. The amount has held since {{ entry.firstSeen }}.</p>
+    } @else {
+      <table class="steps__table">
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">From</th>
+            <th scope="col">To</th>
+            <th scope="col">Change</th>
+            <th scope="col">Held</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (step of entry.priceSteps; track step.at) {
+            <tr>
+              <td>{{ step.at }}</td>
+              <td>{{ formatCents(step.fromCents) }}</td>
+              <td>{{ formatCents(step.toCents) }}</td>
+              <td [class.steps__up]="step.deltaCents > 0" [class.steps__down]="step.deltaCents < 0">
+                {{ step.deltaCents > 0 ? '+' : '' }}{{ formatCents(step.deltaCents) }}
+              </td>
+              <td>
+                @if (step.confirmed) {
+                  {{ step.occurrencesAtNewPrice }} charges
+                } @else {
+                  <span class="steps__unconfirmed" title="Spec 5.5 reports this at reduced confidence rather than withholding it.">
+                    one charge at the new price
+                  </span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+
+  <!-- §6.5's three user-owned fields, all via PATCH /api/series/:id. -->
+  <section class="owned" aria-labelledby="owned-title">
+    <h4 class="section__title" id="owned-title">Yours to set</h4>
+
+    <label class="field">
+      <span class="field__label">Cancellation URL</span>
+      <span class="field__row">
+        <input
+          type="url"
+          class="field__input"
+          placeholder="https://…"
+          [ngModel]="urlDraft()"
+          (ngModelChange)="urlDraft.set($event)"
+          [disabled]="busy()"
+          (blur)="saveUrl()"
+          (keydown.enter)="saveUrl()"
+        />
+        @if (entry.cancellationUrl) {
+          <a
+            class="field__open"
+            [href]="entry.cancellationUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Open</a
+          >
+        }
+      </span>
+      <span class="field__hint">
+        Where you go to cancel this. Must be http or https — the page refuses anything else.
+      </span>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Notes</span>
+      <textarea
+        class="field__area"
+        rows="2"
+        placeholder="Shared with family, renews in March…"
+        [ngModel]="notesDraft()"
+        (ngModelChange)="notesDraft.set($event)"
+        [disabled]="busy()"
+        (blur)="saveNotes()"
+      ></textarea>
+    </label>
+
+    <div class="override">
+      <span class="field__label">Status</span>
+      <p class="override__computed">
+        Analysis says <strong>{{ entry.status }}</strong
+        >. Yours wins where you set one — click the one in force to hand it back.
+      </p>
+      <div class="override__buttons" role="group" aria-label="Manual status override">
+        @for (choice of ['active', 'lapsed', 'cancelled']; track choice) {
+          <button
+            type="button"
+            class="override__button"
+            [class.override__button--on]="entry.userStatus === choice"
+            [disabled]="busy()"
+            (click)="chooseStatus($any(choice))"
+          >
+            {{ choice }}
+          </button>
+        }
+      </div>
+      @if (entry.userStatus) {
+        <p class="override__note">
+          Overridden to <strong>{{ entry.userStatus }}</strong
+          >. It counts as {{ entry.effectiveStatus }} in every total on the Findings page.
+        </p>
+      }
+    </div>
+  </section>
+</section>

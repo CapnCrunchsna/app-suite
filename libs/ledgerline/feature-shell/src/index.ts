@@ -20,3 +20,6 @@ export * from './lib/accounts/accounts-page.js';
 export * from './lib/accounts/account-card.js';
 export * from './lib/accounts/coverage-bar.js';
 export * from './lib/accounts/transfer-queue.js';
+export * from './lib/subscriptions/subscriptions-page.js';
+export * from './lib/subscriptions/month-strip.js';
+export * from './lib/subscriptions/series-detail.js';

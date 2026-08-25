@@ -41,6 +41,7 @@ import {
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
 import { formatCents } from '@metrum/ledgerline-domain';
+import { Router } from '@angular/router';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type {
   Account,
@@ -80,6 +81,7 @@ const PAGE_SIZE = 250;
 })
 export class FindingsPage {
   private readonly api = inject(LedgerlineApiService);
+  private readonly router = inject(Router);
 
   // ------------------------------------------------------------- state ---
 
@@ -285,17 +287,18 @@ export class FindingsPage {
   }
 
   /**
-   * §6.4's "Open subscription".
+   * §6.4's "Open subscription", which now goes somewhere (§9i).
    *
-   * §6.5's Subscriptions page does not exist, so this says so rather than
-   * routing into a blank screen — the same choice the rail makes for the six
-   * unbuilt sections.
+   * A series finding's `subject_id` **is** the series id (§5.1's natural key), so
+   * the deep link needs no lookup — the Subscriptions page selects the row from the
+   * query parameter and opens its drawer. Until §6.5 was built this action set a
+   * notice explaining its own absence, which was the honest thing to do with a
+   * button that could not lead anywhere, and is now dead weight.
    */
-  protected onOpenSubscription(finding: Finding): void {
-    this.notice.set(
-      `§6.5's Subscriptions page is not built yet. This finding is about series ` +
-        `${finding.subjectId}.`,
-    );
+  protected async onOpenSubscription(finding: Finding): Promise<void> {
+    await this.router.navigate(['/subscriptions'], {
+      queryParams: { series: finding.subjectId },
+    });
   }
 
   /**

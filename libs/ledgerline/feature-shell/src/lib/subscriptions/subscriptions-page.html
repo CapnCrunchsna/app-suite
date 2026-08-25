@@ -1,0 +1,155 @@
+@let summary = headline();
+@let list = rows();
+@let open = selected();
+
+<div class="page">
+  <!-- §5.2's summary, on the page it feeds. -->
+  <ui-panel>
+    <div class="headline">
+      <div class="headline__figure">
+        <span class="headline__value">{{ summary.count }}</span>
+        <span class="headline__label">active subscriptions</span>
+      </div>
+      <div class="headline__figure">
+        <span class="headline__value">{{ formatCents(summary.monthlyCents) }}</span>
+        <span class="headline__label">per month</span>
+      </div>
+      <div class="headline__figure headline__figure--lead">
+        <span class="headline__value">{{ formatCents(summary.annualCents) }}</span>
+        <span class="headline__label">per year</span>
+      </div>
+    </div>
+
+    <ll-month-strip
+      [series]="list"
+      [merchantNames]="merchantsById()"
+      (daySelected)="onDaySelected($event)"
+    />
+  </ui-panel>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+
+  <ui-panel heading="Recurring ledger">
+    <div class="toolbar">
+      <div class="scope" role="group" aria-label="Which subscriptions to show">
+        <button
+          type="button"
+          class="scope__button"
+          [class.scope__button--on]="scope() === 'live'"
+          (click)="onScope('live')"
+        >
+          Active
+        </button>
+        <button
+          type="button"
+          class="scope__button"
+          [class.scope__button--on]="scope() === 'all'"
+          (click)="onScope('all')"
+        >
+          All
+          @if (inactiveCount() > 0) {
+            <span class="scope__count">+{{ inactiveCount() }}</span>
+          }
+        </button>
+      </div>
+      <p class="toolbar__hint">
+        Sorted by annual cost. The cheap monthly one is usually the expensive yearly one.
+      </p>
+    </div>
+
+    @if (loading()) {
+      <p class="empty">Loading the ledger…</p>
+    } @else if (failure()) {
+      <p class="empty empty--bad">
+        The ledger did not load: {{ $any(failure()).message }}
+      </p>
+    } @else if (list.length === 0) {
+      <p class="empty">
+        @if (scope() === 'live' && inactiveCount() > 0) {
+          Nothing active. {{ inactiveCount() }} lapsed or cancelled —
+          <button type="button" class="linkish" (click)="onScope('all')">show them</button>.
+        } @else {
+          No recurring series yet. Spec 5.2 needs three charges at a steady cadence before it
+          will call something a subscription — import more statements, then run an analysis.
+        }
+      </p>
+    } @else {
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th scope="col">Merchant</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col">Cadence</th>
+            <th scope="col">Next expected</th>
+            <th scope="col">First seen</th>
+            <th scope="col" class="num">Paid to date</th>
+            <th scope="col" class="num">Per year</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of list; track entry.id) {
+            <tr
+              class="ledger__row"
+              [class.ledger__row--open]="open?.id === entry.id"
+              (click)="onSelect(entry)"
+              tabindex="0"
+              (keydown.enter)="onSelect(entry)"
+              (keydown.space)="onSelect(entry)"
+            >
+              <td>
+                <span class="ledger__merchant">{{ merchantNameFor(entry) }}</span>
+                @if (accountNameFor(entry)) {
+                  <span class="ledger__account">{{ accountNameFor(entry) }}</span>
+                }
+                @if (entry.notes) {
+                  <span class="ledger__flag" title="Has notes">note</span>
+                }
+                @if (entry.cancellationUrl) {
+                  <span class="ledger__flag" title="Has a cancellation link">link</span>
+                }
+              </td>
+              <td class="num">{{ formatCents(entry.amountCentsCurrent ?? 0) }}</td>
+              <td>{{ entry.cadenceLabel ?? '—' }}</td>
+              <td>{{ nextLabel(entry) }}</td>
+              <td>{{ entry.firstSeen ?? '—' }}</td>
+              <td class="num">{{ formatCents(entry.totalPaidCents) }}</td>
+              <td class="num ledger__annual">{{ formatCents(entry.annualCents) }}</td>
+              <td>
+                <span
+                  class="chip"
+                  [class.chip--active]="entry.effectiveStatus === 'active'"
+                  [class.chip--lapsed]="entry.effectiveStatus === 'lapsed'"
+                  [class.chip--cancelled]="entry.effectiveStatus === 'cancelled'"
+                  [title]="
+                    entry.userStatus
+                      ? 'You set this. Analysis computed ' + entry.status + '.'
+                      : 'Computed by spec 5.2.'
+                  "
+                >
+                  {{ entry.effectiveStatus }}
+                  @if (entry.userStatus) {
+                    <span class="chip__manual" aria-label="manually set">·</span>
+                  }
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </ui-panel>
+
+  @if (open) {
+    <ll-series-detail
+      [series]="open"
+      [merchantName]="merchantNameFor(open)"
+      [accountName]="accountNameFor(open)"
+      [busy]="busy()"
+      (edited)="onEdited($event)"
+      (closed)="selectedId.set(null)"
+    />
+  }
+</div>

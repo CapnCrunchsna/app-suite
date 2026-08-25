@@ -274,5 +274,21 @@ function toSeriesInput(series: ReturnType<typeof analyze>['series'][number]): Se
     status: series.status,
     regularity: series.regularity,
     confidence: series.confidence,
+    // §5.3's charge list and price steps, carried into storage rather than dropped.
+    // The two shapes meet structurally here because `data` may not import
+    // `analyzers` (§2.2) — the same arrangement it has with the format profile.
+    charges: series.charges.map((charge) => ({
+      transactionId: charge.transactionId,
+      amountCents: charge.amountCents,
+      effectiveDate: charge.effectiveDate,
+    })),
+    priceSteps: series.priceSteps.map((step) => ({
+      at: step.at,
+      fromCents: step.fromCents,
+      toCents: step.toCents,
+      deltaCents: step.deltaCents,
+      occurrencesAtNewPrice: step.occurrencesAtNewPrice,
+      confirmed: step.confirmed,
+    })),
   };
 }

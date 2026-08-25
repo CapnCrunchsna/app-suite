@@ -467,6 +467,58 @@ export interface DeleteImportResult {
   readonly retainedTransactionIds: string[];
 }
 
+export interface SeriesCharge {
+  readonly transactionId: string;
+  readonly amountCents: number;
+  readonly effectiveDate: string;
+}
+
+export interface SeriesPriceStep {
+  /** Effective date of the first charge at the new price */
+  readonly at: string;
+  readonly fromCents: number;
+  readonly toCents: number;
+  /** Positive for an increase */
+  readonly deltaCents: number;
+  readonly occurrencesAtNewPrice: number;
+  readonly confirmed: boolean;
+}
+
+export interface Series {
+  readonly id: string;
+  readonly merchantId: string;
+  readonly accountId: string;
+  readonly cadenceDays: number | null;
+  readonly cadenceLabel: string | null;
+  readonly cadencesPerYear: number | null;
+  readonly amountCentsCurrent: number | null;
+  readonly amountCentsFirst: number | null;
+  readonly firstSeen: string | null;
+  readonly lastSeen: string | null;
+  readonly nextExpected: string | null;
+  readonly occurrenceCount: number;
+  readonly status: 'active' | 'lapsed' | 'cancelled';
+  readonly userStatus: 'active' | 'lapsed' | 'cancelled' | null;
+  readonly effectiveStatus: 'active' | 'lapsed' | 'cancelled';
+  readonly cancellationUrl: string | null;
+  readonly notes: string | null;
+  readonly regularity: number | null;
+  readonly confidence: number | null;
+  readonly monthlyCents: number;
+  readonly annualCents: number;
+  readonly totalPaidCents: number;
+  readonly charges: SeriesCharge[];
+  readonly priceSteps: SeriesPriceStep[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface SeriesPatch {
+  readonly userStatus?: 'active' | 'lapsed' | 'cancelled' | null;
+  readonly cancellationUrl?: string | null;
+  readonly notes?: string | null;
+}
+
 export interface ColumnRef {
   readonly by: 'header' | 'index';
   readonly name?: string;

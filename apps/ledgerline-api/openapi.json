@@ -1949,6 +1949,259 @@
           "retainedTransactionIds"
         ]
       },
+      "SeriesCharge": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "integer"
+          },
+          "effectiveDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "transactionId",
+          "amountCents",
+          "effectiveDate"
+        ]
+      },
+      "SeriesPriceStep": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "Effective date of the first charge at the new price"
+          },
+          "fromCents": {
+            "type": "integer"
+          },
+          "toCents": {
+            "type": "integer"
+          },
+          "deltaCents": {
+            "type": "integer",
+            "description": "Positive for an increase"
+          },
+          "occurrencesAtNewPrice": {
+            "type": "integer"
+          },
+          "confirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "at",
+          "fromCents",
+          "toCents",
+          "deltaCents",
+          "occurrencesAtNewPrice",
+          "confirmed"
+        ]
+      },
+      "Series": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "cadenceDays": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "cadenceLabel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cadencesPerYear": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "amountCentsCurrent": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "amountCentsFirst": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "firstSeen": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastSeen": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nextExpected": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occurrenceCount": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "lapsed",
+              "cancelled"
+            ]
+          },
+          "userStatus": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "enum": [
+              "active",
+              "lapsed",
+              "cancelled",
+              null
+            ]
+          },
+          "effectiveStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "lapsed",
+              "cancelled"
+            ]
+          },
+          "cancellationUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "regularity": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "confidence": {
+            "type": [
+              "null",
+              "number"
+            ]
+          },
+          "monthlyCents": {
+            "type": "integer"
+          },
+          "annualCents": {
+            "type": "integer"
+          },
+          "totalPaidCents": {
+            "type": "integer"
+          },
+          "charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesCharge"
+            }
+          },
+          "priceSteps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeriesPriceStep"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "merchantId",
+          "accountId",
+          "cadenceDays",
+          "cadenceLabel",
+          "cadencesPerYear",
+          "amountCentsCurrent",
+          "amountCentsFirst",
+          "firstSeen",
+          "lastSeen",
+          "nextExpected",
+          "occurrenceCount",
+          "status",
+          "userStatus",
+          "effectiveStatus",
+          "cancellationUrl",
+          "notes",
+          "regularity",
+          "confidence",
+          "monthlyCents",
+          "annualCents",
+          "totalPaidCents",
+          "charges",
+          "priceSteps",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SeriesPatch": {
+        "type": "object",
+        "properties": {
+          "userStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "active",
+              "lapsed",
+              "cancelled",
+              null
+            ]
+          },
+          "cancellationUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "ColumnRef": {
         "type": "object",
         "properties": {
@@ -5836,6 +6089,283 @@
                   "required": [
                     "deleted"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/series": {
+      "get": {
+        "operationId": "listSeries",
+        "summary": "The recurring ledger behind spec 6.5’s Subscriptions page",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Every series spec 5.2 fitted, with its charge history and price steps as the run that produced it recorded them. Sorted by annual cost, descending — spec 6.5 calls that \"the view that produces the *I pay what for that?* reaction\", so it is the order the list arrives in rather than one the page has to ask for.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Series"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/series/{id}": {
+      "get": {
+        "operationId": "getSeries",
+        "summary": "One series, with its full charge history",
+        "tags": [
+          "analysis"
+        ],
+        "description": "The same shape the list returns. Spec 6.5’s detail drawer needs the charge history and the price-step table, and both travel on every series rather than behind a second request, because the drawer opens from a row the page already holds.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Series"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSeries",
+        "summary": "Spec 6.5’s three user-owned fields",
+        "tags": [
+          "analysis"
+        ],
+        "description": "The cancellation URL, the notes, and the manual status override — which always beats the computed one (spec 6.5). Omitting a field leaves it alone; sending `userStatus: null` clears the override and hands the series back to spec 5.2. Nothing here is recomputed by an analysis run: `replaceSeries` writes the other half of the row and never these three.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesPatch"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Series"
                 }
               }
             }

@@ -1,0 +1,70 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* Cells grow to fill the row but never past `max-width`, for the same reason
+ * `coverage-bar` bounds its own: the strip has to stay scannable whether it is
+ * rendered full-width or beside the detail drawer. */
+.strip__day {
+  display: flex;
+  flex: 1 1 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 9px;
+  max-width: 34px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.6rem;
+  cursor: pointer;
+}
+
+.strip__day--empty {
+  cursor: default;
+}
+
+.strip__day--loaded {
+  color: var(--text, #dcefeb);
+}
+
+.strip__day:focus-visible {
+  outline: 2px solid var(--accent, #2dd4bf);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Height carries the money, so a month whose outgoings all land on the 1st reads
+ * as one tall spike rather than as a row of identical marks. `--fill` is the
+ * day's share of the busiest day, set by the component. */
+.strip__bar {
+  width: 100%;
+  height: calc(6px + (var(--fill, 0) * 40px));
+  border-radius: 2px 2px 0 0;
+  background: var(--accent, #2dd4bf);
+}
+
+.strip__day--empty .strip__number {
+  opacity: 0.45;
+}
+
+.strip__legend {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}

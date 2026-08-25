@@ -1,0 +1,222 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------------------------------------------------------- headline --- */
+
+.headline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-bottom: 18px;
+}
+
+.headline__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.headline__value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text, #dcefeb);
+}
+
+/* The annual figure is the one §6.5 is written around, so it is the one that is
+ * bigger than the others rather than merely present among them. */
+.headline__figure--lead .headline__value {
+  font-size: 2rem;
+  color: var(--accent, #2dd4bf);
+}
+
+.headline__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ----------------------------------------------------------- toolbar --- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.scope {
+  display: flex;
+  gap: 6px;
+}
+
+.scope__button {
+  padding: 4px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.scope__button--on {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--text, #dcefeb);
+}
+
+.scope__count {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.toolbar__hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------------ ledger --- */
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.ledger th,
+.ledger td {
+  padding: 8px 10px 8px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #1f4a47);
+}
+
+.ledger th {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger__row {
+  cursor: pointer;
+}
+
+.ledger__row:hover,
+.ledger__row--open {
+  background: var(--surface-2, #143034);
+}
+
+.ledger__row:focus-visible {
+  outline: 2px solid var(--accent, #2dd4bf);
+  outline-offset: -2px;
+}
+
+.ledger__merchant {
+  color: var(--text, #dcefeb);
+}
+
+.ledger__account {
+  margin-left: 8px;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.ledger__flag {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 3px;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* The column the page is sorted by, marked so the ordering is legible without a
+ * sort indicator on a table that only sorts one way. */
+.ledger__annual {
+  color: var(--accent, #2dd4bf);
+  font-weight: 600;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  text-transform: capitalize;
+  background: var(--surface-2, #143034);
+  border: 1px solid var(--border, #1f4a47);
+  color: var(--text-dim, #7ea8a1);
+}
+
+.chip--active {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.chip--lapsed {
+  border-color: var(--warn, #f0b429);
+  color: var(--warn, #f0b429);
+}
+
+/* A manual override is marked on the chip rather than in a column of its own: it
+ * is a fact *about* the status, and §6.5 makes it the status that wins. */
+.chip__manual {
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------- other --- */
+
+.notice {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface-2, #143034);
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+}
+
+.empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.empty--bad {
+  color: var(--warn, #f0b429);
+}
+
+.linkish {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #2dd4bf);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
