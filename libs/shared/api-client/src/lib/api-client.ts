@@ -37,6 +37,9 @@ import type {
   UploadResult,
   CommitResult,
   DeleteImportResult,
+  Settings,
+  SettingsUpdate,
+  WipeResult,
   Series,
   SeriesPatch,
   FormatProfile,
@@ -259,9 +262,22 @@ export type BackupDataResponse = {
   readonly createdAt?: string;
 };
 
+export type WipeDataBody = {
+  /** Must be exactly: DELETE EVERYTHING */
+  readonly confirm: string;
+};
+
 export interface ExportDataQuery {
   readonly format?: 'json' | 'csv';
 }
+
+export type UpdateSettingsBody = {
+  readonly changes: ({
+    readonly section: string;
+    readonly key: string;
+    readonly value?: number | boolean | null;
+  })[];
+};
 
 /**
  * Every operation in the emitted contract, one method each.
@@ -660,6 +676,17 @@ export class LedgerlineApi {
   }
 
   /**
+   * Delete every transaction, import, finding and series
+   *
+   * Irreversible, and therefore backed up first: the response carries the path of a copy taken immediately before the delete. Requires the exact confirmation phrase. Reference data (spec 4 aliases, spec 5 categories, format profiles) is re-seeded, and spec 7.4 threshold overrides are kept — this clears data, not configuration.
+   */
+  wipeData(body: WipeDataBody): Promise<WipeResult> {
+    return this.request<WipeResult>('DELETE', `/api/data`, {
+      body,
+    });
+  }
+
+  /**
    * Export every transaction as JSON or CSV
    *
    * Money is exported twice on purpose: `amountCents` is the value, and `amount` is the rendered form for a human reading the file. Only the first is ever read back.
@@ -667,6 +694,27 @@ export class LedgerlineApi {
   exportData(query: ExportDataQuery = {}): Promise<unknown> {
     return this.request<unknown>('POST', `/api/data/export`, {
       query,
+    });
+  }
+
+  /**
+   * Spec 7.4’s config, as spec 6.8’s Analyzers section reads it
+   *
+   * Every tunable threshold with its shipped default, whether it has been overridden, and the current `config_hash`; every spec 5 rule with its switch and how many of its findings are active and dismissed. The editable set is derived from the default config, so a threshold added to spec 5 appears here without a second list to update.
+   */
+  getSettings(): Promise<Settings> {
+    return this.request<Settings>('GET', `/api/settings`, {
+    });
+  }
+
+  /**
+   * Override a threshold, or switch a rule off
+   *
+   * Both are the same write: a rule’s switch is a boolean field in that rule’s own config section. A `null` value removes the override and restores the shipped default. Every accepted change moves `config_hash`, which is what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — the response says whether the hash moved and how many dismissals are in scope.
+   */
+  updateSettings(body: UpdateSettingsBody): Promise<SettingsUpdate> {
+    return this.request<SettingsUpdate>('PATCH', `/api/settings`, {
+      body,
     });
   }
   // ------------------------------------------------------------ plumbing ---

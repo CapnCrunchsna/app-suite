@@ -1949,6 +1949,189 @@
           "retainedTransactionIds"
         ]
       },
+      "SettingThreshold": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "number",
+              "boolean"
+            ]
+          },
+          "defaultValue": {
+            "type": [
+              "number",
+              "boolean"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "boolean"
+            ]
+          },
+          "overridden": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "section",
+          "key",
+          "kind",
+          "defaultValue",
+          "value",
+          "overridden"
+        ]
+      },
+      "SettingUnsettable": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "key",
+          "reason"
+        ]
+      },
+      "SettingRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "specRef": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "enabledKey": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "activeFindings": {
+            "type": "integer"
+          },
+          "dismissedFindings": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "specRef",
+          "section",
+          "enabledKey",
+          "enabled",
+          "activeFindings",
+          "dismissedFindings"
+        ]
+      },
+      "Settings": {
+        "type": "object",
+        "properties": {
+          "configHash": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingRule"
+            }
+          },
+          "thresholds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingThreshold"
+            }
+          },
+          "unsettable": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingUnsettable"
+            }
+          },
+          "databaseFile": {
+            "type": "string"
+          },
+          "backupDir": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "configHash",
+          "rules",
+          "thresholds",
+          "unsettable",
+          "databaseFile",
+          "backupDir"
+        ]
+      },
+      "SettingsUpdate": {
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/Settings"
+          },
+          "configHashChanged": {
+            "type": "boolean"
+          },
+          "dismissalsAffected": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "settings",
+          "configHashChanged",
+          "dismissalsAffected"
+        ]
+      },
+      "WipeResult": {
+        "type": "object",
+        "properties": {
+          "backupPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rowsDeleted": {
+            "type": "integer"
+          },
+          "deletedByTable": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "backupPath",
+          "rowsDeleted",
+          "deletedByTable"
+        ]
+      },
       "SeriesCharge": {
         "type": "object",
         "properties": {
@@ -6523,6 +6706,107 @@
         }
       }
     },
+    "/api/data": {
+      "delete": {
+        "operationId": "wipeData",
+        "summary": "Delete every transaction, import, finding and series",
+        "tags": [
+          "data"
+        ],
+        "description": "Irreversible, and therefore backed up first: the response carries the path of a copy taken immediately before the delete. Requires the exact confirmation phrase. Reference data (spec 4 aliases, spec 5 categories, format profiles) is re-seeded, and spec 7.4 threshold overrides are kept — this clears data, not configuration.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "description": "Must be exactly: DELETE EVERYTHING"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WipeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/data/export": {
       "post": {
         "operationId": "exportData",
@@ -6549,6 +6833,209 @@
         "responses": {
           "200": {
             "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "getSettings",
+        "summary": "Spec 7.4’s config, as spec 6.8’s Analyzers section reads it",
+        "tags": [
+          "settings"
+        ],
+        "description": "Every tunable threshold with its shipped default, whether it has been overridden, and the current `config_hash`; every spec 5 rule with its switch and how many of its findings are active and dismissed. The editable set is derived from the default config, so a threshold added to spec 5 appears here without a second list to update.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSettings",
+        "summary": "Override a threshold, or switch a rule off",
+        "tags": [
+          "settings"
+        ],
+        "description": "Both are the same write: a rule’s switch is a boolean field in that rule’s own config section. A `null` value removes the override and restores the shipped default. Every accepted change moves `config_hash`, which is what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — the response says whether the hash moved and how many dismissals are in scope.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "changes"
+                ],
+                "properties": {
+                  "changes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "section",
+                        "key"
+                      ],
+                      "properties": {
+                        "section": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": [
+                            "number",
+                            "boolean",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsUpdate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }

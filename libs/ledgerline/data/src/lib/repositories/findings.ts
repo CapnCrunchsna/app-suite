@@ -175,6 +175,17 @@ export interface FindingQuery {
   readonly ruleIds?: readonly string[];
   readonly bands?: readonly FindingBand[];
   readonly statuses?: readonly FindingLifecycleStatus[];
+  /**
+   * The user's own verdict, from `finding_state` — a different question from
+   * `statuses` (§5.1: "does the data still say this" versus "have you dealt with it").
+   *
+   * `visibility: 'hidden'` is the near neighbour and is not a substitute: it returns
+   * dismissed *and* snoozed together, and §6.8's re-evaluation warning is about
+   * dismissals specifically. A snooze expires on its own; a dismissal is what §5.1
+   * reopens when `config_hash` moves, so counting the two as one would overstate what
+   * changing a threshold disturbs.
+   */
+  readonly userStatuses?: readonly FindingUserStatus[];
   readonly impactKind?: FindingImpactKind;
   /** Through `finding_evidence` — §6.4's account filter. A finding is "on" an
    *  account when any of its evidence is. */
@@ -668,6 +679,13 @@ export class FindingRepository {
     if (query.ruleIds?.length) {
       where.push(`f.rule_id IN (${query.ruleIds.map(() => '?').join(', ')})`);
       params.push(...query.ruleIds);
+    }
+    if (query.userStatuses?.length) {
+      // `fs.status`, not `f.status`. The two tables both have a `status` column and
+      // they mean different things — §5.1's "does the data still say this" versus
+      // "have you dealt with it" — so the alias is doing real work here.
+      where.push(`fs.status IN (${query.userStatuses.map(() => '?').join(', ')})`);
+      params.push(...query.userStatuses);
     }
     if (query.bands?.length) {
       where.push(`f.band IN (${query.bands.map(() => '?').join(', ')})`);

@@ -1,0 +1,134 @@
+@let all = settings();
+
+<p class="lede">
+  Every number §5 uses is a default you can change (§7.4). Findings are stamped with the
+  <code>config_hash</code> they were computed under, so tuning one is a normal edit rather than a
+  migration — and §5.1 re-evaluates a rule's dismissed findings when its own thresholds move.
+</p>
+
+<p class="hash">
+  <span class="hash__label">config_hash</span>
+  <code>{{ all.configHash }}</code>
+  @if (overriddenCount() > 0) {
+    <span class="hash__tuned"
+      >{{ overriddenCount() }} {{ overriddenCount() === 1 ? 'threshold' : 'thresholds' }}
+      overridden</span
+    >
+  } @else {
+    <span class="hash__tuned hash__tuned--stock">all defaults</span>
+  }
+</p>
+
+@for (group of groups(); track group.key) {
+  <section class="group">
+    <header class="group__head">
+      <h3 class="group__title">
+        {{ group.label }}
+        @if (group.specRef) {
+          <span class="group__spec">§{{ group.specRef }}</span>
+        }
+      </h3>
+
+      @if (group.rules.length > 0) {
+        <div class="switches">
+          @for (rule of group.rules; track rule.enabledKey) {
+            <label class="switch">
+              <input
+                type="checkbox"
+                [checked]="rule.enabled"
+                [disabled]="busy()"
+                (change)="toggleRule(rule)"
+              />
+              <span class="switch__label">
+                @if (group.rules.length > 1) {
+                  {{ rule.label }}
+                } @else {
+                  Enabled
+                }
+              </span>
+              <span class="switch__counts">
+                {{ rule.activeFindings }} active
+                @if (rule.dismissedFindings > 0) {
+                  · {{ rule.dismissedFindings }} dismissed
+                }
+              </span>
+            </label>
+          }
+        </div>
+      }
+    </header>
+
+    @if (group.dismissed > 0) {
+      <p class="warn">
+        Changing anything here re-evaluates {{ group.dismissed }} dismissed
+        {{ group.dismissed === 1 ? 'finding' : 'findings' }} in this rule on the next run — §5.1
+        reopens a dismissal when the thresholds behind it move.
+      </p>
+    }
+
+    @let fields = thresholdsOf(group);
+    @if (fields.length === 0) {
+      <p class="none">No tunable thresholds.</p>
+    } @else {
+      <div class="fields">
+        @for (field of fields; track field.section + field.key) {
+          <label
+            class="field"
+            [class.field--overridden]="field.overridden"
+            [attr.for]="fieldId(field)"
+          >
+            <span class="field__name">{{ field.key }}</span>
+
+            @if (field.kind === 'boolean') {
+              <input
+                type="checkbox"
+                class="field__check"
+                [id]="fieldId(field)"
+                [checked]="$any(field.value)"
+                [disabled]="busy()"
+                (change)="commitBoolean(field, $any($event.target).checked)"
+              />
+            } @else {
+              <input
+                type="number"
+                class="field__input"
+                [id]="fieldId(field)"
+                step="any"
+                [value]="field.value"
+                [disabled]="busy()"
+                (blur)="commitNumber(field, $any($event.target).value)"
+                (keydown.enter)="commitNumber(field, $any($event.target).value)"
+              />
+            }
+
+            <span class="field__hint">
+              {{ hintFor(field) }}
+              @if (field.overridden) {
+                <button type="button" class="field__reset" [disabled]="busy()" (click)="reset(field)">
+                  reset
+                </button>
+              }
+            </span>
+          </label>
+        }
+      </div>
+    }
+  </section>
+}
+
+@if (all.unsettable.length > 0) {
+  <section class="group">
+    <h3 class="group__title">Not editable here</h3>
+    <p class="none">
+      These are lists rather than single values. §7.6 calls them calibration decisions, and a
+      generic form is the wrong place to make one.
+    </p>
+    <ul class="unsettable">
+      @for (item of all.unsettable; track item.section + item.key) {
+        <li>
+          <code>{{ item.section }}.{{ item.key }}</code> — {{ item.reason }}
+        </li>
+      }
+    </ul>
+  </section>
+}

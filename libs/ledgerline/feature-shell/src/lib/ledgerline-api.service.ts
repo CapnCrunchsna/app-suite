@@ -49,6 +49,8 @@ import type {
   PreviewFormatProfileBody,
   Series,
   SeriesPatch,
+  Settings,
+  SettingsUpdate,
   SetFindingStateBody,
   StatementImport,
   Transaction,
@@ -61,7 +63,10 @@ import type {
   TransferProposeResult,
   UpdateAccountBody,
   UpdateImportBody,
+  UpdateSettingsBody,
   UploadResult,
+  WipeDataBody,
+  WipeResult,
 } from '@metrum/api-client';
 
 /**
@@ -325,5 +330,64 @@ export class LedgerlineApiService {
   updateSeries(id: string, body: SeriesPatch): Promise<Series> {
     return this.api.updateSeries(id, body);
   }
+
+  // ------------------------------------------------------------- §6.8 ---
+
+  /** §7.4's config: every tunable threshold with its shipped default, every §5
+   *  rule with its switch, and the `config_hash` the findings on screen were
+   *  computed under. */
+  getSettings(): Promise<Settings> {
+    return this.api.getSettings();
+  }
+
+  /** One write for thresholds and rule switches alike — a rule's `enabled` is a
+   *  field in its own config section. A `null` value restores the default. */
+  updateSettings(body: UpdateSettingsBody): Promise<SettingsUpdate> {
+    return this.api.updateSettings(body);
+  }
+
+  /** §2.3's backup: a consistent copy, returning the path it wrote. */
+  backupData(): Promise<{ readonly path: string; readonly createdAt: string }> {
+    return this.api.backupData() as Promise<{ path: string; createdAt: string }>;
+  }
+
+  /** §2.3's wipe. Irreversible, so the API takes its own backup first and returns
+   *  the path — see `routes/data.ts`. */
+  wipeData(body: WipeDataBody): Promise<WipeResult> {
+    return this.api.wipeData(body);
+  }
+
+  /**
+   * §2.3's export, and the second route that cannot go through the generated
+   * client.
+   *
+   * `request()` calls `JSON.parse` on every response body, and a CSV export is not
+   * JSON — it would throw on the format most people want. Same escape hatch
+   * `uploadImports` uses above and for the same kind of reason: the generated
+   * client describes JSON, and this route does not always answer with it. Returns a
+   * `Blob` so the caller can hand it to the browser as a download rather than
+   * holding a megabyte of statement text in a signal.
+   */
+  async exportData(format: 'json' | 'csv'): Promise<Blob> {
+    const path = `${API_BASE_PATH}/data/export?format=${format}`;
+    const response = await fetch(`${this.baseUrl}${path}`, { method: 'POST' });
+
+    if (!response.ok) {
+      let body: ApiError | null = null;
+      try {
+        body = (await response.json()) as ApiError;
+      } catch {
+        body = null;
+      }
+      throw new LedgerlineApiError(
+        response.status,
+        body,
+        body?.message ?? `POST ${path} failed with ${response.status}`,
+      );
+    }
+
+    return response.blob();
+  }
 }
+
 

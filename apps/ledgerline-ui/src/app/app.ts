@@ -11,7 +11,7 @@ const SECTIONS = [
   { label: 'Subscriptions', path: 'subscriptions' },
   { label: 'Insights', path: null },
   { label: 'Ask', path: null },
-  { label: 'Settings', path: null },
+  { label: 'Settings', path: 'settings' },
 ] as const;
 
 /**

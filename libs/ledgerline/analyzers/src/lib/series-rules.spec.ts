@@ -481,6 +481,53 @@ describe('analyze (§2.2)', () => {
     expect(result.warning).toBeNull();
   });
 
+  /**
+   * §6.8's per-rule enable, and the reason it gates the emission rather than the run.
+   */
+  describe('per-rule enable (§6.8)', () => {
+    // A price rise that holds: recurrence fits one series, price_creep reports it.
+    const risen = () => snapshotOf([...monthly(8, -899, 1), ...monthly(8, -1549, 9)]);
+
+    it('silences a rule’s findings without disturbing the others', () => {
+      const snapshot = risen();
+      const before = analyze(snapshot, DEFAULT_CONFIG);
+      expect(before.findings.some((f: Finding) => f.ruleId === 'price_creep.v1')).toBe(true);
+
+      const after = analyze(snapshot, resolveConfig({ priceCreep: { enabled: false } }));
+      expect(after.findings.some((f: Finding) => f.ruleId === 'price_creep.v1')).toBe(false);
+      // Every other rule is untouched.
+      expect(after.findings.filter((f: Finding) => f.ruleId !== 'price_creep.v1')).toEqual(
+        before.findings.filter((f: Finding) => f.ruleId !== 'price_creep.v1'),
+      );
+    });
+
+    /**
+     * The half that would be easy to get wrong: §5.2's series are §6.5's whole page
+     * and the input to §5.4–§5.7, so switching `recurrence.v1` off must silence its
+     * finding and leave the ledger standing.
+     */
+    it('keeps producing series when recurrence.v1 itself is switched off', () => {
+      const snapshot = risen();
+      const result = analyze(snapshot, resolveConfig({ recurrence: { enabled: false } }));
+
+      expect(result.series).toHaveLength(1);
+      expect(result.findings.some((f: Finding) => f.ruleId === 'recurrence.v1')).toBe(false);
+      // And the rules built on those series still fire.
+      expect(result.findings.some((f: Finding) => f.ruleId === 'price_creep.v1')).toBe(true);
+    });
+
+    it('moves config_hash, so §5.1 re-evaluates that rule’s dismissals', () => {
+      const on = analyze(risen(), DEFAULT_CONFIG).configHash;
+      const off = analyze(risen(), resolveConfig({ micro: { enabled: false } })).configHash;
+      expect(off).not.toBe(on);
+    });
+
+    it('still reports the rule’s version, because the rule still exists', () => {
+      const result = analyze(risen(), resolveConfig({ fees: { enabled: false } }));
+      expect(Object.keys(result.ruleVersions)).toContain('fees.v1');
+    });
+  });
+
   it('refuses a snapshot over the ceiling rather than discovering it in production', () => {
     const config = resolveConfig({ global: { snapshotMaxRows: 5, snapshotWarnRows: 2 } });
     const snapshot = snapshotOf(monthly(6, -1549, 1));

@@ -23,3 +23,6 @@ export * from './lib/accounts/transfer-queue.js';
 export * from './lib/subscriptions/subscriptions-page.js';
 export * from './lib/subscriptions/month-strip.js';
 export * from './lib/subscriptions/series-detail.js';
+export * from './lib/settings/settings-page.js';
+export * from './lib/settings/analyzer-settings.js';
+export * from './lib/settings/data-settings.js';

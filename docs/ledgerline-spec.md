@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9j
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9k
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -71,13 +71,22 @@ the charge list and price steps `recurrence.v1` had been computing and discardin
 `005`), because §5.3 forbids re-deriving them downstream. §6.4's "Open subscription" action
 **navigates** rather than explaining its own absence.
 
+As of 2026-08-25 §6.8's **Settings page** is built on §2.3's `/api/settings`, and with it §7.4
+stops being a promise: every threshold in §5 is editable with its shipped default beside it, the
+current `config_hash` is on the page, and each rule has a switch that moves that hash — so §5.1
+re-evaluates the rule's dismissals when it comes back. §2.3's `DELETE /api/data` is built
+alongside it and takes its own backup before deleting anything. **Two of §6.8's six sections
+cannot be built yet** — LLM provider and Redaction both need §2.4's seam — and two more need
+endpoints §2.3 lists as missing; all four are stated on the page rather than omitted. §9k records
+the reasoning.
+
 PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
-review-queue, insights, ask and settings endpoints of §2.3, nor **three of §6's eight pages** —
-§6.6's Insights, §6.7's Ask and §6.8's Settings. §6.1's Import, §6.2's Accounts, §6.3's
-Transactions, §6.4's Findings and §6.5's Subscriptions exist and are all reachable from the
-rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i and §9j list the amendments implementation made
-to this document.
+review-queue, insights and ask endpoints of §2.3, nor **two of §6's eight pages** — §6.6's
+Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
+§6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
+`docs/statement-parsing.md` records what has and has not been validated.
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j and §9k list the amendments implementation
+made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
@@ -1472,6 +1481,42 @@ and at every commit before it. The failure was real and the fix is a boundary, n
 |---|---|---|
 | 2.2 | **`domain` ships two entry points, split by platform.** `@metrum/ledgerline-domain` is loadable in any runtime; `@metrum/ledgerline-domain/node` holds the half that is not, currently `dedupeKey` and `DEDUPE_KEY_VERSION`. | §2.2's hard rule for `domain` is "pure types and arithmetic, no I/O, no framework", and §3.3's key honours it — `createHash` is arithmetic over bytes, and the key lives in `domain` precisely so `data` can reach it without reaching the §4 normalization chain. What the tag graph cannot express is that a lib may legitimately *depend on* `domain` and still must never *load* half of it. One `export *` barrel put `node:crypto` in the import graph of all six §6 pages that import `formatCents`, and esbuild refused to resolve it for the browser. The entry point is named for the property that decides membership — reaches for `node:*` — rather than for the feature inside, so the next Node-only helper has an obvious home and each call site's import line says which half it asked for. Deliberately **not** `platform: 'node'` or a crypto polyfill: both ship a Node shim to a browser to support a function the browser must never call, which is this boundary violation with its only symptom removed. Nothing hashed changes — the material string, the field order and the literal separator §3.3 freezes are untouched, and `collapse.spec.ts`'s golden tests pin them unedited. |
 | 2.2 | **`build` joins `lint`, `typecheck` and `test` in `npm run check`.** | This section already says a lint rule nobody runs is not enforcement; a build nobody runs is the same claim. `check` ran three targets and never a build, and the Angular `test` target bundles a *test* harness rather than the app, so no command in the repo or the local loop exercised the production bundle — which is how a broken build survived unnoticed. All ten projects are green under `nx run-many -t build`, so on a clean tree the addition is a cached no-op, and in exchange it catches the one class of error the other three targets structurally cannot see: a module that lints, typechecks and tests cleanly and still cannot be bundled for the platform it ships to. It also makes `ledgerline-ui`'s initial bundle visible at 502.75 kB against a 500 kB warning budget — a warning, not a failure, and now one that is reported on every run instead of never. |
+
+## 9k. Amendments from implementation — 2026-08-25 (§6.8, §7.4)
+
+Building §6.8's Settings page needed six decisions this document does not make, and one
+admission it does not currently contain: **two of §6.8's six sections cannot be built at
+all yet**, and a page that quietly shipped four of six would read as finished.
+
+| § | Amendment | Why |
+|---|---|---|
+| 7.4 | **Every §5 rule gains `enabled` in its own config section, and the gate applies to the *emission* rather than the run.** | §6.8 asks for "per-rule enable" and §7.4 puts every other knob in the config object, so this belongs there too — §5.4 already had `sameMerchantEnabled` and `categoryOverlapEnabled` and set the precedent. Putting it in the config is what makes turning a rule off move `config_hash`, which is what makes §5.1 re-evaluate that rule's dismissals when it comes back; a switch stored anywhere else could not do that. Gating the emission and not the computation is the load-bearing half: §5.2's series feed §5.4–§5.7 and are the whole of §6.5's page, so a disabled `recurrence.v1` must silence its finding and leave the ledger standing, and §5.5's first-transition set feeds §5.6 the same way. A disabled rule emits **nothing** rather than suppressed findings, because §5.1's `suppressed` means "a standing dismissal rule hid this" and conflating the two would put a dismissal count on a rule nobody is running. |
+| 2.3 | **`GET /api/settings` derives the editable surface from `DEFAULT_CONFIG` rather than declaring it**, and names what it refuses. | A hand-written list of tunable fields drifts the first time §5 gains a threshold, and the drift is silent — the new number simply never appears. Walking the defaults and reporting the scalar leaves cannot drift. The non-scalars are skipped deliberately and returned in `unsettable` with a reason each: §5.2's cadence table is a list of `(days, tolerance, per-year)` triples and §5.1's confidence bands are three cut points that must stay ordered, and both are §7.6 calibration decisions rather than a number with a box round it. Reporting them as refused, with the reason, is what stops the next person adding a text input for them. |
+| 2.3 | **A threshold and a rule switch are the same write.** | §6.8 lists "per-rule enable [...] and threshold overrides" as two features; they are one operation, because a rule's switch *is* a boolean field in that rule's config section. So both travel as `{ section, key, value }`, both move `config_hash`, and both take the same validation. An explicit `null` removes the override and restores the shipped default — the same "explicit null clears, omission leaves alone" shape §9i settled for §6.5's series, and the reason the UI can offer a reset at all. |
+| 6.8 | **The re-evaluation warning is a count, scoped to the rule whose own section changed.** | §6.8 says "changing a threshold warns that dismissed findings in that rule will be re-evaluated". A banner on every field is a banner nobody reads, and a global count would warn about §5.2's dismissals when someone edited §5.10. `PATCH` returns `dismissalsAffected` for the touched sections only, and the page states the number or says nothing. |
+| 3.4 | **`FindingQuery` gains `userStatuses`, because "dismissed" is not "hidden".** | The count above needs dismissed findings per rule, and the nearest existing filter — `visibility: 'hidden'` — returns dismissed **and** snoozed together. They are different: a snooze expires on its own, while a dismissal is what §5.1 reopens when `config_hash` moves. Counting them as one would overstate what changing a threshold disturbs, in the one message whose whole job is to be believed. Note the trap this sits on: `finding.status` and `finding_state.status` are both called `status` and mean §5.1's two different questions. |
+| 2.3 | **`DELETE /api/data` takes a backup first, keeps `settings`, and re-seeds the reference rows.** | §2.3 names the wipe and `routes/data.ts` deferred it to "the Settings UI that confirms it", which is this. A typed confirmation stops an accidental click and does nothing about a deliberate one someone regrets; taking a copy immediately before the delete turns the only irreversible operation in this API into a recoverable one, and it costs a file copy of a database that is about to be emptied. If the backup fails the wipe does not run, because the point of taking one is that it exists. `settings` survives on purpose — §7.4's thresholds are configuration, not data, and clearing statements should not clear an afternoon of tuning §5 against them. The reference rows (§4's aliases, §5's categories, the format profiles) are re-seeded, because a wiped database should be a *fresh install* rather than an empty one: without them the next import invents a provisional merchant for every descriptor §4 already knows. |
+
+**Two of §6.8's six sections are not buildable, and two more are not built.** §6.8's **LLM
+provider** and **Redaction** both require §2.4's provider seam, which does not exist in
+any form — there is no `none` / `claude-cli` / `ollama` to choose between, no health
+probe to call, and no text leaving this machine to redact. A picker over three options
+that all do nothing would be a lie with a dropdown on it. **Merchant aliases** and
+**Categories** need write endpoints §2.3 lists and §1 counts as missing: the LLM review
+queue, and category CRUD with §5.4's overlap groups. All four are rendered on the page as
+stated absences with their reasons, for the same reason the shell's rail renders an
+unbuilt section as a span rather than hiding it.
+
+**Three smaller shapes.** The wipe empties every table **except `schema_migrations` and
+`settings`**, using `defer_foreign_keys` rather than a delete order — SQLite ignores a
+`foreign_keys` change inside a transaction, so deferring the checks to COMMIT is what
+makes the order irrelevant while still refusing to leave an orphan behind. The
+confirmation phrase is **duplicated in the client rather than sent by the API**: a phrase
+the server hands you is one the client can echo back without a human reading it. And
+`POST /api/data/export` is the second route that cannot go through the generated client
+— `request()` calls `JSON.parse` on every body and a CSV export is not JSON — so it uses
+the same `fetch` escape hatch `uploadImports` documents, and returns a `Blob` the browser
+saves rather than a megabyte of statement text held in a signal.
 
 ## 10. Open discrepancies — recorded, not resolved
 

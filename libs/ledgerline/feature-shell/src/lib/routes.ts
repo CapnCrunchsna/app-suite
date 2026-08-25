@@ -6,7 +6,7 @@
  * here means adding the Findings page is a change to this file and one line in the
  * shell's rail, not a change to the shell's route table every time.
  *
- * Lazy, via `loadComponent`. Eight pages of which five are built; eagerly
+ * Lazy, via `loadComponent`. Eight pages of which six are built; eagerly
  * importing the lot would put every page's code in the initial bundle for the
  * sake of the one the user opened.
  */
@@ -42,6 +42,11 @@ export const ledgerlineRoutes: Routes = [
     title: 'Transactions · Ledgerline',
     loadComponent: () =>
       import('./transactions/transactions-page.js').then((module) => module.TransactionsPage),
+  },
+  {
+    path: 'settings',
+    title: 'Settings · Ledgerline',
+    loadComponent: () => import('./settings/settings-page.js').then((module) => module.SettingsPage),
   },
   // §6.4 is the page §6 calls the hero — the three numbers that justify the app —
   // so it is where the app opens now that it exists.

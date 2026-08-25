@@ -38,11 +38,27 @@ export interface CreateContextOptions {
   readonly profilesDir?: string | null;
 }
 
+/**
+ * Every row a fresh install starts with: §5's categories, §4's seed merchants and
+ * aliases, and the shipped format profiles.
+ *
+ * Exported because `DELETE /api/data` (§6.8) has to put them back. A wipe that left
+ * the app with no categories and no merchant aliases would not be a fresh install —
+ * it would be a broken one, and the next import would build a provisional merchant
+ * for every descriptor §4 already knows.
+ */
+export function seedReferenceData(
+  store: LedgerlineStore,
+  profilesDir: string | null,
+): readonly string[] {
+  seedMerchants(store);
+  return profilesDir ? seedProfiles(store, profilesDir) : [];
+}
+
 export function createContext(options: CreateContextOptions): LedgerlineContext {
   const store = LedgerlineStore.open({ filename: options.databaseFile });
 
-  seedMerchants(store);
-  const profileLoadErrors = options.profilesDir ? seedProfiles(store, options.profilesDir) : [];
+  const profileLoadErrors = seedReferenceData(store, options.profilesDir ?? null);
 
   // A job left `running` by a process that died is not running anywhere (§2.7:
   // the queue is a table, the runner is this process). Returning it to the queue
@@ -82,7 +98,7 @@ export function createContext(options: CreateContextOptions): LedgerlineContext 
  * that is what the alias rows reference, and what makes the seeding idempotent
  * across boots.
  */
-function seedMerchants(store: LedgerlineStore): void {
+export function seedMerchants(store: LedgerlineStore): void {
   // Categories first: `merchant_canonical.default_category_id` and
   // `transaction.category_id` are both real foreign keys (§3.2), so nothing can
   // reference a category that has not been inserted yet.
@@ -142,7 +158,7 @@ function seedMerchants(store: LedgerlineStore): void {
  * than thrown: one malformed file should not stop the API from starting, or
  * every other bank becomes unimportable because of a typo in one.
  */
-function seedProfiles(store: LedgerlineStore, profilesDir: string): string[] {
+export function seedProfiles(store: LedgerlineStore, profilesDir: string): string[] {
   const errors: string[] = [];
   let filenames: string[];
 

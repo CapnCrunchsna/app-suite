@@ -856,6 +856,103 @@ const dismissalRule = {
   },
 } as const;
 
+// ------------------------------------------------------ settings (§6.8, §7.4) ---
+
+/**
+ * One tunable number or switch from spec 7.4's config object.
+ *
+ * Derived by walking the shipped defaults rather than declared, so a threshold added
+ * to spec 5 appears here without a second list to update — see `routes/settings.ts`.
+ */
+const settingThreshold = {
+  $id: 'SettingThreshold',
+  type: 'object',
+  properties: {
+    /** The config key holding it: `recurrence`, `trend`, `global`… */
+    section: { type: 'string' },
+    key: { type: 'string' },
+    kind: { type: 'string', enum: ['number', 'boolean'] },
+    /** What spec 5 ships. Shown beside the current value so a tuned threshold is
+     *  legible as tuned, and resettable. */
+    defaultValue: { type: ['number', 'boolean'] },
+    value: { type: ['number', 'boolean'] },
+    overridden: { type: 'boolean' },
+  },
+} as const;
+
+/** A config field this page deliberately will not edit, and why. */
+const settingUnsettable = {
+  $id: 'SettingUnsettable',
+  type: 'object',
+  properties: {
+    section: { type: 'string' },
+    key: { type: 'string' },
+    reason: { type: 'string' },
+  },
+} as const;
+
+/**
+ * One spec 5 rule, its switch, and what turning it off would disturb.
+ *
+ * `duplicate.v1` appears twice: spec 5.4 is two rules sharing one id and one
+ * `config_hash`, "separately toggleable in Settings" in that section's own words.
+ * `enabledKey` is which boolean in `section` carries this row's switch.
+ */
+const settingRule = {
+  $id: 'SettingRule',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    label: { type: 'string' },
+    specRef: { type: 'string' },
+    section: { type: 'string' },
+    enabledKey: { type: 'string' },
+    enabled: { type: 'boolean' },
+    activeFindings: { type: 'integer' },
+    /** What spec 6.8's re-evaluation warning is warning about — a count, so the
+     *  warning is a statement rather than a disclaimer. */
+    dismissedFindings: { type: 'integer' },
+  },
+} as const;
+
+const settings = {
+  $id: 'Settings',
+  type: 'object',
+  properties: {
+    /** Spec 7.4: what `analysis_run` records and `finding.rule_version` incorporates. */
+    configHash: { type: 'string' },
+    rules: { type: 'array', items: ref('SettingRule') },
+    thresholds: { type: 'array', items: ref('SettingThreshold') },
+    unsettable: { type: 'array', items: ref('SettingUnsettable') },
+    databaseFile: { type: 'string' },
+    backupDir: { type: 'string' },
+  },
+} as const;
+
+const settingsUpdate = {
+  $id: 'SettingsUpdate',
+  type: 'object',
+  properties: {
+    settings: ref('Settings'),
+    configHashChanged: { type: 'boolean' },
+    /** Dismissed findings belonging to rules whose own section changed. Spec 5.1
+     *  re-evaluates them on the next run. */
+    dismissalsAffected: { type: 'integer' },
+  },
+} as const;
+
+const wipeResult = {
+  $id: 'WipeResult',
+  type: 'object',
+  properties: {
+    /** Written immediately before the delete. Null only for an in-memory instance,
+     *  which has nothing on disk to copy. */
+    backupPath: { type: ['string', 'null'] },
+    rowsDeleted: { type: 'integer' },
+    deletedByTable: { type: 'object', additionalProperties: { type: 'integer' } },
+  },
+} as const;
+
 // ---------------------------------------------- series / subscriptions (§6.5) ---
 
 /** §5.3's ordered charge list, as stored by the run that fitted the series (§9i). */
@@ -1267,6 +1364,15 @@ const SHARED = [
   // The mapper. `columnRef` and `columnMap` are partial by nature — a role that is
   // not mapped is an absent key, which is what `Partial<Record<ColumnRole, ...>>`
   // means in `parsing`. `formatProfileDraft` is a request body.
+  // §6.8's config surface. `unsettable` and `deletedByTable` are open maps by
+  // nature, so they declare their own shapes above.
+  allRequired(settingThreshold),
+  allRequired(settingUnsettable),
+  allRequired(settingRule),
+  allRequired(settings),
+  allRequired(settingsUpdate),
+  allRequired(wipeResult),
+
   // §6.5's ledger. `seriesPatch` is a request body, so it stays partial.
   allRequired(seriesCharge),
   allRequired(seriesPriceStep),

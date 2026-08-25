@@ -467,6 +467,53 @@ export interface DeleteImportResult {
   readonly retainedTransactionIds: string[];
 }
 
+export interface SettingThreshold {
+  readonly section: string;
+  readonly key: string;
+  readonly kind: 'number' | 'boolean';
+  readonly defaultValue: number | boolean;
+  readonly value: number | boolean;
+  readonly overridden: boolean;
+}
+
+export interface SettingUnsettable {
+  readonly section: string;
+  readonly key: string;
+  readonly reason: string;
+}
+
+export interface SettingRule {
+  readonly id: string;
+  readonly label: string;
+  readonly specRef: string;
+  readonly section: string;
+  readonly enabledKey: string;
+  readonly enabled: boolean;
+  readonly activeFindings: number;
+  readonly dismissedFindings: number;
+}
+
+export interface Settings {
+  readonly configHash: string;
+  readonly rules: SettingRule[];
+  readonly thresholds: SettingThreshold[];
+  readonly unsettable: SettingUnsettable[];
+  readonly databaseFile: string;
+  readonly backupDir: string;
+}
+
+export interface SettingsUpdate {
+  readonly settings: Settings;
+  readonly configHashChanged: boolean;
+  readonly dismissalsAffected: number;
+}
+
+export interface WipeResult {
+  readonly backupPath: string | null;
+  readonly rowsDeleted: number;
+  readonly deletedByTable: Record<string, unknown>;
+}
+
 export interface SeriesCharge {
   readonly transactionId: string;
   readonly amountCents: number;

@@ -60,6 +60,13 @@ export interface GlobalConfig {
 
 export interface RecurrenceConfig {
   /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the series it produces feed §5.4–§5.7 and §6.5.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
+  /**
    * §5.2's cadence table — data, not a constant, for the reason at the top of
    * this file. The tolerances in particular are exactly the kind of number §7.6
    * expects to move once real statements exist: a bank that bills "the first
@@ -139,6 +146,13 @@ export interface DuplicateConfig {
 
 export interface PriceCreepConfig {
   /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
+  /**
    * §5.5's noise floor, stated in the unit the whole app sorts by. The design
    * session's "under 2% or $0.50" suppressed a $3.80 step on a $200/month
    * subscription (1.9%, $45.60/yr — material) while admitting a $0.60 step on an
@@ -154,6 +168,13 @@ export interface PriceCreepConfig {
 }
 
 export interface TrialConfig {
+  /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
   /** The classic card-validation pattern: a $0.00 or near-zero authorization
    *  shortly before the first real charge. */
   readonly authorizationMaxCents: number;
@@ -180,6 +201,13 @@ export interface TrialConfig {
 }
 
 export interface LapsedConfig {
+  /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
   readonly minOccurrences: number;
   /** §5.7 uses `2 ×`, where §5.2's liveness uses `1.5 ×`. The gap between them is
    *  hysteresis rather than an inconsistency: a series that is merely late stops
@@ -268,6 +296,13 @@ export interface AnalyzerConfig {
  *  they are the part of this rule most likely to be wrong about a bank nobody
  *  has imported yet, and adding a keyword should not be a code change. */
 export interface FeesConfig {
+  /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
   /** §5.8's list, matched **whole-token** against `description_normalized`. A
    *  substring test would make `NSF` match `TRANSFERS` and `ATM` match `ATMOS`. */
   readonly keywords: readonly string[];
@@ -297,6 +332,13 @@ export interface FeesConfig {
 }
 
 export interface OutlierConfig {
+  /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
   /** §5.9's sample sizes. A distribution needs members before a charge can be
    *  unlike them. */
   readonly merchantMinSamples: number;
@@ -333,6 +375,13 @@ export interface OutlierConfig {
 }
 
 export interface TrendConfig {
+  /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
   /** §5.10's spike: "exceeds its trailing three-month average by **both** >40%
    *  *and* >$75 **of excess**" — both, because a percentage alone flags a $12
    *  category and a dollar amount alone flags every large category every month. */
@@ -361,6 +410,13 @@ export interface TrendConfig {
 }
 
 export interface MicroConfig {
+  /**
+   * §6.8's per-rule enable. `false` suppresses this rule's *findings*; it does not
+   * stop it running, because the shared snapshot pass is one traversal either way.
+   * Part of the config, so turning a rule off moves `config_hash` and §5.1
+   * re-evaluates its dismissals — which is what §6.8 warns about.
+   */
+  readonly enabled: boolean;
   /** §5.11: "averaging ≥8 transactions per month across fully-covered months, at
    *  a median ≤$15". */
   readonly minPerMonth: number;
@@ -385,6 +441,7 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     snapshotMaxRows: 1_000_000,
   },
   recurrence: {
+    enabled: true,
     cadences: [
       { label: 'weekly', days: 7, toleranceDays: 2, perYear: 52.18 },
       { label: 'biweekly', days: 14, toleranceDays: 2, perYear: 26.09 },
@@ -423,12 +480,14 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     categoryOverlapConfidence: 0.6,
   },
   priceCreep: {
+    enabled: true,
     minStepDeltaCents: 50,
     minAnnualisedDeltaCents: 500,
     confirmedConfidenceCap: 0.9,
     unconfirmedConfidenceCap: 0.7,
   },
   trial: {
+    enabled: true,
     authorizationMaxCents: 150,
     authorizationMinDaysBefore: 5,
     authorizationMaxDaysBefore: 35,
@@ -442,6 +501,7 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     earlyWindowDays: 45,
   },
   lapsed: {
+    enabled: true,
     minOccurrences: 3,
     cadenceMultiple: 2,
   },
@@ -487,6 +547,7 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     ],
   },
   fees: {
+    enabled: true,
     // §5.8's list, verbatim.
     keywords: [
       'INTEREST CHARGE',
@@ -512,6 +573,7 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     categoryOnlyConfidence: 0.75,
   },
   outlier: {
+    enabled: true,
     merchantMinSamples: 5,
     categoryMinSamples: 15,
     zThreshold: 3.5,
@@ -534,6 +596,7 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     globalConfidence: 0.9,
   },
   trend: {
+    enabled: true,
     trailingMonths: 3,
     spikePercent: 0.4,
     spikeExcessCents: 7500,
@@ -550,6 +613,7 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     climbConfidence: 0.6,
   },
   micro: {
+    enabled: true,
     minPerMonth: 8,
     maxMedianCents: 1500,
     minMonths: 3,

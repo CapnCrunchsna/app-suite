@@ -117,6 +117,57 @@ export class LedgerlineStore {
     return backupDatabase(this.db, destination);
   }
 
+  /**
+   * `DELETE /api/data` (§2.3, §6.8) — every row of *data*, and nothing else.
+   *
+   * ## What survives, and why it is not everything
+   *
+   * `schema_migrations` stays, because a wiped database is still this schema at this
+   * version and re-running §3's migrations over a live file is a different, worse
+   * operation than emptying it. `settings` stays too: §7.4's thresholds are
+   * *configuration*, not data — someone who has spent an afternoon tuning §5 against
+   * their statements should not lose that by clearing the statements, and §6.8 files
+   * the wipe under **Data** for exactly that reason. The caller re-seeds the reference
+   * rows (§4's aliases, §5's categories, the format profiles) afterwards, so the app
+   * comes back in the state a fresh install would be in rather than an empty one.
+   *
+   * ## `defer_foreign_keys`, not `foreign_keys = OFF`
+   *
+   * §3.2's `ON DELETE RESTRICT` constraints mean the tables can only be emptied in
+   * dependency order, and getting that order wrong is a runtime error on a
+   * half-emptied database. SQLite ignores a `foreign_keys` change inside a
+   * transaction, so the pragma that works here is `defer_foreign_keys`: constraints
+   * are checked once at COMMIT instead of per statement, which makes the order
+   * irrelevant and still refuses to leave an orphan behind.
+   *
+   * Returns what it deleted, per table, because "are you sure?" deserves an answer
+   * more specific than "done".
+   */
+  wipe(): Record<string, number> {
+    const tables = this.db
+      .prepare<[], { name: string }>(
+        `SELECT name FROM sqlite_master
+          WHERE type = 'table'
+            AND name NOT LIKE 'sqlite_%'
+            AND name NOT IN ('schema_migrations', 'settings')
+          ORDER BY name`,
+      )
+      .all()
+      .map((row) => row.name);
+
+    return this.db.transaction((): Record<string, number> => {
+      this.db.pragma('defer_foreign_keys = ON');
+
+      const deleted: Record<string, number> = {};
+      for (const table of tables) {
+        // The table names come from `sqlite_master`, not from a caller — §3.4's
+        // "no caller string reaches SQL uninterpreted" still holds.
+        deleted[table] = this.db.prepare(`DELETE FROM "${table}"`).run().changes;
+      }
+      return deleted;
+    })();
+  }
+
   close(): void {
     this.db.close();
   }

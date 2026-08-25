@@ -1,0 +1,42 @@
+@let all = settings();
+
+<div class="page">
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+
+  <ui-panel heading="Analyzers">
+    @if (loading() && !all) {
+      <p class="empty">Loading settings…</p>
+    } @else if (failure()) {
+      <p class="empty empty--bad">Settings did not load: {{ $any(failure()).message }}</p>
+    } @else if (all) {
+      <ll-analyzer-settings [settings]="all" [busy]="busy()" (changed)="onChanged($event)" />
+    }
+  </ui-panel>
+
+  <ui-panel heading="Data">
+    @if (all) {
+      <ll-data-settings
+        [settings]="all"
+        [busy]="busy()"
+        [lastBackupPath]="lastBackupPath()"
+        (acted)="onDataAction($event)"
+      />
+    }
+  </ui-panel>
+
+  <!-- §6.8's other four sections, stated rather than omitted. -->
+  <ui-panel heading="Not built yet">
+    <p class="empty">
+      §6.8 names six sections. These four have nothing underneath them, and a control that does
+      nothing is worse than an absence that explains itself.
+    </p>
+    <dl class="pending">
+      @for (item of unbuilt; track item.title) {
+        <dt>{{ item.title }}</dt>
+        <dd>{{ item.detail }}</dd>
+      }
+    </dl>
+  </ui-panel>
+</div>

@@ -47,7 +47,7 @@ describe('App', () => {
     ]);
   });
 
-  // A rail item becomes a link only once its page exists. Three of the eight are
+  // A rail item becomes a link only once its page exists. Two of the eight are
   // spans, so none of them can be clicked into a blank screen.
   it('links only the sections that are built', async () => {
     const fixture = TestBed.createComponent(App);
@@ -61,8 +61,9 @@ describe('App', () => {
       'Transactions',
       'Findings',
       'Subscriptions',
+      'Settings',
     ]);
-    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(3);
+    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(2);
   });
 
   // §6.4 is the page §6 calls the hero, so it is what the app opens on now that

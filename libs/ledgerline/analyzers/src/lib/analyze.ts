@@ -98,16 +98,39 @@ export function analyze(snapshot: Snapshot, config: AnalyzerConfig): AnalysisRes
   const trends = analyzeTrends(snapshot, series, config);
   const micro = analyzeMicroSpend(snapshot, config);
 
+  /**
+   * §6.8's per-rule enable, applied to the **emission** and never to the run.
+   *
+   * The distinction is load-bearing in both directions. §5.2's series feed §5.4–§5.7
+   * and are the whole of §6.5's page, so switching `recurrence.v1` off must silence
+   * its finding and leave the ledger standing. §5.5's first-transition set feeds
+   * §5.6's trial rule the same way. And the rules that read only transactions share
+   * one snapshot traversal (§2.2), so skipping their *computation* would save nothing
+   * worth the second code path.
+   *
+   * A disabled rule emits nothing rather than emitting suppressed findings: §5.1's
+   * `suppressed` status means "a standing dismissal rule hid this", which is a
+   * different statement from "this rule is off", and conflating them would put a
+   * dismissal count on a rule nobody is running. Because `enabled` lives in the
+   * config, turning one off moves `config_hash` and §5.1 re-evaluates that rule's
+   * dismissals when it comes back — which is exactly what §6.8 warns about.
+   */
+  const EMPTY: RuleEmission = { findings: [], rollup: null };
+  const gate = (enabled: boolean, emission: RuleEmission): RuleEmission =>
+    enabled ? emission : EMPTY;
+
   const emissions: readonly RuleEmission[] = [
-    recurrence.emission,
-    priceCreep.emission,
+    gate(config.recurrence.enabled, recurrence.emission),
+    gate(config.priceCreep.enabled, priceCreep.emission),
+    // §5.4's two halves are toggled inside the rule, which already reads
+    // `sameMerchantEnabled` and `categoryOverlapEnabled` separately (§6.8).
     duplicates,
-    trials,
-    lapsed,
-    fees,
-    outliers,
-    trends,
-    micro,
+    gate(config.trial.enabled, trials),
+    gate(config.lapsed.enabled, lapsed),
+    gate(config.fees.enabled, fees),
+    gate(config.outlier.enabled, outliers),
+    gate(config.trend.enabled, trends),
+    gate(config.micro.enabled, micro),
   ];
 
   return {

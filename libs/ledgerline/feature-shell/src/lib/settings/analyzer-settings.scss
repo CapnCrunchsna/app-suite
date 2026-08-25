@@ -1,0 +1,173 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.lede,
+.none {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.hash {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: 0.75rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.hash__label {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.hash__tuned {
+  padding: 1px 8px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 999px;
+  color: var(--accent, #2dd4bf);
+}
+
+/* All-defaults is the uncalibrated state §7.6 warns about, so it is stated rather
+ * than shown as an absence. */
+.hash__tuned--stock {
+  border-color: var(--border, #1f4a47);
+  color: var(--text-dim, #7ea8a1);
+}
+
+.group {
+  padding: 14px 0;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.group__title {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  color: var(--text, #dcefeb);
+}
+
+.group__spec {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+  cursor: pointer;
+}
+
+.switch__counts {
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* The one message on this page with a consequence attached, so it is the one
+ * thing coloured like a warning. */
+.warn {
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--warn, #f0b429);
+  background: var(--surface-2, #143034);
+  font-size: 0.75rem;
+  color: var(--text, #dcefeb);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px 18px;
+  margin-top: 12px;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.field__name {
+  font-size: 0.76rem;
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.field__input {
+  width: 92px;
+  padding: 3px 6px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+.field__input:focus-visible,
+.field__check:focus-visible {
+  outline: 2px solid var(--accent, #2dd4bf);
+  outline-offset: 1px;
+}
+
+/* A tuned threshold is marked, because §7.6's whole point is that the defaults are
+ * uncalibrated guesses — knowing which ones you have moved is the difference
+ * between tuning and drift. */
+.field--overridden .field__input {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.field__hint {
+  grid-column: 1 / -1;
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.field__reset {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #2dd4bf);
+  font: inherit;
+  font-size: 0.68rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.unsettable {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.75rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.unsettable li {
+  margin-bottom: 4px;
+}

@@ -1,0 +1,69 @@
+@let all = settings();
+
+<dl class="where">
+  <dt>Database</dt>
+  <dd>
+    <code>{{ all.databaseFile }}</code>
+    @if (inMemory()) {
+      <span class="where__note">in memory — nothing is written to disk, and a backup has nothing to copy</span>
+    }
+  </dd>
+  <dt>Backups</dt>
+  <dd><code>{{ all.backupDir }}</code></dd>
+</dl>
+
+<div class="actions">
+  <button type="button" class="button" [disabled]="busy() || inMemory()" (click)="backup()">
+    Back up now
+  </button>
+  <button type="button" class="button" [disabled]="busy()" (click)="export('json')">
+    Export JSON
+  </button>
+  <button type="button" class="button" [disabled]="busy()" (click)="export('csv')">
+    Export CSV
+  </button>
+</div>
+
+<p class="note">
+  A backup is a copy of the database and only this app can read it. An export is the portable
+  form and cannot be restored into one — they are not substitutes.
+</p>
+
+@if (lastBackupPath()) {
+  <p class="done">Written to <code>{{ lastBackupPath() }}</code></p>
+}
+
+<!-- §2.3's one irreversible operation, and §6.8's confirmation for it. -->
+<section class="danger">
+  <h4 class="danger__title">Delete everything</h4>
+  <p class="danger__body">
+    Removes every transaction, import, finding, series and account. <strong>A backup is taken
+    first</strong> and its path is shown afterwards, so this is recoverable — but only from that
+    file. Your §7.4 threshold overrides are kept: clearing statements is not clearing an afternoon
+    of tuning §5 against them.
+  </p>
+
+  <label class="danger__confirm">
+    <span
+      >Type <code>{{ wipePhrase }}</code> to enable the button</span
+    >
+    <input
+      type="text"
+      class="danger__input"
+      autocomplete="off"
+      spellcheck="false"
+      [ngModel]="phrase()"
+      (ngModelChange)="phrase.set($event)"
+      [disabled]="busy()"
+    />
+  </label>
+
+  <button
+    type="button"
+    class="button button--danger"
+    [disabled]="busy() || !armed()"
+    (click)="wipe()"
+  >
+    Delete everything
+  </button>
+</section>

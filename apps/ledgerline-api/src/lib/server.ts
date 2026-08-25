@@ -31,6 +31,7 @@ import { registerImportRoutes } from './routes/imports.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerMerchantRoutes } from './routes/merchants.js';
 import { registerSeriesRoutes } from './routes/series.js';
+import { registerSettingsRoutes } from './routes/settings.js';
 import { registerSharedSchemas } from './routes/schemas.js';
 import { registerTransactionRoutes } from './routes/transactions.js';
 import { registerTransferRoutes } from './routes/transfers.js';
@@ -204,6 +205,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerFindingRoutes(app, options.context);
   registerSeriesRoutes(app, options.context);
   registerDataRoutes(app, options.context, options.config);
+  registerSettingsRoutes(app, options.context, options.config);
 
   await app.ready();
   return app;
