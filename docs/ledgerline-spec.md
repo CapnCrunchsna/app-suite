@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9k
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9l
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -85,14 +85,17 @@ review-queue, insights and ask endpoints of §2.3, nor **two of §6's eight page
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j and §9k list the amendments implementation
-made to this document.
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k and §9l list the amendments
+implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
 calibration note in §7.6 says what has to happen to each of them once real statements are in
-the database. **No real statement has been parsed yet** — the code was validated against
-synthetic fixtures only, which is a weaker claim than §7.6's and is stated as such in
-`docs/statement-parsing.md` §6.
+the database. **The first real statement was parsed on 2026-08-26** — a Chase credit-card
+export, 326 rows over eight months, through `profiles/chase-card.json` with no parse failures.
+It has not calibrated anything: §7.6 asks for "a hand-labelled year of real statements with the
+expected findings written down", and one unlabelled statement from one account is not that. What
+it did do is falsify two rules that no synthetic fixture had reached, both corrected in §9l, and
+open one tension recorded in §10. Every threshold in §5 remains a designed number.
 
 This document was extracted from §3–§7 of the design session artifact on 2026-08-03, under
 the workspace rule in `../../CLAUDE.md` § Version control — *must it be true of the code at
@@ -1518,12 +1521,69 @@ the server hands you is one the client can echo back without a human reading it.
 the same `fetch` escape hatch `uploadImports` documents, and returns a `Blob` the browser
 saves rather than a megabyte of statement text held in a signal.
 
+## 9l. Amendments from implementation — 2026-08-26 (§5.2, §5.5)
+
+The first real statement — a Chase credit-card export, 326 rows over eight months — parsed
+without a single failure and then showed that two of §5's rules were wrong in ways no
+synthetic fixture had reached. §7.6 said this would happen and that the first corpus is what
+settles the numbers; these are the two corrections it forced, and one tension it opened.
+
+| § | Amendment | Why |
+|---|---|---|
+| 5.2 | **A fitted series must be a *fee*: at least half its charges must sit on an exact-amount plateau** (`feePlateauShare`, default 0.5). | §5.2 fits a cadence and asks nothing about what the amounts *are*, and on real data that is not enough to describe a subscription. Across 119 Amazon purchases in eight months, some subset always falls on a monthly rhythm — so §5.2 reported "12 active subscriptions, $553/mo" on a card whose real ones numbered five, and handed §5.4, §5.5 and §5.7 the same phantoms to build on. The test is exact-amount repetition rather than a dispersion, because that is what a fee *is*: the same number, over and over. A coefficient of variation cannot tell two tight plateaus from a narrow scatter, and §5.2's own `amount_stability` is computed *within the current price step*, which makes a one-charge step perfectly stable by construction — precisely the shape a scatter produces. A price change is still one series: two plateaus are both plateaus, so the measure stays at 1.00 across it. The two annual exceptions are exempt — a single charge cannot repeat, and an annual pair must already clear `amountStabilityCvCeiling`. |
+| 5.5 | **A series whose price ended up *lower* is not price creep.** | Every part of the finding said "rose": the title, `impact_kind = savings`, and the money a cancellation would recover. A net decrease inverted all three and produced a card reading "Amazon price rose" carrying **−$1,875/yr**. §7.3 says only savings sum into a headline and never contemplates a negative one, so those findings did not merely look odd — they subtracted. On the first real statement roughly $4,435 of negative "savings" cancelled about $4,500 of genuine ones and left a headline of **$64.46/yr**. Individual steps may still fall, and the detail shows the whole path; the series has to be up on net to be creep. |
+
+**What the two corrections did to that statement**, which is the measurement §7.6 asks for and
+not a claim about correctness in general:
+
+| | before | after |
+|---|---|---|
+| series fitted | 19 | 8 |
+| "active subscriptions" | 12, $553.49/mo | 5, $231.23/mo |
+| `duplicate.v1` findings | 2 (both phantom — "4 concurrent Amazon subscriptions") | 0 |
+| `price_creep.v1` findings | 9, six of them negative | 2, both the same real price rise |
+| `lapsed.v1` findings | 4, including "MCDONALDS appears cancelled" | 3 |
+| §7.3 savings headline | $64.46/yr | $3,218.76/yr |
+
+`outlier.v1` was unchanged at nine findings, correctly: it reads transactions rather than
+series, and its output was already the most plausible thing on the page.
+
+**Three things this did not fix, named so they are not rediscovered.** §5.2's pass 2 still
+fails to merge one subscription's two price plateaus — the swim school appears as two series,
+which is why it produces two `price_creep` findings and two `lapsed` findings for one thing.
+Fixing that merge is also what would let `feePlateauShare` rise above 0.5: the one residual
+false positive is a four-charge Amazon series where two charges happen to share an amount,
+scoring exactly 0.50, and the same threshold that would exclude it currently excludes half of
+the swim school. Second, `SAMSCLUB` and `SAMS CLUB` are one merchant in two — §4.3's user
+correction is the designed answer and it has not been made. Third, `trend.v1` still emits
+nothing: §9h's categorizer assigns a category from the resolved merchant's default, 62% of
+these rows resolve to provisional merchants, and a provisional has no default — so there is
+almost nothing to trend even with seven covered months.
+
 ## 10. Open discrepancies — recorded, not resolved
 
 Building the persistence and import-commit path on 2026-08-06 found one place where this
 document contradicts itself. It is recorded here rather than amended, because resolving it
 means choosing a number, and §7.6 makes choosing a number a calibration decision against real
 statements rather than a bug fix. **The code implements what §3.3 specifies, verbatim.**
+
+**§5.2's Low band is dead code again, for fitted series.** §5.2 lists four corrections made
+specifically so that band would stop being unreachable — the original formula "was structurally
+incapable of producing a Low band", and the fix gave `amount_stability` real range. §9l's fee
+test then removed that range from the other end: every series it admits is amount-stable by
+construction, so the term sits near 1 and a quarter of the formula's span is gone. Measured, a
+cadence-ragged three-occurrence series now bottoms out at **0.575** — just inside Medium — and
+nothing that still fits a cadence goes lower. `regularity` cannot make up the difference
+because `regularityOf` scales residuals by the cadence's own tolerance, and monthly's is ±4
+days: gaps of 27 and 34 days still score 0.985.
+
+Recorded rather than fixed, because every way out is a judgement rather than a bug fix.
+Reweighting the formula, giving the fee test a partial-credit score instead of a gate, or
+accepting that a subscription which passes the fee test is simply never Low — each says
+something different about what confidence means, and §7.6 makes that a decision to take against
+a calibrated corpus rather than against one statement. `libs/ledgerline/analyzers/src/lib/recurrence.spec.ts`
+pins the 0.575 floor with a test named after this discrepancy, so whichever way it resolves, the
+resolution is deliberate.
 
 **§3.3's near-duplicate predicate cannot catch §3.3's own pending-to-posted example.** That
 section names "a pending charge that later posts" as one of the three cases the near-duplicate

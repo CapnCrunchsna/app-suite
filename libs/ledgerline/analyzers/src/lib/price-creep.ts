@@ -68,6 +68,25 @@ export function analyzePriceCreep(
     }
 
     const cumulativeDeltaCents = entry.amountCentsCurrent - entry.amountCentsFirst;
+
+    /**
+     * A price that ended up *lower* is not price creep.
+     *
+     * §5.5 is about a subscription getting more expensive, and every part of the
+     * finding says so — the title reads "price rose" and `impact_kind` is `savings`,
+     * the money a cancellation would recover. A net decrease inverts all of it: a
+     * card that reads "price rose" over a fall, carrying a *negative* saving that
+     * §7.3 then adds into the headline. §7.3 says only savings sum into a headline
+     * and never contemplates a negative one; on the first real statement this
+     * cancelled roughly $4,435 of genuine findings against $4,500, leaving a
+     * headline of $64 that meant nothing.
+     *
+     * Individual steps may still go down — `material` keeps them, and the detail
+     * shows the whole path — but the series has to be up on net to be creep.
+     * Recorded in §9l.
+     */
+    if (cumulativeDeltaCents <= 0) continue;
+
     const annualisedCents = Math.round(cumulativeDeltaCents * entry.cadencesPerYear);
     const anyUnconfirmed = material.some((step) => !step.confirmed);
 

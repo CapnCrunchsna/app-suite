@@ -196,15 +196,33 @@ describe('analyzeRecurrence', () => {
      * produce a Low band, so the band and the suppression threshold were dead
      * code and the bands communicated nothing.
      */
-    it('puts a ragged three-occurrence series in the Low band', () => {
-      // Ragged in both inputs the formula reads: the gaps drift (30 then 34
-      // days) and the amount wobbles within one price step. Amounts stay inside
-      // the clustering tolerance on purpose — a spread wide enough to split the
-      // cluster would be testing pass 1 rather than the confidence formula.
+    /**
+     * §5.2's Low band is no longer reachable for a `fitted` series, and that is a
+     * consequence of §9l's fee test rather than an accident.
+     *
+     * The formula reads three inputs, and `amount_stability` was the one with real
+     * range: the case this replaces reached Low by wobbling the amount within a
+     * price step. The fee test now refuses exactly that shape — three charges at
+     * three different amounts is a shopping habit, not a subscription — so every
+     * series that survives is amount-stable, that term sits near 1, and a quarter of
+     * the formula's range is gone with it. A cadence-ragged three-occurrence series
+     * bottoms out at 0.575, just inside Medium.
+     *
+     * This is measured, not assumed: gaps of 27 and 34 days against a 30.44-day
+     * cadence score `regularity` 0.985, because `regularityOf` scales residuals by
+     * the cadence's own tolerance and monthly's is ±4 days. The raggedness a real
+     * subscription can show is simply not enough to move the band on its own.
+     *
+     * Recorded as an open tension in §10: §5.2 wrote four corrections specifically
+     * so the Low band would stop being dead code, and for fitted series it now is
+     * again. Lowering `feePlateauShare` restores the old behaviour and the old
+     * false positives together, which is the trade to make deliberately.
+     */
+    it('bottoms out just inside Medium now that stability is a gate (§9l, §10)', () => {
       const transactions = [
         charge('2025-01-05', -1000),
-        charge('2025-02-04', -1035),
-        charge('2025-03-10', -965),
+        charge('2025-02-04', -1000),
+        charge('2025-03-10', -1000),
       ];
       const snapshot = snapshotOf(transactions, {
         merchants: [
@@ -221,7 +239,62 @@ describe('analyzeRecurrence', () => {
       const { series } = analyzeRecurrence(snapshot, DEFAULT_CONFIG);
 
       expect(series).toHaveLength(1);
-      expect(bandFor(series[0].confidence, DEFAULT_CONFIG)).toBe('low');
+      expect(bandFor(series[0].confidence, DEFAULT_CONFIG)).toBe('medium');
+      // The floor, pinned: if this drops below 0.55 the Low band is live again and
+      // §10's tension has resolved itself.
+      expect(series[0].confidence).toBeCloseTo(0.575, 3);
+    });
+
+    /**
+     * The amounts here sit **inside** §5.2's clustering tolerance — all within a
+     * few percent of $20 — so pass 1 keeps them together and a monthly cadence
+     * fits. That is the case the fee test exists for, and the only one that
+     * reaches it: a wider scatter is split into one-charge clusters by pass 1 and
+     * never gets this far, which is why this case is not simply "six random
+     * amounts".
+     */
+    it('refuses a cadence with no fee behind it (§5.2, §9l)', () => {
+      const nearlyButNotQuite = [
+        charge('2025-01-05', -2000),
+        charge('2025-02-05', -2050),
+        charge('2025-03-05', -1980),
+        charge('2025-04-05', -2035),
+        charge('2025-05-05', -1990),
+        charge('2025-06-05', -2015),
+      ];
+
+      expect(analyzeRecurrence(snapshotOf(nearlyButNotQuite), DEFAULT_CONFIG).series).toEqual([]);
+    });
+
+    it('keeps a fee that changed price — two plateaus are still plateaus', () => {
+      // §5.5's whole subject: flat, then flat at a new price. Every charge sits on
+      // a plateau, so the fee test passes and price creep still has a series.
+      const stepped = [...monthly(4, -899, 1), ...monthly(4, -1549, 5)];
+      const { series } = analyzeRecurrence(snapshotOf(stepped), DEFAULT_CONFIG);
+
+      expect(series).toHaveLength(1);
+      expect(series[0].priceSteps.length).toBeGreaterThan(0);
+    });
+
+    it('is a threshold, so the old behaviour is one setting away (§7.4)', () => {
+      const nearlyButNotQuite = [
+        charge('2025-01-05', -2000),
+        charge('2025-02-05', -2050),
+        charge('2025-03-05', -1980),
+        charge('2025-04-05', -2035),
+        charge('2025-05-05', -1990),
+        charge('2025-06-05', -2015),
+      ];
+
+      expect(analyzeRecurrence(snapshotOf(nearlyButNotQuite), DEFAULT_CONFIG).series).toEqual([]);
+      // Settings can put it back — §7.4 makes every threshold data, and this one
+      // is a judgement about what "subscription" means rather than a fact.
+      expect(
+        analyzeRecurrence(
+          snapshotOf(nearlyButNotQuite),
+          resolveConfig({ recurrence: { feePlateauShare: 0 } }),
+        ).series,
+      ).toHaveLength(1);
     });
 
     it('puts a clean twelve-occurrence series in the High band', () => {

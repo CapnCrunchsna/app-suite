@@ -106,6 +106,24 @@ export interface RecurrenceConfig {
   readonly countScoreSpan: number;
   /** `amount_stability = 1 − clamp(CV ÷ ceiling, 0, 1)`. */
   readonly amountStabilityCvCeiling: number;
+  /**
+   * §5.2's fee test: the share of a fitted series' charges whose exact amount
+   * occurs more than once in it.
+   *
+   * A subscription is a **fee** — the same amount, over and over — so its charges
+   * sit on one flat plateau, or on two when the price changed. Ordinary repeat
+   * spending at one merchant is a scatter of one-off numbers that never repeat, and
+   * over enough charges some subset of it will always land on a cadence. Measured
+   * on exact amounts rather than a dispersion, because a plateau is what a fee
+   * *is*; a coefficient of variation cannot tell two tight plateaus from a narrow
+   * scatter, and computing it inside the current price step makes a one-charge step
+   * perfectly stable by construction.
+   *
+   * Applies to `fitted` series only. §5.2's two annual exceptions are exempt: a
+   * single charge cannot repeat, and an annual pair already has to clear
+   * `amountStabilityCvCeiling` to qualify at all.
+   */
+  readonly feePlateauShare: number;
   /** §5.2's caps. Under the design session's formula a two-occurrence series
    *  scored 0.90 — MAD of a single delta is always zero, so regularity was always
    *  1.0 — which contradicted the same section's "two occurrences emit at Low". */
@@ -468,6 +486,10 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     knownSubscriptionBonus: 0.1,
     countScoreSpan: 6,
     amountStabilityCvCeiling: 0.05,
+    // Half, from the first real statement: every genuine subscription in it scored
+    // 1.00 and every false one 0.00, so the threshold sits in an empty gap rather
+    // than on a slope. Recorded in §9l, and §7.6 still applies — it is one file.
+    feePlateauShare: 0.5,
     twoOccurrenceConfidenceCap: 0.45,
     threeOccurrenceConfidenceCap: 0.7,
     priceStepConfirmationDays: 60,
