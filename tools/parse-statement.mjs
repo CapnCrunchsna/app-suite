@@ -29,10 +29,15 @@ const WORKSPACE_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 let parsing;
 let domain;
+let domainNode;
 let normalize;
 try {
   parsing = await import('@metrum/ledgerline-parsing');
   domain = await import('@metrum/ledgerline-domain');
+  // §3.3's key hashes with `node:crypto`, so it ships from the Node-only entry point
+  // rather than the universal barrel — see `domain/src/node.ts`. This tool is Node, so
+  // it can have it; an Angular page importing `formatCents` must not.
+  domainNode = await import('@metrum/ledgerline-domain/node');
   normalize = await import('@metrum/ledgerline-normalize');
 } catch (error) {
   console.error('Could not load the Ledgerline libraries. Build them first:\n');
@@ -48,7 +53,8 @@ const {
   parseCsvWithProfile,
   sniffFileKind,
 } = parsing;
-const { collapseV1, dedupeKey, DEDUPE_KEY_VERSION, formatCents } = domain;
+const { collapseV1, formatCents } = domain;
+const { dedupeKey, DEDUPE_KEY_VERSION } = domainNode;
 const { normalizeDescriptor, SEED_ALIASES, SEED_MERCHANT_KEYS } = normalize;
 
 function parseArgs(argv) {

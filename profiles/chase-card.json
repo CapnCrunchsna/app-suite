@@ -1,0 +1,30 @@
+{
+  "id": "chase-card-v1",
+  "institution": "Chase",
+  "accountTypeHint": "credit_card",
+  "headerSignature": "aa60296bafa781a7a719967773ae6a7a2b4832fa307a65f788b7dacbfeb16ad0",
+  "headerTokens": [
+    "transaction date",
+    "post date",
+    "description",
+    "category",
+    "type",
+    "amount",
+    "memo"
+  ],
+  "hasHeader": true,
+  "delimiter": ",",
+  "skipLines": 0,
+  "dateFormat": "MM/DD/YYYY",
+  "amountMode": "single",
+  "signConvention": "as_is",
+  "columnMap": {
+    "transactionDate": "Transaction Date",
+    "postedDate": "Post Date",
+    "description": "Description",
+    "amount": "Amount"
+  },
+  "pendingValues": [],
+  "version": 1,
+  "source": "seed"
+}
