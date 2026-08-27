@@ -90,6 +90,24 @@ export interface RecurrenceConfig {
   readonly fourWeeklyMinOccurrences: number;
   readonly fourWeeklyDeltaMinDays: number;
   readonly fourWeeklyDeltaMaxDays: number;
+  /**
+   * §5.2 pass 2: how far apart two candidate groups' prices may be and still be
+   * **one fee that changed price** rather than two different things.
+   *
+   * Pass 1 splits on amount; pass 2 rejoins price steps. Without this bound
+   * nothing after pass 1 looks at amount again, so pass 2 merges on rhythm alone
+   * — which fuses a $14 fee into a $150 tuition run, and a $150 purchase into
+   * three $8 ones, whenever the union happens to fit a cadence. §5.2 names
+   * the merge "a price change, not a second subscription", and this is the part of
+   * that sentence the code was missing. Recorded in §9m.
+   *
+   * Applies **only where neither group fits a cadence on its own**. Two runs that
+   * each fit and agree are §5.2's own test and merge unbounded, because an intro
+   * rate is a genuine tenfold step and §5.6 needs §5.5 to see it.
+   *
+   * A ratio rather than a cent amount, because price changes are proportional.
+   */
+  readonly priceStepMaxAmountRatio: number;
   /** §5.2's annual exception: two charges this far apart with stable amounts
    *  emit at Medium without the known-subscription flag. */
   readonly annualPairMinDays: number;
@@ -477,6 +495,12 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     fourWeeklyMinOccurrences: 6,
     fourWeeklyDeltaMinDays: 27,
     fourWeeklyDeltaMaxDays: 29,
+    // Threefold, from the first real statement: the unvouched steps a merge has to
+    // keep run 1.02×–1.67×, and the junk merges it has to refuse run 6.25×–18×, so
+    // the bound sits in a wide empty gap rather than on a slope. A steeper genuine
+    // step — an intro rate — comes with a run on each side and never reaches this.
+    // §7.6 still applies: it is one file. Recorded in §9m.
+    priceStepMaxAmountRatio: 3,
     annualPairMinDays: 355,
     annualPairMaxDays: 375,
     livenessCadenceMultiple: 1.5,
@@ -486,10 +510,15 @@ export const DEFAULT_CONFIG: AnalyzerConfig = {
     knownSubscriptionBonus: 0.1,
     countScoreSpan: 6,
     amountStabilityCvCeiling: 0.05,
-    // Half, from the first real statement: every genuine subscription in it scored
-    // 1.00 and every false one 0.00, so the threshold sits in an empty gap rather
-    // than on a slope. Recorded in §9l, and §7.6 still applies — it is one file.
-    feePlateauShare: 0.5,
+    // A third, from the same statement re-measured once pass 2 stopped splitting
+    // one subscription in two. §9l set this at half because every genuine series
+    // then scored 1.00 and the one surviving phantom scored exactly 0.50 — but both
+    // of those numbers were products of the bad merge. Merged correctly, the swim
+    // school is a *variable* monthly bill and scores 0.40, and the phantom that
+    // pinned the number is gone from pass 2 entirely. The gap is now (0.29, 0.40],
+    // so this sits inside it rather than on either edge. Recorded in §9m, and §7.6
+    // still applies — it is one file.
+    feePlateauShare: 0.34,
     twoOccurrenceConfidenceCap: 0.45,
     threeOccurrenceConfidenceCap: 0.7,
     priceStepConfirmationDays: 60,

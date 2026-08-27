@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9l
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9m
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -85,7 +85,7 @@ review-queue, insights and ask endpoints of §2.3, nor **two of §6's eight page
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k and §9l list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l and §9m list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -94,8 +94,9 @@ the database. **The first real statement was parsed on 2026-08-26** — a Chase 
 export, 326 rows over eight months, through `profiles/chase-card.json` with no parse failures.
 It has not calibrated anything: §7.6 asks for "a hand-labelled year of real statements with the
 expected findings written down", and one unlabelled statement from one account is not that. What
-it did do is falsify two rules that no synthetic fixture had reached, both corrected in §9l, and
-open one tension recorded in §10. Every threshold in §5 remains a designed number.
+it did do is falsify three rules that no synthetic fixture had reached — two corrected in §9l and
+§5.2's grouping in §9m — and open one tension, recorded in §10 and closed there by §9m. Every
+threshold in §5 remains a designed number.
 
 This document was extracted from §3–§7 of the design session artifact on 2026-08-03, under
 the workspace rule in `../../CLAUDE.md` § Version control — *must it be true of the code at
@@ -1560,6 +1561,75 @@ nothing: §9h's categorizer assigns a category from the resolved merchant's defa
 these rows resolve to provisional merchants, and a provisional has no default — so there is
 almost nothing to trend even with seven covered months.
 
+## 9m. Amendments from implementation — 2026-08-26 (§5.2)
+
+§9l named three things it had not fixed, and the first was that pass 2 still split one
+subscription into two series. It was not that pass 2 failed to fire. Pass 2 fired on the wrong
+pairs, and the merge it should have made was unreachable afterwards.
+
+| § | Amendment | Why |
+|---|---|---|
+| 5.2 | **Pass 2's merge needs evidence about the amounts, not only about the rhythm.** Two groups that each fit a cadence and name the same one merge as before, unbounded. Where one side is too short to fit a cadence of its own, the two prices must be within `priceStepMaxAmountRatio` (default 3). | Pass 1 splits on amount and, until now, nothing after it looked at amount again: pass 2's whole test was "the union fits a cadence" plus an overlap bound. So any two groups of one merchant merged if their charges happened to land on a rhythm, whatever the charges were. On the first real statement a $14 fee and a $150 tuition charge merged because their union fit monthly with a median residual of 3.84 days against a ±4 tolerance, and a $150 purchase merged into three $8 ones by fitting biweekly with two missed cycles assumed twice. The bound cannot be unconditional, because an intro rate converting to full price is a genuine steep step and §5.6 suppresses its own finding only when §5.5 has seen that transition — hence the layering. Two runs that each fit are §5.2's literal test, "their independent cadence estimates agree"; the bound is what stands in for that test when one side has no rhythm to offer. |
+| 5.2 | **`feePlateauShare` moves from 0.5 to 0.34.** | Both numbers that pinned it at half were products of the bad merge. §9l set it there because every genuine series scored 1.00 and the one surviving phantom scored exactly 0.50 — but that phantom was itself a bad merge, and pass 2 no longer makes it. Merged correctly, the subscription at issue turns out to be a **variable** monthly bill: only one of its amounts ever repeats, so it scores 0.40 and half threw it away entirely. Re-measured with the merge fixed, the phantoms score 0.29 and below and the genuine series 0.40 and above, so the threshold sits inside (0.29, 0.40] rather than on either edge. The test itself is unchanged — a fitted series must still sit on an exact-amount plateau. |
+
+**The failure, in full**, because the shape is more instructive than the fix. The merchant has
+eight charges: a monthly bill on the 25th, five of them, moving between roughly $150 and $250;
+and three one-off charges on other days, an order of magnitude smaller. Pass 1 split that into
+six amount groups. Pass 2 then walked the groups in ascending order of amount and merged the
+first pair that fit — which was a fee group and a tuition charge, not two tuition groups. That
+merge was not recoverable: it put charges a day apart into what became two rival clusters, and a
+one-day gap fits no cadence in §5.2's table, so the two halves of the real bill could never
+merge with each other afterwards. One subscription came out as two series, §5.5 and §5.7 read
+each of them, and the hero page carried two "price rose" cards and two "appears cancelled" cards
+for one thing.
+
+**What the corrections did to that statement**, which is the measurement §7.6 asks for and not a
+claim about correctness in general:
+
+| | before | after |
+|---|---|---|
+| series fitted | 8 | 6 |
+| series for the merchant at issue | 2, covering 7 of its 8 charges | 1, covering the 5 that are the bill |
+| "active subscriptions" | 5, $231.23/mo | 4, $212.82/mo |
+| `price_creep.v1` findings | 2, both the same thing | 0 |
+| `lapsed.v1` findings | 3 | 2 |
+| §7.3 savings headline | $3,218.76/yr | $0.00/yr |
+
+The six series that remain are the five real subscriptions on the card and §5.2's single-charge
+annual exception. Nothing genuine was lost; the two that went were the split halves becoming one,
+and the four-charge phantom §9l had left standing.
+
+**The headline going to zero is the correction, not a regression.** §9l's $3,218.76/yr was those
+two `price_creep` findings and nothing else — one of them comparing a fee against tuition. The
+merged series reports no step at all, and that is right twice over: no amount in it holds for two
+consecutive occurrences, so §5.5 finds nothing confirmed, and the one level it can derive runs
+from a median of $209 down to $200, which §9l's own net-increase gate declines. A card reading
+"price rose" over a bill that went 168, 250, 150, 250, 200 would be inventing a direction the
+data does not have. On this statement no subscription's price rose, and $0.00 is the honest
+number.
+
+**This resolves the first discrepancy in §10, as a matter of fact rather than by decision.** §10
+recorded that §5.2's Low band was dead code again for fitted series, because §9l's fee test
+admitted only series that were amount-stable by construction, leaving `amount_stability` pinned
+near 1 and a quarter of the confidence formula's range unusable. At 0.34 that is no longer true:
+a variable-amount bill qualifies and carries `amount_stability` **0**. The subscription at issue
+scores 0.593 with that term at zero, and a three-occurrence bill whose amount will not settle
+scores **0.493** — inside Low. Which is the honest band for it: "something bills me monthly and I
+cannot predict what it will cost" is a real subscription and a weak one. §10's measured floor of
+0.575 survives as the floor for a series whose amount is *flat*; `recurrence.spec.ts` pins both
+numbers.
+
+**Two things this did not fix.** `SAMSCLUB` and `SAMS CLUB` are still one merchant in two, and
+§4.3's user correction is still the designed answer. The same fault has a second instance worth
+naming: the merchant at issue loses its `ICP*` prefix in the last two months of the statement, so
+its final two bills sit under a second merchant and the series reads as lapsed in May rather than
+running to the end of the window. That is why the `lapsed.v1` finding for it is honest about the
+data and wrong about the world. And `trend.v1` still emits nothing, for the reason §9l gives.
+
+§7.6 still applies to every number here. This is one statement from one account, and
+`priceStepMaxAmountRatio` in particular is a bound whose only evidence is that the steps it must
+keep run 1.02×–1.67× and the merges it must refuse run 6.25×–18×.
+
 ## 10. Open discrepancies — recorded, not resolved
 
 Building the persistence and import-commit path on 2026-08-06 found one place where this
@@ -1567,23 +1637,26 @@ document contradicts itself. It is recorded here rather than amended, because re
 means choosing a number, and §7.6 makes choosing a number a calibration decision against real
 statements rather than a bug fix. **The code implements what §3.3 specifies, verbatim.**
 
-**§5.2's Low band is dead code again, for fitted series.** §5.2 lists four corrections made
-specifically so that band would stop being unreachable — the original formula "was structurally
-incapable of producing a Low band", and the fix gave `amount_stability` real range. §9l's fee
-test then removed that range from the other end: every series it admits is amount-stable by
-construction, so the term sits near 1 and a quarter of the formula's span is gone. Measured, a
-cadence-ragged three-occurrence series now bottoms out at **0.575** — just inside Medium — and
-nothing that still fits a cadence goes lower. `regularity` cannot make up the difference
-because `regularityOf` scales residuals by the cadence's own tolerance, and monthly's is ±4
-days: gaps of 27 and 34 days still score 0.985.
+**~~§5.2's Low band is dead code again, for fitted series.~~ Closed by §9m on 2026-08-26** —
+and closed by measurement rather than by any of the judgements below, which is why it is struck
+here rather than deleted.
 
-Recorded rather than fixed, because every way out is a judgement rather than a bug fix.
-Reweighting the formula, giving the fee test a partial-credit score instead of a gate, or
-accepting that a subscription which passes the fee test is simply never Low — each says
-something different about what confidence means, and §7.6 makes that a decision to take against
-a calibrated corpus rather than against one statement. `libs/ledgerline/analyzers/src/lib/recurrence.spec.ts`
-pins the 0.575 floor with a test named after this discrepancy, so whichever way it resolves, the
-resolution is deliberate.
+The discrepancy was that §5.2 lists four corrections made specifically so the Low band would
+stop being unreachable, and §9l's fee test then removed `amount_stability`'s range from the
+other end: every series it admitted was amount-stable by construction, so the term sat near 1
+and a quarter of the formula's span was gone. A cadence-ragged three-occurrence series bottomed
+out at **0.575**, just inside Medium. `regularity` could not make up the difference, because
+`regularityOf` scales residuals by the cadence's own tolerance and monthly's is ±4 days: gaps of
+27 and 34 days score 0.985.
+
+What changed is the premise, not the formula. §9m found that the fee test at 0.5 was calibrated
+against a corpus distorted by a pass-2 defect, and moving it to 0.34 admits a **variable-amount**
+recurring bill — which carries `amount_stability` 0, the term §10 said had lost its range. Such
+a series at three occurrences scores **0.493**, inside Low. The three ways out considered here —
+reweighting the formula, making the fee test a partial-credit score, accepting that a
+subscription which passes it is simply never Low — were all avoided; none was taken.
+`libs/ledgerline/analyzers/src/lib/recurrence.spec.ts` pins 0.493 and keeps 0.575 as the floor
+for a series whose amount is flat.
 
 **§3.3's near-duplicate predicate cannot catch §3.3's own pending-to-posted example.** That
 section names "a pending charge that later posts" as one of the three cases the near-duplicate

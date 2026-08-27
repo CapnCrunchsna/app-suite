@@ -163,6 +163,99 @@ describe('analyzeRecurrence', () => {
         confirmed: false,
       });
     });
+
+    /**
+     * A merchant billing a monthly fee **and** charging incidental one-offs — a
+     * school with tuition on the 25th and the odd small fee in between. The shape
+     * that broke pass 2 on the first real statement (§9m): the fees are their own
+     * amount groups, the union of a fee group and a tuition group happens to fit a
+     * monthly cadence, and with no test on the amounts pass 2 fused them. One
+     * subscription came out as two series, so §5.5 and §5.7 each reported it twice.
+     */
+    describe('a merchant with a fee and one-off charges too (§9m)', () => {
+      const bill = [
+        charge('2025-01-25', -16000),
+        charge('2025-02-25', -25000),
+        charge('2025-03-25', -15000),
+        charge('2025-04-25', -25000),
+        charge('2025-05-25', -20000),
+      ];
+      const oneOffs = [
+        charge('2025-01-17', -1300),
+        charge('2025-02-08', -3200),
+        charge('2025-04-26', -1300),
+      ];
+
+      it('is one series, covering the bill and not the one-offs', () => {
+        const { series } = analyzeRecurrence(snapshotOf([...bill, ...oneOffs]), DEFAULT_CONFIG);
+
+        expect(series).toHaveLength(1);
+        expect(series[0].cadenceLabel).toBe('monthly');
+        expect(series[0].charges.map((entry) => entry.effectiveDate)).toEqual([
+          '2025-01-25',
+          '2025-02-25',
+          '2025-03-25',
+          '2025-04-25',
+          '2025-05-25',
+        ]);
+      });
+
+      it('splits into two the moment the bound is lifted (§7.4)', () => {
+        // The bound is the whole fix, and it is data: put it out of reach and the
+        // old behaviour comes straight back, which is what makes this a threshold
+        // rather than a rewrite.
+        const { series } = analyzeRecurrence(
+          snapshotOf([...bill, ...oneOffs]),
+          resolveConfig({ recurrence: { priceStepMaxAmountRatio: 100 } }),
+        );
+
+        expect(series.length).toBeGreaterThan(1);
+      });
+    });
+
+    it('still merges a fee that climbed through several steps', () => {
+      // The bound is on each merge, not on the series' whole history: $9.99 to
+      // $29.99 is a threefold climb overall, and merging is iterative, so every
+      // step clears the bound against the running median even though the ends of
+      // the series do not.
+      const climbing = [
+        ...monthly(3, -999, 1),
+        ...monthly(3, -1599, 4),
+        ...monthly(3, -2299, 7),
+        ...monthly(3, -2999, 10),
+      ];
+      const { series } = analyzeRecurrence(snapshotOf(climbing), DEFAULT_CONFIG);
+
+      expect(series).toHaveLength(1);
+      expect(series[0].occurrenceCount).toBe(12);
+      expect(series[0].amountCentsFirst).toBe(999);
+      expect(series[0].amountCentsCurrent).toBe(2999);
+    });
+
+    it('merges an intro rate into the full price, however steep the step', () => {
+      // §5.6 suppresses its trial finding only when §5.5 has already reported the
+      // intro-to-full transition, so this merge is load-bearing for two rules. A
+      // run on each side is §5.2's own evidence — "their independent cadence
+      // estimates agree" — and the amount bound does not apply to it.
+      const intro = [...monthly(4, -99, 1), ...monthly(6, -1599, 5)];
+      const { series } = analyzeRecurrence(snapshotOf(intro), DEFAULT_CONFIG);
+
+      expect(series).toHaveLength(1);
+      expect(series[0].priceSteps).toHaveLength(1);
+      expect(series[0].priceSteps[0]).toMatchObject({ fromCents: 99, toCents: 1599 });
+    });
+
+    it('refuses to read a one-off as a price step, however well it fits the rhythm', () => {
+      // One charge two orders of magnitude off the fee, landing exactly on the
+      // next expected date. Rhythm alone would take it; §5.2 calls pass 2 "a price
+      // change, not a second subscription", and this is not a price change.
+      const transactions = [...monthly(6, -999, 1), charge('2025-07-05', -84000)];
+      const { series } = analyzeRecurrence(snapshotOf(transactions), DEFAULT_CONFIG);
+
+      expect(series).toHaveLength(1);
+      expect(series[0].occurrenceCount).toBe(6);
+      expect(series[0].amountCentsCurrent).toBe(999);
+    });
   });
 
   describe('genuine concurrency (§5.2 pass 3)', () => {
@@ -197,28 +290,22 @@ describe('analyzeRecurrence', () => {
      * code and the bands communicated nothing.
      */
     /**
-     * §5.2's Low band is no longer reachable for a `fitted` series, and that is a
-     * consequence of §9l's fee test rather than an accident.
-     *
-     * The formula reads three inputs, and `amount_stability` was the one with real
-     * range: the case this replaces reached Low by wobbling the amount within a
-     * price step. The fee test now refuses exactly that shape — three charges at
-     * three different amounts is a shopping habit, not a subscription — so every
-     * series that survives is amount-stable, that term sits near 1, and a quarter of
-     * the formula's range is gone with it. A cadence-ragged three-occurrence series
-     * bottoms out at 0.575, just inside Medium.
+     * The floor for a series whose amount is **flat**: raggedness alone cannot
+     * reach the Low band.
      *
      * This is measured, not assumed: gaps of 27 and 34 days against a 30.44-day
      * cadence score `regularity` 0.985, because `regularityOf` scales residuals by
-     * the cadence's own tolerance and monthly's is ±4 days. The raggedness a real
-     * subscription can show is simply not enough to move the band on its own.
+     * the cadence's own tolerance and monthly's is ±4 days. With `amount_stability`
+     * at 1 — which a flat fee has by definition — a three-occurrence series bottoms
+     * out at 0.575, just inside Medium.
      *
-     * Recorded as an open tension in §10: §5.2 wrote four corrections specifically
-     * so the Low band would stop being dead code, and for fitted series it now is
-     * again. Lowering `feePlateauShare` restores the old behaviour and the old
-     * false positives together, which is the trade to make deliberately.
+     * §10 recorded this as the Low band being dead code again for *every* fitted
+     * series, on the reasoning that §9l's fee test admitted only amount-stable ones.
+     * §9m's threshold move ended that: a variable-amount bill now qualifies, carries
+     * `amount_stability` 0, and does reach Low — the case below. So this number is a
+     * floor for one shape rather than for the band, and both are pinned.
      */
-    it('bottoms out just inside Medium now that stability is a gate (§9l, §10)', () => {
+    it('bottoms out just inside Medium when the amount is flat (§9l, §9m)', () => {
       const transactions = [
         charge('2025-01-05', -1000),
         charge('2025-02-04', -1000),
@@ -240,9 +327,68 @@ describe('analyzeRecurrence', () => {
 
       expect(series).toHaveLength(1);
       expect(bandFor(series[0].confidence, DEFAULT_CONFIG)).toBe('medium');
-      // The floor, pinned: if this drops below 0.55 the Low band is live again and
-      // §10's tension has resolved itself.
       expect(series[0].confidence).toBeCloseTo(0.575, 3);
+    });
+
+    /**
+     * §5.2 wrote four corrections specifically so the Low band would stop being
+     * dead code, and §10 recorded that §9l had made it unreachable again. It is
+     * reachable: a bill that recurs monthly for a **different amount each time**
+     * passes the fee test on one repeated amount, and then `amount_stability` —
+     * the quarter of the formula §10 said had lost its range — reads 0.
+     *
+     * Which is the honest answer for this shape. "Something bills me monthly and I
+     * cannot predict what it will cost" is a real subscription and a weak one, and
+     * Low is where §5.2 wants weak.
+     */
+    it('reaches the Low band for a bill whose amount will not settle (§10)', () => {
+      const transactions = [
+        charge('2025-01-05', -2000),
+        charge('2025-02-01', -3000),
+        charge('2025-03-07', -2000),
+      ];
+      const snapshot = snapshotOf(transactions, {
+        merchants: [
+          {
+            id: 'netflix',
+            canonicalName: 'SOMETHING',
+            displayName: 'Something',
+            isKnownSubscription: false,
+            isTransferKind: false,
+            overlapGroup: null,
+          },
+        ],
+      });
+      const { series } = analyzeRecurrence(snapshot, DEFAULT_CONFIG);
+
+      expect(series).toHaveLength(1);
+      expect(bandFor(series[0].confidence, DEFAULT_CONFIG)).toBe('low');
+      expect(series[0].confidence).toBeCloseTo(0.493, 3);
+    });
+
+    /**
+     * The other half of §9m's threshold move: at half, a recurring bill whose
+     * amount varies was thrown away entirely, because only one of its amounts ever
+     * repeated. §9l's fee test still stands — a series must sit on an exact-amount
+     * plateau — but a third of its charges is what a *variable* bill can manage.
+     */
+    it('keeps a recurring bill whose amount varies (§9m)', () => {
+      const varying = [
+        charge('2025-01-25', -16000),
+        charge('2025-02-25', -25000),
+        charge('2025-03-25', -15000),
+        charge('2025-04-25', -25000),
+        charge('2025-05-25', -20000),
+      ];
+
+      expect(analyzeRecurrence(snapshotOf(varying), DEFAULT_CONFIG).series).toHaveLength(1);
+      // Two charges of five on a plateau — 0.40, which the old half rejected.
+      expect(
+        analyzeRecurrence(
+          snapshotOf(varying),
+          resolveConfig({ recurrence: { feePlateauShare: 0.5 } }),
+        ).series,
+      ).toEqual([]);
     });
 
     /**
