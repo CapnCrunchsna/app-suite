@@ -21,6 +21,7 @@ import type {
   TransactionDetail,
   Merchant,
   MerchantReviewQueue,
+  MerchantMergeResult,
   Category,
   Job,
   Finding,
@@ -207,6 +208,10 @@ export interface ListTransfersQuery {
 export type ListTransfersResponse = TransferLink[];
 
 export type ListMerchantsResponse = Merchant[];
+
+export type MergeMerchantBody = {
+  readonly intoMerchantId: string;
+};
 
 export type ListCategoriesResponse = Category[];
 
@@ -545,6 +550,17 @@ export class LedgerlineApi {
    */
   getMerchantReviewQueue(): Promise<MerchantReviewQueue> {
     return this.request<MerchantReviewQueue>('GET', `/api/merchants/review-queue`, {
+    });
+  }
+
+  /**
+   * Treat this merchant as another one, retroactively
+   *
+   * Writes a `user` alias for every descriptor spelling of `:id` pointing at `intoMerchantId`, then enqueues spec 4.3’s re-normalize job, which repoints the history and re-runs the analyzers. Permanent and top-precedence (spec 4.3).
+   */
+  mergeMerchant(id: string, body: MergeMerchantBody): Promise<MerchantMergeResult> {
+    return this.request<MerchantMergeResult>('POST', `/api/merchants/${encodeURIComponent(String(id))}/merge`, {
+      body,
     });
   }
 

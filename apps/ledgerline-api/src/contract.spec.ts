@@ -25,20 +25,32 @@ const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const OPENAPI_PATH = fileURLToPath(new URL('../openapi.json', import.meta.url));
 
 describe('the emitted OpenAPI contract', () => {
-  it('matches the committed openapi.json', async () => {
-    // Through the same function the emitter uses, so a difference in indentation
-    // or a missing trailing newline cannot masquerade as a stale contract.
-    const emitted = await serializeOpenapiDocument();
-    const committed = readFileSync(OPENAPI_PATH, 'utf8');
+  /**
+   * The explicit timeout is not decoration. This case boots the whole server to
+   * emit the document, which takes ~3.4s alone and comfortably exceeds vitest's
+   * 5s default once `nx run-many` is saturating the machine — so `npm run check`
+   * would fail here intermittently, reporting a *stale contract* for what is
+   * really a busy laptop. A flaky test that lies about which thing is broken is
+   * worse than a slow one.
+   */
+  it(
+    'matches the committed openapi.json',
+    async () => {
+      // Through the same function the emitter uses, so a difference in indentation
+      // or a missing trailing newline cannot masquerade as a stale contract.
+      const emitted = await serializeOpenapiDocument();
+      const committed = readFileSync(OPENAPI_PATH, 'utf8');
 
-    if (emitted !== committed) {
-      throw new Error(
-        'apps/ledgerline-api/openapi.json is stale against the route schemas.\n' +
-          'Regenerate it with: npx nx build ledgerline-api',
-      );
-    }
-    expect(emitted).toBe(committed);
-  });
+      if (emitted !== committed) {
+        throw new Error(
+          'apps/ledgerline-api/openapi.json is stale against the route schemas.\n' +
+            'Regenerate it with: npx nx build ledgerline-api',
+        );
+      }
+      expect(emitted).toBe(committed);
+    },
+    30_000,
+  );
 
   it('names every operation, so the generated client never has to guess one', () => {
     const document = JSON.parse(readFileSync(OPENAPI_PATH, 'utf8')) as {

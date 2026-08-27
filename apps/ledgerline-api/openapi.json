@@ -567,6 +567,36 @@
           "llmProposalsUnavailableReason"
         ]
       },
+      "MerchantMergeResult": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string"
+          },
+          "aliasKeysWritten": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transactionsAffected": {
+            "type": "integer"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "coalesced": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "merchantId",
+          "aliasKeysWritten",
+          "transactionsAffected",
+          "jobId",
+          "coalesced"
+        ]
+      },
       "Category": {
         "type": "object",
         "properties": {
@@ -5349,6 +5379,117 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MerchantReviewQueue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchants/{id}/merge": {
+      "post": {
+        "operationId": "mergeMerchant",
+        "summary": "Treat this merchant as another one, retroactively",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Writes a `user` alias for every descriptor spelling of `:id` pointing at `intoMerchantId`, then enqueues spec 4.3’s re-normalize job, which repoints the history and re-runs the analyzers. Permanent and top-precedence (spec 4.3).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "intoMerchantId"
+                ],
+                "properties": {
+                  "intoMerchantId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantMergeResult"
                 }
               }
             }

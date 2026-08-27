@@ -759,6 +759,24 @@ const merchantReviewQueue = {
   },
 } as const;
 
+const merchantMergeResult = {
+  $id: 'MerchantMergeResult',
+  type: 'object',
+  properties: {
+    /** The surviving merchant. */
+    merchantId: { type: 'string' },
+    /** Descriptor spellings that now resolve to it, as `user` aliases (§4.3). */
+    aliasKeysWritten: { type: 'array', items: { type: 'string' } },
+    /** Rows the re-normalize job will move. Reported from the dry count rather
+     *  than from the job, because the job is asynchronous and the user is owed a
+     *  number now — the same argument §6.3 makes about its bulk count. */
+    transactionsAffected: { type: 'integer' },
+    jobId: { type: 'string' },
+    /** §2.7's coalescing: a second merge while one is queued merges into it. */
+    coalesced: { type: 'boolean' },
+  },
+} as const;
+
 const category = {
   $id: 'Category',
   type: 'object',
@@ -1366,6 +1384,7 @@ const SHARED = [
   allRequired(reviewMerchant),
   allRequired(mergeCandidate),
   allRequired(merchantReviewQueue),
+  allRequired(merchantMergeResult),
   allRequired(category),
   allRequired(job),
 

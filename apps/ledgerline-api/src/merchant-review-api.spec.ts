@@ -238,6 +238,113 @@ describe('ledgerline-api merchant review queue (§4.1 step 7)', () => {
     expect(review.llmProposalsUnavailableReason).toMatch(/provider seam/);
   });
 
+  describe('resolving one (§4.3)', () => {
+    /**
+     * The merge is a §4.3 correction with the descriptor list filled in, so what
+     * these check is that it inherits §4.3's guarantees rather than restating
+     * them: `user` precedence, the whole history swept, and the analyzers re-run.
+     */
+    async function mergeCoffee(): Promise<{ merchantId: string; transactionsAffected: number }> {
+      const review = await queue();
+      const [candidate] = review.mergeCandidates;
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/merchants/${candidate.merge.merchant.id}/merge`,
+        payload: { intoMerchantId: candidate.keep.merchant.id },
+      });
+
+      expect(response.statusCode).toBe(200);
+      context.jobRunner.drain();
+      return response.json() as { merchantId: string; transactionsAffected: number };
+    }
+
+    beforeEach(async () => {
+      const secondId = (
+        await app.inject({
+          method: 'POST',
+          url: '/api/accounts',
+          payload: { displayName: 'Northgate Joint', accountType: 'checking', last4: '9931' },
+        })
+      ).json().id;
+      await importFixture('northgate-checking-2026-01-part-a.csv', secondId);
+    });
+
+    it('repoints every row of the losing spelling and empties the queue', async () => {
+      const before = await queue();
+      const losing = before.mergeCandidates[0].merge;
+      const surviving = before.mergeCandidates[0].keep;
+
+      const result = await mergeCoffee();
+
+      expect(result.merchantId).toBe(surviving.merchant.id);
+      expect(result.transactionsAffected).toBe(losing.transactionCount);
+
+      const after = await queue();
+      // The pair is gone because one side has no transactions left, not because
+      // anything was deleted — both merchants still exist.
+      expect(
+        after.mergeCandidates.filter((candidate) =>
+          candidate.keep.merchant.canonicalName.startsWith('BLUE BOTTLE'),
+        ),
+      ).toEqual([]);
+    });
+
+    it('writes a `user` alias, which §4.3 puts above every other source', async () => {
+      const before = await queue();
+      const losingName = before.mergeCandidates[0].merge.merchant.canonicalName;
+
+      await mergeCoffee();
+
+      const alias = context.store.merchants
+        .listAliases()
+        .find((entry) => entry.aliasKey === losingName);
+
+      expect(alias?.source).toBe('user');
+      expect(alias?.matchType).toBe('exact');
+    });
+
+    it('refuses to merge a merchant into itself', async () => {
+      const [merchant] = context.store.merchants.list();
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/merchants/${merchant.id}/merge`,
+        payload: { intoMerchantId: merchant.id },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('404s on a merchant that does not exist, rather than writing an alias', async () => {
+      const [merchant] = context.store.merchants.list();
+      const aliasesBefore = context.store.merchants.listAliases().length;
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/merchants/nope/merge',
+        payload: { intoMerchantId: merchant.id },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(context.store.merchants.listAliases()).toHaveLength(aliasesBefore);
+    });
+
+    it('is idempotent — merging again moves nothing and breaks nothing', async () => {
+      const before = await queue();
+      const losingId = before.mergeCandidates[0].merge.merchant.id;
+      const keepId = before.mergeCandidates[0].keep.merchant.id;
+
+      await mergeCoffee();
+      const second = await app.inject({
+        method: 'POST',
+        url: `/api/merchants/${losingId}/merge`,
+        payload: { intoMerchantId: keepId },
+      });
+
+      expect(second.statusCode).toBe(200);
+      expect((second.json() as { transactionsAffected: number }).transactionsAffected).toBe(0);
+    });
+  });
+
   it('changes nothing — the queue only ever asks', async () => {
     const before = (await app.inject({ method: 'GET', url: '/api/merchants' })).json();
     await queue();

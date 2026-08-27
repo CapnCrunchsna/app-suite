@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9p
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9q
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -86,7 +86,7 @@ records what it proposes — nor **two of §6's eight pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o and §9p list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p and §9q list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -255,6 +255,7 @@ serialization out of the box, and a clean Nx build target.
 | `GET` | `/api/merchants` · `PATCH /:id` · `POST /api/merchants/aliases` | Canonical merchants and alias management. |
 | `GET` | `/api/categories` | Spend categories, for §6.3's category filter and inline assignment. |
 | `GET` | `/api/merchants/review-queue` | **Merge candidates**, provisional merchants, and sub-floor LLM proposals awaiting a decision. A merge candidate is a pair of merchants the chain resolved separately and cannot itself tell apart — §9p. Read-only: it proposes, and §4.3 owns every write. |
+| `POST` | `/api/merchants/:id/merge` | Treat this merchant as another one, retroactively. Writes a `user` alias for every descriptor spelling of `:id` and enqueues §4.3's re-normalize job. The answer to a merge candidate above, and the only write on this surface — §9q. |
 | `POST` | `/api/transfers/propose` · `POST /api/transfers/:id/confirm` · `DELETE /api/transfers/:id` | Transfer link proposals and their resolution (§2.6). |
 | `POST` | `/api/analysis/run` | Enqueue an analysis run. Returns a job id (§2.7). |
 | `GET` | `/api/findings` · `GET /api/findings/summary` | List with filters (rule, band, status, account, min annual impact); summary backs the three headline numbers. |
@@ -1784,6 +1785,40 @@ one statement.
 **LLM proposals stay empty and say why.** §2.3 lists them on this queue and §4.2 needs §2.4's
 provider seam, which is not built. The field is present and the reason is on the response, rather
 than the field being omitted and the response shape changing later.
+
+## 9q. Amendments from implementation — 2026-08-27 (§2.3, §4.3)
+
+§9p gave §4.1 step 7's queue something to propose. This is the answer coming back.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3, 4.3 | **`POST /api/merchants/:id/merge`**, taking `{ intoMerchantId }`: every descriptor spelling of the named merchant becomes a `user` alias pointing at the surviving one, and §4.3's re-normalize job sweeps the history and re-runs the analyzers. | §4.3 already describes this operation exactly — "correcting a merchant in the UI writes a `merchant_alias` row and enqueues a re-normalize job [...] So fixing `SPOTIFYUSA` once retroactively merges four years of charges into one series" — and the machinery has existed since §6.3's bulk path. What was missing is the ability to say it about a *merchant* rather than about a transaction the user happened to be looking at. A merge is that bulk correction with the descriptor list filled in from the store instead of from the screen. |
+
+**Composed, not reimplemented.** The route calls `writeUserMerchantAlias` and
+`enqueueRenormalize` unchanged, so the merge inherits §4.3's guarantees rather than restating
+them: `user` precedence puts it above `seed`, `rule` and `llm`, a later re-seed or a better model
+cannot undo it, and the sweep is coalesced so eight merges are one re-normalization.
+
+**Both merchants survive the merge**, and that is deliberate. What changes is which merchant
+their descriptors *resolve to*, not the existence of a row. So the operation is reversible by the
+same mechanism that made it — correct one descriptor back and its rows follow — where deleting a
+merchant would not be. It also means a merge reports `transactionsAffected: 0` on a second
+attempt rather than failing, which is the honest answer: there is nothing left to move.
+
+**The count is returned from the store, not from the job.** The job is asynchronous and the user
+is owed a number immediately, which is the same argument §6.3 makes about its bulk count: it is
+"the basis on which they authorise a permanent, precedence-topping change".
+
+**What is still not built, and why it is not here.** §6.8 specifies "a re-normalize trigger with
+job progress", and §9o showed why it now matters: a change to §4.1's chain invalidates every
+stored `description_normalized`, and §4.3's sweep will not rewrite it. That sweep needs two
+things this amendment does not touch — `TransactionPatch` cannot carry
+`description_normalized` (§4.3's job was written on the premise that re-writing it is a no-op),
+and `runRenormalize` skips a descriptor that resolves *provisionally* rather than through an
+alias, which on the first real statement is 17 merchants of 21. A merge writes aliases, so the
+merge path is unaffected; a chain amendment is not. Building half of it here would have shipped
+a "re-normalize everything" button that silently does nothing for most merchants, which is the
+failure §9n and §9o are both about. It gets its own change.
 
 ## 10. Open discrepancies — recorded, not resolved
 

@@ -146,6 +146,14 @@ export interface MerchantReviewQueue {
   readonly llmProposalsUnavailableReason: string | null;
 }
 
+export interface MerchantMergeResult {
+  readonly merchantId: string;
+  readonly aliasKeysWritten: string[];
+  readonly transactionsAffected: number;
+  readonly jobId: string;
+  readonly coalesced: boolean;
+}
+
 export interface Category {
   readonly id: string;
   readonly name: string;
