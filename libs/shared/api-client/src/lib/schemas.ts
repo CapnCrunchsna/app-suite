@@ -127,6 +127,25 @@ export interface Merchant {
   readonly source: 'seed' | 'rule' | 'llm' | 'user';
 }
 
+export interface ReviewMerchant {
+  readonly merchant: Merchant;
+  readonly transactionCount: number;
+  readonly sampleDescriptors: string[];
+}
+
+export interface MergeCandidate {
+  readonly keep: ReviewMerchant;
+  readonly merge: ReviewMerchant;
+  readonly similarity: number;
+}
+
+export interface MerchantReviewQueue {
+  readonly mergeCandidates: MergeCandidate[];
+  readonly provisional: ReviewMerchant[];
+  readonly llmProposals: Record<string, unknown>[];
+  readonly llmProposalsUnavailableReason: string | null;
+}
+
 export interface Category {
   readonly id: string;
   readonly name: string;

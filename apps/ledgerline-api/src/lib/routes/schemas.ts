@@ -714,6 +714,51 @@ const merchant = {
   },
 } as const;
 
+/**
+ * A merchant as §4.1 step 7's review queue needs it — the record plus the two
+ * facts a person needs to decide: how much history rides on it, and how the bank
+ * actually spelled it.
+ */
+const reviewMerchant = {
+  $id: 'ReviewMerchant',
+  type: 'object',
+  properties: {
+    merchant: ref('Merchant'),
+    transactionCount: { type: 'integer' },
+    /** A few real spellings, so the card can justify itself rather than asking the
+     *  user to take a similarity score on faith. */
+    sampleDescriptors: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+const mergeCandidate = {
+  $id: 'MergeCandidate',
+  type: 'object',
+  properties: {
+    /** The default survivor. The UI may flip it; nothing is decided here. */
+    keep: ref('ReviewMerchant'),
+    merge: ref('ReviewMerchant'),
+    similarity: { type: 'number' },
+  },
+} as const;
+
+const merchantReviewQueue = {
+  $id: 'MerchantReviewQueue',
+  type: 'object',
+  properties: {
+    mergeCandidates: { type: 'array', items: ref('MergeCandidate') },
+    /** §4.1 step 7's provisional merchants — resolved by rule, never confirmed. */
+    provisional: { type: 'array', items: ref('ReviewMerchant') },
+    /**
+     * §2.3 lists this queue as carrying "sub-floor LLM proposals" too. §4.2's
+     * stage needs §2.4's provider seam, which is not built, so this is always
+     * empty and says why rather than omitting the field and changing shape later.
+     */
+    llmProposals: { type: 'array', items: { type: 'object' } },
+    llmProposalsUnavailableReason: nullableString,
+  },
+} as const;
+
 const category = {
   $id: 'Category',
   type: 'object',
@@ -1318,6 +1363,9 @@ const SHARED = [
   allRequired(transactionSourceLine),
   allRequired(transactionDetail),
   allRequired(merchant),
+  allRequired(reviewMerchant),
+  allRequired(mergeCandidate),
+  allRequired(merchantReviewQueue),
   allRequired(category),
   allRequired(job),
 

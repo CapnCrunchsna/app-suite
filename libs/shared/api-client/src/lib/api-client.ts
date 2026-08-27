@@ -20,6 +20,7 @@ import type {
   StatementImport,
   TransactionDetail,
   Merchant,
+  MerchantReviewQueue,
   Category,
   Job,
   Finding,
@@ -534,6 +535,16 @@ export class LedgerlineApi {
    */
   listMerchants(): Promise<ListMerchantsResponse> {
     return this.request<ListMerchantsResponse>('GET', `/api/merchants`, {
+    });
+  }
+
+  /**
+   * Merchant questions the chain cannot answer on its own
+   *
+   * Spec 4.1 step 7. Merge candidates are pairs of merchants similar enough to be worth asking about, and provisional merchants are descriptors the chain cleaned but never resolved. Nothing here has been applied — a merge is a user action (spec 4.3).
+   */
+  getMerchantReviewQueue(): Promise<MerchantReviewQueue> {
+    return this.request<MerchantReviewQueue>('GET', `/api/merchants/review-queue`, {
     });
   }
 

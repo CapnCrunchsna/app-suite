@@ -491,6 +491,82 @@
           "source"
         ]
       },
+      "ReviewMerchant": {
+        "type": "object",
+        "properties": {
+          "merchant": {
+            "$ref": "#/components/schemas/Merchant"
+          },
+          "transactionCount": {
+            "type": "integer"
+          },
+          "sampleDescriptors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "merchant",
+          "transactionCount",
+          "sampleDescriptors"
+        ]
+      },
+      "MergeCandidate": {
+        "type": "object",
+        "properties": {
+          "keep": {
+            "$ref": "#/components/schemas/ReviewMerchant"
+          },
+          "merge": {
+            "$ref": "#/components/schemas/ReviewMerchant"
+          },
+          "similarity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "keep",
+          "merge",
+          "similarity"
+        ]
+      },
+      "MerchantReviewQueue": {
+        "type": "object",
+        "properties": {
+          "mergeCandidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MergeCandidate"
+            }
+          },
+          "provisional": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewMerchant"
+            }
+          },
+          "llmProposals": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "llmProposalsUnavailableReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "mergeCandidates",
+          "provisional",
+          "llmProposals",
+          "llmProposalsUnavailableReason"
+        ]
+      },
       "Category": {
         "type": "object",
         "properties": {
@@ -5191,6 +5267,88 @@
                   "items": {
                     "$ref": "#/components/schemas/Merchant"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/merchants/review-queue": {
+      "get": {
+        "operationId": "getMerchantReviewQueue",
+        "summary": "Merchant questions the chain cannot answer on its own",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Spec 4.1 step 7. Merge candidates are pairs of merchants similar enough to be worth asking about, and provisional merchants are descriptors the chain cleaned but never resolved. Nothing here has been applied — a merge is a user action (spec 4.3).",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantReviewQueue"
                 }
               }
             }

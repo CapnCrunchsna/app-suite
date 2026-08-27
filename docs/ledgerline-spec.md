@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9o
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9p
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -81,11 +81,12 @@ endpoints §2.3 lists as missing; all four are stated on the page rather than om
 the reasoning.
 
 PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
-review-queue, insights and ask endpoints of §2.3, nor **two of §6's eight pages** — §6.6's
+insights and ask endpoints of §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
+records what it proposes — nor **two of §6's eight pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n and §9o list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o and §9p list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -253,7 +254,7 @@ serialization out of the box, and a clean Nx build target.
 | `POST` | `/api/transactions/bulk` | Apply one change to a filter-matched set. `?dryRun=true` returns the match count only — this is what backs the UI's "apply to all 47 matching". |
 | `GET` | `/api/merchants` · `PATCH /:id` · `POST /api/merchants/aliases` | Canonical merchants and alias management. |
 | `GET` | `/api/categories` | Spend categories, for §6.3's category filter and inline assignment. |
-| `GET` | `/api/merchants/review-queue` | Provisional merchants and sub-floor LLM proposals awaiting a decision. |
+| `GET` | `/api/merchants/review-queue` | **Merge candidates**, provisional merchants, and sub-floor LLM proposals awaiting a decision. A merge candidate is a pair of merchants the chain resolved separately and cannot itself tell apart — §9p. Read-only: it proposes, and §4.3 owns every write. |
 | `POST` | `/api/transfers/propose` · `POST /api/transfers/:id/confirm` · `DELETE /api/transfers/:id` | Transfer link proposals and their resolution (§2.6). |
 | `POST` | `/api/analysis/run` | Enqueue an analysis run. Returns a job id (§2.7). |
 | `GET` | `/api/findings` · `GET /api/findings/summary` | List with filters (rule, band, status, account, min annual impact); summary backs the three headline numbers. |
@@ -1722,6 +1723,67 @@ built, **a chain amendment requires re-importing rather than re-analysing**, and
 statement about this build rather than about the design. Recorded here so the next chain change
 does not rediscover it. `collapse_v1` is untouched throughout — §3.3's dedupe keys never call
 this chain, which is the whole reason §4 opens by separating the two.
+
+## 9p. Amendments from implementation — 2026-08-27 (§2.3, §4.1)
+
+Three amendments in two days — §9m, §9n, §9o — all came out of one statement, and all three
+made §4.1's chain cleverer. The chain still cannot say whether `SAMSCLUB` and `SAMS CLUB` are
+one vendor, and no amount of further rule-writing will let it, because that question is not
+about the descriptors. It is about what the user's world contains.
+
+So §4.1 step 7's review queue stops being a phrase and starts being an endpoint. This is the
+first amendment in the series that makes the chain *ask* rather than guess better.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3, 4.1 | **`GET /api/merchants/review-queue` carries merge candidates**, not only provisional merchants and LLM proposals: pairs of merchants the chain resolved separately and cannot itself distinguish, each with both transaction counts and sample descriptors. | §4.1 stage 4 already argues that the chain must fail toward two merchants rather than one wrong one, because "over-stripping silently merges two merchants and every §5 rule groups by merchant". That is the right default and it leaves a residue the chain is structurally unable to clear. Detection, though, is cheap where resolution is impossible — and the detector was already in the file: `trigramSimilarity` exists for step 6's fuzzy alias lookup, and the only new idea is running it *between merchants* rather than between a descriptor and an alias. |
+
+**The rule**, stated so it can be argued with. A pair is proposed when trigram similarity over
+the two canonical names is at least `MERGE_PROPOSAL_FLOOR` (**0.5**) and **both** merchants have
+at least `MERGE_PROPOSAL_MIN_TRANSACTIONS` (**2**) transactions. Two shipped `seed` canonicals
+are never proposed against each other — `AMAZON` and `AMAZON PRIME` are deliberately separate,
+and §5.4's overlap groups are where that relationship belongs. The list is capped, for the reason
+§5.1 caps findings per rule.
+
+**Why this floor is lower than `FUZZY_SIMILARITY_FLOOR`**, which is 0.72 and sits in the same
+file. That one bounds what the machine may do **silently** — a fuzzy alias resolves a descriptor
+with nobody watching, and its own note says a wrong merge is "close to invisible". This one
+bounds what is worth **showing a person**, where the cost of being wrong is that they read a card
+and say no. Different questions, so different numbers.
+
+**The count guard is doing more work than the floor.** Measured on the first real statement,
+similarity alone at 0.4 produced 48 candidate pairs, of which one was real; requiring both sides
+to recur left **exactly one pair, and it was the right one**. The long tail of a statement is
+one-off descriptors, and those resemble each other in precisely the way trigrams measure.
+
+**And it has a cost, which the test fixtures demonstrate better than the real statement does.**
+The two checking fixtures hold one coffee shop under two provisional names — the January
+spelling and a February one carrying a city, which is the split §4.1 stage 4 accepts on purpose.
+The pair scores 0.586, over the floor, and is **still withheld**, because the January spelling
+occurs exactly once. So the guard that removes the noise will also sit on a true pair until both
+spellings recur. That is the trade at 2, it is stated rather than discovered, and it is the first
+number anyone tuning this will want to move. `merchant-review-api.spec.ts` pins both halves.
+
+**What it finds on that statement:**
+
+| | |
+|---|---|
+| merchant identities | 21 |
+| merge candidates proposed | **1** |
+| the candidate | `SAMSCLUB` (24 charges) ← `SAMS CLUB` (14) at 0.583 |
+| false positives | 0 |
+| provisional merchants listed | 17 |
+
+Worth recording what this would have caught: the merchant split §9n fixed by adding a processor
+prefix scored **0.769** as a pair, above even the auto-apply floor. §9m, §9n and §9o were three
+amendments, an algorithm change and a threshold recalibration; the queue would have put both
+faults on screen as one card each, on the first import, with no code change at all. That is the
+argument for the direction, and §7.6 still applies to both thresholds — they are two numbers from
+one statement.
+
+**LLM proposals stay empty and say why.** §2.3 lists them on this queue and §4.2 needs §2.4's
+provider seam, which is not built. The field is present and the reason is on the response, rather
+than the field being omitted and the response shape changing later.
 
 ## 10. Open discrepancies — recorded, not resolved
 
