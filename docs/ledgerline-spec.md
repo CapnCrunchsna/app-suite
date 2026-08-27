@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9m
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9n
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -85,7 +85,7 @@ review-queue, insights and ask endpoints of §2.3, nor **two of §6's eight page
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l and §9m list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m and §9n list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -95,8 +95,9 @@ export, 326 rows over eight months, through `profiles/chase-card.json` with no p
 It has not calibrated anything: §7.6 asks for "a hand-labelled year of real statements with the
 expected findings written down", and one unlabelled statement from one account is not that. What
 it did do is falsify three rules that no synthetic fixture had reached — two corrected in §9l and
-§5.2's grouping in §9m — and open one tension, recorded in §10 and closed there by §9m. Every
-threshold in §5 remains a designed number.
+§5.2's grouping in §9m — and expose a silent gap in §4.1's processor-prefix table, corrected in
+§9n. It also opened one tension, recorded in §10 and closed there by §9m. Every threshold in §5
+remains a designed number.
 
 This document was extracted from §3–§7 of the design session artifact on 2026-08-03, under
 the workspace rule in `../../CLAUDE.md` § Version control — *must it be true of the code at
@@ -663,7 +664,7 @@ Runs in order, each stage cheap and inspectable. This is rules-first on purpose:
 reproducible, debuggable, and works with the LLM off.
 
 1. **Case and whitespace** — uppercase, fold Unicode dashes and quotes to ASCII, drop control characters, collapse runs of spaces. **Punctuation stripping does not happen here**, and must not: stage 2's prefix table is `SQ *`, `TST*`, `PAYPAL *`, entries identified *by* their punctuation. Removing `*` at this stage leaves `SQ BLUE BOTTLE`, every processor prefix silently stops matching, and the chain goes on producing stable, wrong output. Character-class stripping is a final tidy after stage 5.
-2. **Processor prefixes** — a maintained prefix table: `SQ *`, `TST*`, `SP `, `PAYPAL *`, `PP*`, `IN *`, `WWW.`, `POS DEBIT`, `ACH DEBIT`, `DEBIT CARD PURCHASE`, `RECURRING PMT`. Notably these often *hide* the real merchant behind Square/Toast/PayPal — the rule strips the prefix and keeps what follows.
+2. **Processor prefixes** — a maintained prefix table: `SQ *`, `TST*`, `ICP*`, `SP `, `PAYPAL *`, `PP*`, `IN *`, `WWW.`, `POS DEBIT`, `ACH DEBIT`, `DEBIT CARD PURCHASE`, `RECURRING PMT`. Notably these often *hide* the real merchant behind Square/Toast/PayPal — the rule strips the prefix and keeps what follows. A prefix **missing** from this table fails quietly rather than loudly: stage 6's tidy turns the `*` into a space and the processor becomes the first word of the merchant's name, so the chain keeps producing clean, stable, wrong output. §9n is one instance, found only because the same merchant appeared both with and without its prefix in one statement.
 3. **Store and terminal numbers** — `#0042`, `STORE 1234`, trailing 3–5 digit runs, and long numeric reference tails.
 4. **Geographic and contact noise** — phone numbers, country codes, and a trailing state code against a state-code list. A URL keeps its host label and loses its scheme, `WWW.` and TLD: `NETFLIX.COM 866-579-7172 CA` must reach stage 6 as `NETFLIX`, and deleting the whole token leaves `CA`, a merchant named after a US state. **The city is deliberately not stripped.** The state code is verifiable against a list; the city is merely whatever token precedes it, and removing it blind turns `BLUE BOTTLE COFFE CA` into `BLUE BOTTLE`. The costs are asymmetric — over-stripping silently merges two merchants and every §5 rule groups by merchant, while under-stripping leaves `STARBUCKS SEATTLE`, which is *stable* and therefore still groups correctly, only less prettily. The known cost is that one chain in two cities is two provisional merchants until an alias joins them, which is step 6's job. Revisit with a city list once real statements show how often it happens (§7.6).
 5. **Reference and date debris** — transaction ids, `REF#`, embedded `MM/DD`.
@@ -1629,6 +1630,50 @@ data and wrong about the world. And `trend.v1` still emits nothing, for the reas
 §7.6 still applies to every number here. This is one statement from one account, and
 `priceStepMaxAmountRatio` in particular is a bound whose only evidence is that the steps it must
 keep run 1.02×–1.67× and the merges it must refuse run 6.25×–18×.
+
+## 9n. Amendments from implementation — 2026-08-27 (§4.1)
+
+§9m named two things it had not fixed and called them both instances of one fault. They are
+not. One is a gap in §4.1's stage-2 table and is fixed here; the other is what §4.3's user
+correction exists for and stays that way.
+
+| § | Amendment | Why |
+|---|---|---|
+| 4.1 | **`ICP*` joins stage 2's processor-prefix table**, and the stage gains a note about how a missing prefix fails. | The bank printed one merchant both ways across eight months — `ICP*GOLDFISH SWIM SCHOOL` on the first six charges, bare `GOLDFISH SWIM SCHOOL` on the last two — so §4.1 produced two merchants and §5.2 could only ever see part of the subscription. This is the exact shape §4.1 already documents for `TST*` and `SQ *`; `ICP*` was simply not in the table, which §4 says is "expected to grow". Worth stating because the failure is silent: stage 1 keeps punctuation so stage 2 can match on it, and an unmatched prefix then reaches stage 6's tidy, which turns `*` into a space. The chain does not error, does not warn, and emits a clean name with the processor welded to the front of it. Nothing short of the same merchant appearing *both* ways would have surfaced it. |
+
+**What it did to that statement:**
+
+| | before | after |
+|---|---|---|
+| merchants for the swim school | 2 (8 charges + 2) | 1 (10 charges) |
+| its series | 5 occurrences, `lapsed` | **7 occurrences, `active`** |
+| `lapsed.v1` findings | 2 | 1 |
+| `price_creep.v1` findings | 0 | **1, and real** |
+| "active subscriptions" | 4, $212.82/mo | 5, $462.82/mo |
+| §7.3 savings headline | $0.00/yr | $450.00/yr |
+
+The `lapsed.v1` finding that disappeared is the one §9m called "honest about the data and wrong
+about the world": the bill never stopped, it only stopped being recognisable. And the price rise
+this now reports is the first genuine `price_creep` finding on the corpus — $168 to a current
+$250, +$37.50/mo, on a series whose plateau share is 0.43. Note what that number requires: at
+§9l's `feePlateauShare` of 0.5 this series would still be discarded, so the two amendments are
+load-bearing together rather than independently.
+
+**`SAMSCLUB` and `SAMS CLUB` are deliberately not fixed here.** The two differ by a space in the
+bank's own descriptor; both run the chain cleanly and neither is wrong. §4.1 stage 4 already
+argues the general case — "over-stripping silently merges two merchants and every §5 rule groups
+by merchant" — and closing whitespace inside a descriptor is exactly that kind of guess. A seed
+alias was the other candidate and is declined too: `seed-aliases.ts` says in its own header that
+it is "**not** an attempt at a merchant database", and a warehouse club on one person's statement
+is not evidence about anyone else's. §4.3's user correction is the designed answer, the machinery
+for it is built, and one correction repoints all 38 rows.
+
+**A pattern rule was considered and declined.** `^[A-Z0-9]{2,6}\*` would generalise stage 2 to
+every processor nobody has enumerated, and it is tempting precisely because the failure is
+silent. But this corpus contains exactly one unknown prefix, which is n=1 to calibrate a rule
+whose errors are the asymmetric kind §4.1 stage 4 describes — a false strip merges two merchants
+invisibly. §7.6's answer applies: revisit when a corpus shows how often an unknown prefix
+actually appears, and until then grow the table.
 
 ## 10. Open discrepancies — recorded, not resolved
 

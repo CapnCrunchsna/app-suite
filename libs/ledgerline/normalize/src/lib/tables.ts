@@ -17,6 +17,13 @@
  *
  * Ordered longest-first so `DEBIT CARD PURCHASE` is tried before any shorter prefix
  * that happens to be its own prefix.
+ *
+ * The asterisk is not decoration — it is what identifies the entry, which is why
+ * §4.1 stage 1 keeps punctuation and defers character-class tidying to the end. A
+ * prefix missing from this table is not a loud failure: stage 6 turns the `*` into a
+ * space and the processor becomes the first word of the merchant's name, stably and
+ * wrongly, for as long as nobody looks. That is how `ICP*` split one swim school
+ * into two merchants on the first real statement (§9n).
  */
 export const PROCESSOR_PREFIXES: readonly string[] = [
   'DEBIT CARD PURCHASE',
@@ -26,6 +33,7 @@ export const PROCESSOR_PREFIXES: readonly string[] = [
   'PAYPAL *',
   'WWW.',
   'TST*',
+  'ICP*',
   'SQ *',
   'PP*',
   'IN *',

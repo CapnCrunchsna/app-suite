@@ -38,6 +38,28 @@ describe('stage 2 — processor prefixes', () => {
   it('never strips a descriptor down to nothing', () => {
     expect(stageProcessorPrefixes('PAYPAL *')).toBe('PAYPAL *');
   });
+
+  /**
+   * From the first real statement (§9n). The bank printed one merchant both ways
+   * across eight months — `ICP*` on the earlier charges and bare on the later ones
+   * — so one subscription resolved to two merchants and §5.2 could only ever see
+   * part of it.
+   *
+   * The failure is quiet by construction: with the prefix unknown, stage 6's tidy
+   * turns the `*` into a space and `ICP` becomes the first word of the merchant's
+   * name. The output is clean, stable and wrong, which is why this needs a test
+   * rather than a glance.
+   */
+  it('strips ICP*, so a merchant printed both ways resolves once', () => {
+    expect(stageProcessorPrefixes('ICP*GOLDFISH SWIM SCHOOL')).toBe('GOLDFISH SWIM SCHOOL');
+    expect(clean('ICP*Goldfish Swim School')).toBe(clean('Goldfish Swim School'));
+  });
+
+  it('leaves a merchant genuinely called ICP alone', () => {
+    // The table holds `ICP*`, not `ICP` — §4.1's whole reason for keeping
+    // punctuation until after stage 5.
+    expect(stageProcessorPrefixes('ICP CONSULTING')).toBe('ICP CONSULTING');
+  });
 });
 
 describe('stage 3 — store and terminal numbers', () => {
