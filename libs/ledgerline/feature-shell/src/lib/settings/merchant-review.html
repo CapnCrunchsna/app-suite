@@ -1,0 +1,112 @@
+@let review = queue();
+
+@if (candidates().length === 0 && provisional().length === 0) {
+  <p class="note">
+    Nothing to review. Every descriptor resolved to a merchant the chain was sure about.
+  </p>
+} @else {
+  @if (candidates().length > 0) {
+    <p class="lede">
+      {{ candidates().length }}
+      {{ candidates().length === 1 ? 'pair looks' : 'pairs look' }} like one merchant spelled two
+      ways. The chain will not guess — merging two merchants that are genuinely different is
+      invisible afterwards, so it asks instead.
+    </p>
+
+    <ul class="cards">
+      @for (candidate of candidates(); track keyOf(candidate)) {
+        @let keep = keeping(candidate);
+        @let fold = folding(candidate);
+
+        <li class="card">
+          <p class="card__claim">
+            <strong>{{ fold.merchant.displayName }}</strong>
+            and
+            <strong>{{ keep.merchant.displayName }}</strong>
+            are {{ confidenceWord(candidate) }}.
+          </p>
+
+          <dl class="card__sides">
+            <div class="side">
+              <dt>Keeping</dt>
+              <dd>
+                <span class="side__name">{{ keep.merchant.displayName }}</span>
+                <span class="side__count"
+                  >{{ keep.transactionCount }}
+                  {{ keep.transactionCount === 1 ? 'charge' : 'charges' }}</span
+                >
+                <span class="side__spellings">{{ keep.sampleDescriptors.join(' · ') }}</span>
+              </dd>
+            </div>
+            <div class="side side--folding">
+              <dt>Folding in</dt>
+              <dd>
+                <span class="side__name">{{ fold.merchant.displayName }}</span>
+                <span class="side__count"
+                  >{{ fold.transactionCount }}
+                  {{ fold.transactionCount === 1 ? 'charge' : 'charges' }}</span
+                >
+                <span class="side__spellings">{{ fold.sampleDescriptors.join(' · ') }}</span>
+              </dd>
+            </div>
+          </dl>
+
+          <p class="card__effect">
+            {{ fold.transactionCount }}
+            {{ fold.transactionCount === 1 ? 'charge moves' : 'charges move' }} to
+            {{ keep.merchant.displayName }}, across your whole history. Subscriptions and findings
+            are recalculated afterwards. This is permanent and outranks anything the app works out
+            on its own (§4.3).
+          </p>
+
+          <div class="card__actions">
+            <button
+              type="button"
+              class="button button--primary"
+              [disabled]="busy()"
+              (click)="confirm(candidate)"
+            >
+              Merge into {{ keep.merchant.displayName }}
+            </button>
+            <button type="button" class="button" [disabled]="busy()" (click)="flip(candidate)">
+              Keep {{ fold.merchant.displayName }} instead
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (provisional().length > 0) {
+    <section class="provisional">
+      <h4 class="provisional__title">
+        Merchants the app named for itself ({{ provisional().length }})
+      </h4>
+      <p class="note">
+        §4.1 could not match these to anything it ships with, so it made a merchant out of the
+        cleaned descriptor. That is not a problem on its own — a stable name groups correctly even
+        when it is ugly — but it is where a wrong grouping would show up first.
+      </p>
+      <ul class="provisional__list">
+        @for (entry of provisionalShown(); track entry.merchant.id) {
+          <li>
+            <span class="provisional__name">{{ entry.merchant.displayName }}</span>
+            <span class="provisional__count"
+              >{{ entry.transactionCount }}
+              {{ entry.transactionCount === 1 ? 'charge' : 'charges' }}</span
+            >
+          </li>
+        }
+      </ul>
+      @if (provisionalHidden() > 0) {
+        <p class="note">
+          and {{ provisionalHidden() }} more with less history behind them.
+        </p>
+      }
+    </section>
+  }
+}
+
+@if (review.llmProposalsUnavailableReason) {
+  <p class="note note--absent">{{ review.llmProposalsUnavailableReason }}</p>
+}

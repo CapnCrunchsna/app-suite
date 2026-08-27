@@ -378,10 +378,41 @@ export class ImportsPage {
       );
       this.notice.set(null);
       this.revision.update((value) => value + 1);
+      await this.reportMerchantQuestions();
     } catch (cause) {
       this.reportFailure(cause, 'That commit did not run');
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  /**
+   * §4.1 step 7, surfaced at the moment it is cheapest to act on.
+   *
+   * The queue lives on §6.8's Settings page, which is where someone goes to
+   * *look* for it — and nobody goes looking for a question they do not know
+   * exists. A statement is the thing that creates these questions, so the import
+   * that created them is the honest place to say so.
+   *
+   * Appended to the commit report rather than raised as its own banner: the count
+   * that matters immediately is still the rows, and a second strip competing with
+   * the first is how a page teaches people to dismiss both. Failing to read the
+   * queue is deliberately silent — a commit that worked has worked, and it must
+   * not report a failure because an advisory count could not be fetched.
+   */
+  private async reportMerchantQuestions(): Promise<void> {
+    try {
+      const { mergeCandidates } = await this.api.getMerchantReviewQueue();
+      if (mergeCandidates.length === 0) return;
+
+      const count = mergeCandidates.length;
+      this.commitReport.update(
+        (report) =>
+          `${report ?? ''} ${count} ${count === 1 ? 'merchant may be' : 'merchants may be'} ` +
+          `the same as another under a different spelling — Settings › Merchants.`.trimStart(),
+      );
+    } catch {
+      // Advisory only. See above.
     }
   }
 

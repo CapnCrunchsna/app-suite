@@ -255,6 +255,15 @@ class ApiStub {
     return Promise.resolve(ACCOUNTS);
   }
 
+  /** §4.1 step 7. Empty by default: most commits raise no question, and the
+   *  callout must stay quiet then. */
+  mergeCandidateCount = 0;
+  getMerchantReviewQueue(): Promise<{ mergeCandidates: unknown[] }> {
+    return Promise.resolve({
+      mergeCandidates: Array.from({ length: this.mergeCandidateCount }, () => ({})),
+    });
+  }
+
   listFormatProfiles(): Promise<FormatProfile[]> {
     return Promise.resolve(PROFILES);
   }
@@ -568,6 +577,51 @@ describe('ImportsPage', () => {
 
       expect(el.querySelector('.notice__text')?.textContent).toContain('parsed to $0.00');
       expect(el.querySelector('.commit__optin')?.textContent).toContain('(rows 5)');
+    });
+  });
+
+  /**
+   * §4.1 step 7's queue lives on §6.8's Settings page, and nobody goes looking
+   * for a question they do not know exists. The import that created it is the
+   * moment to say so.
+   */
+  describe('the merchant questions a commit raises (§4.1, §9p)', () => {
+    async function commit(candidates: number) {
+      api.mergeCandidateCount = candidates;
+      api.current = review({
+        import: statementImport({ accountId: 'a1' }),
+        accountSuggestion: null,
+        plan: { willInsert: 1, alreadyPresent: 0, nearDuplicates: [] },
+      });
+      const { fixture, el } = await render();
+      (el.querySelector('.commit__button') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      return el.querySelector('.notice__text')?.textContent?.replace(/\s+/g, ' ') ?? '';
+    }
+
+    it('points at the queue when the commit raised one', async () => {
+      const notice = await commit(2);
+
+      expect(notice).toContain('Committed');
+      expect(notice).toContain('2 merchants may be');
+      expect(notice).toContain('Settings › Merchants');
+    });
+
+    it('says nothing when it raised none', async () => {
+      const notice = await commit(0);
+
+      expect(notice).toContain('Committed');
+      expect(notice).not.toContain('Settings › Merchants');
+    });
+
+    it('still reports the commit when the queue cannot be read', async () => {
+      // Advisory only — a commit that worked has worked, and must not report a
+      // failure because a count could not be fetched.
+      vi.spyOn(api, 'getMerchantReviewQueue').mockRejectedValue(new Error('offline'));
+      const notice = await commit(2);
+
+      expect(notice).toContain('Committed');
+      expect(notice).not.toContain('Settings › Merchants');
     });
   });
 

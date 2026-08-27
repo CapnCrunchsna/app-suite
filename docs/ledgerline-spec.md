@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9q
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9r
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -76,9 +76,11 @@ stops being a promise: every threshold in §5 is editable with its shipped defau
 current `config_hash` is on the page, and each rule has a switch that moves that hash — so §5.1
 re-evaluates the rule's dismissals when it comes back. §2.3's `DELETE /api/data` is built
 alongside it and takes its own backup before deleting anything. **Two of §6.8's six sections
-cannot be built yet** — LLM provider and Redaction both need §2.4's seam — and two more need
-endpoints §2.3 lists as missing; all four are stated on the page rather than omitted. §9k records
-the reasoning.
+cannot be built yet** — LLM provider and Redaction both need §2.4's seam — and one more,
+Categories, needs endpoints §2.3 lists as missing; all three are stated on the page rather than
+omitted. §9k records the reasoning. **§6.8's Merchant aliases section is built as of
+2026-08-27**: §4.1 step 7's review queue, the merge that answers it, and the provisional list —
+§9r.
 
 PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
 insights and ask endpoints of §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
@@ -86,7 +88,7 @@ records what it proposes — nor **two of §6's eight pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p and §9q list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q and §9r list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -1819,6 +1821,50 @@ alias, which on the first real statement is 17 merchants of 21. A merge writes a
 merge path is unaffected; a chain amendment is not. Building half of it here would have shipped
 a "re-normalize everything" button that silently does nothing for most merchants, which is the
 failure §9n and §9o are both about. It gets its own change.
+
+## 9r. Amendments from implementation — 2026-08-27 (§6.8, §6.1)
+
+§9p built the question and §9q built the answer. Neither was reachable by a person. This puts
+them on screen, which is where the whole approach either works or does not.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.8 | **Merchant aliases stops being a stated absence.** The section carries §4.1 step 7's merge candidates as cards, the provisional merchants behind them, and the merge that resolves one. | §6.8 has named this section since the beginning and §9k rendered it as an absence because "the review queue for LLM proposals needs the endpoints §2.3 lists". Those endpoints now exist. The LLM half still does not and still says so. |
+| 6.1 | **A commit that raises merchant questions says so**, appended to the commit report, pointing at Settings › Merchants. | The queue lives where someone goes to *look* for it, and nobody goes looking for a question they do not know exists. A statement is what creates these questions, so the import that created them is the honest place to mention them. Appended rather than raised as a second banner: the count that matters immediately is still the rows, and two strips competing is how a page teaches people to dismiss both. |
+
+**Two decisions borrowed from §6.3's merchant edit**, because they are the same decision. The
+counts on a card come from the API and are never computed from what the page happens to hold —
+they are "the basis on which they authorise a permanent, precedence-topping change". And nothing
+applies on selection: choosing a direction arms the merge, and a second explicit click performs
+it.
+
+**The direction is a control, not a verdict.** §9p's proposal picks a survivor — the larger
+history, or the shipped canonical — and it is usually right and occasionally not, because the
+bank's uglier spelling can be the one with more charges behind it. The card says which way it
+points in words, and flipping is one click.
+
+**The re-read has to wait for the job, and finding that out is the reason this is a separate
+amendment.** The alias write is synchronous; the rows move in §4.3's re-normalize job. A queue
+re-read issued the moment the merge returns therefore sees the old counts and re-proposes the
+merge that was just made — the card sits there looking like the button did nothing, which is the
+one failure that would make a person stop trusting the section. §2.7 already had the answer ("the
+UI polls a job rather than blocking on it") and §6.4's Run analysis already ran the loop; the
+merge now does too, and says "have been recalculated" or "are still recalculating" rather than
+guessing.
+
+**Measured on the first real statement**, through the built UI against a throwaway copy of it:
+
+| | before the merge | after |
+|---|---|---|
+| the merchant | `SAMSCLUB` 24 charges · `SAMS CLUB` 14 | `SAMSCLUB` **38** · `SAMS CLUB` 0 |
+| merge candidates in the queue | 1 | 0 |
+| §5.9's baseline for it | "typical is $82" | "typical is $92" |
+| outliers it reports | 2 | **3** |
+
+That last row is the argument for the whole direction rather than a detail. Splitting one
+merchant in two did not merely mislabel a card: it split the distribution §5.9 reasons against,
+and a $326 charge that should have been flagged was sitting inside the smaller half looking
+ordinary. One click fixed the analysis, not just the name.
 
 ## 10. Open discrepancies — recorded, not resolved
 

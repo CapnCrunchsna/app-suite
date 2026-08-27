@@ -46,6 +46,9 @@ import type {
   ListTransfersQuery,
   Merchant,
   MergeAccountBody,
+  MerchantMergeResult,
+  MerchantReviewQueue,
+  MergeMerchantBody,
   PreviewFormatProfileBody,
   Series,
   SeriesPatch,
@@ -170,6 +173,18 @@ export class LedgerlineApiService {
 
   listCategories(): Promise<Category[]> {
     return this.api.listCategories();
+  }
+
+  /** §4.1 step 7: what the chain could not settle on its own. A read — it
+   *  proposes, and nothing here has been applied. */
+  getMerchantReviewQueue(): Promise<MerchantReviewQueue> {
+    return this.api.getMerchantReviewQueue();
+  }
+
+  /** §4.3, aimed at a merchant: writes a `user` alias for every spelling and
+   *  sweeps the history. Permanent and top-precedence. */
+  mergeMerchant(id: string, body: MergeMerchantBody): Promise<MerchantMergeResult> {
+    return this.api.mergeMerchant(id, body);
   }
 
   /** §2.7: the UI polls a job rather than blocking on it. */

@@ -1,0 +1,170 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.lede {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.note--absent {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+/* A card per question, boxed, because each one is a separate decision and a
+ * flat list invites answering them as a batch. */
+.card {
+  padding: 12px 14px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface-2, #143034);
+}
+
+.card__claim {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--text, #dcefeb);
+}
+
+.card__sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+@media (max-width: 640px) {
+  .card__sides {
+    grid-template-columns: 1fr;
+  }
+}
+
+.side dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.side dd {
+  margin: 4px 0 0;
+  display: grid;
+  gap: 2px;
+}
+
+.side__name {
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.side__count {
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* The real spellings, so the claim can be checked rather than trusted. */
+.side__spellings {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+  overflow-wrap: anywhere;
+}
+
+.side--folding .side__name {
+  color: var(--text-dim, #7ea8a1);
+}
+
+.card__effect {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button {
+  padding: 5px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button--primary {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.provisional {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.provisional__title {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+}
+
+.provisional__list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+
+.provisional__list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.74rem;
+}
+
+.provisional__name {
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.provisional__count {
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
