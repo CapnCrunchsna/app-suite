@@ -10,7 +10,7 @@ artifact, `artifacts/plans/ledgerline-design.md`.
 **Section map — navigation only, non-normative.** §1 status & provenance · §2 architecture
 (Nx layout, HTTP API, LLM seam, parse-to-analyze pipeline) · §3 data model (SQLite schema) ·
 §4 merchant normalization · §5 analyzer specs (the nine rules and thresholds) · §6 UI
-contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9n
+contract · §7 cross-cutting rules · §8 changes from the design session · §9 and §9a–§9o
 amendments from implementation, oldest first · §10 open discrepancies, recorded not resolved.
 
 ## 1. Status and provenance
@@ -85,7 +85,7 @@ review-queue, insights and ask endpoints of §2.3, nor **two of §6's eight page
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
 `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m and §9n list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n and §9o list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -96,7 +96,7 @@ It has not calibrated anything: §7.6 asks for "a hand-labelled year of real sta
 expected findings written down", and one unlabelled statement from one account is not that. What
 it did do is falsify three rules that no synthetic fixture had reached — two corrected in §9l and
 §5.2's grouping in §9m — and expose a silent gap in §4.1's processor-prefix table, corrected in
-§9n. It also opened one tension, recorded in §10 and closed there by §9m. Every threshold in §5
+§9n and §9o. It also opened one tension, recorded in §10 and closed there by §9m. Every threshold in §5
 remains a designed number.
 
 This document was extracted from §3–§7 of the design session artifact on 2026-08-03, under
@@ -665,7 +665,7 @@ reproducible, debuggable, and works with the LLM off.
 
 1. **Case and whitespace** — uppercase, fold Unicode dashes and quotes to ASCII, drop control characters, collapse runs of spaces. **Punctuation stripping does not happen here**, and must not: stage 2's prefix table is `SQ *`, `TST*`, `PAYPAL *`, entries identified *by* their punctuation. Removing `*` at this stage leaves `SQ BLUE BOTTLE`, every processor prefix silently stops matching, and the chain goes on producing stable, wrong output. Character-class stripping is a final tidy after stage 5.
 2. **Processor prefixes** — a maintained prefix table: `SQ *`, `TST*`, `ICP*`, `SP `, `PAYPAL *`, `PP*`, `IN *`, `WWW.`, `POS DEBIT`, `ACH DEBIT`, `DEBIT CARD PURCHASE`, `RECURRING PMT`. Notably these often *hide* the real merchant behind Square/Toast/PayPal — the rule strips the prefix and keeps what follows. A prefix **missing** from this table fails quietly rather than loudly: stage 6's tidy turns the `*` into a space and the processor becomes the first word of the merchant's name, so the chain keeps producing clean, stable, wrong output. §9n is one instance, found only because the same merchant appeared both with and without its prefix in one statement.
-3. **Store and terminal numbers** — `#0042`, `STORE 1234`, trailing 3–5 digit runs, and long numeric reference tails.
+3. **Store and terminal numbers** — `#0042`, `STORE 1234`, trailing 3–5 digit runs, and long numeric reference tails. **The asterisk is also un-glued to a space here**, and this is the earliest point it may be: stage 2 is its only consumer, and left in place past that it is glue rather than structure. Stages 3–5 are all written around whitespace boundaries, so `AMAZON MKTPL*5O6QH4PH1` reaches stage 5 with its order reference welded on and the trailing-reference rule never fires — then stage 6 spaces it out, long after anything could have cleaned it. See §9o.
 4. **Geographic and contact noise** — phone numbers, country codes, and a trailing state code against a state-code list. A URL keeps its host label and loses its scheme, `WWW.` and TLD: `NETFLIX.COM 866-579-7172 CA` must reach stage 6 as `NETFLIX`, and deleting the whole token leaves `CA`, a merchant named after a US state. **The city is deliberately not stripped.** The state code is verifiable against a list; the city is merely whatever token precedes it, and removing it blind turns `BLUE BOTTLE COFFE CA` into `BLUE BOTTLE`. The costs are asymmetric — over-stripping silently merges two merchants and every §5 rule groups by merchant, while under-stripping leaves `STARBUCKS SEATTLE`, which is *stable* and therefore still groups correctly, only less prettily. The known cost is that one chain in two cities is two provisional merchants until an alias joins them, which is step 6's job. Revisit with a city list once real statements show how often it happens (§7.6).
 5. **Reference and date debris** — transaction ids, `REF#`, embedded `MM/DD`.
 6. **Alias lookup** — exact match on `alias_key` first, then prefix, then trigram fuzzy match above a similarity floor. A hit resolves to a canonical merchant and stops.
@@ -1674,6 +1674,54 @@ silent. But this corpus contains exactly one unknown prefix, which is n=1 to cal
 whose errors are the asymmetric kind §4.1 stage 4 describes — a false strip merges two merchants
 invisibly. §7.6's answer applies: revisit when a corpus shows how often an unknown prefix
 actually appears, and until then grow the table.
+
+## 9o. Amendments from implementation — 2026-08-27 (§4.1)
+
+§9n fixed one missing processor prefix and framed it as a gap in a maintained table. That was
+the smaller half of the truth. The same statement carries a second instance of the *same
+structural fault*, and it is the fault rather than either instance that this records.
+
+| § | Amendment | Why |
+|---|---|---|
+| 4.1 | **Stage 3 un-glues the asterisk to a space**, and §4.1 stage 3 says so. | §4.1 keeps punctuation through stage 1 for exactly one reason, which it states: stage 2's prefix table holds "entries identified *by* their punctuation". Stage 2 is therefore the only consumer of the asterisk — and past it, an asterisk left in place stops being structure and becomes **glue**. Stages 3, 4 and 5 are every one of them written around whitespace boundaries, so anything a bank welds on with an asterisk is invisible to all three. `AMAZON MKTPL*5O6QH4PH1` reached stage 5 with its order reference attached, the trailing-reference rule wanted `\s+` in front of a run it never saw, and stage 6's tidy then spaced the string out after every cleaning stage had finished. One merchant became roughly 150 distinct descriptors. |
+
+**Why it survived this long.** The output looks *right*. `AMAZON MKTPL 5O6QH4PH1` is spaced,
+uppercase and readable, and nothing errors or warns — the chain reports success and the damage is
+one table further down, where a merchant has a hundred names. This is the same shape as §9n's
+missing prefix and the same shape §4.1 stage 1 already warns about in its own words: "the chain
+goes on producing stable, wrong output". Stage 1 is not the only place that can happen.
+
+**What it did to that statement:**
+
+| | before | after |
+|---|---|---|
+| distinct merchant identities | 68 | **21** |
+| descriptors for the marketplace merchant | ~150 | 2 |
+| `trend.v1` findings | 0 | **1** |
+| series fitted | 6 | 6 (unchanged) |
+| §7.3 savings headline | $450.00/yr | $450.00/yr (unchanged) |
+
+The series set is untouched, which is the result to want: this changes *identity*, not the
+grouping built on it, so nothing genuine moved and no phantom appeared. `trend.v1` emitting at
+all is the third item on §9m's did-not-fix list starting to move — §9l diagnosed it as starved
+because "62% of these rows resolve to provisional merchants, and a provisional has no default"
+category. Collapsing 68 identities to 21 is what fed it.
+
+**This amendment invalidates stored data, and that is not yet handled.** `description_normalized`
+is computed once at import and stored (§3.1), and `merchant-corrections.ts` documents the
+assumption this breaks in as many words: "a merchant correction changes the *alias table*, not
+the chain — so `description_normalized` comes back identical by construction". True of a
+correction; false of a chain amendment. Every row imported before this commit still carries the
+old chain's output, and §4.3's re-normalize job will not rewrite it, because it was designed on
+the premise that it never needs to.
+
+The designed home for the fix already exists on paper and not in code: §6.8's Merchant aliases
+section specifies "a re-normalize trigger with job progress", and §2.3 lists
+`GET /api/merchants/review-queue` among the endpoints §1 counts as missing. Until one of them is
+built, **a chain amendment requires re-importing rather than re-analysing**, and that is a
+statement about this build rather than about the design. Recorded here so the next chain change
+does not rediscover it. `collapse_v1` is untouched throughout — §3.3's dedupe keys never call
+this chain, which is the whole reason §4 opens by separating the two.
 
 ## 10. Open discrepancies — recorded, not resolved
 

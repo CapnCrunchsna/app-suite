@@ -88,10 +88,26 @@ export function stageProcessorPrefixes(
  * wherever it sits. The short rules stay anchored to the end or to a marker word,
  * because an unanchored 3-digit rule would eat the `76` in `76 GAS` and the `7` in
  * `7-ELEVEN`.
+ *
+ * ## The asterisk is un-glued here, and this is the earliest it may be
+ *
+ * §4.1 keeps punctuation through stage 1 for one reason: stage 2's prefix table is
+ * `SQ *`, `TST*`, `PAYPAL *`, "entries identified *by* their punctuation". Stage 2 is
+ * therefore the **only** consumer of the asterisk, and once it has run the asterisk
+ * stops being structure and becomes glue.
+ *
+ * Left in place it defeats every anchored rule downstream, because stages 3–5 are all
+ * written around whitespace boundaries. `AMAZON MKTPL*5O6QH4PH1` reaches stage 5 with
+ * its order reference welded on, so the trailing-reference rule — which wants `\s+`
+ * before the run — never fires; stage 6's tidy then turns the `*` into a space long
+ * after anything could have cleaned it. One merchant became ~150 distinct descriptors
+ * that way. Un-gluing it at the top of stage 3 puts the boundary where the rest of the
+ * chain already expects one. Recorded in §9o.
  */
 export function stageStoreNumbers(input: string): string {
   let out = input;
 
+  out = out.replace(/\*/g, ' ');
   out = out.replace(/\s*#\s*\d+/g, ' ');
   out = out.replace(/\b(?:STORE|STR|TERM|TERMINAL|LOC|UNIT)\s*#?\s*\d+\b/g, ' ');
   // Six or more consecutive digits is a reference or terminal number wherever it

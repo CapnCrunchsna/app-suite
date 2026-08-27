@@ -62,6 +62,44 @@ describe('stage 2 — processor prefixes', () => {
   });
 });
 
+/**
+ * §9o. Stage 2 is the only consumer of the asterisk; after it, an asterisk left in
+ * place is glue that defeats every anchored rule downstream, because stages 3–5 are
+ * written around whitespace boundaries.
+ *
+ * The reason this went unnoticed is that the output looks fine. Stage 6's tidy turns
+ * the asterisk into a space at the very end, so the descriptor comes out spaced and
+ * readable with the debris still in it — and one merchant quietly becomes a hundred.
+ */
+describe('punctuation as glue (§9o)', () => {
+  it('strips a reference welded on with an asterisk, not just one after a space', () => {
+    expect(clean('AMAZON MKTPL*5O6QH4PH1')).toBe('AMAZON MKTPL');
+    expect(clean('AMAZON MKTPL 5O6QH4PH1')).toBe('AMAZON MKTPL');
+  });
+
+  it('collapses one merchant’s order references to one key', () => {
+    const keys = new Set(
+      ['AMAZON MKTPL*5O6QH4PH1', 'AMAZON MKTPL*5A03Q41F2', 'AMAZON MKTPL*BD5VT45C0'].map(clean),
+    );
+
+    expect([...keys]).toEqual(['AMAZON MKTPL']);
+  });
+
+  it('still lets stage 2 match on the punctuation it is identified by', () => {
+    // The un-gluing happens at stage 3, after the prefix table has had its look —
+    // so these keep working exactly as §4 documents them.
+    expect(clean('SQ *BLUE BOTTLE COFFE 415-555-0111 CA')).toBe('BLUE BOTTLE COFFE');
+    expect(clean('TST* THE PLANT CAFE #0042')).toBe('THE PLANT CAFE');
+    expect(clean('PAYPAL *SPOTIFYUSA 4029357733')).toBe('SPOTIFYUSA');
+  });
+
+  it('leaves a merchant name that merely contains an asterisk readable', () => {
+    // The asterisk becomes a separator rather than vanishing, so nothing is glued
+    // together that the bank had kept apart.
+    expect(clean('STAR*MART')).toBe('STAR MART');
+  });
+});
+
 describe('stage 3 — store and terminal numbers', () => {
   it('removes store numbers and long reference runs', () => {
     expect(stageStoreNumbers('THE PLANT CAFE #0042')).toBe('THE PLANT CAFE');
