@@ -3,14 +3,18 @@
 Angular 22 shell for Ledgerline — standalone components, signals, zoneless,
 SCSS, esbuild, vitest via `@angular/build:unit-test`. `scope:ll`, `type:app`.
 
-Header, section rail for §6's eight pages, and a `<router-outlet>`. `appRoutes` is
+Header, section rail for §6's nine pages, and a `<router-outlet>`. `appRoutes` is
 `ledgerlineRoutes` from `@metrum/ledgerline-feature-shell` — the pages live there,
 so adding one is a change in that lib rather than a change here plus a change
 there.
 
-One of the eight is built: **Transactions (§6.3)**, which is where the app opens.
-The other seven are rendered as spans rather than links, so a rail item can never
-be clicked into a blank screen.
+Seven of the nine are built. Insights (§6.6) and Ask (§6.7) are rendered as spans
+rather than links, so a rail item can never be clicked into a blank screen.
+
+The app opens on the **home page** (§9u), which is not a §6 section and has no
+rail item — the app name in the header is the way to it. Findings (§6.4) is still
+the page §6 calls the hero, and the home page's headline figure is §6.4's savings
+total and links straight to it.
 
 ```bash
 npx nx serve ledgerline-api   # 127.0.0.1:4310 — the page has nothing to read without it
@@ -77,8 +81,26 @@ as built output. Rebuild the lib, then reload.
 
 ## Styling
 
-Dark-first, per §6. The palette in `src/styles.scss` is the MetrumDigital
-artifact palette (`artifacts/_template.html`) so the app and the dashboard read
-as one house. Everything downstream — including `@metrum/ui` — consumes
-it as CSS custom properties, so a light theme is a token swap on `:root` and
-nothing else.
+Dark-first, per §6 — and dark-first now means a default rather than the only
+option (§9u). The palette lives in `src/app/ledgerline.theme.ts` and is registered
+at bootstrap with one call:
+
+```ts
+providers: [provideTheming(LEDGERLINE_THEME)]
+```
+
+`@metrum/ui` owns everything after that: it writes the tokens onto `:root` before
+the first paint, keeps `color-scheme` in step, remembers the choice per app, and
+renders the header's `<ui-theme-switcher>`. Two themes are offered — Ledgerline's
+own and the MetrumDigital house palette, which is the one `artifacts/_template.html`
+and the dashboard use — each in light and dark, with "system" following
+`prefers-color-scheme`.
+
+`src/styles.scss` holds structure and **two** colour literals: `--bg` and `--text`
+at Ledgerline's dark values, as the ground painted between the browser reading
+`index.html` and Angular's initializer running. They are the only tokens duplicated
+anywhere, and `ledgerline.theme.spec.ts` asserts the duplicate matches.
+
+Nothing else in this app or in `libs/ledgerline/feature-shell` names a colour.
+`ledgerline.theme.spec.ts` also runs `@metrum/ui`'s `auditTheme` over the palette,
+which is what makes the light half checked rather than eyeballed.

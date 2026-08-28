@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { provideTheming } from '@metrum/ui';
 import { LedgerlineApiService } from '@metrum/ledgerline-feature-shell';
 import type { MerchantReviewQueue, Settings } from '@metrum/api-client';
 import { App } from './app';
 import { appRoutes } from './app.routes';
+import { LEDGERLINE_THEME } from './ledgerline.theme';
 
 /**
  * The shell, and only the shell.
@@ -74,7 +76,9 @@ function settingsWith(llm: Partial<Settings['llm']>): Settings {
   } as Settings;
 }
 
-/** The two reads the shell makes, in one stub. */
+/** The two reads the shell makes, plus the three the home page makes when a test
+ *  navigates to `/`. What the home page renders is `home-page.spec.ts`'s
+ *  business; this stub exists only so routing to it does not reach the network. */
 class ApiStub {
   queue: MerchantReviewQueue = queueOf(1);
   settings: Settings = settingsWith({});
@@ -85,6 +89,18 @@ class ApiStub {
 
   getSettings(): Promise<Settings> {
     return Promise.resolve(this.settings);
+  }
+
+  getFindingsSummary(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  listAccounts(): Promise<[]> {
+    return Promise.resolve([]);
+  }
+
+  getAccountCoverage(): Promise<null> {
+    return Promise.resolve(null);
   }
 }
 
@@ -98,6 +114,9 @@ describe('App', () => {
       imports: [App],
       providers: [
         provideRouter(appRoutes),
+        // The app's real theming, because the header renders the switcher and
+        // what it offers is exactly what `provideTheming` registered.
+        provideTheming(LEDGERLINE_THEME),
         { provide: LedgerlineApiService, useValue: api },
       ],
     }).compileComponents();
@@ -145,6 +164,26 @@ describe('App', () => {
     const badge = el.querySelector('.header__provider');
     expect(badge?.textContent).toContain('AI on this machine');
     expect(badge?.classList.contains('header__provider--remote')).toBe(false);
+  });
+
+  // The app name is the way home — the one navigation convention every user
+  // already has, and the reason the front door needs no rail item of its own.
+  it('makes the app name the way home', async () => {
+    const el = await render();
+
+    expect(el.querySelector('a.header__brand')?.getAttribute('href')).toBe('/');
+  });
+
+  // Theming is `@metrum/ui`'s, and the switcher is chrome: it is true on every
+  // page, so putting it on one would make it false on the other nine.
+  it('carries the theme and mode switcher in the header', async () => {
+    const el = await render();
+
+    const switcher = el.querySelector('.header ui-theme-switcher');
+    expect(switcher).not.toBeNull();
+    // Two themes are registered, so the picker has something to pick.
+    expect(switcher?.querySelector('select')).not.toBeNull();
+    expect(switcher?.querySelectorAll('.modes__button')).toHaveLength(3);
   });
 
   // §6.9's Review is last in the spec and fourth here: it is about your data, not
@@ -214,12 +253,14 @@ describe('App', () => {
     });
   });
 
-  // §6.4 is the page §6 calls the hero, so it is what the app opens on now that
-  // it exists — Transactions held that position only until it did.
-  it('opens on Findings, the page §6 calls the hero', async () => {
+  // §9u: the app opens on the front door rather than on §6.4. Findings is still
+  // the hero and the home page's headline figure links straight to it — what
+  // changed is that a fresh database now opens on something other than three
+  // em-dashes.
+  it('opens on the home page rather than redirecting into a section', async () => {
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/');
 
-    expect(router.url).toBe('/findings');
+    expect(router.url).toBe('/');
   });
 });

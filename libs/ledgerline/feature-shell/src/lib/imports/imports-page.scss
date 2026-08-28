@@ -46,9 +46,9 @@
 
 .failure {
   padding: 16px;
-  border: 1px solid #e0796a;
+  border: 1px solid var(--danger, #e0796a);
   border-radius: var(--radius, 10px);
-  background: rgb(224 121 106 / 8%);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 .failure__text {
@@ -111,13 +111,13 @@
   }
 
   &[data-status='needs_mapping'] {
-    border-color: #b08b4f;
-    color: #d9b878;
+    border-color: var(--caution, #b08b4f);
+    color: var(--caution-soft, #d9b878);
   }
 
   &[data-status='failed'] {
-    border-color: #e0796a;
-    color: #eda596;
+    border-color: var(--danger, #e0796a);
+    color: var(--danger-soft, #eda596);
   }
 }
 
@@ -135,11 +135,11 @@
 .refused {
   margin: 0 0 14px;
   padding: 12px 14px;
-  border: 1px solid #e0796a;
+  border: 1px solid var(--danger, #e0796a);
   border-radius: 8px;
-  background: rgb(224 121 106 / 8%);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
   font-size: 0.84rem;
-  color: #eda596;
+  color: var(--danger-soft, #eda596);
 }
 
 /* ------------------------------------------------- account confirmation --- */
@@ -160,8 +160,8 @@
 /* §6.1 makes this a gate, not a field: commit refuses without it, so the
  * unconfirmed state is the one that looks unfinished. */
 .account--unconfirmed {
-  border-color: #b08b4f;
-  background: rgb(176 139 79 / 10%);
+  border-color: var(--caution, #b08b4f);
+  background: color-mix(in srgb, var(--caution) 10%, transparent);
 }
 
 .account__prompt {
@@ -224,13 +224,13 @@
   font-size: 0.78rem;
 
   &[data-severity='bad'] {
-    border-left-color: #e0796a;
-    background: rgb(224 121 106 / 7%);
+    border-left-color: var(--danger, #e0796a);
+    background: color-mix(in srgb, var(--danger) 7%, transparent);
   }
 
   &[data-severity='warn'] {
-    border-left-color: #b08b4f;
-    background: rgb(176 139 79 / 7%);
+    border-left-color: var(--caution, #b08b4f);
+    background: color-mix(in srgb, var(--caution) 7%, transparent);
   }
 
   &[data-severity='note'] {
@@ -272,11 +272,11 @@
 }
 
 .plan__figure--decide strong {
-  color: #d9b878;
+  color: var(--caution-soft, #d9b878);
 }
 
 .plan__figure--bad strong {
-  color: #eda596;
+  color: var(--danger-soft, #eda596);
 }
 
 .plan__figure--pending {
@@ -301,9 +301,9 @@
   gap: 7px;
   flex: 1 1 100%;
   padding: 8px 11px;
-  border: 1px solid #b08b4f;
+  border: 1px solid var(--caution, #b08b4f);
   border-radius: 7px;
-  background: rgb(176 139 79 / 8%);
+  background: color-mix(in srgb, var(--caution) 8%, transparent);
   font-size: 0.78rem;
   cursor: pointer;
 }
@@ -313,7 +313,7 @@
   border: 1px solid var(--accent, #2dd4bf);
   border-radius: 6px;
   background: var(--accent, #2dd4bf);
-  color: #06201c;
+  color: var(--on-accent, #06201c);
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;

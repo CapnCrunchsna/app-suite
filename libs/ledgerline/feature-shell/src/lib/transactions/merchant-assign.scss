@@ -77,7 +77,7 @@
 .assign__apply--bulk {
   border-color: var(--accent, #2dd4bf);
   background: var(--accent, #2dd4bf);
-  color: #06201c;
+  color: var(--on-accent, #06201c);
   font-weight: 600;
 }
 
@@ -106,5 +106,5 @@
 
 .assign__error {
   font-size: 0.78rem;
-  color: #e0796a;
+  color: var(--danger, #e0796a);
 }

@@ -1,11 +1,21 @@
 <header class="header">
-  <span class="header__brand">Ledgerline</span>
+  <!-- The app name is the way home, which is the one navigation convention every
+       user already has. It is not also a rail item: the rail is §6's nine
+       sections, and a tenth entry above them would make the front door look like
+       a section it is not. -->
+  <a class="header__brand" routerLink="/" routerLinkActive="header__brand--here"
+    [routerLinkActiveOptions]="{ exact: true }">Ledgerline</a>
   <span class="header__tagline">local statement analyzer</span>
   <span class="header__spacer"></span>
+  <ui-theme-switcher />
+
   <!-- §6.8: "While it's active, a persistent indicator sits in the app header."
        Worded as what happens to the data rather than as a provider name — "LLM:
        claude-cli" tells a passer-by nothing, and this line exists to be read by
-       someone who is not thinking about it. -->
+       someone who is not thinking about it.
+
+       Last, so it stays the rightmost thing in the header. The switcher is a
+       control you go looking for; this is a statement you should trip over. -->
   <span
     class="header__provider"
     [class.header__provider--remote]="sendsDataOffMachine()"

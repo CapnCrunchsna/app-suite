@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ThemeSwitcher } from '@metrum/ui';
 import { LedgerlineApiService, ReviewQueue } from '@metrum/ledgerline-feature-shell';
 
 /**
@@ -28,6 +29,11 @@ const SECTIONS = [
 /**
  * The app shell — header, section rail, content area.
  *
+ * The header carries three things beyond the app's name: the theme and mode
+ * switcher from `@metrum/ui`, §6.8's provider indicator, and the link home. All
+ * three are chrome by the same test — they are true on every page, and putting
+ * any of them on a page would make it false on the other nine.
+ *
  * §2.2 keeps this a shell. The app may reach `type:feature`, `type:ui`,
  * `type:api-client` and `type:domain`, and talks to the API over HTTP only. §6's
  * pages are components in `libs/ledgerline/feature-shell`; this file knows their
@@ -41,7 +47,7 @@ const SECTIONS = [
  */
 @Component({
   selector: 'll-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ThemeSwitcher],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

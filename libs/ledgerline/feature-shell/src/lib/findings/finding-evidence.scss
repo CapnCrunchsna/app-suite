@@ -51,7 +51,7 @@
 }
 
 .evidence__value--up {
-  color: #eda596;
+  color: var(--danger-soft, #eda596);
 }
 
 .evidence__value--down {

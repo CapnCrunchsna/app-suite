@@ -1,5 +1,5 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
     // `dist/` belongs to ng-packagr; `tsc` (the inferred `typecheck` target)
@@ -8,12 +8,12 @@
     // `dest`.
     "outDir": "out-tsc/lib",
     "tsBuildInfoFile": "out-tsc/lib/tsconfig.lib.tsbuildinfo",
-    "emitDeclarationOnly": false,
+    "declaration": true,
+    "declarationMap": true,
     "forceConsistentCasingInFileNames": true,
-    "experimentalDecorators": true,
-    "lib": ["es2022", "dom"],
     "types": []
   },
   "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
   "references": []
 }

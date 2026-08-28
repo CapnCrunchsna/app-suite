@@ -1,0 +1,155 @@
+<div class="page">
+  <header class="intro">
+    <h1 class="intro__title">Everything you are paying for</h1>
+    <p class="intro__lede">
+      Ledgerline reads your statements on this machine, finds the charges that repeat, and puts a
+      number on the ones you have stopped noticing. Nothing leaves the loopback interface.
+    </p>
+  </header>
+
+  @if (failure()) {
+    <ui-panel>
+      <p class="state state--bad">
+        The API is not answering: {{ $any(failure()).message }}
+      </p>
+      <p class="state__hint">
+        Ledgerline's API binds to <code>127.0.0.1</code> and serves only this machine. If it is
+        not running, nothing on this page can be read.
+      </p>
+    </ui-panel>
+  } @else if (loading()) {
+    <ui-panel><p class="state">Reading…</p></ui-panel>
+  } @else if (firstRun()) {
+    <!-- The one screen where none of the figures mean anything yet. §6.1 is the
+         only next move, so it is the only thing offered. -->
+    <ui-panel heading="Start with a statement">
+      <p class="state">
+        There are no accounts yet. Import a CSV or PDF statement and Ledgerline will parse it,
+        show you every row it read, and wait for you to commit before anything is stored.
+      </p>
+      <a class="cta" routerLink="/imports">Import a statement</a>
+    </ui-panel>
+  } @else {
+    @let s = summary();
+
+    <!-- §6.4's justification figure, alone. `impact_kind = savings` only (§5.1),
+         which is what makes "would stop leaving" a true sentence. -->
+    <a class="headline" routerLink="/findings">
+      <span class="headline__label">Flagged annual savings</span>
+      <span class="headline__value">{{ s ? formatCents(s.savingsAnnualCents) : '—' }}</span>
+      <span class="headline__sub">
+        @if (s) {
+          {{ formatCents(s.savingsMonthlyCents) }} a month that would stop leaving ·
+          {{ s.activeFindingCount }} {{ s.activeFindingCount === 1 ? 'finding' : 'findings' }}
+        }
+      </span>
+    </a>
+
+    <div class="cards">
+      <a class="card" routerLink="/subscriptions">
+        <span class="card__label">Active subscriptions</span>
+        <span class="card__value">{{ s ? s.subscriptions.activeCount : '—' }}</span>
+        <span class="card__sub">
+          @if (s) {
+            {{ formatCents(s.subscriptions.monthlyCents) }}/mo ·
+            {{ formatCents(s.subscriptions.annualCents) }}/yr
+          }
+        </span>
+      </a>
+
+      <!-- §6.9. Same holder as the rail's badge, so the two cannot disagree. -->
+      <a class="card" routerLink="/review" [class.card--asking]="outstanding() > 0">
+        <span class="card__label">Waiting on you</span>
+        <span class="card__value">{{ outstanding() }}</span>
+        <span class="card__sub">
+          {{
+            outstanding() === 0
+              ? 'nothing to answer'
+              : (outstanding() === 1 ? 'question' : 'questions') + ' about your merchants'
+          }}
+        </span>
+      </a>
+
+      <a class="card" routerLink="/findings">
+        <span class="card__label">Unreviewed findings</span>
+        <span class="card__value">{{ s ? s.unreviewedCount : '—' }}</span>
+        <span class="card__sub">
+          @if (s) {
+            of {{ s.activeFindingCount }} active
+          }
+        </span>
+      </a>
+
+      <a class="card" routerLink="/findings">
+        <span class="card__label">Last analysis</span>
+        <span class="card__value card__value--date">
+          {{ s?.lastRunAt ? formatDay(s!.lastRunAt!) : 'never' }}
+        </span>
+        <span class="card__sub">
+          @if (neverRun()) {
+            run it to score your transactions
+          } @else if (s?.lastRunSnapshotRows) {
+            {{ s!.lastRunSnapshotRows }} rows · config
+            <code>{{ s!.lastRunConfigHash?.slice(0, 8) }}</code>
+          }
+        </span>
+      </a>
+    </div>
+
+    @if (staleRun()) {
+      <!-- §7.4: a threshold moved after the run, so the figures above were scored
+           under a config that no longer applies. -->
+      <p class="alert" role="status">
+        Thresholds have changed since the last run, so the numbers above were scored under
+        settings that no longer apply.
+        <a routerLink="/findings">Re-run the analysis</a> to re-score them.
+      </p>
+    }
+
+    <ui-panel heading="Statement coverage">
+      <p class="coverage__lede">
+        Most findings degrade quietly across a missing month, and the annual-spend rules refuse
+        to compute over a partial one at all. This is how much of your history the app has
+        actually seen.
+      </p>
+
+      @for (account of accounts(); track account.id) {
+        @let coverage = coverageFor(account);
+        <div class="coverage">
+          <span class="coverage__name">
+            {{ account.displayName }}
+            @if (account.last4) {
+              <span class="coverage__last4">••{{ account.last4 }}</span>
+            }
+          </span>
+
+          @if (coverage) {
+            <span class="coverage__span">{{ coverageSpan(coverage) }}</span>
+            <span class="coverage__count">
+              {{ coverage.transactionCount }}
+              {{ coverage.transactionCount === 1 ? 'transaction' : 'transactions' }}
+            </span>
+            @if (gapCount(coverage) > 0) {
+              <span class="coverage__gaps">
+                {{ gapCount(coverage) }} incomplete
+                {{ gapCount(coverage) === 1 ? 'month' : 'months' }}
+              </span>
+            } @else {
+              <span class="coverage__clean">no gaps</span>
+            }
+          } @else {
+            <span class="coverage__span">reading…</span>
+          }
+        </div>
+      }
+
+      <a class="coverage__link" routerLink="/accounts">
+        {{
+          totalGaps() > 0
+            ? 'See which months are missing'
+            : 'Accounts, coverage bars and possible transfers'
+        }}
+      </a>
+    </ui-panel>
+  }
+</div>

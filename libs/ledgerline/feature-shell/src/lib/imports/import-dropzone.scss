@@ -15,7 +15,7 @@
   padding: 34px 20px;
   border: 2px dashed var(--border, #1f4a47);
   border-radius: var(--radius, 10px);
-  background: rgb(20 48 52 / 35%);
+  background: color-mix(in srgb, var(--surface-2) 35%, transparent);
   text-align: center;
   transition:
     border-color 120ms ease,
@@ -24,7 +24,7 @@
 
 .zone--over {
   border-color: var(--accent, #2dd4bf);
-  background: rgb(45 212 191 / 10%);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .zone__headline {
@@ -96,7 +96,7 @@
 }
 
 .staged__row--failed {
-  border-color: #e0796a;
+  border-color: var(--danger, #e0796a);
 }
 
 .staged__name {
@@ -131,7 +131,7 @@
 .staged__progress {
   height: 4px;
   border-radius: 2px;
-  background: rgb(31 74 71 / 60%);
+  background: color-mix(in srgb, var(--border) 60%, transparent);
   overflow: hidden;
 }
 
@@ -187,18 +187,18 @@
 }
 
 .badge--warn {
-  border-color: #b08b4f;
-  color: #d9b878;
+  border-color: var(--caution, #b08b4f);
+  color: var(--caution-soft, #d9b878);
 }
 
 .badge--bad {
-  border-color: #e0796a;
-  color: #eda596;
+  border-color: var(--danger, #e0796a);
+  color: var(--danger-soft, #eda596);
   /* The API's own refusal reason, which is a sentence rather than a word. */
   white-space: normal;
   text-align: right;
 }
 
 .badge--known {
-  background: rgb(31 74 71 / 45%);
+  background: color-mix(in srgb, var(--border) 45%, transparent);
 }

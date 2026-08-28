@@ -1,10 +1,35 @@
 {
   "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "module": "preserve",
+    // The workspace base targets Node libs and declaration-only emit. Angular's
+    // compiler rejects `emitDeclarationOnly` outright (NG4006) and the browser
+    // needs `dom` — the same two overrides `libs/ledgerline/feature-shell` and
+    // `apps/ledgerline-ui` explain.
+    "emitDeclarationOnly": false,
+    "lib": ["es2022", "dom"],
+    // This lib has no workspace dependencies, so the base config's
+    // `@metrum/source` condition has nothing to resolve — but it is cleared here
+    // for the same reason it is cleared next door: what gets typechecked should
+    // be what gets bundled, and `@angular/build` applies no custom conditions.
+    "customConditions": []
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
   "files": [],
   "include": [],
   "references": [
     {
       "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
     }
   ]
 }

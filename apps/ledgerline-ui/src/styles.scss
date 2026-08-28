@@ -1,25 +1,29 @@
 /* Ledgerline global styles.
  *
- * Dark-first, per spec §6, using the MetrumDigital workspace palette from
- * `artifacts/_template.html` so the app and the dashboard read as one house.
- * Everything downstream — including `@metrum/ui` — consumes these as
- * custom properties, so a light theme is a token swap on :root and nothing
- * else.
+ * The palette is no longer here. `@metrum/ui`'s `ThemeService` writes every token
+ * onto `:root` at bootstrap from `app/ledgerline.theme.ts`, in the mode the user
+ * chose — so this file holds structure, and the one thing a stylesheet can do
+ * that a bootstrap-time service cannot.
+ *
+ * ## The two values below are a floor, not a copy of the palette
+ *
+ * Between the browser painting `index.html` and Angular's environment
+ * initializer running, no custom property is set. Without a ground colour here
+ * that gap is a white flash — a full-screen one, and worst for exactly the person
+ * who chose dark mode. So `--bg` and `--text` are declared once, at Ledgerline's
+ * dark values, and everything else waits for the service.
+ *
+ * They are the *default theme's default mode*, deliberately, and they are the
+ * only two tokens duplicated anywhere. A light-mode user still sees one dark
+ * frame; a matching pair of literals for every token would be a second palette to
+ * keep in step, which is the thing this whole change exists to remove.
  */
 
 :root {
   color-scheme: dark;
 
-  --bg: #0a1517;
-  --surface: #0f2124;
-  --surface-2: #143034;
-  --border: #1f4a47;
-  --text: #dcefeb;
-  --text-dim: #7ea8a1;
-  --accent: #2dd4bf;
-  --accent-2: #34d399;
-  --shadow: 0 1px 3px rgb(0 0 0 / 50%);
-  --radius: 10px;
+  --bg: #0b1220;
+  --text: #e7eef8;
 }
 
 * {

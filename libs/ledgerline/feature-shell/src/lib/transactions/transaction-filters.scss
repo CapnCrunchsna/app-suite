@@ -49,7 +49,7 @@
 }
 
 .filters__input--invalid {
-  border-color: #e0796a;
+  border-color: var(--danger, #e0796a);
 }
 
 .filters__toggles {
@@ -99,7 +99,7 @@
   flex: 1 1 100%;
   margin: 0;
   font-size: 0.8rem;
-  color: #e0796a;
+  color: var(--danger, #e0796a);
 
   code {
     padding: 0 3px;

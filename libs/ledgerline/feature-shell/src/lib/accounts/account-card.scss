@@ -100,8 +100,8 @@
 }
 
 .action--archive:not(:disabled):hover {
-  border-color: #e0796a;
-  color: #e0796a;
+  border-color: var(--danger, #e0796a);
+  color: var(--danger, #e0796a);
 }
 
 /* -------------------------------------------------------------- editor --- */
@@ -144,5 +144,5 @@
   margin: 0;
   font-size: 0.76rem;
   line-height: 1.6;
-  color: #e0b46a;
+  color: var(--caution-soft, #d9b878);
 }

@@ -42,9 +42,9 @@
 
 .failure {
   padding: 16px;
-  border: 1px solid #e0796a;
+  border: 1px solid var(--danger, #e0796a);
   border-radius: var(--radius, 10px);
-  background: rgb(224 121 106 / 8%);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 .failure__text {

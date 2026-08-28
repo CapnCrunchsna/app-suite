@@ -8,10 +8,29 @@
   box-shadow: var(--shadow);
 }
 
+/* The way home. Styled as the app name rather than as a link — an underline here
+ * would make the masthead look like body copy — so the affordance is the hover
+ * and the cursor, which is what every other app's wordmark does too. */
 .header__brand {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header__brand:hover {
+  text-decoration: underline;
+}
+
+/* Already home. Not a disabled link — clicking it is harmless — just not
+ * advertised as somewhere to go. */
+.header__brand--here {
+  cursor: default;
+}
+
+.header__brand--here:hover {
+  text-decoration: none;
 }
 
 .header__tagline {

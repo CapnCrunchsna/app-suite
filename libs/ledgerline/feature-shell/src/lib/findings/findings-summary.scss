@@ -61,7 +61,7 @@
 /* §7.4: a config change means the stored findings were scored under thresholds
  * that no longer apply. Saying so beats showing a number that looks current. */
 .run__stale {
-  color: #d9b878;
+  color: var(--caution-soft, #d9b878);
   max-width: 260px;
   text-align: right;
 }
@@ -78,7 +78,7 @@
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: rgb(45 212 191 / 12%);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
   &:disabled {

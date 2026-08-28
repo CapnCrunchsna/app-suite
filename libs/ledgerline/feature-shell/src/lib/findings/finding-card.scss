@@ -34,16 +34,16 @@
 
 /* The money moved. */
 .banner--changed {
-  border-color: #b08b4f;
-  background: rgb(176 139 79 / 10%);
-  color: #d9b878;
+  border-color: var(--caution, #b08b4f);
+  background: color-mix(in srgb, var(--caution) 10%, transparent);
+  color: var(--caution-soft, #d9b878);
 }
 
 /* The rule moved. Visually distinct from the above on purpose — §5.1 groups
  * these separately because they mean different things. */
 .banner--reevaluated {
   border-color: var(--accent, #2dd4bf);
-  background: rgb(45 212 191 / 8%);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   color: var(--accent, #2dd4bf);
 }
 
@@ -84,8 +84,8 @@
 }
 
 .chip--band[data-band='medium'] {
-  border-color: #b08b4f;
-  color: #d9b878;
+  border-color: var(--caution, #b08b4f);
+  color: var(--caution-soft, #d9b878);
 }
 
 .chip--band[data-band='low'] {
@@ -93,12 +93,12 @@
 }
 
 .chip--llm {
-  border-color: #8b7fd4;
-  color: #b3a8ee;
+  border-color: var(--ai, #8b7fd4);
+  color: var(--ai-soft, #b3a8ee);
 }
 
 .chip--state {
-  background: rgb(31 74 71 / 45%);
+  background: color-mix(in srgb, var(--border) 45%, transparent);
   text-transform: capitalize;
 }
 
@@ -158,8 +158,8 @@
 }
 
 .action--dismiss:hover:not(:disabled) {
-  border-color: #e0796a;
-  color: #eda596;
+  border-color: var(--danger, #e0796a);
+  color: var(--danger-soft, #eda596);
 }
 
 .action__group {
@@ -189,7 +189,7 @@
   gap: 1px;
   padding: 8px 11px;
   border: 0;
-  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -201,7 +201,7 @@
   }
 
   &:hover {
-    background: rgb(45 212 191 / 10%);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
   }
 }
 

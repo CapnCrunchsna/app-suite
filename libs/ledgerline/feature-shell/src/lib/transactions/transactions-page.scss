@@ -107,9 +107,9 @@
 
 .failure {
   padding: 16px;
-  border: 1px solid #e0796a;
+  border: 1px solid var(--danger, #e0796a);
   border-radius: var(--radius, 10px);
-  background: rgb(224 121 106 / 8%);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
 .failure__text {
@@ -205,7 +205,7 @@
 
 .table__row {
   padding: 0 12px;
-  border-bottom: 1px solid rgb(31 74 71 / 45%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   font-size: 0.83rem;
   box-sizing: border-box;
   /* The whole row expands, so the whole row says so. The cells that do something
@@ -214,7 +214,7 @@
   cursor: pointer;
 
   &:hover {
-    background: rgb(20 48 52 / 55%);
+    background: color-mix(in srgb, var(--surface-2) 55%, transparent);
   }
 }
 
@@ -300,7 +300,7 @@
 
 .table__editable {
   border: 0;
-  border-bottom: 1px dashed rgb(126 168 161 / 45%);
+  border-bottom: 1px dashed color-mix(in srgb, var(--text-dim) 45%, transparent);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -374,8 +374,8 @@
 }
 
 .chip--pending {
-  border-color: #b08b4f;
-  color: #d9b878;
+  border-color: var(--caution, #b08b4f);
+  color: var(--caution-soft, #d9b878);
 }
 
 .chip--finding {
@@ -402,6 +402,6 @@
 .chip--on {
   background: var(--accent, #2dd4bf);
   border-color: var(--accent, #2dd4bf);
-  color: #06201c;
+  color: var(--on-accent, #06201c);
   font-weight: 600;
 }

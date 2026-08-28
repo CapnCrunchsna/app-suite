@@ -3,8 +3,11 @@
 Ledgerline's §6 pages. `scope:ll`, `type:feature`, consumed as
 `@metrum/ledgerline-feature-shell`.
 
-Built so far: **Import (§6.1)** and **Transactions (§6.3)**. The other six sections
-are rail items in `apps/ledgerline-ui` that route nowhere yet.
+Built so far: **Import (§6.1)**, **Accounts (§6.2)**, **Transactions (§6.3)**,
+**Findings (§6.4)**, **Subscriptions (§6.5)**, **Review (§6.9)** and
+**Settings (§6.8)**, plus the **home page** at `/` (§9u), which is not a §6 section
+and has no rail item. Insights (§6.6) and Ask (§6.7) are rail items in
+`apps/ledgerline-ui` that route nowhere yet.
 
 ## The boundary is the point of this lib
 
@@ -28,13 +31,10 @@ everything through HTTP."* Which means:
 ```
 lib/
   ledgerline-api.service.ts     the one seam to the API
-  routes.ts                     §6's pages as lazy routes, exported to the shell
-  transactions/
-    transactions-page.ts        the container — owns all state and every request
-    transaction-filters.ts      §6.3's filter bar (presentational)
-    transaction-detail.ts       the row expander (presentational)
-    merchant-assign.ts          the merchant edit and its bulk offer
-    virtual-window.ts           the windowing arithmetic, as a pure function
+  routes.ts                     the pages as lazy routes, exported to the shell
+  rule-copy.ts                  §5's rule ids rendered as English
+  home/
+    home-page.ts                the front door (§9u) — computes nothing
   imports/
     imports-page.ts             the container — owns all state and every request
     import-dropzone.ts          the dropzone and the staged file list
@@ -42,9 +42,38 @@ lib/
     review-warnings.ts          §6.1's warning strip, as a pure function
     column-mapper.ts            the inline mapper and its live preview
     import-history.ts           re-parse and delete
+  accounts/
+    accounts-page.ts            the container
+    account-card.ts             §6.2's row and its four actions
+    coverage-bar.ts             the month strip (presentational)
+    transfer-queue.ts           §2.6's proposals and the auto-links beside them
+  transactions/
+    transactions-page.ts        the container
+    transaction-filters.ts      §6.3's filter bar (presentational)
+    transaction-detail.ts       the row expander (presentational)
+    merchant-assign.ts          the merchant edit and its bulk offer
+    virtual-window.ts           the windowing arithmetic, as a pure function
+  review/
+    review-page.ts              the container
+    review-queue.service.ts     the queue, held once — the rail badges it too
+    merchant-review.ts          §4.1 step 7's merge candidates (presentational)
+  findings/
+    findings-page.ts            the container
+    findings-summary.ts         §6.4's three headline numbers
+    finding-filters.ts          band, rule, account, minimum impact
+    finding-card.ts             one finding and its four actions
+    finding-evidence.ts         the inline charge history
+  subscriptions/
+    subscriptions-page.ts       the container
+    month-strip.ts              which days charges land
+    series-detail.ts            the drawer: history, price steps, user fields
+  settings/
+    settings-page.ts            the container
+    analyzer-settings.ts        §7.4's thresholds and per-rule switches
+    data-settings.ts            backup, export, wipe
 ```
 
-Both pages follow the same split: the container owns the state and every request,
+Every page follows the same split: the container owns the state and every request,
 and the children are presentational. Two children are the exception, for one
 reason. `MerchantAssign` owns its dry-run count so that *the filter the user is
 reading* and *the filter the bulk apply sends* are the same object rather than

@@ -40,7 +40,7 @@
 }
 
 .filters__input--invalid {
-  border-color: #e0796a;
+  border-color: var(--danger, #e0796a);
 }
 
 .filters__bands {
@@ -85,5 +85,5 @@
   flex: 1 1 100%;
   margin: 0;
   font-size: 0.74rem;
-  color: #d9b878;
+  color: var(--caution-soft, #d9b878);
 }

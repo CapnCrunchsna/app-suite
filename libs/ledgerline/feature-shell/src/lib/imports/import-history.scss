@@ -37,7 +37,7 @@
 }
 
 .history__row--failed {
-  border-color: #e0796a;
+  border-color: var(--danger, #e0796a);
 }
 
 .history__name {
@@ -72,13 +72,13 @@
   }
 
   &[data-status='needs_mapping'] {
-    border-color: #b08b4f;
-    color: #d9b878;
+    border-color: var(--caution, #b08b4f);
+    color: var(--caution-soft, #d9b878);
   }
 
   &[data-status='failed'] {
-    border-color: #e0796a;
-    color: #eda596;
+    border-color: var(--danger, #e0796a);
+    color: var(--danger-soft, #eda596);
   }
 }
 
@@ -125,12 +125,12 @@
 }
 
 .history__action--danger {
-  border-color: #e0796a;
-  color: #eda596;
+  border-color: var(--danger, #e0796a);
+  color: var(--danger-soft, #eda596);
 
   &:hover:not(:disabled) {
-    background: rgb(224 121 106 / 12%);
-    border-color: #e0796a;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border-color: var(--danger, #e0796a);
   }
 }
 

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "//": "Compiles the lib's own sources rather than referencing tsconfig.lib.json, matching libs/ledgerline/feature-shell. A self-reference makes the spec project depend on declaration outputs that `--emitDeclarationOnly` typechecking has not produced yet (TS6305).",
+  "compilerOptions": {
+    "outDir": "./out-tsc/vitest",
+    "tsBuildInfoFile": "out-tsc/vitest/tsconfig.spec.tsbuildinfo",
+    "types": ["vitest/globals"],
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "references": []
+}

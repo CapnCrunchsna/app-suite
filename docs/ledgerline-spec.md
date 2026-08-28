@@ -2033,6 +2033,92 @@ the seam — the same one `fetchFn` and `spawnFn` already are, one level up, bec
 providers are constructed from a settings row and a spec that only replaced `fetch` still
 could not make `GET /api/llm/health` answer for a provider it is not allowed to start.
 
+## 9u. Amendments from implementation — 2026-08-28 (§6, §6.4)
+
+§6 opens with "dark-first to match the workspace look" and then lists nine pages, and both halves
+turned out to be doing less than they read as. **Dark-first became dark-only** — there was no way
+to choose, so the app was simply dark. And **nine sections is not an app**: with no front door the
+app opened on §6.4, which is the right answer to a question it has only earned once you have
+imported something and run an analysis. On a fresh database it is three em-dashes and no
+indication that the next move is Import.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6 | **A theme system in `@metrum/ui`**: a token contract, a registration call an app makes at bootstrap with its own palette, and a switcher with two axes — theme, and light/dark/system. | "Dark-first" describes a default, and a default only means something where there is an alternative. Putting it in the shared lib rather than in this app is what makes it true of the next app for free, which is the whole reason that lib exists. |
+| 6 (new) | **A home page at `/`**, and the app name in the header links to it. | The state you are in is a different question from what was found, and only §6.4 was answering the second one. The fresh-install case is the sharpest version: the app's first screen used to be an empty table. |
+| 6.4 | **Findings is still the hero and is no longer the landing page.** The home page's headline figure is §6.4's savings total and links straight to it. | Nothing about §6.4 changed. What changed is that the number now has somewhere to be *before* you have decided to go looking at findings. |
+
+**Two axes, not one.** A *theme* is an identity — one app's palette, registered by that app. A
+*mode* is light or dark within it. They are independent because picking "Ledgerline" and picking
+"light" are different questions, and collapsing them into one list of four options makes adding a
+third app produce six. `provideTheming(LEDGERLINE_THEME)` is the whole app-side API: it registers
+the palette, makes it that app's default, and puts it in the switcher beside the house theme.
+
+**"System" reads `prefers-color-scheme`,** which is the honest answer — the OS already knows, and
+asking the user to say it a second time is asking them to keep two settings in step. It is a
+listener rather than a one-off read, because the OS can flip at sunset while the app is open, and
+it loses to an explicit choice, because a choice is a choice. `color-scheme` on `:root` is kept in
+step with the resolved mode: scrollbars, form controls and the caret are painted by the browser
+from that property alone, and without it a light theme keeps dark native furniture and reads as
+broken rather than as light.
+
+**The choice is stored in `localStorage` and deliberately not in the API.** It has to be readable
+synchronously at bootstrap — an async read reintroduces the flash it exists to prevent — and it
+has to survive a reload. It is also a per-device presentation preference, and §2.3 backs up,
+exports and wipes the database: a scrollbar colour has no business in a backup of someone's bank
+records. The key is namespaced per app so two apps on `localhost` in development do not overwrite
+each other's answer.
+
+**The token contract grew, and that is what made a second palette possible at all.** §2.2's rule
+that feature libs ship no palette was already almost true — almost, because `--warn` and
+`--surface-1` were *consumed* thirteen and three times and *defined* nowhere, so every use fell
+back to a hex literal, and because roughly a hundred and twenty more literals sat outside any
+`var()` at all: a coral for danger, two bronzes for caution, a violet for §4.2's AI marks, a
+near-black for text on a filled chip, and a dozen translucent tints. Every one of them would have
+survived a theme switch. They are tokens now — `--danger`, `--danger-soft`, `--caution`,
+`--caution-soft`, `--ai`, `--ai-soft`, `--on-accent`, and the tints as `color-mix` over the token
+they were an alpha of.
+
+**Contrast is checked rather than eyeballed.** The dark palette is comfortable because it was
+tuned against a real screen over weeks; a light palette gets no such tuning before it ships, and
+"looks fine on my monitor" is exactly the judgement that produces captions nobody else can read.
+So the requirement list is executable: body text at 7:1 on every ground because this is a screen
+of figures and a mis-read digit is a different kind of wrong, the accents and dim text at 4.5:1,
+and the three border-weight colours at 3:1 under the non-text rule. Both themes are audited in
+both modes, in the test suite, and an app that registers a palette runs the same audit over it in
+one line.
+
+**Ledgerline's own theme is a ledger.** Not "finance" in the abstract — the object this app
+replaces: a ruled statement, ink on paper, money in a column down the right. That gives the two
+modes something to *be* rather than one being the other inverted. Dark is ink: a deep navy ground
+rather than the house theme's teal-black. Light is the paper: warm cream, not white, because
+ledger stock never is, white panels on a white page lose every edge, and a screen of figures read
+for half an hour is easier on cream. The accent is banknote green, which is the one colour that
+already means *money you still have*. The second accent is gold, and it is the more considered of
+the two: every use of that token is a figure or a chip that wants a second look — §6.4's flagged
+savings, §6.8's indicator when the provider is remote — and in the house theme it is a green
+sibling of the teal accent, so the headline number blends into the chrome it is supposed to stand
+out from. The house teal stays in the list, one selection away, and is still what the dashboard
+looks like; an app that looks exactly like the workspace dashboard has no identity of its own to
+return to.
+
+**The home page computes nothing.** It shows §6.4's savings figure alone and large, then three
+facts about the state of the data rather than the money — active subscriptions, §6.9's questions
+waiting, and when the analysis last ran with §7.4's warning if a threshold has moved since — and
+then statement coverage per account, because §5.10 and §5.11 refuse to compute over a partial
+month and every other rule degrades quietly across a gap, so "your findings are only as good as
+your months" belongs beside the findings total rather than two clicks away on §6.2. The review
+count comes from the holder the rail's badge reads, so the front door and the rail cannot show two
+different numbers for one queue.
+
+**It has no Run analysis button, and no rail item.** §6.4 owns that write along with §2.7's job
+poll, the busy state and the failure text; a second button would be a second copy of all four, and
+two of them on two pages can disagree about whether a run is in flight. The stale-config warning
+links to Findings instead, which is where the button already is and where the result would be read
+anyway. And the way home is the app name, which is the one navigation convention every user
+already has — a tenth entry above §6's nine would make the front door look like a section it is
+not.
+
 ## 10. Open discrepancies — recorded, not resolved
 
 Building the persistence and import-commit path on 2026-08-06 found one place where this

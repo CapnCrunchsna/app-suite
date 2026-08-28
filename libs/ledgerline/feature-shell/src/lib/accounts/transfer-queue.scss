@@ -53,7 +53,7 @@
 
 .pair__state {
   font-size: 0.72rem;
-  color: #e0b46a;
+  color: var(--caution-soft, #d9b878);
 }
 
 .pair__state--auto {
@@ -152,7 +152,7 @@
 }
 
 .reason--negative .reason__points {
-  color: #e0796a;
+  color: var(--danger, #e0796a);
 }
 
 /* ---------------------------------------------------------------- foot --- */
@@ -197,6 +197,6 @@
 }
 
 .button--reject:not(:disabled):hover {
-  border-color: #e0796a;
-  color: #e0796a;
+  border-color: var(--danger, #e0796a);
+  color: var(--danger, #e0796a);
 }

@@ -10,9 +10,9 @@
   flex-direction: column;
   gap: 14px;
   padding: 14px;
-  border: 1px solid #b08b4f;
+  border: 1px solid var(--caution, #b08b4f);
   border-radius: 8px;
-  background: rgb(176 139 79 / 6%);
+  background: color-mix(in srgb, var(--caution) 6%, transparent);
 }
 
 .mapper__lead {
@@ -89,7 +89,7 @@
 
 .grid__row {
   padding-block: 4px;
-  border-bottom: 1px solid rgb(31 74 71 / 35%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
   font-size: 0.75rem;
   font-family: ui-monospace, Consolas, monospace;
 }
@@ -199,15 +199,15 @@ ul.outcome {
 }
 
 .outcome--bad {
-  border-color: #e0796a;
-  background: rgb(224 121 106 / 8%);
-  color: #eda596;
+  border-color: var(--danger, #e0796a);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger-soft, #eda596);
 }
 
 .outcome--warn {
-  border-color: #b08b4f;
-  background: rgb(176 139 79 / 8%);
-  color: #d9b878;
+  border-color: var(--caution, #b08b4f);
+  background: color-mix(in srgb, var(--caution) 8%, transparent);
+  color: var(--caution-soft, #d9b878);
 }
 
 /* ---------------------------------------------------- the live preview --- */
@@ -298,12 +298,12 @@ ul.outcome {
 .live__raw {
   margin: 0;
   padding: 0 10px 5px;
-  color: rgb(126 168 161 / 75%);
+  color: color-mix(in srgb, var(--text-dim) 75%, transparent);
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.68rem;
   white-space: pre-wrap;
   word-break: break-all;
-  border-bottom: 1px solid rgb(31 74 71 / 35%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
 }
 
 .live__failures {
@@ -311,15 +311,15 @@ ul.outcome {
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
-  border: 1px solid #e0796a;
+  border: 1px solid var(--danger, #e0796a);
   border-radius: 7px;
-  background: rgb(224 121 106 / 6%);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
 }
 
 .live__subheading {
   margin: 0;
   font-size: 0.76rem;
-  color: #eda596;
+  color: var(--danger-soft, #eda596);
 }
 
 .live__failure {
@@ -332,7 +332,7 @@ ul.outcome {
   margin: 0;
   padding-left: 24px;
   font-size: 0.72rem;
-  color: #eda596;
+  color: var(--danger-soft, #eda596);
 }
 
 .live__warnings {
@@ -352,7 +352,7 @@ ul.outcome {
   }
 
   &[data-kind='mismatch'] {
-    color: #eda596;
+    color: var(--danger-soft, #eda596);
   }
 }
 
@@ -370,7 +370,7 @@ ul.outcome {
   border: 1px solid var(--accent, #2dd4bf);
   border-radius: 6px;
   background: var(--accent, #2dd4bf);
-  color: #06201c;
+  color: var(--on-accent, #06201c);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;

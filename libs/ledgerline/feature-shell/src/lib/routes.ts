@@ -6,9 +6,9 @@
  * here means adding the Findings page is a change to this file and one line in the
  * shell's rail, not a change to the shell's route table every time.
  *
- * Lazy, via `loadComponent`. Nine pages of which seven are built; eagerly
- * importing the lot would put every page's code in the initial bundle for the
- * sake of the one the user opened.
+ * Lazy, via `loadComponent`. Nine §6 pages of which seven are built, plus the
+ * home page at `''`; eagerly importing the lot would put every page's code in the
+ * initial bundle for the sake of the one the user opened.
  */
 
 import type { Routes } from '@angular/router';
@@ -53,7 +53,14 @@ export const ledgerlineRoutes: Routes = [
     title: 'Settings · Ledgerline',
     loadComponent: () => import('./settings/settings-page.js').then((module) => module.SettingsPage),
   },
-  // §6.4 is the page §6 calls the hero — the three numbers that justify the app —
-  // so it is where the app opens now that it exists.
-  { path: '', pathMatch: 'full', redirectTo: 'findings' },
+  // The front door (§9u). Not a §6 section: §6.4 is still the hero, and this
+  // page's headline figure links straight to it. What it adds is the state you
+  // are in — including the fresh-install state, where Findings is three
+  // em-dashes and no indication that the next move is Import.
+  {
+    path: '',
+    pathMatch: 'full',
+    title: 'Ledgerline',
+    loadComponent: () => import('./home/home-page.js').then((module) => module.HomePage),
+  },
 ];
