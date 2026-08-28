@@ -138,3 +138,78 @@
   line-height: 1.6;
   color: var(--text-dim, #7ea8a1);
 }
+
+/* ---- contents strip and collapsible groups (user feedback) ---- */
+
+.toolbar__fold {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.toolbar__fold:hover {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--text, #dcefeb);
+}
+
+.contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.contents__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.contents__item:hover {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.contents__count {
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The heading is the fold control, so the whole label is the hit target rather
+   than a chevron somebody has to aim at. */
+.group__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.group__chevron {
+  color: var(--text-dim, #7ea8a1);
+  font-size: 0.8em;
+}
+
+.group__blurb {
+  margin: 2px 0 10px;
+  font-size: 0.74rem;
+  color: var(--text-dim, #7ea8a1);
+}

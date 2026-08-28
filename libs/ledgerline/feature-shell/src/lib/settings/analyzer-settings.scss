@@ -171,3 +171,32 @@
 .unsettable li {
   margin-bottom: 4px;
 }
+
+/* The hover explainer. A mark rather than an icon font: this lib ships no assets,
+   and one character that reads as "there is more here" does the job. */
+.field__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 5px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 50%;
+  color: var(--text-dim, #7ea8a1);
+  font-size: 0.6rem;
+  font-style: italic;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.field__info:hover {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--text, #dcefeb);
+}
+
+/* The sentence reaches assistive technology through `aria-label` on the mark
+   above rather than a duplicate node: `title` alone is not announced reliably on
+   a non-interactive element, and a visually-hidden copy would put the text into
+   the label's own `textContent`, where it does not belong. */

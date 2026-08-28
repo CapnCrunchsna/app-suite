@@ -208,6 +208,10 @@
   border-bottom: 1px solid rgb(31 74 71 / 45%);
   font-size: 0.83rem;
   box-sizing: border-box;
+  /* The whole row expands, so the whole row says so. The cells that do something
+   * else of their own — the merchant and category buttons, the chips — set their
+   * own cursor and win on specificity. */
+  cursor: pointer;
 
   &:hover {
     background: rgb(20 48 52 / 55%);

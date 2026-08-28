@@ -282,7 +282,7 @@ describe('SettingsPage', () => {
       const { el } = await render();
       const groups = text(el, '.group__title');
 
-      expect(groups).toContain('Duplicate and overlapping services §5.4');
+      expect(groups).toContain('Duplicate and overlapping services');
       const duplicateGroup = [...el.querySelectorAll('.group')].find((g) =>
         g.querySelector('.group__title')?.textContent?.includes('Duplicate'),
       ) as HTMLElement;
@@ -296,7 +296,7 @@ describe('SettingsPage', () => {
       const { el } = await render();
       // `global` is not a §5 rule but holds §5.1's emission policy — the most
       // consequential numbers in the file.
-      expect(text(el, '.group__title')).toContain('Shared emission policy §5.1');
+      expect(text(el, '.group__title')).toContain('Shared emission policy');
     });
 
     it('lists what it will not edit, with the reason', async () => {
@@ -309,8 +309,8 @@ describe('SettingsPage', () => {
       const { el } = await render();
       // `recurrence.enabled` is the switch in the header; it must not also appear
       // as a checkbox in the number list below it.
-      expect(text(el, '.field__name')).not.toContain('enabled');
-      expect(text(el, '.field__name')).toContain('minOccurrences');
+      expect(text(el, '.field__key')).not.toContain('enabled');
+      expect(text(el, '.field__key')).toContain('minOccurrences');
     });
   });
 
@@ -333,7 +333,9 @@ describe('SettingsPage', () => {
       const { el, fixture } = await render();
 
       const input = [...el.querySelectorAll('.field__input')].find(
-        (node) => node.previousElementSibling?.textContent?.trim() === 'minOccurrences',
+        (node) =>
+          node.previousElementSibling?.querySelector('.field__key')?.textContent?.trim() ===
+          'minOccurrences',
       ) as HTMLInputElement;
       input.value = '5';
       input.dispatchEvent(new Event('blur'));
@@ -364,7 +366,9 @@ describe('SettingsPage', () => {
       const { el, fixture } = await render();
 
       const input = [...el.querySelectorAll('.field__input')].find(
-        (node) => node.previousElementSibling?.textContent?.trim() === 'minOccurrences',
+        (node) =>
+          node.previousElementSibling?.querySelector('.field__key')?.textContent?.trim() ===
+          'minOccurrences',
       ) as HTMLInputElement;
       input.dispatchEvent(new Event('blur'));
       await fixture.whenStable();

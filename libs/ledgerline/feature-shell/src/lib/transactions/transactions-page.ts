@@ -341,6 +341,29 @@ export class TransactionsPage {
     this.collapse();
   }
 
+  /**
+   * The whole row is the expander, not just the date cell.
+   *
+   * A row that opens when you click one of its six cells and does nothing for the
+   * other five is a row you have to learn. The date cell stays a `<button>`,
+   * because that is what makes the expander reachable from the keyboard and what
+   * carries `aria-expanded` — this adds a mouse affordance over the rest of the
+   * row rather than replacing the accessible one.
+   *
+   * **Interactive descendants keep their own meaning.** The merchant and category
+   * cells, the transfer and excluded chips, and the date button all do something
+   * specific, and a click on any of them must not also toggle the row. Testing for
+   * the nearest interactive ancestor rather than listing cells to exclude is what
+   * keeps that true when someone adds a seventh control: the default for a new
+   * button becomes "does not also collapse the row", which is the safe direction.
+   */
+  protected onRowClick(id: string, event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, select, input, textarea, [contenteditable]')) return;
+
+    void this.toggleExpanded(id);
+  }
+
   protected async toggleExpanded(id: string): Promise<void> {
     if (this.expandedId() === id) {
       this.collapse();

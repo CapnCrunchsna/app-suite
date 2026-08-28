@@ -52,6 +52,7 @@ import type {
 } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
+import { ruleBlurb, ruleLabel } from '../rule-copy.js';
 import { FindingCard } from './finding-card.js';
 import type { FindingActionEvent } from './finding-card.js';
 import { FindingFilters, EMPTY_FINDING_FILTER, minAnnualCents } from './finding-filters.js';
@@ -193,6 +194,68 @@ export class FindingsPage {
       }))
       .sort((a, b) => Math.abs(b.annualCents) - Math.abs(a.annualCents));
   });
+
+  /**
+   * Which groups the reader has folded away.
+   *
+   * Collapsed rather than expanded is stored, so a rule that appears for the first
+   * time after an analysis run arrives open. The alternative — remembering what is
+   * *open* — silently hides a brand-new finding behind a fold the user never made.
+   */
+  private readonly collapsed = signal<ReadonlySet<string>>(new Set());
+
+  protected isCollapsed(ruleId: string): boolean {
+    return this.collapsed().has(ruleId);
+  }
+
+  protected toggleGroup(ruleId: string): void {
+    this.collapsed.update((current) => {
+      const next = new Set(current);
+      if (next.has(ruleId)) next.delete(ruleId);
+      else next.add(ruleId);
+      return next;
+    });
+  }
+
+  protected collapseAll(): void {
+    this.collapsed.set(new Set(this.groups().map((group) => group.ruleId)));
+  }
+
+  protected expandAll(): void {
+    this.collapsed.set(new Set());
+  }
+
+  protected readonly allCollapsed = computed(
+    () => this.groups().length > 0 && this.groups().every((group) => this.isCollapsed(group.ruleId)),
+  );
+
+  /** §6.4's page is one long column once a few rules fire; this is the strip that
+   *  makes it navigable without scrolling to find out what is down there. */
+  protected ruleLabel(ruleId: string): string {
+    return ruleLabel(ruleId);
+  }
+
+  protected ruleBlurb(ruleId: string): string | null {
+    return ruleBlurb(ruleId);
+  }
+
+  protected anchorFor(ruleId: string): string {
+    return `rule-${ruleId.replace(/[^a-z0-9]+/gi, '-')}`;
+  }
+
+  /** Opens the group first, so a contents link never scrolls to a folded heading. */
+  protected jumpTo(ruleId: string): void {
+    this.collapsed.update((current) => {
+      const next = new Set(current);
+      next.delete(ruleId);
+      return next;
+    });
+
+    // After the fold has opened, or the browser measures the old height.
+    setTimeout(() => {
+      document.getElementById(this.anchorFor(ruleId))?.scrollIntoView({ block: 'start' });
+    });
+  }
 
   // ----------------------------------------------------------- handlers ---
 

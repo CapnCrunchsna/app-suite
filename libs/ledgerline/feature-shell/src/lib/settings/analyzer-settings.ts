@@ -27,6 +27,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { SettingRule, Settings, SettingThreshold } from '@metrum/api-client';
+import { thresholdBlurb } from '../rule-copy.js';
 
 export interface SettingChange {
   readonly section: string;
@@ -163,6 +164,17 @@ export class AnalyzerSettings {
 
   /** Fractions read as percentages everywhere in §5 — "exceeds by >40%" — so the
    *  hint says both rather than making the reader convert. */
+  /**
+   * What this number actually does, for the hover.
+   *
+   * Not every field has one and that is deliberate: `minOccurrences` and
+   * `enabled` say what they do, and a tooltip on every control is a tooltip
+   * nobody reads. See `rule-copy.ts`.
+   */
+  protected blurbFor(field: { section: string; key: string }): string | null {
+    return thresholdBlurb(field.section, field.key);
+  }
+
   protected hintFor(threshold: SettingThreshold): string {
     if (threshold.kind === 'boolean') return `default ${String(threshold.defaultValue)}`;
 

@@ -41,19 +41,48 @@
   <span class="toolbar__status">loading…</span>
   } @else if (busy()) {
   <span class="toolbar__status">saving…</span>
+  } @if (groups().length > 1) {
+  <button type="button" class="toolbar__fold" (click)="allCollapsed() ? expandAll() : collapseAll()">
+    {{ allCollapsed() ? 'Expand all' : 'Collapse all' }}
+  </button>
   }
 </div>
 
+<!-- What is on this page, before you scroll to find out. One entry per rule that
+     actually fired, so it stays short on a thin corpus and earns its place on a
+     thick one. -->
+@if (groups().length > 1) {
+<nav class="contents" aria-label="Findings by kind">
+  @for (group of groups(); track group.ruleId) {
+  <button type="button" class="contents__item" (click)="jumpTo(group.ruleId)">
+    <span class="contents__label">{{ ruleLabel(group.ruleId) }}</span>
+    <span class="contents__count">{{ group.findings.length }}</span>
+  </button>
+  }
+</nav>
+}
+
 @for (group of groups(); track group.ruleId) {
-<section class="group">
+<section class="group" [id]="anchorFor(group.ruleId)">
   <header class="group__head">
-    <h2 class="group__rule">{{ group.ruleId }}</h2>
+    <button
+      type="button"
+      class="group__toggle"
+      (click)="toggleGroup(group.ruleId)"
+      [attr.aria-expanded]="!isCollapsed(group.ruleId)"
+    >
+      <span class="group__chevron">{{ isCollapsed(group.ruleId) ? '▸' : '▾' }}</span>
+      <h2 class="group__rule">{{ ruleLabel(group.ruleId) }}</h2>
+    </button>
     <span class="group__count">
       {{ group.findings.length }} {{ group.findings.length === 1 ? 'finding' : 'findings' }}
     </span>
     <span class="group__total">{{ formatGroupTotal(group.annualCents) }}</span>
   </header>
 
+  @if (ruleBlurb(group.ruleId); as blurb) {
+  <p class="group__blurb">{{ blurb }}</p>
+  } @if (!isCollapsed(group.ruleId)) {
   <div class="group__cards">
     @for (finding of group.findings; track finding.id) {
     <ll-finding-card
@@ -65,6 +94,7 @@
     />
     }
   </div>
+  }
 </section>
 } @empty {
 <ui-panel>

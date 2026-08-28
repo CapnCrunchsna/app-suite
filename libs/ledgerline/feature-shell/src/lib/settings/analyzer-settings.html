@@ -1,9 +1,10 @@
 @let all = settings();
 
 <p class="lede">
-  Every number §5 uses is a default you can change (§7.4). Findings are stamped with the
-  <code>config_hash</code> they were computed under, so tuning one is a normal edit rather than a
-  migration — and §5.1 re-evaluates a rule's dismissed findings when its own thresholds move.
+  Every number behind a finding is a default you can change, and none of them is calibrated yet —
+  they are starting points. Findings record the settings they were found under, so changing one is
+  an ordinary edit rather than something that invalidates history, and anything you dismissed under
+  a rule gets looked at again when that rule's numbers move.
 </p>
 
 <p class="hash">
@@ -24,9 +25,6 @@
     <header class="group__head">
       <h3 class="group__title">
         {{ group.label }}
-        @if (group.specRef) {
-          <span class="group__spec">§{{ group.specRef }}</span>
-        }
       </h3>
 
       @if (group.rules.length > 0) {
@@ -60,9 +58,9 @@
 
     @if (group.dismissed > 0) {
       <p class="warn">
-        Changing anything here re-evaluates {{ group.dismissed }} dismissed
-        {{ group.dismissed === 1 ? 'finding' : 'findings' }} in this rule on the next run — §5.1
-        reopens a dismissal when the thresholds behind it move.
+        Changing anything here brings back {{ group.dismissed }} dismissed
+        {{ group.dismissed === 1 ? 'finding' : 'findings' }} in this rule on the next run — a
+        dismissal is reopened when the numbers behind it move.
       </p>
     }
 
@@ -77,7 +75,14 @@
             [class.field--overridden]="field.overridden"
             [attr.for]="fieldId(field)"
           >
-            <span class="field__name">{{ field.key }}</span>
+            <span class="field__name">
+              <span class="field__key">{{ field.key }}</span>
+              @if (blurbFor(field); as blurb) {
+                <span class="field__info" role="img" [title]="blurb" [attr.aria-label]="blurb"
+                  >i</span
+                >
+              }
+            </span>
 
             @if (field.kind === 'boolean') {
               <input
@@ -120,8 +125,9 @@
   <section class="group">
     <h3 class="group__title">Not editable here</h3>
     <p class="none">
-      These are lists rather than single values. §7.6 calls them calibration decisions, and a
-      generic form is the wrong place to make one.
+      These are lists rather than single values — the cadence table, the confidence bands. They
+      are judgement calls to make against real statements, and a row of number boxes is the wrong
+      place to make one.
     </p>
     <ul class="unsettable">
       @for (item of all.unsettable; track item.section + item.key) {

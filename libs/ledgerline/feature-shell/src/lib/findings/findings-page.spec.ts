@@ -271,8 +271,56 @@ describe('FindingsPage', () => {
       ];
       const { el } = await render();
 
+      // Headings are what the rules *are*, not their ids. `outlier.v1` is §5.1's
+      // primary key — right for a dismissal that must survive a version change,
+      // wrong for a heading, which asks the reader to learn the schema.
       const rules = [...el.querySelectorAll('.group__rule')].map((n) => n.textContent?.trim());
-      expect(rules).toEqual(['duplicate.v1', 'price_creep.v1', 'lapsed.v1']);
+      expect(rules).toEqual([
+        'Duplicate & overlapping services',
+        'Price rises',
+        'Appears cancelled',
+      ]);
+    });
+
+    it('folds a group away and back', async () => {
+      api.rows = [
+        finding({ id: 'a', ruleId: 'price_creep.v1', impactAnnualCents: 7800 }),
+        finding({ id: 'b', ruleId: 'lapsed.v1', impactAnnualCents: 0, title: 'A lapsed' }),
+      ];
+      const { fixture, el } = await render();
+      const firstToggle = () => el.querySelector('.group__toggle') as HTMLButtonElement;
+
+      expect(el.querySelectorAll('.card__title').length).toBe(2);
+
+      firstToggle().click();
+      await fixture.whenStable();
+      expect(el.querySelectorAll('.card__title').length).toBe(1);
+
+      firstToggle().click();
+      await fixture.whenStable();
+      expect(el.querySelectorAll('.card__title').length).toBe(2);
+    });
+
+    it('offers a contents strip once there is more than one kind', async () => {
+      api.rows = [
+        finding({ id: 'a', ruleId: 'price_creep.v1', impactAnnualCents: 7800 }),
+        finding({ id: 'b', ruleId: 'outlier.v1', impactAnnualCents: 500, title: 'An outlier' }),
+      ];
+      const { el } = await render();
+
+      const contents = [...el.querySelectorAll('.contents__label')].map((n) =>
+        n.textContent?.trim(),
+      );
+      expect(contents).toEqual(['Price rises', 'Unusually large charges']);
+    });
+
+    it('keeps the page quiet when only one kind fired', async () => {
+      // A contents strip listing one entry is furniture.
+      api.rows = [finding({ id: 'a', ruleId: 'price_creep.v1', impactAnnualCents: 7800 })];
+      const { el } = await render();
+
+      expect(el.querySelector('.contents')).toBeNull();
+      expect(el.querySelector('.toolbar__fold')).toBeNull();
     });
 
     it('sorts cards inside a group by annual impact descending', async () => {

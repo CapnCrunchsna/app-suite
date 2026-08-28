@@ -351,6 +351,50 @@ describe('TransactionsPage', () => {
     );
   });
 
+  describe('the whole row is the expander', () => {
+    // Asserting on the expanded row rather than on the loaded detail: the row
+    // opens synchronously and the verbatim line arrives from a later fetch, and
+    // what this behaviour changes is which clicks open the row.
+    const expanded = (el: HTMLElement) => el.querySelectorAll('.table__row--expanded').length;
+
+    it('expands from a click anywhere that is not a control', async () => {
+      const { fixture, el } = await render();
+
+      // The description cell does nothing of its own, so it belongs to the row.
+      (el.querySelector('.table__row .table__cell--desc') as HTMLElement).click();
+      await fixture.whenStable();
+
+      expect(expanded(el)).toBe(1);
+    });
+
+    it('collapses again on a second click', async () => {
+      const { fixture, el } = await render();
+      const cell = () => el.querySelector('.table__row .table__cell--desc') as HTMLElement;
+
+      cell().click();
+      await fixture.whenStable();
+      expect(expanded(el)).toBe(1);
+
+      cell().click();
+      await fixture.whenStable();
+      expect(expanded(el)).toBe(0);
+    });
+
+    it('leaves the controls inside the row doing their own job', async () => {
+      // A chip that also toggled the row would make the row unusable: every edit
+      // would open or close the thing being edited.
+      const { fixture, el } = await render();
+
+      const transfer = [...el.querySelectorAll<HTMLButtonElement>('.chip--toggle')].find((chip) =>
+        chip.textContent?.includes('transfer'),
+      ) as HTMLButtonElement;
+      transfer.click();
+      await fixture.whenStable();
+
+      expect(expanded(el)).toBe(0);
+    });
+  });
+
   describe('the bulk correction path (§6.3)', () => {
     it('counts over the descriptor, everywhere, before offering anything', async () => {
       const { fixture, el } = await render();

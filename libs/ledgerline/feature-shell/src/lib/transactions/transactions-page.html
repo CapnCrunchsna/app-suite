@@ -113,12 +113,21 @@
 
       @for (entry of visibleRows(); track entry.row.transaction.id) { @let t =
       entry.row.transaction;
+      <!-- The row click is a *redundant* pointer affordance: the same expander is
+           already on the date cell as a real <button>, which is focusable and
+           carries aria-expanded, so keyboard and assistive-technology users have
+           it without this. Making the row itself focusable would add a tab stop
+           per row to a virtualised list of hundreds and announce a second
+           interactive element wrapping the first — worse for exactly the users
+           these two rules exist to protect. -->
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
       <div
         class="table__row"
         role="row"
         [class.table__row--expanded]="expandedId() === t.id"
         [class.table__row--pending]="t.isPending"
         [style.height.px]="ROW_HEIGHT"
+        (click)="onRowClick(t.id, $event)"
       >
         <button
           type="button"
