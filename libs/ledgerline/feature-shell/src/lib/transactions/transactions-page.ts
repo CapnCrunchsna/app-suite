@@ -183,6 +183,9 @@ export class TransactionsPage {
   protected readonly merchants = computed(() => this.merchantList.value());
   protected readonly categories = computed(() => this.categoryList.value());
 
+  protected readonly accountsById = computed(
+    () => new Map(this.accounts().map((account) => [account.id, account])),
+  );
   protected readonly merchantsById = computed(
     () => new Map(this.merchants().map((merchant) => [merchant.id, merchant])),
   );

@@ -18,7 +18,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { formatCents } from '@metrum/ledgerline-domain';
-import type { Category, Merchant, TransactionDetail as Detail } from '@metrum/api-client';
+import type { Account, Category, Merchant, TransactionDetail as Detail } from '@metrum/api-client';
 
 @Component({
   selector: 'll-transaction-detail',
@@ -51,6 +51,7 @@ import type { Category, Merchant, TransactionDetail as Detail } from '@metrum/ap
               @for (statement of d.coveringImports; track statement.id) {
                 <li class="detail__import">
                   <span class="detail__filename">{{ statement.sourceFilename }}</span>
+                  <span class="detail__account">{{ accountName(statement.accountId) }}</span>
                   <span class="detail__period">
                     @if (statement.periodStart && statement.periodEnd) {
                       {{ statement.periodStart }} → {{ statement.periodEnd }}
@@ -131,6 +132,7 @@ import type { Category, Merchant, TransactionDetail as Detail } from '@metrum/ap
 })
 export class TransactionDetailPanel {
   readonly detail = input<Detail | null>(null);
+  readonly accounts = input<ReadonlyMap<string, Account>>(new Map());
   readonly merchants = input<ReadonlyMap<string, Merchant>>(new Map());
   readonly categories = input<ReadonlyMap<string, Category>>(new Map());
 
@@ -154,6 +156,20 @@ export class TransactionDetailPanel {
     if (!id) return 'uncategorized';
     return this.categories().get(id)?.name ?? id;
   });
+
+  /**
+   * Which account a covering statement was filed into.
+   *
+   * The filename alone does not identify an import: two cards at the same bank
+   * export the same name, and the period does not separate them either when both
+   * statements cover the same month. §6.1's history has carried the account
+   * beside the filename since it was built; this list is the other place an
+   * import is named, and it did not.
+   */
+  protected accountName(accountId: string | null): string {
+    if (!accountId) return 'no account';
+    return this.accounts().get(accountId)?.displayName ?? accountId;
+  }
 
   protected lineFor(importId: string): string | null {
     return this.detail()?.sources.find((source) => source.importId === importId)?.rawText ?? null;

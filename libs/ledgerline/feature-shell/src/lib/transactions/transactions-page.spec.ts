@@ -19,6 +19,7 @@ import type {
   Job,
   ListTransactionsQuery,
   Merchant,
+  StatementImport,
   Transaction,
   TransactionBulkChange,
   TransactionBulkResult,
@@ -57,6 +58,31 @@ function transaction(overrides: Partial<Transaction> = {}): Transaction {
     occurrenceIndex: 0,
     createdAt: '2026-01-03T00:00:00.000Z',
     updatedAt: '2026-01-03T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function statementImport(overrides: Partial<StatementImport> = {}): StatementImport {
+  return {
+    id: 'imp-1',
+    accountId: 'a1',
+    sourceFilename: 'activity.csv',
+    fileSha256: 'b'.repeat(64),
+    fileSizeBytes: 2048,
+    formatProfileId: 'fp-1',
+    periodStart: '2026-01-01',
+    periodEnd: '2026-01-31',
+    rowsParsed: 40,
+    rowsInserted: 40,
+    rowsDuplicate: 0,
+    status: 'committed',
+    parser: 'csv',
+    parserVersion: '1',
+    errorDetail: null,
+    diagnosticsJson: null,
+    importedAt: '2026-02-01T00:00:00.000Z',
+    createdAt: '2026-02-01T00:00:00.000Z',
+    updatedAt: '2026-02-01T00:00:00.000Z',
     ...overrides,
   };
 }
@@ -140,10 +166,12 @@ class ApiStub {
     });
   }
 
+  coveringImports: StatementImport[] = [];
+
   getTransaction(id: string): Promise<TransactionDetail> {
     return Promise.resolve({
       transaction: this.rows.find((t) => t.id === id) ?? transaction(),
-      coveringImports: [],
+      coveringImports: this.coveringImports,
       rawText: '01/03/2026,POS DEBIT SQ *BLUE BOTTLE COFFE 415-555-0111 CA,-18.75,2481.25,Posted',
       sources: [],
     });
@@ -348,6 +376,24 @@ describe('TransactionsPage', () => {
 
     expect(el.querySelector('.detail__raw')?.textContent).toContain(
       'POS DEBIT SQ *BLUE BOTTLE COFFE 415-555-0111 CA,-18.75',
+    );
+  });
+
+  /** A filename does not identify an import: two cards at one bank export the
+   *  same name, and the period does not separate them when both statements cover
+   *  the same month. §6.1's history has always named the account beside the
+   *  filename; this list is the other place an import is named. */
+  it('names the account a covering statement was filed into', async () => {
+    api.coveringImports = [statementImport({ accountId: 'a1' })];
+    const { fixture, el } = await render();
+
+    (el.querySelector('.table__expand') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(el.querySelector('.detail__filename')?.textContent?.trim()).toBe('activity.csv');
+    expect(el.querySelector('.detail__account')?.textContent?.trim()).toBe('Northgate Checking');
+    expect(el.querySelector('.detail__period')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      '2026-01-01 → 2026-01-31',
     );
   });
 

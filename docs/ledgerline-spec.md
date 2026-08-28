@@ -78,17 +78,21 @@ re-evaluates the rule's dismissals when it comes back. §2.3's `DELETE /api/data
 alongside it and takes its own backup before deleting anything. **Two of §6.8's six sections
 cannot be built yet** — LLM provider and Redaction both need §2.4's seam — and one more,
 Categories, needs endpoints §2.3 lists as missing; all three are stated on the page rather than
-omitted. §9k records the reasoning. **§6.8's Merchant aliases section is built as of
-2026-08-27**: §4.1 step 7's review queue, the merge that answers it, and the provisional list —
-§9r.
+omitted. §9k records the reasoning.
+
+§4.1 step 7's **review queue reached a person on 2026-08-27** as a section of that page (§9r)
+and **moved off it the next day** into **§6.9's Review page**, with a count in the rail — a
+queue nobody knows is non-empty is a queue nobody answers, and Settings is a door people open
+twice a year. §6.9 is a section of §6 this implementation added rather than found; §9s records
+the move, the badge, and where the count lives.
 
 PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
 insights and ask endpoints of §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
-records what it proposes — nor **two of §6's eight pages** — §6.6's
+records what it proposes — nor **two of §6's nine pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
-§6.5's Subscriptions and §6.8's Settings exist and are all reachable from the rail.
-`docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q and §9r list the amendments
+§6.5's Subscriptions, §6.8's Settings and §6.9's Review exist and are all reachable from the
+rail. `docs/statement-parsing.md` records what has and has not been validated.
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r and §9s list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -1103,10 +1107,35 @@ the rows." An answer with no visible data behind it is not shown.
 
 - **LLM provider** — `none` (default) / `claude-cli` / `ollama`, with a Test Connection button and health detail. Selecting `claude-cli` shows a prominent warning card: *"The Claude CLI provider sends statement text — merchant descriptors, and for Q&A, aggregated amounts — off this machine to Anthropic. Ollama and None keep everything local."* While it's active, a persistent indicator sits in the app header.
 - **Redaction** — strips account numbers, last4 and counterparty names, and hard-filters P2P descriptors (§2.4). On by default and not disableable while `claude-cli` is selected.
-- **Merchant aliases** — the review queue for LLM proposals and provisional merchants, a list of user corrections, and a re-normalize trigger with job progress.
+- **Merchant aliases** — a re-normalize trigger with job progress. The review queue for LLM proposals and provisional merchants, and the list of user corrections, are **§6.9's**: they are work on the data rather than configuration of the app, and §9s says why that difference earned its own page.
 - **Analyzers** — per-rule enable (with the two halves of `duplicate.v1` toggled separately) and threshold overrides, plus rule versions and the current `config_hash`. Changing a threshold warns that dismissed findings in that rule will be re-evaluated.
 - **Categories** — taxonomy editor and overlap-group assignment.
 - **Data** — database path, backup, export to JSON/CSV, wipe, and the degraded-LLM-call log.
+
+### 6.9 Review
+
+Where the app puts the questions it will not answer for itself, with a count in the rail so
+they are noticed rather than found. §4.1 step 7's queue is the first population: **merge
+candidates** as cards — both merchants, both transaction counts, the sample spellings behind
+each, and which way the merge points, stated in words and flipped in one click — and the
+**provisional merchants** behind them. §4.2's LLM alias proposals belong here too and say why
+they are empty until §2.4's seam exists.
+
+Three rules, all inherited from §6.3's merchant edit because they are the same decision.
+Counts come from the API and are never computed from what the page holds. Nothing applies on
+selection: a direction is armed, and a second explicit click performs it. And the re-read
+waits for §4.3's job, because the alias write is synchronous and the rows are not.
+
+The rail badge counts **questions, not context** — provisional merchants are listed and not
+counted, since a name the chain invented for itself is only a problem when it is unstable.
+
+Everything of that shape belongs here as it arrives: uncategorized merchants, and anything
+else where the app is unsure and one click settles it. §2.6's possible transfers stay on
+§6.2 for now, because they are a fact about two accounts and the page holding both already
+has the evidence.
+
+**Not Settings**, which is where the app is configured. This is where the data is corrected,
+and the two are different errands — §9s.
 
 ## 7. Cross-cutting rules
 
@@ -1865,6 +1894,64 @@ That last row is the argument for the whole direction rather than a detail. Spli
 merchant in two did not merely mislabel a card: it split the distribution §5.9 reasons against,
 and a $326 charge that should have been flagged was sitting inside the smaller half looking
 ordinary. One click fixed the analysis, not just the name.
+
+## 9s. Amendments from implementation — 2026-08-28 (§6.8, §6.9, §6.1, §6.3)
+
+§9r put §4.1 step 7's queue on screen and filed it under §6.8's Settings. That was the wrong
+room, and the amendment half-admitted it in its own second row: it added a sentence to §6.1's
+commit report because "nobody goes looking for a question they do not know exists" — and then
+left the question behind the one door in this app that a person opens twice a year.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.9 (new) | **§4.1 step 7's queue gets its own page**, and a badge in the rail carrying the number of questions waiting on it. | Settings is where the *app* is configured. This is where the *data* is corrected, and it is the only screen in the app that asks the user something it cannot work out for itself. The badge is the actual fix: a page is findable, but a queue has to be noticed. |
+| 6.8 | **Merchant aliases keeps only the re-normalize trigger**, still unbuilt for the reasons §9q gives. | The queue and the user-correction list were the halves of that section that were about the data. A sweep that rebuilds derived state is maintenance, and maintenance is what the rest of that page is. |
+| 6.1 | **The commit report points at Review**, not at Settings › Merchants. | Unchanged in substance, and worth keeping for the one thing the badge cannot do: the badge says a question exists, and only the import that raised it can say which one did. |
+
+**It sits fourth in the rail, not last.** §6.9 is the newest section and so the last one
+numbered, and putting it under Settings would have reproduced the burial in a different shape.
+It goes with Import, Accounts and Transactions — the pages about your data — which is also the
+order the work happens in: the questions Review asks are the ones the import raised, and
+answering them is what makes everything below it correct.
+
+**Where the count lives is the one real decision here**, and both obvious answers are wrong.
+*The page publishes it* fails at the only moment that matters: the badge is addressed to
+someone who has **not** been to the page, so a count published on load is a count you first see
+when you no longer need it. *The rail reads it privately* fails immediately after: a merge
+changes the count, and a rail that read once at startup goes on advertising work that is
+finished — with the page saying "nothing to review" two inches from a rail saying `1`. Two
+reads of one endpoint is two numbers that can disagree on one screen, which is worse than
+either of them being briefly stale.
+
+So the queue is held once, in a service both inject. The shell loads it at startup, §6.9
+re-reads it on entry and after a merge, and §6.1's commit re-reads it because a statement is
+what creates these questions in the first place — one request, moving the sentence and the
+badge together. **Not a timer poll**: this is a single-user local app and nothing outside this
+UI writes an alias, so a poll would spend a request every few seconds to be told what the page
+that caused the change already knew. And a failed re-read keeps the last known queue rather
+than emptying it, because "the API is not answering" and "you have nothing left to review" are
+different facts and only one of them belongs in a badge that has just gone quiet.
+
+**The badge counts questions, not context.** Merge candidates, and §4.2's LLM proposals when
+they exist. Not the provisional merchants, of which the first real statement has seventeen: a
+name the chain invented for itself is fine as long as it is spelled the same way every month,
+which is what §6.9 says on the same screen that lists them. `18` would be a badge nobody reads,
+and the number this one has to be right about is `1`.
+
+**The copy stopped citing the spec at the reader** on the way across. The cards had said "this
+is permanent and outranks anything the app works out on its own (§4.3)" and "§4.1 could not
+match these"; they now say those things in English. That is the rule the previous change set
+for §6.8's analyzer copy, and it applies here for the same reason — §-numbers are how this repo
+keeps its reasoning attached to its code, and they have no business on a page someone is
+reading about their own money.
+
+**And one thing turned out to be true already.** The move was to carry a fix with it: §6.1's
+import history was reported as showing the filename alone, which would make two statements from
+one bank indistinguishable. It does not — it has shown filename, status, account, statement
+period and row counts since it was built, confirmed in the running app against the real Chase
+import. The list that does name an import without naming its account is **§6.3's row expander**,
+under covering imports, where two cards at one bank exporting the same filename for the same
+month are genuinely two identical lines. That is where the account went instead.
 
 ## 10. Open discrepancies — recorded, not resolved
 

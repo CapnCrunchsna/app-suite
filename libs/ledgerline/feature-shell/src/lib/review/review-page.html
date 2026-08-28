@@ -1,0 +1,20 @@
+<div class="page">
+  <p class="lede">
+    Questions about your statements that the app will not answer for itself. Nothing here is a
+    setting — it is all about the data you imported, and an answer is permanent.
+  </p>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+
+  <ui-panel heading="Merchants">
+    @if (loading() && nothingHeld()) {
+      <p class="empty">Reading the queue…</p>
+    } @else if (failure() && nothingHeld()) {
+      <p class="empty empty--bad">The queue did not load: {{ $any(failure()).message }}</p>
+    } @else {
+      <ll-merchant-review [queue]="queue()" [busy]="busy()" (merge)="onMerge($event)" />
+    }
+  </ui-panel>
+</div>

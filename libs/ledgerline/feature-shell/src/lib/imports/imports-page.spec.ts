@@ -27,6 +27,7 @@ import type {
   FormatProfile,
   FormatProfilePreview,
   ImportReview,
+  MerchantReviewQueue,
   NearDuplicateCandidate,
   PreviewFormatProfileBody,
   RawRow,
@@ -256,11 +257,19 @@ class ApiStub {
   }
 
   /** §4.1 step 7. Empty by default: most commits raise no question, and the
-   *  callout must stay quiet then. */
+   *  callout must stay quiet then. The whole shape is returned rather than the one
+   *  field this page reads — it goes into `ReviewQueue`, which the rail's badge
+   *  also reads (§6.9). */
   mergeCandidateCount = 0;
-  getMerchantReviewQueue(): Promise<{ mergeCandidates: unknown[] }> {
+  getMerchantReviewQueue(): Promise<MerchantReviewQueue> {
     return Promise.resolve({
-      mergeCandidates: Array.from({ length: this.mergeCandidateCount }, () => ({})),
+      mergeCandidates: Array.from(
+        { length: this.mergeCandidateCount },
+        () => ({}) as MerchantReviewQueue['mergeCandidates'][number],
+      ),
+      provisional: [],
+      llmProposals: [],
+      llmProposalsUnavailableReason: null,
     });
   }
 
@@ -581,9 +590,9 @@ describe('ImportsPage', () => {
   });
 
   /**
-   * §4.1 step 7's queue lives on §6.8's Settings page, and nobody goes looking
-   * for a question they do not know exists. The import that created it is the
-   * moment to say so.
+   * §4.1 step 7's queue has its own page and a rail badge (§6.9, §9s). The badge
+   * says a question exists; only this can say which import raised it, which is why
+   * the sentence survived the move off Settings.
    */
   describe('the merchant questions a commit raises (§4.1, §9p)', () => {
     async function commit(candidates: number) {
@@ -604,14 +613,14 @@ describe('ImportsPage', () => {
 
       expect(notice).toContain('Committed');
       expect(notice).toContain('2 merchants may be');
-      expect(notice).toContain('Settings › Merchants');
+      expect(notice).toContain('see Review');
     });
 
     it('says nothing when it raised none', async () => {
       const notice = await commit(0);
 
       expect(notice).toContain('Committed');
-      expect(notice).not.toContain('Settings › Merchants');
+      expect(notice).not.toContain('see Review');
     });
 
     it('still reports the commit when the queue cannot be read', async () => {
@@ -621,7 +630,7 @@ describe('ImportsPage', () => {
       const notice = await commit(2);
 
       expect(notice).toContain('Committed');
-      expect(notice).not.toContain('Settings › Merchants');
+      expect(notice).not.toContain('see Review');
     });
   });
 

@@ -14,15 +14,17 @@
  *   exist in any form; there is no `none`/`claude-cli`/`ollama` to choose between and
  *   no health probe to call. A picker over three options that all do nothing would be
  *   a lie with a dropdown on it.
- * - **Merchant aliases** — built. §4.1 step 7's review queue reaches a person here:
- *   the pairs the chain could not tell apart, the merchants it named for itself, and
- *   the one action that resolves either (§4.3, §9p, §9q).
+ * - **Merchant aliases** — built, and **not here**. It lived on this page for a day
+ *   (§9r) and moved to §6.9's Review page the next (§9s). Settings is where you go to
+ *   configure the app; the review queue is where you go to answer a question about
+ *   your own data, and it needs to be noticed rather than found. It is not in
+ *   `UNBUILT` below for that reason: it exists, it is just not this page's.
  * - **Categories** — not built. Editing the taxonomy and assigning §5.4's overlap
  *   groups needs write endpoints §2.3 lists and §1 counts as missing.
  *
- * The three that remain are rendered as stated absences rather than omitted, for the
- * same reason the shell's rail renders an unbuilt section as a span: a page that
- * quietly lacks half its parts reads as a page that is finished.
+ * The three that remain unbuilt are rendered as stated absences rather than omitted,
+ * for the same reason the shell's rail renders an unbuilt section as a span: a page
+ * that quietly lacks half its parts reads as a page that is finished.
  *
  * Same split as the other five pages: the container owns all state and every request,
  * the children are presentational, and `LedgerlineApiService` is the one seam.
@@ -38,15 +40,13 @@ import {
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
 import { LedgerlineApiError } from '@metrum/api-client';
-import type { MerchantReviewQueue, Settings } from '@metrum/api-client';
+import type { Settings } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { AnalyzerSettings } from './analyzer-settings.js';
 import type { SettingChange } from './analyzer-settings.js';
 import { DataSettings } from './data-settings.js';
-import { MerchantReview } from './merchant-review.js';
 import type { DataAction } from './data-settings.js';
-import type { MergeRequest } from './merchant-review.js';
 
 /** §6.8's sections with nothing behind them yet, and the reason in each case. Stated
  *  rather than omitted — see the header. */
@@ -74,7 +74,7 @@ const UNBUILT = [
 
 @Component({
   selector: 'll-settings-page',
-  imports: [Panel, AnalyzerSettings, DataSettings, MerchantReview],
+  imports: [Panel, AnalyzerSettings, DataSettings],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
@@ -88,29 +88,6 @@ export class SettingsPage {
   protected readonly unbuilt = UNBUILT;
 
   private readonly revision = signal(0);
-
-  /**
-   * §4.1 step 7's queue. Its own resource rather than a field on the settings
-   * one: a merge changes what is worth reviewing but not a single threshold, and
-   * re-reading the whole settings surface to refresh a list of merchants would
-   * make `config_hash` appear to move when nothing about §5 changed.
-   *
-   * `defaultValue` is an empty queue, because "nothing to review" is a valid and
-   * common state and rendering it while the first read is in flight is honest.
-   */
-  private readonly reviewRevision = signal(0);
-  private readonly reviewResource = resource({
-    params: () => this.reviewRevision(),
-    loader: () => this.api.getMerchantReviewQueue(),
-    defaultValue: {
-      mergeCandidates: [],
-      provisional: [],
-      llmProposals: [],
-      llmProposalsUnavailableReason: null,
-    } satisfies MerchantReviewQueue,
-  });
-
-  protected readonly review = computed(() => this.reviewResource.value());
 
   /** No `defaultValue`: unlike the other pages there is no empty-but-valid Settings to
    *  render, and an invented one would show every threshold as zero for a frame. */
@@ -149,63 +126,6 @@ export class SettingsPage {
           : `${what}. Run an analysis to see it applied.`,
       );
     });
-  }
-
-  /**
-   * §4.3's correction, and the one write on this panel.
-   *
-   * The notice reports the count the *API* returned rather than the one the card
-   * showed. They should agree, and on the day they do not the user is owed the
-   * true number — a merge is permanent, and "47 charges moved" has to mean it.
-   *
-   * **The re-read waits for the job**, which is the difference between a card that
-   * disappears and one that sits there having apparently done nothing. The alias
-   * is written synchronously but the rows move in §4.3's re-normalize job, so a
-   * queue re-read issued the moment the POST returns still sees the old counts and
-   * proposes the merge that was just made. §2.7's answer is that the UI polls a
-   * job rather than blocking on it, and §6.4's Run analysis already runs this loop.
-   */
-  protected async onMerge(request: MergeRequest): Promise<void> {
-    await this.write(async () => {
-      const result = await this.api.mergeMerchant(request.mergeMerchantId, {
-        intoMerchantId: request.intoMerchantId,
-      });
-
-      const settled = await this.awaitJob(result.jobId);
-
-      this.notice.set(
-        `${request.mergeName} is now ${request.keepName}. ` +
-          `${result.transactionsAffected} ` +
-          `${result.transactionsAffected === 1 ? 'charge' : 'charges'} moved` +
-          (settled
-            ? ', and subscriptions and findings have been recalculated (§4.3).'
-            : '. Subscriptions and findings are still recalculating.'),
-      );
-      this.reviewRevision.update((n) => n + 1);
-    });
-  }
-
-  /**
-   * §2.7's poll. Returns whether the job actually landed, so the notice can say
-   * "have been" or "are still" rather than guessing.
-   *
-   * Bounded, and a timeout is not a failure: the work is queued and finishes
-   * whether or not this page is still watching. A merge that reported success and
-   * then threw because a poll ran out would be the worst of both.
-   */
-  private async awaitJob(jobId: string): Promise<boolean> {
-    let job = await this.api.getJob(jobId);
-
-    for (
-      let attempt = 0;
-      attempt < 60 && (job.state === 'queued' || job.state === 'running');
-      attempt += 1
-    ) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      job = await this.api.getJob(jobId);
-    }
-
-    return job.state === 'succeeded';
   }
 
   protected async onDataAction(action: DataAction): Promise<void> {

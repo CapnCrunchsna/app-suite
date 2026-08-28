@@ -1,9 +1,12 @@
 /**
- * §6.8's Merchant aliases section — §4.1 step 7's review queue, on screen.
+ * §4.1 step 7's review queue, on screen — the merchant half of §6.9's Review page.
  *
  * This is where the app stops pretending it can work everything out. §4.1's chain
  * is deliberately unable to decide whether two similar names are one merchant, so
  * the queue carries the question here and a person answers it once.
+ *
+ * Presentational, and it stayed that way through the move out of §6.8's Settings
+ * page (§9s): the container changed, the questions did not.
  *
  * ## Two decisions, both borrowed from §6.3's merchant edit
  *

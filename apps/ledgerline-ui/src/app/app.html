@@ -9,15 +9,26 @@
 
 <div class="shell">
   <nav class="rail" aria-label="Sections">
-    @for (section of sections; track section.label) { @if (section.path) {
+    @for (section of sections; track section.label) { @if (section.path) { @let badged =
+    section.badge && reviewCount() > 0;
     <a
       class="rail__item"
       [routerLink]="section.path"
       routerLinkActive="rail__item--active"
       #active="routerLinkActive"
       [attr.aria-current]="active.isActive ? 'page' : null"
+      [attr.aria-label]="
+        badged ? section.label + ', ' + reviewCount() + ' waiting for an answer' : null
+      "
     >
-      {{ section.label }}
+      <span class="rail__label">{{ section.label }}</span>
+      @if (badged) {
+      <!-- Decorative: the count is already in the link's own accessible name above,
+           and a bare number read out on its own says nothing. -->
+      <span class="rail__badge" aria-hidden="true" title="Waiting for an answer">
+        {{ reviewCount() }}
+      </span>
+      }
     </a>
     } @else {
     <span
@@ -25,7 +36,7 @@
       title="Not built yet — see spec section 6."
       aria-disabled="true"
     >
-      {{ section.label }}
+      <span class="rail__label">{{ section.label }}</span>
     </span>
     } }
   </nav>

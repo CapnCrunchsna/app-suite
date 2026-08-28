@@ -55,8 +55,8 @@
             {{ fold.transactionCount }}
             {{ fold.transactionCount === 1 ? 'charge moves' : 'charges move' }} to
             {{ keep.merchant.displayName }}, across your whole history. Subscriptions and findings
-            are recalculated afterwards. This is permanent and outranks anything the app works out
-            on its own (§4.3).
+            are recalculated afterwards. This is permanent, and it outranks anything the app works
+            out on its own — a later re-import or a better model will not undo it.
           </p>
 
           <div class="card__actions">
@@ -83,9 +83,10 @@
         Merchants the app named for itself ({{ provisional().length }})
       </h4>
       <p class="note">
-        §4.1 could not match these to anything it ships with, so it made a merchant out of the
-        cleaned descriptor. That is not a problem on its own — a stable name groups correctly even
-        when it is ugly — but it is where a wrong grouping would show up first.
+        These matched nothing the app ships with, so it made a merchant out of the cleaned-up
+        statement text. That is not a problem on its own — an ugly name still groups correctly, as
+        long as it is spelled the same way every month — but it is where a wrong grouping would
+        show up first.
       </p>
       <ul class="provisional__list">
         @for (entry of provisionalShown(); track entry.merchant.id) {

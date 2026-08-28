@@ -15,13 +15,6 @@
     }
   </ui-panel>
 
-  <!-- §6.8's Merchant aliases, which is §4.1 step 7's review queue with a person in
-       front of it. Above Data deliberately: it is the section with a question in it,
-       and a question belongs before housekeeping. -->
-  <ui-panel heading="Merchants">
-    <ll-merchant-review [queue]="review()" [busy]="busy()" (merge)="onMerge($event)" />
-  </ui-panel>
-
   <ui-panel heading="Data">
     @if (all) {
       <ll-data-settings

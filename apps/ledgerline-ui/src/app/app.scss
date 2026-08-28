@@ -53,6 +53,9 @@
 }
 
 .rail__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 14px;
   border: 1px solid transparent;
   border-radius: var(--radius);
@@ -63,6 +66,28 @@
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+}
+
+.rail__label {
+  flex: 1;
+  min-width: 0;
+}
+
+/* §6.9's "there is something to review here". Filled rather than outlined: the
+ * rail is otherwise all dim text on dim ground, which is right for navigation and
+ * wrong for the one item that is asking for something. It renders only when the
+ * count is above zero — a badge showing 0 is a badge you stop looking at. */
+.rail__badge {
+  flex: none;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 a.rail__item:hover {

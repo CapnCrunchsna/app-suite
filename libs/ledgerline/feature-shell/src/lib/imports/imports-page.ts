@@ -54,6 +54,7 @@ import type {
 } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
+import { ReviewQueue } from '../review/review-queue.service.js';
 import { ColumnMapper } from './column-mapper.js';
 import { ImportDropzone } from './import-dropzone.js';
 import type { StagedFileRow } from './import-dropzone.js';
@@ -77,6 +78,10 @@ import { reviewWarnings } from './review-warnings.js';
 })
 export class ImportsPage {
   private readonly api = inject(LedgerlineApiService);
+
+  /** §4.1 step 7's queue, shared with §6.9's page and the rail's badge. A commit
+   *  is one of the two things that changes it. */
+  private readonly reviewQueue = inject(ReviewQueue);
 
   protected readonly formatCents = formatCents;
 
@@ -389,31 +394,33 @@ export class ImportsPage {
   /**
    * §4.1 step 7, surfaced at the moment it is cheapest to act on.
    *
-   * The queue lives on §6.8's Settings page, which is where someone goes to
-   * *look* for it — and nobody goes looking for a question they do not know
-   * exists. A statement is the thing that creates these questions, so the import
-   * that created them is the honest place to say so.
+   * A statement is the thing that creates these questions, so the import that
+   * created them is the honest place to say so. That was the whole argument while
+   * the queue was a section of Settings (§9r) and it survives the move to §6.9's
+   * own page (§9s) — the rail badge now says a question exists, and this says
+   * *which import* raised it, which the badge cannot.
    *
    * Appended to the commit report rather than raised as its own banner: the count
    * that matters immediately is still the rows, and a second strip competing with
-   * the first is how a page teaches people to dismiss both. Failing to read the
-   * queue is deliberately silent — a commit that worked has worked, and it must
-   * not report a failure because an advisory count could not be fetched.
+   * the first is how a page teaches people to dismiss both.
+   *
+   * The re-read goes through `ReviewQueue` rather than the API directly, so one
+   * request updates this sentence and the rail's badge together. Failing is
+   * deliberately silent — the store keeps whatever it last held, and a commit that
+   * worked has worked; it must not report a failure because an advisory count
+   * could not be fetched.
    */
   private async reportMerchantQuestions(): Promise<void> {
-    try {
-      const { mergeCandidates } = await this.api.getMerchantReviewQueue();
-      if (mergeCandidates.length === 0) return;
+    await this.reviewQueue.refresh();
 
-      const count = mergeCandidates.length;
-      this.commitReport.update(
-        (report) =>
-          `${report ?? ''} ${count} ${count === 1 ? 'merchant may be' : 'merchants may be'} ` +
-          `the same as another under a different spelling — Settings › Merchants.`.trimStart(),
-      );
-    } catch {
-      // Advisory only. See above.
-    }
+    const count = this.reviewQueue.queue().mergeCandidates.length;
+    if (count === 0) return;
+
+    this.commitReport.update(
+      (report) =>
+        `${report ?? ''} ${count} ${count === 1 ? 'merchant may be' : 'merchants may be'} ` +
+        `the same as another under a different spelling — see Review.`.trimStart(),
+    );
   }
 
   protected async reparse(importId: string): Promise<void> {
