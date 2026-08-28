@@ -1,0 +1,12 @@
+{
+  "name": "ledgerline-llm",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ledgerline/llm/src",
+  "projectType": "library",
+  "tags": [
+    "scope:ll",
+    "type:llm"
+  ],
+  "// targets": "to see all targets run: nx show project ledgerline-llm --web",
+  "targets": {}
+}
