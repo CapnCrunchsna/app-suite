@@ -39,6 +39,14 @@ import { ref } from './schemas.js';
 import { ANALYZER_CONFIG_SETTING } from '../analysis-service.js';
 import type { ApiConfig } from '../config.js';
 import type { LedgerlineContext } from '../context.js';
+import {
+  LLM_PROVIDER_IDS,
+  createLlmProvider,
+  effectiveRedaction,
+  readLlmSettings,
+  writeLlmSettings,
+} from '../llm-service.js';
+import type { LlmSettings } from '../llm-service.js';
 
 type Section = keyof AnalyzerConfig;
 type Scalar = number | boolean;
@@ -47,6 +55,22 @@ interface ChangeBody {
   readonly section: string;
   readonly key: string;
   readonly value: Scalar | null;
+}
+
+/**
+ * §6.8's LLM provider section, as a partial patch.
+ *
+ * On the same endpoint as the thresholds because §2.3 puts it there — one row,
+ * "`GET /api/settings` · `PATCH`", purpose "Config, analyzer thresholds, provider
+ * health probe". Underneath they are two settings keys and that separation is the
+ * point: a provider change must not move `config_hash` (see `llm-service.ts`). So
+ * one request can carry both and the response says, truthfully, that only one of
+ * them disturbed §5.
+ */
+interface LlmChangeBody {
+  readonly providerId?: string;
+  readonly model?: string | null;
+  readonly redaction?: boolean;
 }
 
 /**
@@ -92,6 +116,32 @@ const fieldsOf = (section: unknown): Record<string, unknown> =>
 function storedOverride(context: LedgerlineContext): ConfigOverride {
   const raw = context.store.settings.get<ConfigOverride>(ANALYZER_CONFIG_SETTING);
   return raw && typeof raw === 'object' ? raw : {};
+}
+
+/**
+ * §6.8's provider section, with the two facts the page cannot derive.
+ *
+ * `sendsDataOffMachine` is read off the *built* provider rather than mapped from
+ * the id, because §2.4 puts it on the interface for exactly this reason: it is what
+ * the warning card and the header indicator both read, and a UI that inferred it
+ * would be a second implementation of the one fact that must never be wrong.
+ *
+ * `redactionLocked` reports §6.8's clamp — "not disableable while `claude-cli` is
+ * selected" — as a fact rather than leaving the page to re-derive it and disagree.
+ */
+function buildLlmSettings(context: LedgerlineContext) {
+  const stored = readLlmSettings(context);
+  const provider = createLlmProvider(context, { uncached: true });
+
+  return {
+    providerId: stored.providerId,
+    model: stored.model,
+    redaction: effectiveRedaction(stored),
+    redactionLocked: stored.providerId === 'claude-cli',
+    sendsDataOffMachine: provider.sendsDataOffMachine,
+    cachedResponses: context.store.llm.countCached(),
+    degradedCallCount: context.store.llm.countDegraded(),
+  };
 }
 
 function buildSettings(context: LedgerlineContext, config: ApiConfig) {
@@ -149,8 +199,56 @@ function buildSettings(context: LedgerlineContext, config: ApiConfig) {
     })),
     thresholds,
     unsettable,
+    llm: buildLlmSettings(context),
     databaseFile: config.databaseFile,
     backupDir: config.backupDir,
+  };
+}
+
+/**
+ * Validate and apply an LLM change, or say what is wrong with it.
+ *
+ * §6.8's clamp is enforced here rather than silently corrected: a request that asks
+ * to disable redaction while `claude-cli` is selected is refused with the reason,
+ * because quietly storing `true` after being told `false` is how a privacy control
+ * comes to be believed to be off when it is on. The opposite would be worse, and
+ * neither is as good as an error the page can print.
+ */
+function applyLlmChange(
+  context: LedgerlineContext,
+  change: LlmChangeBody,
+): { settings: LlmSettings } | { error: string } {
+  const current = readLlmSettings(context);
+
+  const providerId = change.providerId ?? current.providerId;
+  if (!LLM_PROVIDER_IDS.includes(providerId as (typeof LLM_PROVIDER_IDS)[number])) {
+    return {
+      error: `"${providerId}" is not a provider — spec 2.4 has ${LLM_PROVIDER_IDS.join(', ')}`,
+    };
+  }
+
+  const redaction = change.redaction ?? current.redaction;
+  if (providerId === 'claude-cli' && redaction === false) {
+    return {
+      error:
+        'Redaction cannot be disabled while the Claude CLI provider is selected (spec 6.8). ' +
+        'It is the provider that sends descriptors off this machine.',
+    };
+  }
+
+  const model =
+    change.model === undefined
+      ? current.model
+      : change.model === null || change.model.trim() === ''
+        ? null
+        : change.model.trim();
+
+  return {
+    settings: writeLlmSettings(context, {
+      providerId: providerId as LlmSettings['providerId'],
+      model,
+      redaction,
+    }),
   };
 }
 
@@ -218,22 +316,24 @@ export function registerSettingsRoutes(
     async () => buildSettings(context, config),
   );
 
-  app.patch<{ Body: { changes: ChangeBody[] } }>(
+  app.patch<{ Body: { changes?: ChangeBody[]; llm?: LlmChangeBody } }>(
     '/api/settings',
     {
       schema: {
-        summary: 'Override a threshold, or switch a rule off',
+        summary: 'Override a threshold, switch a rule off, or choose an LLM provider',
         operationId: 'updateSettings',
         description:
-          'Both are the same write: a rule’s switch is a boolean field in that rule’s own ' +
-          'config section. A `null` value removes the override and restores the shipped ' +
-          'default. Every accepted change moves `config_hash`, which is what makes spec 5.1 ' +
-          're-evaluate that rule’s dismissed findings on the next run — the response says ' +
-          'whether the hash moved and how many dismissals are in scope.',
+          'The first two are the same write: a rule’s switch is a boolean field in that ' +
+          'rule’s own config section. A `null` value removes the override and restores the ' +
+          'shipped default. Every accepted threshold change moves `config_hash`, which is ' +
+          'what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — ' +
+          'the response says whether the hash moved and how many dismissals are in scope. ' +
+          'The provider is deliberately **not** part of that hash: choosing a different model ' +
+          'changes which descriptors resolve to which merchant, but not a single spec 5 ' +
+          'threshold, and folding it in would invalidate every dismissal in the database.',
         tags: ['settings'],
         body: {
           type: 'object',
-          required: ['changes'],
           properties: {
             changes: {
               type: 'array',
@@ -249,19 +349,38 @@ export function registerSettingsRoutes(
                 },
               },
             },
+            /** Spec 6.8's LLM provider and Redaction sections. Partial: an absent
+             *  field leaves that setting alone. */
+            llm: {
+              type: 'object',
+              properties: {
+                providerId: { type: 'string', enum: LLM_PROVIDER_IDS },
+                model: { type: ['string', 'null'] },
+                redaction: { type: 'boolean' },
+              },
+            },
           },
         },
         response: { 200: ref('SettingsUpdate'), ...errorResponses },
       },
     },
     async (request, reply) => {
-      const { changes } = request.body;
+      const changes = request.body.changes ?? [];
 
       // Validated as a set before anything is written: a half-applied batch would
       // leave the config in a state the user never asked for and could not name.
+      // The LLM half is validated in the same breath and for the same reason —
+      // one request, one verdict.
       const problems = changes.map(validate).filter((p): p is string => p !== null);
       if (problems.length > 0) {
         return reply.code(422).send({ error: 'invalid_setting', message: problems.join('; ') });
+      }
+
+      if (request.body.llm) {
+        const outcome = applyLlmChange(context, request.body.llm);
+        if ('error' in outcome) {
+          return reply.code(422).send({ error: 'invalid_setting', message: outcome.error });
+        }
       }
 
       const before = configHash(resolveConfig(storedOverride(context)));

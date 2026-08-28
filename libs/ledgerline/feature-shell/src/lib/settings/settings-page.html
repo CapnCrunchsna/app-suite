@@ -15,21 +15,38 @@
     }
   </ui-panel>
 
+  <!-- §6.8's LLM provider and Redaction. Above Data because it is the section with a
+       decision in it, and a decision belongs before housekeeping — and because the
+       degraded-call log below only means anything once a provider is chosen. -->
+  <ui-panel heading="AI assistance">
+    @if (all) {
+      <ll-llm-settings
+        [settings]="all.llm"
+        [busy]="busy()"
+        [health]="health()"
+        [probing]="probing()"
+        (changed)="onLlmChanged($event)"
+        (tested)="onTestConnection()"
+      />
+    }
+  </ui-panel>
+
   <ui-panel heading="Data">
     @if (all) {
       <ll-data-settings
         [settings]="all"
         [busy]="busy()"
         [lastBackupPath]="lastBackupPath()"
+        [degradedCalls]="degradedCalls()"
         (acted)="onDataAction($event)"
       />
     }
   </ui-panel>
 
-  <!-- §6.8's remaining three sections, stated rather than omitted. -->
+  <!-- §6.8's one remaining section, stated rather than omitted. -->
   <ui-panel heading="Not built yet">
     <p class="empty">
-      §6.8 names six sections. These three have nothing underneath them, and a control that does
+      §6.8 names six sections. This one has nothing underneath it, and a control that does
       nothing is worse than an absence that explains itself.
     </p>
     <dl class="pending">

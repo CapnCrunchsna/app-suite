@@ -208,7 +208,7 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
   async function analyze(): Promise<void> {
     const response = await app.inject({ method: 'POST', url: '/api/analysis/run' });
     expect(response.statusCode).toBe(202);
-    context.jobRunner.drain();
+    await context.jobRunner.drain();
 
     const job = await app.inject({
       method: 'GET',
@@ -965,7 +965,7 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
 
       // The message §6.3 used to have to show — "the job runner is not built yet,
       // so it stays queued" — is what this test exists to make false.
-      context.jobRunner.drain();
+      await context.jobRunner.drain();
 
       const job = context.store.jobs.get(queued[0].id);
       expect(job).toMatchObject({ state: 'succeeded', progress: 100 });
@@ -1023,7 +1023,7 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
         url: `/api/transactions/${spotifyRows[1].id}`,
         payload: { merchantId: 'apple' },
       });
-      context.jobRunner.drain();
+      await context.jobRunner.drain();
 
       const after = (
         (
@@ -1059,7 +1059,7 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
         mergePayload: () => null,
       });
 
-      new JobRunner(context, {}).drain();
+      await new JobRunner(context, {}).drain();
 
       expect(context.store.jobs.get(job.id)).toMatchObject({
         state: 'failed',
@@ -1073,7 +1073,7 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
         mergePayload: () => null,
       });
 
-      new JobRunner(context, {
+      await new JobRunner(context, {
         analysis: () => {
           throw new Error('the snapshot could not be loaded');
         },

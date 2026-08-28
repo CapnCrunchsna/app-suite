@@ -2,8 +2,26 @@
   <span class="header__brand">Ledgerline</span>
   <span class="header__tagline">local statement analyzer</span>
   <span class="header__spacer"></span>
-  <span class="header__provider" [class.header__provider--remote]="llmProvider() === 'claude-cli'">
-    LLM: {{ llmProvider() }}
+  <!-- §6.8: "While it's active, a persistent indicator sits in the app header."
+       Worded as what happens to the data rather than as a provider name — "LLM:
+       claude-cli" tells a passer-by nothing, and this line exists to be read by
+       someone who is not thinking about it. -->
+  <span
+    class="header__provider"
+    [class.header__provider--remote]="sendsDataOffMachine()"
+    [title]="
+      sendsDataOffMachine()
+        ? 'Merchant descriptors are sent to Anthropic when you ask for suggestions. Change this in Settings.'
+        : 'Nothing leaves this machine.'
+    "
+  >
+    @if (sendsDataOffMachine()) {
+      Sending data off this machine
+    } @else if (llmProvider() === 'ollama') {
+      AI on this machine
+    } @else {
+      Local only
+    }
   </span>
 </header>
 

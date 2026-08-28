@@ -142,7 +142,7 @@ export interface MergeCandidate {
 export interface MerchantReviewQueue {
   readonly mergeCandidates: MergeCandidate[];
   readonly provisional: ReviewMerchant[];
-  readonly llmProposals: Record<string, unknown>[];
+  readonly llmProposals: LlmProposal[];
   readonly llmProposalsUnavailableReason: string | null;
 }
 
@@ -520,11 +520,69 @@ export interface SettingRule {
   readonly dismissedFindings: number;
 }
 
+export interface LlmSettings {
+  readonly providerId: 'none' | 'claude-cli' | 'ollama';
+  readonly model: string | null;
+  readonly redaction: boolean;
+  readonly redactionLocked: boolean;
+  readonly sendsDataOffMachine: boolean;
+  readonly cachedResponses: number;
+  readonly degradedCallCount: number;
+}
+
+export interface LlmHealth {
+  readonly providerId: 'none' | 'claude-cli' | 'ollama';
+  readonly ok: boolean;
+  readonly detail: string;
+  readonly model: string | null;
+  readonly sendsDataOffMachine: boolean;
+  readonly capabilities: string[];
+}
+
+export interface DegradedCall {
+  readonly id: string;
+  readonly at: string;
+  readonly provider: string;
+  readonly operation: string;
+  readonly reason: string;
+}
+
+export interface DegradedCallLog {
+  readonly entries: DegradedCall[];
+  readonly total: number;
+}
+
+export interface LlmProposal {
+  readonly id: string;
+  readonly descriptor: string;
+  readonly merchantName: string;
+  readonly categoryName: string | null;
+  readonly confidence: number;
+  readonly status: 'pending' | 'applied' | 'blocked' | 'rejected';
+  readonly blockedReason: string | null;
+  readonly provider: string;
+  readonly model: string;
+}
+
+export interface LlmProposalRun {
+  readonly providerId: string;
+  readonly model: string;
+  readonly descriptorsConsidered: number;
+  readonly withheldP2P: number;
+  readonly batches: number;
+  readonly proposalsReceived: number;
+  readonly applied: number;
+  readonly queuedForReview: number;
+  readonly degraded: boolean;
+  readonly jobId: string | null;
+}
+
 export interface Settings {
   readonly configHash: string;
   readonly rules: SettingRule[];
   readonly thresholds: SettingThreshold[];
   readonly unsettable: SettingUnsettable[];
+  readonly llm: LlmSettings;
   readonly databaseFile: string;
   readonly backupDir: string;
 }

@@ -168,3 +168,58 @@
   color: var(--text-dim, #7ea8a1);
   white-space: nowrap;
 }
+
+/* §4.2's proposals. Same rule as the provisional list — a divider rather than a
+ * card, because nothing here is a button and a boxed row that cannot be acted on
+ * reads as a control that does not work. */
+.proposals {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.proposals__title {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+}
+
+.proposals__list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.proposal__claim {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.proposal__claim code {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.proposal__confidence {
+  margin-left: 6px;
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.proposal__reason {
+  margin: 3px 0 0;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* The one that no threshold releases, marked so it does not read as the same
+ * kind of "not yet" as the sub-floor list above it. */
+.proposal--blocked {
+  padding-left: 8px;
+  border-left: 2px solid var(--warn, #d9a441);
+}

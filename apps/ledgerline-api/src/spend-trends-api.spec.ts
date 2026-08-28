@@ -154,7 +154,7 @@ describe('§5.10 and §5.11 over a multi-year corpus (§7.2, §9h)', () => {
   async function analyze(): Promise<void> {
     const response = await app.inject({ method: 'POST', url: '/api/analysis/run' });
     expect(response.statusCode).toBe(202);
-    context.jobRunner.drain();
+    await context.jobRunner.drain();
   }
 
   async function findings(): Promise<FindingShape[]> {

@@ -1,6 +1,6 @@
 @let review = queue();
 
-@if (candidates().length === 0 && provisional().length === 0) {
+@if (empty()) {
   <p class="note">
     Nothing to review. Every descriptor resolved to a merchant the chain was sure about.
   </p>
@@ -106,6 +106,60 @@
       }
     </section>
   }
+}
+
+<!-- §4.2's proposals. Read-only, like everything else here: the queue proposes and
+     §4.3 owns every write, so these are resolved by assigning the merchant on the
+     Transactions page rather than by a button that would be a second alias path. -->
+@if (llmBlocked().length > 0) {
+  <section class="proposals">
+    <h4 class="proposals__title">
+      Held back from a settled subscription ({{ llmBlocked().length }})
+    </h4>
+    <p class="note">
+      The app was confident enough to regroup these, and did not. Each one would have changed a
+      subscription with a settled history behind it, and rewriting years of a subscription on a
+      suggestion is not something it will do on its own — however sure it is.
+    </p>
+    <ul class="proposals__list">
+      @for (proposal of llmBlocked(); track proposal.id) {
+        <li class="proposal proposal--blocked">
+          <p class="proposal__claim">
+            <code>{{ proposal.descriptor }}</code> looks like
+            <strong>{{ proposal.merchantName }}</strong>
+          </p>
+          @if (proposal.blockedReason) {
+            <p class="proposal__reason">{{ proposal.blockedReason }}</p>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+@if (llmPending().length > 0) {
+  <section class="proposals">
+    <h4 class="proposals__title">Suggestions the app was not sure enough about ({{ llmPending().length }})</h4>
+    <p class="note">
+      Below the confidence it needs to regroup anything by itself, so nothing here has been
+      applied. They are worth a look because a name you recognise is usually right even when the
+      app is unsure — assign the merchant on the Transactions page and the whole history follows.
+    </p>
+    <ul class="proposals__list">
+      @for (proposal of llmPending(); track proposal.id) {
+        <li class="proposal">
+          <p class="proposal__claim">
+            <code>{{ proposal.descriptor }}</code> may be
+            <strong>{{ proposal.merchantName }}</strong>
+            <span class="proposal__confidence">{{ confidenceOf(proposal.confidence) }}</span>
+          </p>
+          @if (proposal.blockedReason) {
+            <p class="proposal__reason">{{ proposal.blockedReason }}</p>
+          }
+        </li>
+      }
+    </ul>
+  </section>
 }
 
 @if (review.llmProposalsUnavailableReason) {

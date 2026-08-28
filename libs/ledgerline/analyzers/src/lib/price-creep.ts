@@ -35,6 +35,7 @@ import type { AnalyzerConfig } from './config.js';
 import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
 import type { PriceStep, RecurringSeries } from './recurrence.js';
+import { llmAttributedIds } from './snapshot.js';
 import type { Snapshot } from './snapshot.js';
 
 export const PRICE_CREEP_RULE_ID = 'price_creep.v1';
@@ -142,7 +143,9 @@ export function analyzePriceCreep(
   }
 
   return {
-    emission: applyEmissionPolicy(PRICE_CREEP_RULE_ID, drafts, config),
+    emission: applyEmissionPolicy(PRICE_CREEP_RULE_ID, drafts, config, {
+      llmAttributed: llmAttributedIds(snapshot),
+    }),
     reportedFirstTransitionSeriesIds: reportedFirstTransition,
   };
 }

@@ -39,6 +39,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 3, name: '003-transfer-link-detail' },
   { version: 4, name: '004-format-profile-period-pattern' },
   { version: 5, name: '005-recurring-series-charge-history' },
+  { version: 6, name: '006-llm-degraded-call-and-proposal' },
 ];
 
 /**

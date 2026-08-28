@@ -29,13 +29,28 @@ import type { MergeSubject } from '@metrum/ledgerline-normalize';
 import { errorResponses } from './errors.js';
 import { ref } from './schemas.js';
 import type { LedgerlineContext } from '../context.js';
+import { readLlmSettings } from '../llm-service.js';
 import { enqueueRenormalize, writeUserMerchantAlias } from '../merchant-corrections.js';
 
-/** §4.2's stage needs §2.4's provider seam, which is not built. Stated on the
- *  response rather than omitted, for the reason §6.8 gives about absences. */
-const LLM_PROPOSALS_UNAVAILABLE =
-  'Spec 4.2’s LLM stage needs spec 2.4’s provider seam, which is not built. No ' +
-  'descriptor has been sent anywhere, so there are no proposals to review.';
+/**
+ * Why the LLM half of the queue is empty, when it is.
+ *
+ * `none` is the default and is not a failure — §2.4 makes it "a real
+ * implementation, not a null", and an app that has never been pointed at a
+ * provider has correctly sent nothing anywhere. Saying so is the difference
+ * between a feature that looks broken and one that is switched off, which is the
+ * same argument §6.8 makes about stated absences.
+ */
+function llmProposalsUnavailableReason(providerId: string, proposals: number): string | null {
+  if (proposals > 0) return null;
+  if (providerId === 'none') {
+    return (
+      'No LLM provider is configured, so no descriptor has left this machine and there is ' +
+      'nothing to review. Choose a provider in the LLM section above to change that.'
+    );
+  }
+  return null;
+}
 
 export function registerMerchantRoutes(app: FastifyInstance, context: LedgerlineContext): void {
   app.get(
@@ -95,6 +110,7 @@ export function registerMerchantRoutes(app: FastifyInstance, context: Ledgerline
 
       const byId = new Map(subjects.map((subject) => [subject.merchantId, subject]));
       const merchants = new Map(context.store.merchants.list().map((row) => [row.id, row]));
+      const llmProposals = context.store.llm.listProposals(['pending', 'blocked']);
 
       const describe = (subject: MergeSubject) => ({
         merchant: merchants.get(subject.merchantId),
@@ -120,8 +136,16 @@ export function registerMerchantRoutes(app: FastifyInstance, context: Ledgerline
           .filter((subject) => subject.source === 'rule')
           .sort((a, b) => b.transactionCount - a.transactionCount)
           .map(describe),
-        llmProposals: [],
-        llmProposalsUnavailableReason: LLM_PROPOSALS_UNAVAILABLE,
+        // §2.3's "sub-floor LLM proposals", which §4.2 says "sit in the review
+        // queue and apply to nothing" — plus everything the settled-series
+        // exception withheld at any confidence. `applied` is excluded: it wrote an
+        // alias and is visible as one, and a queue that listed answered questions
+        // is a queue nobody finishes reading.
+        llmProposals,
+        llmProposalsUnavailableReason: llmProposalsUnavailableReason(
+          readLlmSettings(context).providerId,
+          llmProposals.length,
+        ),
       };
     },
   );

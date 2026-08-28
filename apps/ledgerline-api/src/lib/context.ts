@@ -14,11 +14,13 @@ import { join } from 'node:path';
 
 import { LedgerlineStore } from '@metrum/ledgerline-data';
 import type { FormatProfileRecord } from '@metrum/ledgerline-data';
+import type { LlmProvider } from '@metrum/ledgerline-llm';
 import { SEED_ALIASES, SEED_CATEGORIES, SEED_MERCHANTS } from '@metrum/ledgerline-normalize';
 import { createNodeCsvParser, loadProfile } from '@metrum/ledgerline-parsing';
 import type { ColumnRef, ColumnRole, FormatProfile, ParserPort } from '@metrum/ledgerline-parsing';
 
 import { JobRunner } from './job-runner.js';
+import type { LlmSettings } from './llm-service.js';
 
 export interface LedgerlineContext {
   readonly store: LedgerlineStore;
@@ -29,6 +31,20 @@ export interface LedgerlineContext {
    *  job *does* is run the §4 chain and the §5 rules, and `data` may reach
    *  neither (§2.2) — the queue is a table, the runner is composition. */
   readonly jobRunner: JobRunner;
+  /**
+   * §2.4's provider, built from the configured settings — replaced by the specs.
+   *
+   * The same seam `OllamaProvider.fetchFn` and `ClaudeCliProvider.spawnFn` already
+   * are, one level up: "Injected for the spec. Production uses the global `fetch`."
+   * It exists a level up because those two are constructed *here*, from a settings
+   * row, so a spec that only replaced `fetch` still could not make
+   * `GET /api/llm/health` answer for a provider it is not allowed to start.
+   *
+   * That prohibition is not tidiness. `ClaudeCliProvider` sends merchant descriptors
+   * to Anthropic, and a suite that spawned it would do so on every `npm run check`.
+   * Production leaves this unset and gets §2.4's real three.
+   */
+  readonly llmProviderFactory?: (settings: LlmSettings) => LlmProvider;
   readonly profileLoadErrors: readonly string[];
   close(): void;
 }
@@ -36,6 +52,8 @@ export interface LedgerlineContext {
 export interface CreateContextOptions {
   readonly databaseFile: string;
   readonly profilesDir?: string | null;
+  /** See `LedgerlineContext.llmProviderFactory`. */
+  readonly llmProviderFactory?: (settings: LlmSettings) => LlmProvider;
 }
 
 /**
@@ -82,6 +100,7 @@ export function createContext(options: CreateContextOptions): LedgerlineContext 
     store,
     parsers: [csvParser],
     jobRunner: undefined as unknown as JobRunner,
+    llmProviderFactory: options.llmProviderFactory,
     profileLoadErrors,
     close: () => store.close(),
   };

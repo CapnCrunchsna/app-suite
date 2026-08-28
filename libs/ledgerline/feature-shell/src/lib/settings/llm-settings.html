@@ -1,0 +1,130 @@
+@let llm = settings();
+
+<p class="lede">
+  An optional model can suggest merchant names for descriptors the app’s own rules could not
+  place. It never decides anything on its own: every number in this app is produced without it,
+  and a suggestion either groups a descriptor the same way a person would have, or waits in the
+  review queue below.
+</p>
+
+<fieldset class="providers" [disabled]="busy()">
+  <legend class="providers__legend">Provider</legend>
+
+  @for (provider of providers; track provider.id) {
+    <label class="provider" [class.provider--selected]="selected() === provider.id">
+      <input
+        type="radio"
+        name="llm-provider"
+        class="provider__radio"
+        [value]="provider.id"
+        [checked]="selected() === provider.id"
+        (change)="pick(provider.id)"
+      />
+      <span class="provider__body">
+        <span class="provider__label">
+          {{ provider.label }}
+          @if (llm.providerId === provider.id) {
+            <span class="provider__current">in use</span>
+          }
+        </span>
+        <span class="provider__detail">{{ provider.detail }}</span>
+      </span>
+    </label>
+  }
+</fieldset>
+
+<!-- §6.8's card, quoted verbatim. Shown for the *armed* choice so it is read
+     before the click that commits, not after. -->
+@if (showsWarning()) {
+  <p class="warning" role="alert">
+    <strong class="warning__title">This sends your data off this machine</strong>
+    <span class="warning__body">{{ warning }}</span>
+  </p>
+}
+
+@if (showsModel()) {
+  <label class="model">
+    <span class="model__label">Model</span>
+    <input
+      type="text"
+      class="model__input"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="llama3.2:3b"
+      [disabled]="busy()"
+      [ngModel]="modelValue()"
+      (ngModelChange)="draftModel.set($event)"
+    />
+    <span class="model__note">
+      Leave empty for the default. It has to be pulled first — Test Connection says so if it is
+      not, and names the command.
+    </span>
+  </label>
+}
+
+@if (dirty()) {
+  <div class="actions">
+    <button type="button" class="button button--primary" [disabled]="busy()" (click)="apply()">
+      @if (selected() === 'claude-cli') {
+        Turn on Claude CLI and send descriptors to Anthropic
+      } @else if (selected() === 'none') {
+        Turn the provider off
+      } @else {
+        Use {{ selected() }}
+      }
+    </button>
+    <button type="button" class="button" [disabled]="busy()" (click)="cancel()">Cancel</button>
+  </div>
+}
+
+<div class="test">
+  <button type="button" class="button" [disabled]="probing()" (click)="test()">
+    {{ probing() ? 'Testing…' : 'Test connection' }}
+  </button>
+
+  @if (health(); as probe) {
+    <p class="test__result" [class.test__result--bad]="!probe.ok" role="status">
+      <span class="test__mark">{{ probe.ok ? '✓' : '✗' }}</span>
+      {{ probe.detail }}
+    </p>
+  }
+</div>
+
+<!-- §6.8's Redaction section. Its own block rather than a separate panel: it is a
+     property of what leaves, and it means nothing apart from the picker above. -->
+<section class="redaction">
+  <h4 class="redaction__title">Redaction</h4>
+  <p class="note">
+    Strips account and card numbers from a descriptor before it is sent, and never sends a
+    person-to-person payment at all — a Zelle or Venmo line names a person, not a merchant, and
+    masking half of a name still leaves a name.
+  </p>
+
+  <label class="redaction__toggle">
+    <input
+      type="checkbox"
+      [checked]="llm.redaction"
+      [disabled]="busy() || llm.redactionLocked"
+      (change)="toggleRedaction($any($event.target).checked)"
+    />
+    <span>Redact descriptors before sending them</span>
+  </label>
+
+  @if (llm.redactionLocked) {
+    <p class="note note--locked">
+      Locked on while the Claude CLI provider is selected. It is the provider that sends
+      descriptors off this machine, so this is not a choice it offers.
+    </p>
+  }
+</section>
+
+@if (llm.cachedResponses > 0 || llm.degradedCallCount > 0) {
+  <p class="note">
+    {{ llm.cachedResponses }} cached {{ llm.cachedResponses === 1 ? 'answer' : 'answers' }}, reused
+    rather than asked again.
+    @if (llm.degradedCallCount > 0) {
+      {{ llm.degradedCallCount }} {{ llm.degradedCallCount === 1 ? 'call has' : 'calls have' }}
+      fallen back to the app’s own rules — the log is in Data below.
+    }
+  </p>
+}

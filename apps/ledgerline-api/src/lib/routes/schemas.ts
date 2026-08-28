@@ -22,6 +22,19 @@
 
 import type { FastifyInstance } from 'fastify';
 
+/**
+ * The one enum below that is imported rather than restated.
+ *
+ * Every other list here is a wire contract this file owns. This one is a *type* in
+ * `@metrum/ledgerline-llm` — `LlmProviderId` — and `llm-service.ts` switches on it
+ * to decide which class to construct. A restated copy that fell out of step would
+ * not fail a type check; it would accept a provider id at the route boundary that
+ * the factory then silently resolved to `NoneProvider`.
+ */
+import { LLM_PROVIDER_IDS } from '../llm-service.js';
+
+export { LLM_PROVIDER_IDS };
+
 export const ACCOUNT_TYPES = ['checking', 'savings', 'credit_card'] as const;
 export const CATEGORY_KINDS = ['spend', 'fee', 'transfer', 'income'] as const;
 export const PROVENANCE_SOURCES = ['seed', 'rule', 'llm', 'user'] as const;
@@ -750,11 +763,12 @@ const merchantReviewQueue = {
     /** §4.1 step 7's provisional merchants — resolved by rule, never confirmed. */
     provisional: { type: 'array', items: ref('ReviewMerchant') },
     /**
-     * §2.3 lists this queue as carrying "sub-floor LLM proposals" too. §4.2's
-     * stage needs §2.4's provider seam, which is not built, so this is always
-     * empty and says why rather than omitting the field and changing shape later.
+     * §2.3's "sub-floor LLM proposals", plus everything §4.2's settled-series
+     * exception withheld at any confidence. Empty with the provider set to `none`,
+     * which is the default and is not a failure — `llmProposalsUnavailableReason`
+     * says which of the two an empty list means.
      */
-    llmProposals: { type: 'array', items: { type: 'object' } },
+    llmProposals: { type: 'array', items: ref('LlmProposal') },
     llmProposalsUnavailableReason: nullableString,
   },
 } as const;
@@ -978,6 +992,126 @@ const settingRule = {
   },
 } as const;
 
+/**
+ * Spec 6.8's LLM provider section, as the page reads it.
+ *
+ * `sendsDataOffMachine` comes off the built provider rather than being inferred
+ * from the id, for the reason `provider.ts` gives: it is the fact the warning card
+ * and the header indicator both read, and a UI that derived it would be a second
+ * implementation to keep in step with spec 2.4.
+ *
+ * `redaction` and `redactionLocked` are two fields because they are two facts —
+ * what the user chose, and whether the choice is available. Spec 6.8 makes
+ * redaction "not disableable while `claude-cli` is selected", and a single boolean
+ * would force the page to re-derive the clamp.
+ */
+const llmSettings = {
+  $id: 'LlmSettings',
+  type: 'object',
+  properties: {
+    providerId: { type: 'string', enum: LLM_PROVIDER_IDS },
+    /** Null means the provider's own default rather than a model this app named. */
+    model: nullableString,
+    redaction: { type: 'boolean' },
+    redactionLocked: { type: 'boolean' },
+    /** Spec 2.4: "Drives the UI warning. True only for claude-cli." */
+    sendsDataOffMachine: { type: 'boolean' },
+    /** Spec 2.4's cache, so spec 6.8 can say whether it is doing anything. */
+    cachedResponses: { type: 'integer' },
+    degradedCallCount: { type: 'integer' },
+  },
+} as const;
+
+/** Spec 2.4's `health()`, over HTTP — spec 6.8's Test Connection button. */
+const llmHealth = {
+  $id: 'LlmHealth',
+  type: 'object',
+  properties: {
+    providerId: { type: 'string', enum: LLM_PROVIDER_IDS },
+    ok: { type: 'boolean' },
+    /** The provider's own sentence, which names the fix where it can — Ollama's
+     *  health says `ollama pull <model>` rather than "model not found". */
+    detail: { type: 'string' },
+    model: nullableString,
+    sendsDataOffMachine: { type: 'boolean' },
+    capabilities: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+/** One entry in spec 6.8's degraded-LLM-call log. */
+const degradedCall = {
+  $id: 'DegradedCall',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    at: { type: 'string' },
+    provider: { type: 'string' },
+    /** The caller's words, not a stack frame (spec 2.4). */
+    operation: { type: 'string' },
+    reason: { type: 'string' },
+  },
+} as const;
+
+const degradedCallLog = {
+  $id: 'DegradedCallLog',
+  type: 'object',
+  properties: {
+    entries: { type: 'array', items: ref('DegradedCall') },
+    /** The list is capped; this is not. A run of failures is the signal, so the
+     *  page must be able to say "50 of 412" rather than implying 50 is all. */
+    total: { type: 'integer' },
+  },
+} as const;
+
+/**
+ * A spec 4.2 proposal that did not apply, and why.
+ *
+ * `pending` is the sub-floor case; `blocked` is the settled-series exception, which
+ * withholds "at any confidence". They are one list with two reasons rather than two
+ * lists, because a person reviewing them takes the same action either way — and the
+ * reason is the thing that has to differ, since raising a threshold would release
+ * one and not the other.
+ */
+const llmProposal = {
+  $id: 'LlmProposal',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    /** The normalized descriptor, which is also the alias key it would write. */
+    descriptor: { type: 'string' },
+    merchantName: { type: 'string' },
+    /** Spec 4.2 asks the model for one; nothing applies it yet — see spec 9s. */
+    categoryName: nullableString,
+    confidence: { type: 'number' },
+    status: { type: 'string', enum: ['pending', 'applied', 'blocked', 'rejected'] },
+    blockedReason: nullableString,
+    provider: { type: 'string' },
+    model: { type: 'string' },
+  },
+} as const;
+
+/** What one spec 4.2 run did. */
+const llmProposalRun = {
+  $id: 'LlmProposalRun',
+  type: 'object',
+  properties: {
+    providerId: { type: 'string' },
+    model: { type: 'string' },
+    descriptorsConsidered: { type: 'integer' },
+    /** Spec 2.4's P2P hard filter, counted rather than silent. */
+    withheldP2P: { type: 'integer' },
+    batches: { type: 'integer' },
+    proposalsReceived: { type: 'integer' },
+    applied: { type: 'integer' },
+    queuedForReview: { type: 'integer' },
+    /** True when every batch fell back — the provider did nothing, which looks
+     *  identical to "had nothing to add" in the counts alone. */
+    degraded: { type: 'boolean' },
+    /** Spec 4.3's re-normalize, when anything applied. Null when nothing did. */
+    jobId: nullableString,
+  },
+} as const;
+
 const settings = {
   $id: 'Settings',
   type: 'object',
@@ -987,6 +1121,10 @@ const settings = {
     rules: { type: 'array', items: ref('SettingRule') },
     thresholds: { type: 'array', items: ref('SettingThreshold') },
     unsettable: { type: 'array', items: ref('SettingUnsettable') },
+    /** Spec 6.8's LLM provider section. A separate settings key from the analyzer
+     *  config, so choosing a provider does not move `config_hash` — see
+     *  `llm-service.ts`. */
+    llm: ref('LlmSettings'),
     databaseFile: { type: 'string' },
     backupDir: { type: 'string' },
   },
@@ -1436,6 +1574,14 @@ const SHARED = [
   allRequired(settingThreshold),
   allRequired(settingUnsettable),
   allRequired(settingRule),
+  // §6.8's LLM provider, Redaction, and the degraded-call log in Data. Before
+  // `settings`, which `$ref`s the first of them.
+  allRequired(llmSettings),
+  allRequired(llmHealth),
+  allRequired(degradedCall),
+  allRequired(degradedCallLog),
+  allRequired(llmProposal),
+  allRequired(llmProposalRun),
   allRequired(settings),
   allRequired(settingsUpdate),
   allRequired(wipeResult),

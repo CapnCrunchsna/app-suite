@@ -125,3 +125,56 @@
   color: var(--surface-1, #0e2427);
   font-weight: 600;
 }
+
+/* §6.8's degraded-LLM-call log. A dense three-column list rather than cards: it is
+ * read as a pattern over time — a run of failures on one day — and cards would put
+ * one event per screenful. */
+.degraded {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.degraded__title {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+}
+
+.degraded__list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.degraded__entry {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  gap: 10px;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .degraded__entry {
+    grid-template-columns: 1fr;
+    gap: 1px;
+  }
+}
+
+.degraded__when {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.degraded__what {
+  color: var(--text, #dcefeb);
+  white-space: nowrap;
+}
+
+.degraded__why {
+  color: var(--text-dim, #7ea8a1);
+  overflow-wrap: anywhere;
+}

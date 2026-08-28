@@ -1,0 +1,223 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.lede {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.providers {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.providers__legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* One box per option, because the difference between them is a paragraph rather
+ * than a word — a bare dropdown would hide the only thing worth reading. */
+.provider {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface-2, #143034);
+  cursor: pointer;
+}
+
+.provider--selected {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.provider__radio {
+  margin: 3px 0 0;
+  accent-color: var(--accent, #2dd4bf);
+}
+
+.provider__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.provider__label {
+  font-size: 0.82rem;
+  color: var(--text, #dcefeb);
+}
+
+.provider__current {
+  margin-left: 6px;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.provider__detail {
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* §6.8 asks for this to be "prominent", and prominence here means an amber edge
+ * and a headline that states the consequence — not a colour alone, which a reader
+ * skimming for controls will pass over. */
+.warning {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--warn, #d9a441);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warn, #d9a441) 8%, transparent);
+}
+
+.warning__title {
+  font-size: 0.78rem;
+  color: var(--warn, #d9a441);
+}
+
+.warning__body {
+  font-size: 0.74rem;
+  color: var(--text, #dcefeb);
+}
+
+.model {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.model__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.model__input {
+  padding: 5px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.model__note {
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.button {
+  padding: 5px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button--primary {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.test {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.test__result {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.test__mark {
+  margin-right: 4px;
+  color: var(--accent-2, #34d399);
+}
+
+.test__result--bad .test__mark {
+  color: var(--warn, #d9a441);
+}
+
+.redaction {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.redaction__title {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+}
+
+.redaction__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.redaction__toggle input {
+  accent-color: var(--accent, #2dd4bf);
+}
+
+.redaction__toggle input:disabled + span {
+  color: var(--text-dim, #7ea8a1);
+}
+
+.note--locked {
+  color: var(--warn, #d9a441);
+}

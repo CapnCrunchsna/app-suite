@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { LedgerlineApiService } from '@metrum/ledgerline-feature-shell';
-import type { MerchantReviewQueue } from '@metrum/api-client';
+import type { MerchantReviewQueue, Settings } from '@metrum/api-client';
 import { App } from './app';
 import { appRoutes } from './app.routes';
 
@@ -13,10 +13,12 @@ import { appRoutes } from './app.routes';
  * the guard has to sit wherever `ui-panel` is actually rendered. Its reasoning is
  * unchanged and is written out there; see also `apps/ledgerline-ui/README.md`.
  *
- * The API is stubbed here for one reason: §6.9's rail badge (§9s). The shell reads
- * a count at startup, which is the whole point of the badge, and a shell spec that
- * reached the network to render its own navigation would be a spec that fails when
- * nothing is serving.
+ * The API is stubbed here for two reasons, and they are the only two things the
+ * shell reads. §6.9's rail badge (§9s) needs a count at startup, which is the whole
+ * point of the badge. §6.8's provider indicator (§9t) needs the settings row,
+ * because which provider is configured is a fact about the *server* rather than UI
+ * state. A shell spec that reached the network to render its own navigation would
+ * be a spec that fails when nothing is serving.
  */
 function queueOf(mergeCandidates: number): MerchantReviewQueue {
   return {
@@ -51,20 +53,52 @@ function reviewMerchant(id: string, name: string, transactionCount: number) {
   };
 }
 
+function settingsWith(llm: Partial<Settings['llm']>): Settings {
+  return {
+    configHash: 'abc0123456789def',
+    rules: [],
+    thresholds: [],
+    unsettable: [],
+    llm: {
+      providerId: 'none',
+      model: null,
+      redaction: true,
+      redactionLocked: false,
+      sendsDataOffMachine: false,
+      cachedResponses: 0,
+      degradedCallCount: 0,
+      ...llm,
+    },
+    databaseFile: ':memory:',
+    backupDir: '',
+  } as Settings;
+}
+
+/** The two reads the shell makes, in one stub. */
+class ApiStub {
+  queue: MerchantReviewQueue = queueOf(1);
+  settings: Settings = settingsWith({});
+
+  getMerchantReviewQueue(): Promise<MerchantReviewQueue> {
+    return Promise.resolve(this.queue);
+  }
+
+  getSettings(): Promise<Settings> {
+    return Promise.resolve(this.settings);
+  }
+}
+
 describe('App', () => {
-  let queue: MerchantReviewQueue;
+  let api: ApiStub;
 
   beforeEach(async () => {
-    queue = queueOf(1);
+    api = new ApiStub();
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideRouter(appRoutes),
-        {
-          provide: LedgerlineApiService,
-          useValue: { getMerchantReviewQueue: () => Promise.resolve(queue) },
-        },
+        { provide: LedgerlineApiService, useValue: api },
       ],
     }).compileComponents();
   });
@@ -82,8 +116,35 @@ describe('App', () => {
     const el = await render();
 
     expect(el.querySelector('.header__brand')?.textContent).toContain('Ledgerline');
-    // §6.8 — the provider indicator is persistent, not Settings-only.
-    expect(el.querySelector('.header__provider')?.textContent).toContain('LLM: none');
+    // §6.8 — the provider indicator is persistent, not Settings-only. It is worded
+    // as what happens to the data rather than as a provider name, because it is
+    // read by someone who is not thinking about providers.
+    expect(el.querySelector('.header__provider')?.textContent).toContain('Local only');
+  });
+
+  /**
+   * §6.8: "While it's active, a persistent indicator sits in the app header."
+   *
+   * Driven off `sendsDataOffMachine` rather than off the provider id, which is
+   * §2.4's reason for putting that flag on the interface at all: one fact, one
+   * source, and no UI re-deriving the thing that must never be wrong.
+   */
+  it('marks the header when the provider sends data off this machine', async () => {
+    api.settings = settingsWith({ providerId: 'claude-cli', sendsDataOffMachine: true });
+    const el = await render();
+
+    const badge = el.querySelector('.header__provider');
+    expect(badge?.textContent).toContain('Sending data off this machine');
+    expect(badge?.classList.contains('header__provider--remote')).toBe(true);
+  });
+
+  it('says a local model is local, which is not the same as none', async () => {
+    api.settings = settingsWith({ providerId: 'ollama', sendsDataOffMachine: false });
+    const el = await render();
+
+    const badge = el.querySelector('.header__provider');
+    expect(badge?.textContent).toContain('AI on this machine');
+    expect(badge?.classList.contains('header__provider--remote')).toBe(false);
   });
 
   // §6.9's Review is last in the spec and fourth here: it is about your data, not
@@ -134,14 +195,14 @@ describe('App', () => {
     });
 
     it('counts the questions and not the provisional merchants beside them', async () => {
-      queue = queueOf(2);
+      api.queue = queueOf(2);
       const el = await render();
 
       expect(el.querySelector('.rail__badge')?.textContent?.trim()).toBe('2');
     });
 
     it('renders nothing at all when the queue is empty', async () => {
-      queue = queueOf(0);
+      api.queue = queueOf(0);
       const el = await render();
 
       // Not a zero. A badge showing 0 is a badge you stop looking at.

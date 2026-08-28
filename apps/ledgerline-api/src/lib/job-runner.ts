@@ -37,14 +37,23 @@
  * first. **Uncalibrated** in the §7.6 sense, like every other number that has not
  * been run against real statements.
  *
- * ## Why it is still fully synchronous once started
+ * ## One runner at a time, which is what the synchronous rule was protecting
  *
- * Every handler is synchronous, and that is a property worth keeping rather than
- * an accident of `better-sqlite3`. A job that yielded mid-run would let a second
- * drain claim the next job and interleave two writers over one SQLite
- * connection — which is precisely the concurrency §2.7 avoided by not having a
- * broker. `draining` is the flag that keeps two scheduled drains from becoming
- * two runners.
+ * Every handler used to be synchronous, and the argument for it was concurrency:
+ * "a job that yielded mid-run would let a second drain claim the next job and
+ * interleave two writers over one SQLite connection — which is precisely the
+ * concurrency §2.7 avoided by not having a broker." §4.2's stage cannot be
+ * synchronous; it awaits a subprocess or an HTTP call by construction (§2.4), and
+ * §2.7's own reasoning is *why* it is a job rather than a request.
+ *
+ * So the guard moved down to what it was actually guarding. `draining` is now held
+ * across the awaits, so there is still exactly one runner and no second drain can
+ * claim the next job — which is the property that sentence names. What is no longer
+ * true is that a job cannot be interleaved with an HTTP request, and that turns out
+ * to be the safe half: a handler's writes are still synchronous between awaits, and
+ * the one thing a concurrent request could change under §4.2 is the alias table,
+ * where §4.3's precedence already settles the race in the user's favour — an `llm`
+ * write never overwrites a `user` one. Recorded in §9s.
  *
  * ## Failure is a job state, not an exception
  *
@@ -58,6 +67,7 @@ import type { JobRecord, LedgerlineStore } from '@metrum/ledgerline-data';
 
 import { runAnalysis } from './analysis-service.js';
 import type { LedgerlineContext } from './context.js';
+import { runLlmMerchantProposals } from './llm-merchants.js';
 import { runRenormalize } from './merchant-corrections.js';
 import type { RenormalizePayload } from './merchant-corrections.js';
 
@@ -68,7 +78,12 @@ export type JobHandler = (
   job: JobRecord,
   report: ProgressReporter,
   context: LedgerlineContext,
-) => unknown;
+) => unknown | Promise<unknown>;
+
+/** §4.2's stage, as a job kind. Named rather than spelled at both the route and
+ *  the handler, because a typo in one of two string literals is a job that
+ *  enqueues and then fails with "no handler". */
+export const LLM_PROPOSAL_JOB = 'llm-normalize';
 
 /**
  * A ceiling on one drain, so a handler that enqueues its own kind cannot spin the
@@ -111,6 +126,17 @@ export const JOB_HANDLERS: Readonly<Record<string, JobHandler>> = {
   },
 
   analysis: (_job, report, context) => runAnalysis(context, report),
+
+  /**
+   * §4.2's stage. The only asynchronous handler, and the reason the runner is —
+   * §2.4's providers are a subprocess and an HTTP call.
+   *
+   * It does *not* re-run the analysis itself. Applying an alias enqueues §4.3's
+   * re-normalize (see `runLlmMerchantProposals`), and that job already ends in a
+   * full analysis; doing both here would run §5 twice over the same data and
+   * publish the intermediate one.
+   */
+  [LLM_PROPOSAL_JOB]: (_job, report, context) => runLlmMerchantProposals(context, { report }),
 };
 
 export class JobRunner {
@@ -133,7 +159,7 @@ export class JobRunner {
    * scheduled drain would be a suite that sleeps, and the assertion "one
    * correction produces one converged analysis" does not need a timer to be true.
    */
-  runNext(): JobRecord | null {
+  async runNext(): Promise<JobRecord | null> {
     const job = this.store.jobs.claimNext();
     if (!job) return null;
 
@@ -143,7 +169,9 @@ export class JobRunner {
     }
 
     try {
-      const result = handler(
+      // `await` on a synchronous handler's return value is a microtask and
+      // nothing else, so the two existing handlers behave exactly as before.
+      const result = await handler(
         job,
         (progress, message) => {
           this.store.jobs.reportProgress(job.id, progress, message);
@@ -157,14 +185,15 @@ export class JobRunner {
   }
 
   /** Run until the queue is empty. Re-entrant calls are a no-op rather than a
-   *  second runner (see the header). */
-  drain(): number {
+   *  second runner — `draining` is held across the awaits, which is the whole of
+   *  the guarantee described in the header. */
+  async drain(): Promise<number> {
     if (this.draining) return 0;
     this.draining = true;
 
     try {
       let ran = 0;
-      while (ran < MAX_JOBS_PER_DRAIN && this.runNext() !== null) ran += 1;
+      while (ran < MAX_JOBS_PER_DRAIN && (await this.runNext()) !== null) ran += 1;
       return ran;
     } finally {
       this.draining = false;
@@ -186,12 +215,11 @@ export class JobRunner {
 
     setTimeout(() => {
       this.scheduled = false;
-      try {
-        this.drain();
-      } catch {
-        // `drain` marks each job's own failure; reaching here means the store
-        // itself is unusable, and there is no job left to record it against.
-      }
+      // `drain` marks each job's own failure, so a rejection here means the store
+      // itself is unusable and there is no job left to record it against. Caught
+      // rather than left to become an unhandled rejection, which would take the
+      // API down for a diagnostic.
+      void this.drain().catch(() => undefined);
     }, COALESCE_WINDOW_MS).unref();
   }
 }

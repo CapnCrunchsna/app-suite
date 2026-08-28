@@ -32,9 +32,13 @@
   color: var(--text-dim);
 }
 
+/* Amber, not the accent green. The green in this palette means "good" everywhere
+ * else in the app, and the one state this badge exists to mark is the one a user
+ * might want to reconsider — spec 6.8 puts it in the header precisely so it is
+ * noticed. */
 .header__provider--remote {
-  border-color: var(--accent-2);
-  color: var(--accent-2);
+  border-color: var(--warn, #d9a441);
+  color: var(--warn, #d9a441);
 }
 
 .shell {

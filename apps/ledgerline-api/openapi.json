@@ -550,7 +550,7 @@
           "llmProposals": {
             "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/LlmProposal"
             }
           },
           "llmProposalsUnavailableReason": {
@@ -2154,6 +2154,241 @@
           "dismissedFindings"
         ]
       },
+      "LlmSettings": {
+        "type": "object",
+        "properties": {
+          "providerId": {
+            "type": "string",
+            "enum": [
+              "none",
+              "claude-cli",
+              "ollama"
+            ]
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redaction": {
+            "type": "boolean"
+          },
+          "redactionLocked": {
+            "type": "boolean"
+          },
+          "sendsDataOffMachine": {
+            "type": "boolean"
+          },
+          "cachedResponses": {
+            "type": "integer"
+          },
+          "degradedCallCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "providerId",
+          "model",
+          "redaction",
+          "redactionLocked",
+          "sendsDataOffMachine",
+          "cachedResponses",
+          "degradedCallCount"
+        ]
+      },
+      "LlmHealth": {
+        "type": "object",
+        "properties": {
+          "providerId": {
+            "type": "string",
+            "enum": [
+              "none",
+              "claude-cli",
+              "ollama"
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sendsDataOffMachine": {
+            "type": "boolean"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "providerId",
+          "ok",
+          "detail",
+          "model",
+          "sendsDataOffMachine",
+          "capabilities"
+        ]
+      },
+      "DegradedCall": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "provider",
+          "operation",
+          "reason"
+        ]
+      },
+      "DegradedCallLog": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DegradedCall"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total"
+        ]
+      },
+      "LlmProposal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "descriptor": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "categoryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "applied",
+              "blocked",
+              "rejected"
+            ]
+          },
+          "blockedReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "descriptor",
+          "merchantName",
+          "categoryName",
+          "confidence",
+          "status",
+          "blockedReason",
+          "provider",
+          "model"
+        ]
+      },
+      "LlmProposalRun": {
+        "type": "object",
+        "properties": {
+          "providerId": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "descriptorsConsidered": {
+            "type": "integer"
+          },
+          "withheldP2P": {
+            "type": "integer"
+          },
+          "batches": {
+            "type": "integer"
+          },
+          "proposalsReceived": {
+            "type": "integer"
+          },
+          "applied": {
+            "type": "integer"
+          },
+          "queuedForReview": {
+            "type": "integer"
+          },
+          "degraded": {
+            "type": "boolean"
+          },
+          "jobId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "providerId",
+          "model",
+          "descriptorsConsidered",
+          "withheldP2P",
+          "batches",
+          "proposalsReceived",
+          "applied",
+          "queuedForReview",
+          "degraded",
+          "jobId"
+        ]
+      },
       "Settings": {
         "type": "object",
         "properties": {
@@ -2178,6 +2413,9 @@
               "$ref": "#/components/schemas/SettingUnsettable"
             }
           },
+          "llm": {
+            "$ref": "#/components/schemas/LlmSettings"
+          },
           "databaseFile": {
             "type": "string"
           },
@@ -2190,6 +2428,7 @@
           "rules",
           "thresholds",
           "unsettable",
+          "llm",
           "databaseFile",
           "backupDir"
         ]
@@ -7219,20 +7458,17 @@
       },
       "patch": {
         "operationId": "updateSettings",
-        "summary": "Override a threshold, or switch a rule off",
+        "summary": "Override a threshold, switch a rule off, or choose an LLM provider",
         "tags": [
           "settings"
         ],
-        "description": "Both are the same write: a rule’s switch is a boolean field in that rule’s own config section. A `null` value removes the override and restores the shipped default. Every accepted change moves `config_hash`, which is what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — the response says whether the hash moved and how many dismissals are in scope.",
+        "description": "The first two are the same write: a rule’s switch is a boolean field in that rule’s own config section. A `null` value removes the override and restores the shipped default. Every accepted threshold change moves `config_hash`, which is what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — the response says whether the hash moved and how many dismissals are in scope. The provider is deliberately **not** part of that hash: choosing a different model changes which descriptors resolve to which merchant, but not a single spec 5 threshold, and folding it in would invalidate every dismissal in the database.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "changes"
-                ],
                 "properties": {
                   "changes": {
                     "type": "array",
@@ -7259,6 +7495,28 @@
                         }
                       }
                     }
+                  },
+                  "llm": {
+                    "type": "object",
+                    "properties": {
+                      "providerId": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "claude-cli",
+                          "ollama"
+                        ]
+                      },
+                      "model": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "redaction": {
+                        "type": "boolean"
+                      }
+                    }
                   }
                 }
               }
@@ -7272,6 +7530,280 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SettingsUpdate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/llm/health": {
+      "get": {
+        "operationId": "getLlmHealth",
+        "summary": "Spec 6.8’s Test Connection, against the configured provider",
+        "tags": [
+          "llm"
+        ],
+        "description": "Probes whichever provider spec 2.4 is currently configured. `none` answers `ok: false` with \"LLM disabled\" rather than a green tick, because there is nothing to connect to and a tick would teach the button to mean nothing. Ollama’s answer distinguishes \"not running\" from \"running but the model is not pulled\" and names the fix. Never cached — a remembered \"ok\" is the one answer this must not give.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmHealth"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/llm/degraded-calls": {
+      "get": {
+        "operationId": "listDegradedCalls",
+        "summary": "Spec 6.8’s degraded-LLM-call log",
+        "tags": [
+          "llm"
+        ],
+        "description": "Every call that fell back to the deterministic path, newest first. Spec 2.4: \"a run of degraded calls is how a user discovers Ollama has been down for a week while the app quietly carried on working.\" The list is capped and `total` is not, so a page can say \"50 of 412\" rather than implying 50 is all there was.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedCallLog"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/llm/propose-merchants": {
+      "post": {
+        "operationId": "proposeMerchants",
+        "summary": "Ask the configured provider about unresolved descriptors (spec 4.2)",
+        "tags": [
+          "llm"
+        ],
+        "description": "Batches spec 4.1 step 7’s unresolved descriptors, ~50 per call, as descriptor strings only — no amounts, no dates, no account numbers, and nothing on spec 2.4’s P2P filter list. At or above 0.85 a proposal writes a `source = \"llm\"` alias and applies provisionally; below it, or wherever it would disturb a settled recurring series, it goes to the review queue and applies to nothing. Enqueues spec 2.7’s job and returns its id.",
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "jobId",
+                    "providerId",
+                    "willDoNothing"
+                  ],
+                  "properties": {
+                    "jobId": {
+                      "type": "string"
+                    },
+                    "providerId": {
+                      "type": "string"
+                    },
+                    "willDoNothing": {
+                      "type": "boolean"
+                    }
+                  }
                 }
               }
             }
@@ -7372,6 +7904,14 @@
     {
       "name": "data",
       "description": "Backup and export"
+    },
+    {
+      "name": "llm",
+      "description": "The optional LLM provider: its health, the calls that fell back without it, and the merchant groupings it proposes"
+    },
+    {
+      "name": "settings",
+      "description": "Analyzer thresholds, rule switches and the provider"
     }
   ]
 }

@@ -40,7 +40,7 @@ import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
 import { annualCentsOf } from './duplicate.js';
 import type { RecurringSeries } from './recurrence.js';
-import { coverageEnd } from './snapshot.js';
+import { coverageEnd, llmAttributedIds } from './snapshot.js';
 import type { Snapshot } from './snapshot.js';
 
 export const LAPSED_RULE_ID = 'lapsed.v1';
@@ -108,5 +108,8 @@ export function analyzeLapsed(
     });
   }
 
-  return applyEmissionPolicy(LAPSED_RULE_ID, drafts, config, { exemptFromImpactFloor: true });
+  return applyEmissionPolicy(LAPSED_RULE_ID, drafts, config, {
+    exemptFromImpactFloor: true,
+    llmAttributed: llmAttributedIds(snapshot),
+  });
 }

@@ -75,10 +75,9 @@ As of 2026-08-25 §6.8's **Settings page** is built on §2.3's `/api/settings`, 
 stops being a promise: every threshold in §5 is editable with its shipped default beside it, the
 current `config_hash` is on the page, and each rule has a switch that moves that hash — so §5.1
 re-evaluates the rule's dismissals when it comes back. §2.3's `DELETE /api/data` is built
-alongside it and takes its own backup before deleting anything. **Two of §6.8's six sections
-cannot be built yet** — LLM provider and Redaction both need §2.4's seam — and one more,
-Categories, needs endpoints §2.3 lists as missing; all three are stated on the page rather than
-omitted. §9k records the reasoning.
+alongside it and takes its own backup before deleting anything. **One of §6.8's six sections
+cannot be built yet** — Categories needs endpoints §2.3 lists as missing — and it is stated on
+the page rather than omitted. §9k records the reasoning.
 
 §4.1 step 7's **review queue reached a person on 2026-08-27** as a section of that page (§9r)
 and **moved off it the next day** into **§6.9's Review page**, with a count in the rail — a
@@ -86,13 +85,17 @@ queue nobody knows is non-empty is a queue nobody answers, and Settings is a doo
 twice a year. §6.9 is a section of §6 this implementation added rather than found; §9s records
 the move, the badge, and where the count lives.
 
+**§2.4's provider seam is wired as of 2026-08-28**, and with it §6.8's LLM provider and
+Redaction sections, §4.2's merchant-proposal stage, and the degraded-call log in Data — §9t.
+`none` remains the default and the app is complete without a provider (§2.4).
+
 PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
 insights and ask endpoints of §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
 records what it proposes — nor **two of §6's nine pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r and §9s list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s and §9t list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -1952,6 +1955,83 @@ period and row counts since it was built, confirmed in the running app against t
 import. The list that does name an import without naming its account is **§6.3's row expander**,
 under covering imports, where two cards at one bank exporting the same filename for the same
 month are genuinely two identical lines. That is where the account went instead.
+## 9t. Amendments from implementation — 2026-08-28 (§2.4, §4.2, §2.3, §6.8, §2.7)
+
+§2.4's provider seam existed and nothing called it. This is everything that turned out to
+be missing between "there are three providers" and "a model changes which merchant a
+descriptor resolves to" — one contradiction, two tables, three endpoints, and a rule about
+what a `rule` alias *is*.
+
+| § | Amendment | Why |
+|---|---|---|
+| 4.2, 4.3 | **An `llm` alias may replace a `rule` alias, and nothing else.** Not `seed`, not `user`, not another `llm` row. | §4.2 says "The LLM never overwrites an existing alias", and applied to every source that makes §4.2's own auto-apply path **unreachable**: §4.1 step 7 writes a `rule` alias for every descriptor the chain could not place, so by the time §4.2 is asked about one it always already has an alias. A 0.99 proposal applied to nothing, ever. See below. |
+| 3.1 | **`llm_degraded_call`** and **`llm_proposal`** (migration 006). | §6.8 asks for "the degraded-LLM-call log" and "the review queue for LLM proposals" and §3.1 gives neither a row. Both are read in Settings, which is a page someone opens tomorrow. |
+| 2.3 | **`GET /api/llm/degraded-calls`** and **`POST /api/llm/propose-merchants`**. | §2.3 lists `GET /api/llm/health` and stops. The log needs a reader, and §4.2's stage needs something to start it — §2.7 is why that cannot be an HTTP request. |
+| 2.3, 6.8 | **The provider travels on `PATCH /api/settings`, in an `llm` block beside `changes`.** It lands in its own settings key, `llm.provider`. | §2.3 puts config on one endpoint and §7.4 hashes the analyzer config into `config_hash`. Both stay true: one request, two keys, and choosing a model does not invalidate every dismissal in the database. |
+| 2.7 | **The job runner is asynchronous.** | §2.4's providers are a subprocess and an HTTP call. `draining` is held across the awaits, so the property that sentence was protecting — one runner, no second drain claiming the next job — is unchanged. |
+
+**The contradiction, stated plainly.** §4.1 step 7 makes every unresolved descriptor a
+provisional merchant *and* a `rule` alias pointing at it. §4.2 then says the LLM never
+overwrites an existing alias. §4.3 puts `llm` below `rule` in precedence. Taken together
+the three mean §4.2 can never apply anything: the only descriptors it is allowed to
+consider are precisely the ones that already have an alias it is not allowed to replace.
+
+What resolves it is what a `rule` alias **is**. `seed` and `user` are judgements — one
+shipped, one made by a person. A `rule` row is neither: it is a cache of the chain's own
+deterministic output, written so a later import of the same spelling lands on the same
+provisional merchant rather than creating a second one. Overwriting it discards no
+decision, because nobody made one — the chain would recompute the identical answer from
+the descriptor. So `llm` may replace it, and §4.3's precedence is untouched for
+*resolution*, where `rule` still outranks `llm`. This is only about who may overwrite
+whom, and `merchants.ts` says so where the rule is enforced.
+
+**`llm_dependent` was true by vacuum and is now true by mechanism.** §2.4's "no silent
+authority" held before this change only because nothing had ever written a `source='llm'`
+alias, so `llmDependent: false` on every finding was correct. Landing §4.2 made it wrong.
+The snapshot now carries `llmAttributedTransactionIds`, `applyEmissionPolicy` intersects
+it with each draft's `evidenceTransactionIds`, and §2.4's cap — which already lived there
+— finally has an input. **No rule reads it**: it is passed straight through by all nine
+and consumed once, which is what keeps §7.5's "no analyzer branches on a `source` column"
+true while making the invariant reachable. The set is joined on the *descriptor*, not the
+merchant: going via `merchant_id` would cap four years of correctly-grouped Netflix
+charges because one odd spelling was folded in, and a badge that is everywhere is a badge
+that means nothing.
+
+**T1's clause (a) is stricter than the reason §2.4 gives for it.** §2.4 justifies it as
+catching a provider-gated rule — one that "only ever emits *because* a model grouped
+something". But the literal test, *every rule that fires in the full run also fires in the
+ablated one*, is tripped by an ordinary success: the first version of T1's fixture had the
+model merge two coffee spellings whose four charges together fit a quarterly cadence, the
+merge built a `recurring_series` neither half could carry, and a rule with a new subject
+to report on fired in the full run and nowhere else. No rule was gated; a subject appeared.
+The fixture was changed rather than the assertion — §2.4 governs — and the case is
+recorded here because the next person to trip it will be looking at a green mechanism and
+a red test. `llm-api.spec.ts` keeps both shapes, in two fixtures, and says why.
+
+**§4.2 asks the model for a `category` and there is nowhere for it to go.** The schema is
+`{ descriptor, merchant_name, category, confidence }`, and applying the category would mean
+writing `transaction.category_source = 'llm'` — which §4.3's re-normalize, enqueued by the
+alias write moments earlier, immediately overwrites with the *new* merchant's default
+(§2.5's rule). Two mechanisms writing one column is how a category starts flickering. It is
+stored on `llm_proposal` so the review card can show what the model thought, and applied to
+nothing. Resolving it means deciding whether an LLM category outranks a merchant default,
+which is a §4.3 precedence question this change does not need to answer.
+
+**A redacted descriptor is not an alias key.** The model sees
+`SQ *BLUE BOTTLE [redacted] PORTLAND` and echoes it back; the alias has to be keyed on the
+real `BLUE BOTTLE 1234 PORTLAND` or it matches no transaction at all. The batch therefore
+carries a map from sent text back to candidate, and **drops collisions** rather than
+resolving them: two descriptors that redact to one string cannot be told apart in the
+answer, and guessing which one a proposal meant would write a permanent grouping onto a
+coin flip.
+
+**Nothing in the suite starts a real provider.** `ClaudeCliProvider` sends merchant
+descriptors to Anthropic, so a suite that spawned it would do so on every `npm run check`,
+against whatever is in the developer's database; a real Ollama on 127.0.0.1 would make the
+same test pass and fail on different machines. `LedgerlineContext.llmProviderFactory` is
+the seam — the same one `fetchFn` and `spawnFn` already are, one level up, because the
+providers are constructed from a settings row and a spec that only replaced `fetch` still
+could not make `GET /api/llm/health` answer for a provider it is not allowed to start.
 
 ## 10. Open discrepancies — recorded, not resolved
 

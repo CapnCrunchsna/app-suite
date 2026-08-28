@@ -61,6 +61,40 @@ export class MerchantReview {
   protected readonly candidates = computed(() => this.queue().mergeCandidates);
   protected readonly provisional = computed(() => this.queue().provisional);
 
+  /**
+   * §4.2's proposals that did not apply, split by *why*.
+   *
+   * Two lists rather than one with a status column, because the two are different
+   * questions to a reader. A sub-floor proposal is the model being unsure and is
+   * released by raising confidence or by assigning the merchant by hand. A blocked
+   * one is the settled-series exception, which "never auto-applies at any
+   * confidence" — no threshold releases it, and showing them together would invite
+   * exactly that misreading.
+   */
+  protected readonly llmBlocked = computed(() =>
+    this.queue().llmProposals.filter((proposal) => proposal.status === 'blocked'),
+  );
+  protected readonly llmPending = computed(() =>
+    this.queue().llmProposals.filter((proposal) => proposal.status !== 'blocked'),
+  );
+
+  /** Whether the queue has anything at all in it. Includes the LLM half, so the
+   *  "nothing to review" line cannot appear above a list of proposals. */
+  protected readonly empty = computed(
+    () =>
+      this.candidates().length === 0 &&
+      this.provisional().length === 0 &&
+      this.queue().llmProposals.length === 0,
+  );
+
+  /** §7.5 again: a confidence is a diagnostic, not a promise, so it reaches the
+   *  card as a word. The floor is named separately where it is the reason. */
+  protected confidenceOf(confidence: number): string {
+    if (confidence >= 0.85) return 'confident';
+    if (confidence >= 0.6) return 'fairly sure';
+    return 'unsure';
+  }
+
   /** §4.1 step 7 says an unresolved descriptor "joins the review queue", which is
    *  true of every provisional merchant and would be a list of dozens. The ones
    *  worth a person's attention are the ones with history behind them. */

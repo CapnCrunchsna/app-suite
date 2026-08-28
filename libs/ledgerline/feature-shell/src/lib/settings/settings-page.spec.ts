@@ -13,6 +13,8 @@
 
 import { TestBed } from '@angular/core/testing';
 import type {
+  DegradedCallLog,
+  LlmHealth,
   Settings,
   SettingsUpdate,
   UpdateSettingsBody,
@@ -110,6 +112,18 @@ function settingsOf(overrides: Partial<Settings> = {}): Settings {
     unsettable: [
       { section: 'recurrence', key: 'cadences', reason: 'a calibration decision, not a number' },
     ],
+    // §6.8's provider section, at the shipped default: nothing configured, nothing
+    // sent, redaction on. That is the state the app is in until someone changes it,
+    // and the state most of these cases should be exercised against.
+    llm: {
+      providerId: 'none',
+      model: null,
+      redaction: true,
+      redactionLocked: false,
+      sendsDataOffMachine: false,
+      cachedResponses: 0,
+      degradedCallCount: 0,
+    },
     databaseFile: 'C:/data/ledgerline.sqlite',
     backupDir: 'C:/data/backups',
     ...overrides,
@@ -153,6 +167,30 @@ class ApiStub {
 
   exportData(): Promise<Blob> {
     return Promise.resolve(new Blob(['{}']));
+  }
+
+  // §6.8's LLM section. The probe is stubbed rather than omitted because the page
+  // must never call it on render — a spec that could not observe the call could
+  // not catch a regression that started one.
+  healthProbes = 0;
+  health: LlmHealth = {
+    providerId: 'none',
+    ok: false,
+    detail: 'LLM disabled',
+    model: null,
+    sendsDataOffMachine: false,
+    capabilities: [],
+  };
+
+  getLlmHealth(): Promise<LlmHealth> {
+    this.healthProbes += 1;
+    return Promise.resolve(this.health);
+  }
+
+  degradedLog: DegradedCallLog = { entries: [], total: 0 };
+
+  listDegradedCalls(): Promise<DegradedCallLog> {
+    return Promise.resolve(this.degradedLog);
   }
 }
 
@@ -394,14 +432,44 @@ describe('SettingsPage', () => {
   it('no longer carries the merchant review queue (§9s)', async () => {
     const { el } = await render();
 
-    expect(text(el, '.panel__heading')).toEqual(['Analyzers', 'Data', 'Not built yet']);
+    // §9t adds AI assistance between them; the queue is still absent.
+    expect(text(el, '.panel__heading')).toEqual([
+      'Analyzers',
+      'AI assistance',
+      'Data',
+      'Not built yet',
+    ]);
     expect(el.querySelector('ll-merchant-review')).toBeNull();
     expect(el.textContent).not.toContain('Nothing to review');
   });
 
-  it('states §6.8’s three remaining unbuilt sections rather than omitting them', async () => {
+  it('states §6.8’s one remaining unbuilt section rather than omitting it', async () => {
     const { el } = await render();
-    expect(text(el, '.pending dt')).toEqual(['LLM provider', 'Redaction', 'Categories']);
-    expect(text(el, '.pending dd')[0]).toContain('§2.4');
+    // LLM provider and Redaction have left this list because they now exist —
+    // §2.4's seam is built and §6.8's picker writes to it. Categories still needs
+    // write endpoints §2.3 lists and §1 counts as missing.
+    expect(text(el, '.pending dt')).toEqual(['Categories']);
+    expect(text(el, '.pending dd')[0]).toContain('overlap groups');
+  });
+
+  // -------------------------------------------------------- §6.8's LLM ---
+
+  /**
+   * The provider section, and the one property of it worth asserting from up here
+   * rather than in the panel: **nothing probes on render**.
+   *
+   * §2.4's providers spawn a process or open a socket. A page that ran a health
+   * check when it loaded would start the Claude CLI every time someone opened
+   * Settings — which is both slow and, for the one provider that sends data off
+   * this machine, not a thing that should happen without being asked for.
+   */
+  it('does not probe the provider until Test Connection is pressed', async () => {
+    await render();
+    expect(api.healthProbes).toBe(0);
+  });
+
+  it('renders the provider section against the shipped default', async () => {
+    const { el } = await render();
+    expect(el.querySelector('ll-llm-settings')).not.toBeNull();
   });
 });

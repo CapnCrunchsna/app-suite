@@ -31,6 +31,7 @@ import { FindingRepository } from './repositories/findings.js';
 import { FormatProfileRepository } from './repositories/format-profiles.js';
 import { ImportRepository } from './repositories/imports.js';
 import { JobRepository } from './repositories/jobs.js';
+import { LlmRepository } from './repositories/llm.js';
 import { MerchantRepository } from './repositories/merchants.js';
 import { SettingsRepository } from './repositories/settings.js';
 import { TombstoneRepository } from './repositories/tombstones.js';
@@ -56,6 +57,9 @@ export class LedgerlineStore {
   readonly analysis: AnalysisRepository;
   /** §2.6's `transfer_link` / `transfer_rule`, and the flags a live link sets. */
   readonly transfers: TransferRepository;
+  /** §2.4's cache and degraded-call log, and §4.2's proposals. Rows only — what a
+   *  provider is stays in the app (§2.2). */
+  readonly llm: LlmRepository;
   readonly migrations: MigrationOutcome;
 
   private constructor(
@@ -74,6 +78,7 @@ export class LedgerlineStore {
     this.findings = new FindingRepository(db, clock);
     this.analysis = new AnalysisRepository(db, clock, this.tombstones);
     this.transfers = new TransferRepository(db, clock);
+    this.llm = new LlmRepository(db, clock);
   }
 
   static open(options: LedgerlineStoreOptions): LedgerlineStore {

@@ -40,6 +40,10 @@ const SPEC_TABLES = [
   'analysis_run',
   'job',
   'llm_cache',
+  // §9s: §6.8 names both of these as things Settings shows and §3.1 lists
+  // neither, because the spec describes the feature and stops short of the row.
+  'llm_degraded_call',
+  'llm_proposal',
   'tombstone',
   'settings',
   'schema_migrations',

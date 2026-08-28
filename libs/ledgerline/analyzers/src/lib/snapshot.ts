@@ -121,6 +121,42 @@ export interface Snapshot {
   readonly transactions: readonly SnapshotTransaction[];
   readonly merchants: readonly SnapshotMerchant[];
   readonly categories: readonly SnapshotCategory[];
+  /**
+   * Transactions whose merchant was decided by a `source = 'llm'` alias (§2.4).
+   *
+   * ## This is the one piece of provenance in the snapshot, and it is not an input
+   *
+   * §7.5 is absolute that "no analyzer branches on a `source` column" — and nothing
+   * here does. No rule reads this field: it is consumed once, by
+   * `applyEmissionPolicy`, which uses it to set `llmDependent` on a draft and apply
+   * §2.4's confidence cap. That cap is not a rule's threshold, it is §2.4's own
+   * instruction — "has its confidence **capped at Medium** until the underlying
+   * alias is user-confirmed" — and it already lived there before this field
+   * existed. What was missing was any way for it to ever be true.
+   *
+   * ## Ids rather than a flag on the transaction
+   *
+   * A `merchantSource` column on `SnapshotTransaction` would be provenance sitting
+   * in front of every rule, one autocomplete away from becoming a filter. A set of
+   * ids on the snapshot is reachable only by something that already has the whole
+   * snapshot and is looking for it.
+   *
+   * Optional because a literal-array test builds a snapshot without one and means
+   * "nothing here came from a model", which is the correct default and the state
+   * every rule spec is written in.
+   */
+  readonly llmAttributedTransactionIds?: readonly string[];
+}
+
+/**
+ * §2.4's attributed set, as a lookup.
+ *
+ * A free function rather than a field so the snapshot stays plain data (§2.2's
+ * "one snapshot per run" is about a value, not an object with behaviour), and so
+ * the empty case has exactly one spelling.
+ */
+export function llmAttributedIds(snapshot: Snapshot): ReadonlySet<string> {
+  return new Set(snapshot.llmAttributedTransactionIds ?? []);
 }
 
 // ------------------------------------------------------------- coverage ---

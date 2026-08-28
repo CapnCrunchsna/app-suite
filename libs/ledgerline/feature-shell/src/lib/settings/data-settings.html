@@ -33,6 +33,38 @@
   <p class="done">Written to <code>{{ lastBackupPath() }}</code></p>
 }
 
+<!-- §6.8's degraded-LLM-call log. A record, not a control — which is why it is
+     filed under Data rather than beside the provider picker. -->
+@if (degradedCalls(); as log) {
+  <section class="degraded">
+    <h4 class="degraded__title">Calls that fell back ({{ log.total }})</h4>
+    @if (log.total === 0) {
+      <p class="note">
+        None. Either no provider is configured — which is the default and is not a fault — or
+        every call it made was answered.
+      </p>
+    } @else {
+      <p class="note">
+        Each of these went to the app’s own rules instead of the model, and nothing was lost by
+        it: the rules are what produce every number here anyway. A run of them together is how
+        you find out a provider has been down for a week.
+      </p>
+      <ul class="degraded__list">
+        @for (entry of log.entries; track entry.id) {
+          <li class="degraded__entry">
+            <span class="degraded__when">{{ entry.at }}</span>
+            <span class="degraded__what">{{ entry.operation }}</span>
+            <span class="degraded__why">{{ entry.reason }}</span>
+          </li>
+        }
+      </ul>
+      @if (degradedHidden() > 0) {
+        <p class="note">and {{ degradedHidden() }} older.</p>
+      }
+    }
+  </section>
+}
+
 <!-- §2.3's one irreversible operation, and §6.8's confirmation for it. -->
 <section class="danger">
   <h4 class="danger__title">Delete everything</h4>

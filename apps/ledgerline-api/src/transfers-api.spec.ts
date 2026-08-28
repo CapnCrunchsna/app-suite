@@ -595,7 +595,7 @@ describe('ledgerline-api transfers and accounts (§2.6, §6.2)', () => {
 
       const enqueued = await app.inject({ method: 'POST', url: '/api/analysis/run' });
       expect(enqueued.statusCode).toBe(202);
-      context.jobRunner.drain();
+      await context.jobRunner.drain();
 
       const job = await app.inject({
         method: 'GET',

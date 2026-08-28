@@ -233,9 +233,12 @@ describe('ledgerline-api merchant review queue (§4.1 step 7)', () => {
     const review = await queue();
 
     expect(review.llmProposals).toEqual([]);
-    // §2.3 lists this queue as carrying them; §4.2 needs §2.4's seam, which is not
-    // built. Stated, for the reason §6.8 gives about absences.
-    expect(review.llmProposalsUnavailableReason).toMatch(/provider seam/);
+    // §2.3 lists this queue as carrying them, and §2.4's seam now exists — so the
+    // reason is no longer "unbuilt" but "switched off", which is the shipped
+    // default and not a fault. §6.8's argument about stated absences is the same
+    // either way: an empty list that says nothing reads as a broken feature.
+    // §4.2's stage and its floor are covered in `llm-api.spec.ts`.
+    expect(review.llmProposalsUnavailableReason).toMatch(/No LLM provider is configured/);
   });
 
   describe('resolving one (§4.3)', () => {
@@ -254,7 +257,7 @@ describe('ledgerline-api merchant review queue (§4.1 step 7)', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      context.jobRunner.drain();
+      await context.jobRunner.drain();
       return response.json() as { merchantId: string; transactionsAffected: number };
     }
 

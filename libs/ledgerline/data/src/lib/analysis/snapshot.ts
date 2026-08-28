@@ -100,6 +100,9 @@ export interface Snapshot {
   readonly transactions: readonly SnapshotTransaction[];
   readonly merchants: readonly SnapshotMerchant[];
   readonly categories: readonly SnapshotCategory[];
+  /** §2.4's attributed set — see `loadLlmAttributed` and the matching note on the
+   *  analyzers' own `Snapshot`, which is where it is consumed. */
+  readonly llmAttributedTransactionIds: readonly string[];
 }
 
 interface AccountRow {
@@ -159,7 +162,49 @@ export function buildSnapshot(db: Database): Snapshot {
     transactions: loadTransactions(db),
     merchants: loadMerchants(db),
     categories: loadCategories(db),
+    llmAttributedTransactionIds: loadLlmAttributed(db),
   };
+}
+
+/**
+ * §2.4's "no silent authority", as the set of rows it is about.
+ *
+ * "A finding whose evidence depends on any `source='llm'` alias or category carries
+ * `llm_dependent = true` [...] and has its confidence **capped at Medium** until the
+ * underlying alias is user-confirmed."
+ *
+ * ## Joined on the descriptor, not on the merchant
+ *
+ * The question is which *rows* got their merchant from a model, and the alias table
+ * answers it directly: `merchant_alias.alias_key` is the normalized descriptor
+ * (§4.3), so a row is attributed exactly when its own `description_normalized` has
+ * an `llm` alias. Going via `merchant_id` instead would mark every row of a
+ * merchant the model contributed *one* spelling to — four years of correctly
+ * grouped Netflix charges capped at Medium because one odd descriptor was folded
+ * in, which is not what §2.4 says and would make the badge meaningless by being
+ * everywhere.
+ *
+ * ## `exact` only, and why that is not a gap today
+ *
+ * §4.2 writes `match_type = 'exact'` and nothing else, so this is the whole of the
+ * set. A prefix or fuzzy `llm` alias would need the §4.1 chain to be re-run to know
+ * which rows it claimed, which is a query this cannot do and `data` may not reach
+ * `normalize` to do (§2.2). If §4.2 ever writes one, this comment is the thing that
+ * should stop it going unnoticed.
+ */
+function loadLlmAttributed(db: Database): string[] {
+  return db
+    .prepare<[], { id: string }>(
+      `SELECT t.id
+         FROM "transaction" AS t
+         JOIN merchant_alias AS a
+           ON a.alias_key = t.description_normalized
+          AND a.match_type = 'exact'
+        WHERE a.source = 'llm'
+        ORDER BY t.id`,
+    )
+    .all()
+    .map((row) => row.id);
 }
 
 /**

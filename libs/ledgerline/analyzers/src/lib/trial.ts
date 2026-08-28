@@ -46,6 +46,7 @@ import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
 import { annualCentsOf } from './duplicate.js';
 import type { RecurringSeries } from './recurrence.js';
+import { llmAttributedIds } from './snapshot.js';
 import type { Snapshot, SnapshotTransaction } from './snapshot.js';
 
 export const TRIAL_RULE_ID = 'trial.v1';
@@ -136,7 +137,9 @@ export function analyzeTrials(input: TrialInput): RuleEmission {
     });
   }
 
-  return applyEmissionPolicy(TRIAL_RULE_ID, drafts, config);
+  return applyEmissionPolicy(TRIAL_RULE_ID, drafts, config, {
+    llmAttributed: llmAttributedIds(snapshot),
+  });
 }
 
 /**

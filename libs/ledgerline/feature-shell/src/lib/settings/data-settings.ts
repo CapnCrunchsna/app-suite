@@ -19,7 +19,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import type { Settings } from '@metrum/api-client';
+import type { DegradedCallLog, Settings } from '@metrum/api-client';
 
 export type DataAction =
   | { readonly kind: 'backup' }
@@ -43,6 +43,15 @@ export class DataSettings {
   readonly busy = input(false);
   /** Where the last backup went, so "done" has a path attached. */
   readonly lastBackupPath = input<string | null>(null);
+  /**
+   * §6.8's degraded-LLM-call log, which that section files under Data.
+   *
+   * It belongs here and not beside the provider picker for the reason §6.8 puts it
+   * here: it is a record of what happened, like the backups and the export, rather
+   * than a control. Someone reads it to answer "has my provider been doing
+   * anything?", which is a question about history.
+   */
+  readonly degradedCalls = input<DegradedCallLog | null>(null);
 
   readonly acted = output<DataAction>();
 
@@ -51,6 +60,14 @@ export class DataSettings {
   protected readonly wipePhrase = WIPE_PHRASE;
 
   protected readonly inMemory = computed(() => this.settings().databaseFile === ':memory:');
+
+  /** How many of the total the list is showing. Said explicitly, because "50" over
+   *  a capped list reads as the whole history and a run of failures is precisely
+   *  the signal this log exists to carry. */
+  protected readonly degradedHidden = computed(() => {
+    const log = this.degradedCalls();
+    return log ? Math.max(0, log.total - log.entries.length) : 0;
+  });
 
   protected backup(): void {
     this.acted.emit({ kind: 'backup' });

@@ -29,6 +29,7 @@ import { registerFindingRoutes } from './routes/findings.js';
 import { registerFormatProfileRoutes } from './routes/format-profiles.js';
 import { registerImportRoutes } from './routes/imports.js';
 import { registerJobRoutes } from './routes/jobs.js';
+import { registerLlmRoutes } from './routes/llm.js';
 import { registerMerchantRoutes } from './routes/merchants.js';
 import { registerSeriesRoutes } from './routes/series.js';
 import { registerSettingsRoutes } from './routes/settings.js';
@@ -76,6 +77,13 @@ export const OPENAPI_DOCUMENT = {
       description: 'Analysis runs, findings and their dismissals',
     },
     { name: 'data', description: 'Backup and export' },
+    {
+      name: 'llm',
+      description:
+        'The optional LLM provider: its health, the calls that fell back without it, ' +
+        'and the merchant groupings it proposes',
+    },
+    { name: 'settings', description: 'Analyzer thresholds, rule switches and the provider' },
   ],
 };
 
@@ -206,6 +214,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerSeriesRoutes(app, options.context);
   registerDataRoutes(app, options.context, options.config);
   registerSettingsRoutes(app, options.context, options.config);
+  registerLlmRoutes(app, options.context);
 
   await app.ready();
   return app;

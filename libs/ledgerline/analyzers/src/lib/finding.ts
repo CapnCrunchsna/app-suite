@@ -140,6 +140,15 @@ export interface EmissionOptions {
   /** §5.1: only `lapsed.v1` opts out of the absolute impact floor, because its
    *  value is confirmation rather than money. */
   readonly exemptFromImpactFloor?: boolean;
+  /**
+   * §2.4's attributed set — `llmAttributedIds(snapshot)`.
+   *
+   * Passed by every rule and read by none of them: a rule hands it straight through
+   * to this function, which is the only place that looks at it. That is what keeps
+   * §7.5 true while making §2.4's "no silent authority" reachable — see the note on
+   * `Snapshot.llmAttributedTransactionIds`.
+   */
+  readonly llmAttributed?: ReadonlySet<string>;
 }
 
 /**
@@ -154,6 +163,24 @@ export interface EmissionOptions {
  *
  * Sorting is by absolute impact because a rule may express a saving as a negative
  * number, and "the biggest ones" should not depend on which sign it chose.
+ *
+ * ## Where `llm_dependent` becomes true
+ *
+ * §2.4: "A finding whose evidence depends on any `source='llm'` alias or category
+ * carries `llm_dependent = true`, is badged in the UI as resting on an AI-suggested
+ * grouping, and has its confidence **capped at Medium**."
+ *
+ * "Whose evidence depends on" is the operative phrase and it is why this is decided
+ * here rather than in each rule. Every draft already carries
+ * `evidenceTransactionIds` — the explicit rows §5.1 materializes into
+ * `finding_evidence` — so the test is an intersection against the set the snapshot
+ * carried, and it is the same test for all nine rules. A rule computing it for
+ * itself would be nine chances to forget, and forgetting is invisible: the finding
+ * still emits, it just quietly claims High confidence on a model's say-so.
+ *
+ * A rule may still declare `llmDependent: true` on its own; the two are OR-ed. None
+ * does today, and the field stays on `DraftFinding` because a future rule that
+ * consumed an LLM-assigned *category* would have a reason to.
  */
 export function applyEmissionPolicy(
   ruleId: string,
@@ -161,12 +188,23 @@ export function applyEmissionPolicy(
   config: AnalyzerConfig,
   options: EmissionOptions = {},
 ): RuleEmission {
-  const capped = drafts.map((draft) => ({
-    ...draft,
-    confidence: draft.llmDependent
-      ? Math.min(draft.confidence, config.global.llmDependentConfidenceCap)
-      : draft.confidence,
-  }));
+  const attributed = options.llmAttributed;
+
+  const capped = drafts.map((draft) => {
+    const llmDependent =
+      draft.llmDependent ||
+      (attributed !== undefined &&
+        attributed.size > 0 &&
+        draft.evidenceTransactionIds.some((id) => attributed.has(id)));
+
+    return {
+      ...draft,
+      llmDependent,
+      confidence: llmDependent
+        ? Math.min(draft.confidence, config.global.llmDependentConfidenceCap)
+        : draft.confidence,
+    };
+  });
 
   const admitted = capped
     .filter((draft) => bandFor(draft.confidence, config) !== 'suppressed')

@@ -40,7 +40,7 @@ import type { AnalyzerConfig, MicroConfig } from './config.js';
 import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
 import { median } from './statistics.js';
-import { fullyCoveredMonths, monthOf } from './snapshot.js';
+import { fullyCoveredMonths, llmAttributedIds, monthOf } from './snapshot.js';
 import type { Snapshot, SnapshotTransaction } from './snapshot.js';
 
 export const MICRO_RULE_ID = 'micro.v1';
@@ -93,7 +93,9 @@ export function analyzeMicroSpend(snapshot: Snapshot, config: AnalyzerConfig): R
       .map((entry) => draft(entry, 'category', covered.size, settings)),
   ];
 
-  return applyEmissionPolicy(MICRO_RULE_ID, drafts, config);
+  return applyEmissionPolicy(MICRO_RULE_ID, drafts, config, {
+    llmAttributed: llmAttributedIds(snapshot),
+  });
 }
 
 const eligible = (row: SnapshotTransaction): boolean =>

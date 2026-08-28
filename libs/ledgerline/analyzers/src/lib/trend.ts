@@ -40,7 +40,7 @@ import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
 import type { RecurringSeries } from './recurrence.js';
 import { medianAbsoluteDeviation } from './statistics.js';
-import { fullyCoveredMonths, monthOf } from './snapshot.js';
+import { fullyCoveredMonths, llmAttributedIds, monthOf } from './snapshot.js';
 import type { Snapshot, SnapshotTransaction } from './snapshot.js';
 
 export const TREND_RULE_ID = 'trend.v1';
@@ -115,7 +115,9 @@ export function analyzeTrends(
     ...topBy(climbs, settings.maxClimbs),
   ];
 
-  return applyEmissionPolicy(TREND_RULE_ID, drafts, config);
+  return applyEmissionPolicy(TREND_RULE_ID, drafts, config, {
+    llmAttributed: llmAttributedIds(snapshot),
+  });
 }
 
 const eligible = (row: SnapshotTransaction): boolean =>

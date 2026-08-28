@@ -14,9 +14,11 @@ import { newStamp } from './stamp.js';
 import type { Clock } from '../clock.js';
 import type { Database } from '../database.js';
 
-/** §2.7's two kinds. The column is free text so a third does not need a
- *  migration, but these are the two the design names. */
-export type JobKind = 'renormalize' | 'analysis';
+/** §2.7's two kinds, and §4.2's. The column is free text so a fourth does not
+ *  need a migration; these are the ones the design names, plus the one §9s adds
+ *  because §4.2's stage has to be started by something and §2.7 is why it cannot
+ *  be started inside an HTTP request. */
+export type JobKind = 'renormalize' | 'analysis' | 'llm-normalize';
 
 export type JobState = 'queued' | 'running' | 'succeeded' | 'failed';
 

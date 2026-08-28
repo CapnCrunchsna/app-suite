@@ -191,9 +191,29 @@ export class MerchantRepository {
    * §4.3's precedence is enforced here rather than at the call site, because the
    * call site is where it will be forgotten: a weaker source never overwrites a
    * stronger one, so a re-seed cannot undo a user correction and a re-normalize
-   * cannot undo a seed. §4.2 adds a stricter rule for one source — "the LLM
-   * never overwrites an existing alias" at all, not even another model's — and
-   * that is checked separately because precedence alone would let it.
+   * cannot undo a seed.
+   *
+   * ## The one place `llm` is not simply the weakest source (§9s)
+   *
+   * §4.2 adds a stricter rule for it — "The LLM never overwrites an existing alias
+   * and never touches anything with `source = 'user'`" — and that rule, applied to
+   * every source, makes §4.2's own auto-apply path unreachable. §4.1 step 7 writes
+   * a `rule` alias for **every** descriptor the chain could not place, so by the
+   * time §4.2 is asked about one it always already has an alias, and a blanket
+   * refusal means a proposal at 0.99 confidence applies to nothing, ever.
+   *
+   * The distinction that resolves it is what a `rule` alias *is*. `seed` and `user`
+   * are judgements — one shipped, one made by a person. A `rule` row is neither: it
+   * is a cache of the chain's own deterministic output, written so a later import
+   * of the same spelling lands on the same provisional merchant rather than
+   * creating a second one. Overwriting it discards no decision, because nobody made
+   * one; the chain would recompute the identical answer from the descriptor.
+   *
+   * So `llm` may replace `rule`, and nothing else — not `seed`, not `user`, and not
+   * another `llm` row, which keeps a re-run idempotent and stops two models
+   * trading a descriptor back and forth. §4.3's precedence is untouched for
+   * *resolution*, where `rule` still outranks `llm`; this is only about who may
+   * overwrite whom.
    */
   upsertAlias(input: AliasInput): MerchantAliasRecord {
     const existing = this.db
@@ -203,8 +223,11 @@ export class MerchantRepository {
       .get(input.aliasKey, input.matchType);
 
     if (existing) {
-      const weaker = SOURCE_PRECEDENCE[input.source] > SOURCE_PRECEDENCE[existing.source];
-      if (weaker || input.source === 'llm') return toMerchantAlias(existing);
+      if (input.source === 'llm') {
+        if (existing.source !== 'rule') return toMerchantAlias(existing);
+      } else if (SOURCE_PRECEDENCE[input.source] > SOURCE_PRECEDENCE[existing.source]) {
+        return toMerchantAlias(existing);
+      }
 
       this.db
         .prepare(

@@ -12,6 +12,7 @@ export * from './lib/repositories/findings.js';
 export * from './lib/repositories/format-profiles.js';
 export * from './lib/repositories/imports.js';
 export * from './lib/repositories/jobs.js';
+export * from './lib/repositories/llm.js';
 export * from './lib/repositories/merchants.js';
 export * from './lib/repositories/settings.js';
 export * from './lib/repositories/tombstones.js';

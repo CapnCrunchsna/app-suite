@@ -56,6 +56,7 @@ import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
 import type { RecurringSeries } from './recurrence.js';
 import { clamp, median, modifiedZScore, percentile } from './statistics.js';
+import { llmAttributedIds } from './snapshot.js';
 import type { Snapshot, SnapshotTransaction } from './snapshot.js';
 
 export const OUTLIER_RULE_ID = 'outlier.v1';
@@ -119,7 +120,9 @@ export function analyzeOutliers(
     ...largestInEachYear(charges, inSeries, config),
   ];
 
-  return applyEmissionPolicy(OUTLIER_RULE_ID, drafts, config);
+  return applyEmissionPolicy(OUTLIER_RULE_ID, drafts, config, {
+    llmAttributed: llmAttributedIds(snapshot),
+  });
 }
 
 /**

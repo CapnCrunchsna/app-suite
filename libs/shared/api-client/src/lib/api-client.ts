@@ -39,6 +39,8 @@ import type {
   UploadResult,
   CommitResult,
   DeleteImportResult,
+  LlmHealth,
+  DegradedCallLog,
   Settings,
   SettingsUpdate,
   WipeResult,
@@ -278,11 +280,26 @@ export interface ExportDataQuery {
 }
 
 export type UpdateSettingsBody = {
-  readonly changes: ({
+  readonly changes?: ({
     readonly section: string;
     readonly key: string;
     readonly value?: number | boolean | null;
   })[];
+  readonly llm?: {
+    readonly providerId?: 'none' | 'claude-cli' | 'ollama';
+    readonly model?: string | null;
+    readonly redaction?: boolean;
+  };
+};
+
+export interface ListDegradedCallsQuery {
+  readonly limit?: number;
+}
+
+export type ProposeMerchantsResponse = {
+  readonly jobId: string;
+  readonly providerId: string;
+  readonly willDoNothing: boolean;
 };
 
 /**
@@ -735,13 +752,44 @@ export class LedgerlineApi {
   }
 
   /**
-   * Override a threshold, or switch a rule off
+   * Override a threshold, switch a rule off, or choose an LLM provider
    *
-   * Both are the same write: a rule’s switch is a boolean field in that rule’s own config section. A `null` value removes the override and restores the shipped default. Every accepted change moves `config_hash`, which is what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — the response says whether the hash moved and how many dismissals are in scope.
+   * The first two are the same write: a rule’s switch is a boolean field in that rule’s own config section. A `null` value removes the override and restores the shipped default. Every accepted threshold change moves `config_hash`, which is what makes spec 5.1 re-evaluate that rule’s dismissed findings on the next run — the response says whether the hash moved and how many dismissals are in scope. The provider is deliberately **not** part of that hash: choosing a different model changes which descriptors resolve to which merchant, but not a single spec 5 threshold, and folding it in would invalidate every dismissal in the database.
    */
   updateSettings(body: UpdateSettingsBody): Promise<SettingsUpdate> {
     return this.request<SettingsUpdate>('PATCH', `/api/settings`, {
       body,
+    });
+  }
+
+  /**
+   * Spec 6.8’s Test Connection, against the configured provider
+   *
+   * Probes whichever provider spec 2.4 is currently configured. `none` answers `ok: false` with "LLM disabled" rather than a green tick, because there is nothing to connect to and a tick would teach the button to mean nothing. Ollama’s answer distinguishes "not running" from "running but the model is not pulled" and names the fix. Never cached — a remembered "ok" is the one answer this must not give.
+   */
+  getLlmHealth(): Promise<LlmHealth> {
+    return this.request<LlmHealth>('GET', `/api/llm/health`, {
+    });
+  }
+
+  /**
+   * Spec 6.8’s degraded-LLM-call log
+   *
+   * Every call that fell back to the deterministic path, newest first. Spec 2.4: "a run of degraded calls is how a user discovers Ollama has been down for a week while the app quietly carried on working." The list is capped and `total` is not, so a page can say "50 of 412" rather than implying 50 is all there was.
+   */
+  listDegradedCalls(query: ListDegradedCallsQuery = {}): Promise<DegradedCallLog> {
+    return this.request<DegradedCallLog>('GET', `/api/llm/degraded-calls`, {
+      query,
+    });
+  }
+
+  /**
+   * Ask the configured provider about unresolved descriptors (spec 4.2)
+   *
+   * Batches spec 4.1 step 7’s unresolved descriptors, ~50 per call, as descriptor strings only — no amounts, no dates, no account numbers, and nothing on spec 2.4’s P2P filter list. At or above 0.85 a proposal writes a `source = "llm"` alias and applies provisionally; below it, or wherever it would disturb a settled recurring series, it goes to the review queue and applies to nothing. Enqueues spec 2.7’s job and returns its id.
+   */
+  proposeMerchants(): Promise<ProposeMerchantsResponse> {
+    return this.request<ProposeMerchantsResponse>('POST', `/api/llm/propose-merchants`, {
     });
   }
   // ------------------------------------------------------------ plumbing ---

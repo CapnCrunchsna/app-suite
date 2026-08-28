@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { ReviewQueue } from '@metrum/ledgerline-feature-shell';
+import { LedgerlineApiService, ReviewQueue } from '@metrum/ledgerline-feature-shell';
 
 /**
  * Spec §6's nine sections. `path` is null until the page exists — a rail item that
@@ -48,6 +48,7 @@ const SECTIONS = [
 })
 export class App {
   private readonly reviewQueue = inject(ReviewQueue);
+  private readonly api = inject(LedgerlineApiService);
 
   protected readonly sections = SECTIONS;
 
@@ -55,12 +56,29 @@ export class App {
   protected readonly reviewCount = this.reviewQueue.outstanding;
 
   /**
-   * §6.8's persistent header indicator. `none` is the default provider, and the
-   * only one that keeps every descriptor on this machine; the header says so
-   * at all times rather than only in Settings. Reads `GET /api/settings` once that
-   * endpoint exists.
+   * §6.8's persistent header indicator: "While it's active, a persistent indicator
+   * sits in the app header."
+   *
+   * Read from `GET /api/settings` rather than held as UI state, because the fact it
+   * reports is a property of the *server* — the provider is a settings row, and a
+   * second tab that changed it has changed it for this one too. `none` is the
+   * default while the first read is in flight, which is both the true default and
+   * the safe direction to be wrong in: the indicator never claims local when it is
+   * not, only the reverse, and the reverse resolves within a request.
+   *
+   * `sendsDataOffMachine` drives the emphasis rather than a comparison against
+   * `'claude-cli'`, for §2.4's reason: it is on the provider interface precisely so
+   * that one fact has one source, and a UI that re-derived it would be the second.
    */
-  protected readonly llmProvider = signal<'none' | 'claude-cli' | 'ollama'>('none');
+  private readonly settings = resource({
+    params: () => 0,
+    loader: () => this.api.getSettings(),
+  });
+
+  protected readonly llmProvider = computed(() => this.settings.value()?.llm.providerId ?? 'none');
+  protected readonly sendsDataOffMachine = computed(
+    () => this.settings.value()?.llm.sendsDataOffMachine ?? false,
+  );
 
   constructor() {
     // Read at startup, not on a timer. Nothing outside this UI writes an alias, so

@@ -37,7 +37,7 @@ import { addDaysIso } from '@metrum/ledgerline-domain';
 import type { AnalyzerConfig, FeesConfig } from './config.js';
 import { applyEmissionPolicy, evidenceHash } from './finding.js';
 import type { DraftFinding, RuleEmission } from './finding.js';
-import { monthOf } from './snapshot.js';
+import { llmAttributedIds, monthOf } from './snapshot.js';
 import type { Snapshot, SnapshotTransaction } from './snapshot.js';
 
 export const FEES_RULE_ID = 'fees.v1';
@@ -143,7 +143,9 @@ export function analyzeFees(snapshot: Snapshot, config: AnalyzerConfig): RuleEmi
     });
   }
 
-  return applyEmissionPolicy(FEES_RULE_ID, drafts, config);
+  return applyEmissionPolicy(FEES_RULE_ID, drafts, config, {
+    llmAttributed: llmAttributedIds(snapshot),
+  });
 }
 
 // ------------------------------------------------------------------ matching ---

@@ -31,6 +31,7 @@ import type {
   CommitResult,
   CreateDismissalRuleBody,
   CreateFormatProfileBody,
+  DegradedCallLog,
   DeleteImportResult,
   DismissalRule,
   Finding,
@@ -44,12 +45,14 @@ import type {
   ListFindingsQuery,
   ListTransactionsQuery,
   ListTransfersQuery,
+  LlmHealth,
   Merchant,
   MergeAccountBody,
   MerchantMergeResult,
   MerchantReviewQueue,
   MergeMerchantBody,
   PreviewFormatProfileBody,
+  ProposeMerchantsResponse,
   Series,
   SeriesPatch,
   Settings,
@@ -355,10 +358,28 @@ export class LedgerlineApiService {
     return this.api.getSettings();
   }
 
-  /** One write for thresholds and rule switches alike — a rule's `enabled` is a
-   *  field in its own config section. A `null` value restores the default. */
+  /** One write for thresholds, rule switches and the LLM provider alike — a rule's
+   *  `enabled` is a field in its own config section, and the provider travels
+   *  beside them but lands in its own settings key (§2.4, §7.4). A `null` value
+   *  restores the default. */
   updateSettings(body: UpdateSettingsBody): Promise<SettingsUpdate> {
     return this.api.updateSettings(body);
+  }
+
+  /** §6.8's Test Connection. Probes the configured provider *now* — never a
+   *  remembered answer, which is the one thing this button must not give. */
+  getLlmHealth(): Promise<LlmHealth> {
+    return this.api.getLlmHealth();
+  }
+
+  /** §6.8's degraded-LLM-call log, in the Data section. */
+  listDegradedCalls(limit?: number): Promise<DegradedCallLog> {
+    return this.api.listDegradedCalls(limit === undefined ? {} : { limit });
+  }
+
+  /** §4.2's stage. Returns §2.7's job id; the page polls it like every other. */
+  proposeMerchants(): Promise<ProposeMerchantsResponse> {
+    return this.api.proposeMerchants();
   }
 
   /** §2.3's backup: a consistent copy, returning the path it wrote. */
