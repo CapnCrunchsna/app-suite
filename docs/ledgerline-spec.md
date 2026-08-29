@@ -89,13 +89,13 @@ the move, the badge, and where the count lives.
 Redaction sections, §4.2's merchant-proposal stage, and the degraded-call log in Data — §9t.
 `none` remains the default and the app is complete without a provider (§2.4).
 
-PDF ingest and the **LLM stage of §4.2** are **not** built, nor are the merchant-alias,
-insights and ask endpoints of §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
+PDF ingest is **not** built, nor are the merchant-alias, insights and ask endpoints of
+§2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
 records what it proposes — nor **two of §6's nine pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s and §9t list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t and §9u list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
