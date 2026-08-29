@@ -362,6 +362,30 @@ describe('ledgerline-api analysis surface (§5.1)', () => {
       expect((flagged.json() as { total: number }).total).toBe(25);
     });
 
+    it('returns the evidence oldest charge first, so a card can take the recent end', async () => {
+      await importPriceRise();
+      await analyze();
+
+      const creep = await findingFor('price_creep.v1');
+
+      // §9w. This used to be ordered by `transaction_id`, which is stable and
+      // means nothing — ids are `randomUUID`. §6.4's card shows six of fifteen,
+      // and "six of" is only a sample worth showing if the list has an end that
+      // is the recent one.
+      const charges = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?ids=${creep.evidenceTransactionIds.join(',')}&sort=date_asc&limit=1000`,
+      });
+      const rows = (
+        charges.json() as { rows: { transaction: { id: string; effectiveDate: string } }[] }
+      ).rows;
+
+      expect(rows.map((row) => row.transaction.id)).toEqual(creep.evidenceTransactionIds);
+      expect(rows.map((row) => row.transaction.effectiveDate)).toEqual(
+        [...rows.map((row) => row.transaction.effectiveDate)].sort(),
+      );
+    });
+
     it('records config_hash and snapshot_rows on the run (§2.2, §7.4)', async () => {
       await importPriceRise();
       await analyze();

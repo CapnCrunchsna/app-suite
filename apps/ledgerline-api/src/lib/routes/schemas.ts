@@ -1456,6 +1456,10 @@ const transactionFilter = {
   $id: 'TransactionFilter',
   type: 'object',
   properties: {
+    /** Exactly these rows, by surrogate id. An empty array matches nothing —
+     *  the one list filter here for which empty is a selection rather than a
+     *  missing one. */
+    ids: { type: 'array', items: { type: 'string' } },
     accountIds: { type: 'array', items: { type: 'string' } },
     merchantIds: { type: 'array', items: { type: 'string' } },
     categoryIds: { type: 'array', items: { type: 'string' } },

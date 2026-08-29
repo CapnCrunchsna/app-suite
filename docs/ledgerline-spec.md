@@ -2177,6 +2177,89 @@ within a kind, and merging the two is lossless in one direction only: a sweep
 **subsumes** incremental work, because it re-resolves every row rather than a key-space.
 So `full` is OR-ed when payloads merge, and the incremental payload is still carried
 rather than discarded.
+## 9w. Amendments from implementation — 2026-08-29 (§2.3, §6.4, §5.1, §6.3, §2.6)
+
+§6.4 asks for "a compact charge history or mini-table, **not a link to go find it**", and §5.1
+hands it the material — evidence is "explicit transaction ids, materialized into
+`finding_evidence`". The cards had the ids and rendered them as a number. The reader was told
+"12 charges" and shown none of the twelve.
+
+That was not an oversight and the component said so in its own header: `ListTransactionsQuery`
+had no by-ids filter, so a card wanting its rows had to issue one `GET /api/transactions/:id`
+per cited transaction. Twelve requests to rebuild a history the rule had already summarised is
+a bad trade, and the honest response to a missing contract was to show the count and explain
+the absence. The contract is the thing that was wrong.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3 | **`GET /api/transactions` gains an `ids` filter** — comma-separated on the query string, an array on `TransactionFilter`. Present but empty selects nothing. | It is the one selection this API could not express, and §5.1 produces exactly that selection on every run. Every other filter here describes a *shape* of row; this one names rows, which is what evidence is. |
+| 6.4 | **Cards show the transactions they were built from**: date, descriptor, amount, most recent first, under the rule's own `detail` rows. | §6.4 asked for this from the start. What changed is that it can now be had for one request. |
+| 5.1 | **A finding's `evidence_transaction_ids` are ordered by the transaction's `effective_date`**, id breaking the tie. | They were ordered by `transaction_id`, which is stable and means nothing: ids are `randomUUID`. Harmless while the only consumer was a count; wrong the moment a card shows six of thirty-two, because "six of" is a sample only if the list has an end that is the recent one. |
+| 6.3 | **The transfer chip dims where §2.6's spend-category signal fires.** Dimmed, never disabled. | The chip is a manual override with no sense of how implausible it is, and offered "not spending" beside an Amazon purchase in the same tone as beside a credit-card payment. §2.6 already scores that −2. |
+| 2.6 | **The spend-category signal moves to `domain`** as a single-row predicate; the matcher calls it. | It is the half of §2.6 that asks nothing about the counterpart, and §6.3's chip needs the same judgement on the far side of §2.2's boundary. One rule, two callers, rather than a copy in the UI that silently stops agreeing. |
+
+**The id list is bound as one JSON value, not as `n` placeholders.** Every other list filter in
+`buildFilter` expands to `IN (?, ?, …)`, which is right when the list is a handful of account or
+category ids chosen from a picker. This one is sized by how much evidence a run happened to
+produce — `micro.v1` cites every charge in a high-frequency group and `trend.v1` cites a month
+of a category — so the placeholder count is *data*, and data that grows into SQLite's
+`SQLITE_MAX_VARIABLE_NUMBER` (32,766 on the bundled build, 999 on an older one) fails at exactly
+the sizes the filter exists for. `t.id IN (SELECT value FROM json_each(?))` takes the whole list
+as one bound parameter and the statement's shape stops depending on the input.
+
+Chunking was the alternative and it does not survive §3.4's own rule. `buildFilter` is written
+once because `search`, `countMatching` and `applyBulk` "must agree exactly" — one filter, one
+clause. A chunked `applyBulk` is several transactions where §6.3 promised one, and the promise
+§6.3 makes is a count: "apply to all 47 matching."
+
+**One request for the page, not one per card.** Per-card would have been defensible and is worse
+in every direction that matters. Nine rules' worth of cards is nine to two hundred requests for
+data that fits in one; the cards would populate raggedly as each landed; and a card that fetches
+is a card that owns a resource, a loading state and an error state, which is the split §6.4's
+page was built to avoid — "the container owns all state and every request." The page already
+re-reads on its own revision counter, so the charges invalidate with everything else for free.
+
+**Two caps, both visible.** A card shows at most **six** charges: §5.1 caps a *rule* at 25
+findings and says nothing about how many transactions one finding may cite, and a card is not
+the transactions page. Six covers a typical price-creep or lapsed finding outright, and a card
+showing fewer than it cites says so — "6 most recent of 32" — because a reader who counts the
+rows must not conclude the rule looked at six. The page as a whole sends at most **160 ids**,
+about 5.9 KB against the route's declared 8 KB: `GET` is where this lives, Node caps a request's
+whole header block at 16 KB by default, and an over-long URL fails as a socket error with no
+route entered and nothing in the log. A declared `maxLength` turns that into the 400 every other
+malformed query gets. The budget is spent in the page's own reading order — biggest group,
+biggest card — so it runs out at the bottom, and a card past it renders exactly what every card
+rendered before: its `detail` rows and its charge count.
+
+**The charge fetch asks for rows a browse would hide.** §6.3 defaults internal transfers and
+excluded rows off, and rightly: a credit-card payment is not spending. But an id list is an
+explicit selection rather than a browse, and a rule cited these exact rows. If the user has since
+marked one an internal transfer, the honest card is the one whose charges match its own count —
+dropping it silently leaves "6 charges" above five rows with no account of the sixth. The
+defaults stay where they are and the caller opts in, because the default is right for the page
+that has one.
+
+**The rule's `detail` payload stays primary.** The charges are an addition, not a replacement. A
+price-step table says more than twelve rows of the same merchant, and §5.3 forbids re-deriving
+downstream what §5 already computed — the mini-table is the evidence beside the conclusion, not
+a second attempt at it. The one case where the charges are the whole of the evidence is a rule
+with no `detail` renderer: `outlier.v1`, `micro.v1`, `trend.v1` and `fees.v1` showed no evidence
+block at all before this, which is where "$290 at SAMSCLUB — typical is $82" was hardest to
+believe.
+
+**On the transfer chip: the complaint was about the chip and not about a bad link.** Checked
+before assuming — `GET /api/transfers` over the real statement returns nothing and no row is
+flagged, which is correct: §2.6's candidate generation needs a debit in A and a credit in B with
+A ≠ B, and there is one account in the system. So nothing was mis-linking. What was wrong is
+that the manual toggle had no opinion at all. It now reads §2.6's own predicate and recedes —
+dashed border, less contrast, full hover state — where a row is a purchase at a real merchant in
+a spend category. **Not disabled**: §4.3 puts a user's decision above every rule, a merchant can
+be miscategorized, and refusing the toggle would make a wrong category unfixable from the page
+whose job is fixing wrong categories. Only §2.6's *second* negative signal is applied. The first
+— "already belongs to a `recurring_series` whose merchant is not transfer-kind" — needs series
+membership per row, which is not on `TransactionSearchRow`; that is a second §2.3 change for a
+case the second signal almost always catches anyway, since a series has a resolved merchant by
+construction and a subscription charge lands in a spend category.
 
 ## 10. Open discrepancies — recorded, not resolved
 

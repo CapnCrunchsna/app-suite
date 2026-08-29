@@ -124,6 +124,28 @@ const MERCHANTS: Merchant[] = [
     overlapGroup: null,
     source: 'seed',
   },
+  {
+    id: 'amazon',
+    canonicalName: 'AMAZON',
+    displayName: 'Amazon',
+    website: null,
+    defaultCategoryId: 'shopping',
+    isKnownSubscription: false,
+    isTransferKind: false,
+    overlapGroup: null,
+    source: 'seed',
+  },
+  {
+    id: 'cardinal-card',
+    canonicalName: 'CARDINAL CARD',
+    displayName: 'Cardinal Card',
+    website: null,
+    defaultCategoryId: 'transfers',
+    isKnownSubscription: false,
+    isTransferKind: true,
+    overlapGroup: null,
+    source: 'seed',
+  },
 ];
 
 const CATEGORIES: Category[] = [
@@ -139,6 +161,20 @@ const CATEGORIES: Category[] = [
     name: 'Groceries',
     parentId: null,
     kind: 'spend',
+    overlapGroup: null,
+  },
+  {
+    id: 'shopping',
+    name: 'Shopping',
+    parentId: null,
+    kind: 'spend',
+    overlapGroup: null,
+  },
+  {
+    id: 'transfers',
+    name: 'Transfers',
+    parentId: null,
+    kind: 'transfer',
     overlapGroup: null,
   },
 ];
@@ -578,6 +614,89 @@ describe('TransactionsPage', () => {
       await fixture.whenStable();
 
       expect(el.querySelector('.notice__text')?.textContent).toContain('no such merchant');
+    });
+  });
+
+  /**
+   * §9w. §2.6's spend-category signal, applied to the one row whose transfer chip
+   * it is. "An amazon purchase was clearly not a transfer" — and the chip used to
+   * offer itself there in exactly the tone it offers itself on a card payment.
+   */
+  describe('the transfer chip, where §2.6 scores against it', () => {
+    const transferChip = (el: HTMLElement) =>
+      [...el.querySelectorAll<HTMLButtonElement>('.chip--toggle')].find((chip) =>
+        chip.textContent?.includes('transfer'),
+      );
+
+    it('dims itself on a purchase at a real merchant in a spend category', async () => {
+      api.rows = [
+        transaction({
+          merchantId: 'amazon',
+          categoryId: 'shopping',
+          descriptionRaw: 'AMAZON.COM*RT4XY9SL3',
+        }),
+      ];
+      const { el } = await render();
+
+      const chip = transferChip(el);
+      expect(chip?.classList.contains('chip--implausible')).toBe(true);
+      expect(chip?.title).toContain('looks like spending at Amazon');
+    });
+
+    it('is still clickable, because §4.3 puts the user above the rule', async () => {
+      api.rows = [transaction({ merchantId: 'amazon', categoryId: 'shopping' })];
+      const { fixture, el } = await render();
+
+      const chip = transferChip(el);
+      expect(chip?.disabled).toBe(false);
+      chip?.click();
+      await fixture.whenStable();
+
+      expect(api.patches).toEqual([{ id: 't1', change: { isInternalTransfer: true } }]);
+    });
+
+    it('leaves a transfer-kind merchant alone — that is what the chip is for', async () => {
+      api.rows = [
+        transaction({
+          merchantId: 'cardinal-card',
+          categoryId: 'transfers',
+          descriptionRaw: 'ONLINE PMT CARDINAL CARD XXXX9012',
+        }),
+      ];
+      const { el } = await render();
+
+      const chip = transferChip(el);
+      expect(chip?.classList.contains('chip--implausible')).toBe(false);
+      expect(chip?.title).toBe('Mark as money moving between your own accounts, not spending.');
+    });
+
+    it('says nothing about a row with no canonical merchant', async () => {
+      // §2.6 requires both halves: an unresolved descriptor in a spend category
+      // has no merchant to vouch that the money went to a real payee.
+      api.rows = [transaction({ merchantId: null, categoryId: 'dining' })];
+      const { el } = await render();
+
+      expect(transferChip(el)?.classList.contains('chip--implausible')).toBe(false);
+    });
+
+    it('says nothing about a row with no category', async () => {
+      api.rows = [transaction({ merchantId: 'starbucks', categoryId: null })];
+      const { el } = await render();
+
+      expect(transferChip(el)?.classList.contains('chip--implausible')).toBe(false);
+    });
+
+    it('drops the dimming once the row is actually marked', async () => {
+      // The chip is now stating a fact rather than offering a doubtful action.
+      api.rows = [
+        transaction({ merchantId: 'amazon', categoryId: 'shopping', isInternalTransfer: true }),
+      ];
+      const { el } = await render();
+
+      const chip = transferChip(el);
+      expect(chip?.classList.contains('chip--implausible')).toBe(false);
+      expect(chip?.classList.contains('chip--on')).toBe(true);
+      expect(chip?.title).toContain('Click to unmark');
     });
   });
 

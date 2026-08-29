@@ -1393,6 +1393,12 @@
       "TransactionFilter": {
         "type": "object",
         "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "accountIds": {
             "type": "array",
             "items": {
@@ -4625,6 +4631,16 @@
         ],
         "description": "Internal transfers are excluded unless asked for — a credit-card payment is not spending (spec 6.3). `hasFinding` comes from `finding_evidence` (spec 2.3).",
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "in": "query",
+            "name": "ids",
+            "required": false,
+            "description": "Comma-separated transaction ids — exactly these rows, in the requested sort order. Backs spec 6.4's inline evidence: a finding's charges are one request, not one per cited row. Present but empty matches nothing."
+          },
           {
             "schema": {
               "type": "string"

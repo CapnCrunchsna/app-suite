@@ -29,6 +29,31 @@
  * §6.4's grouping is a presentation of the page you have. The *sort* is applied
  * within each group, so a group's first card is its biggest — matching §5.1's
  * "default sort" without pretending the page is the whole set.
+ *
+ * ## The evidence charges are one request for the page, not one per card
+ *
+ * §6.4 wants the transactions a finding was built from on the card. They now
+ * arrive here, in a single `GET /api/transactions?ids=…` keyed by the union of
+ * every visible card's evidence — the filter §9w added for exactly this.
+ *
+ * One request for the page rather than one per card, and neither of those rather
+ * than the twelve-per-series `GET /api/transactions/:id` loop the old filter-less
+ * contract forced. Per-card would have been defensible and is still worse in
+ * every direction that matters here: nine rules' worth of cards is nine to two
+ * hundred requests against a local Fastify process for data that fits in one, the
+ * cards would populate raggedly as each landed, and a card that fetches is a card
+ * that owns a resource, an error state and a loading state — which is the split
+ * this file's second paragraph exists to prevent. The page already re-reads on
+ * `revision`, so the charges invalidate with everything else for free.
+ *
+ * The union is **capped, twice**, and both caps are visible to the reader rather
+ * than silent. `EVIDENCE_PER_CARD` is what a card may show: §5.1 caps a rule at 25
+ * findings but says nothing about how many charges one may cite, and `micro.v1`
+ * cites every charge in a high-frequency group by design. `EVIDENCE_ID_BUDGET` is
+ * what the URL may carry, because `GET` is where this lives and a query string has
+ * a length. Cards are served in the page's own reading order — biggest group,
+ * biggest card — so a budget that runs out runs out at the bottom, on the cards
+ * nobody scrolled to, and those degrade to the charge count they showed before.
  */
 
 import {
@@ -49,10 +74,12 @@ import type {
   FindingsSummary,
   ListFindingsQuery,
   Merchant,
+  Transaction,
 } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { ruleBlurb, ruleLabel } from '../rule-copy.js';
+import { chargesFor, evidenceIdsForPage } from './evidence-charges.js';
 import { FindingCard } from './finding-card.js';
 import type { FindingActionEvent } from './finding-card.js';
 import { FindingFilters, EMPTY_FINDING_FILTER, minAnnualCents } from './finding-filters.js';
@@ -72,6 +99,7 @@ export interface FindingGroup {
 /** A page of findings is small — §5.1 caps every rule at 25 plus a rollup, so
  *  nine rules cannot exceed a few hundred. One request, no pagination UI. */
 const PAGE_SIZE = 250;
+
 
 @Component({
   selector: 'll-findings-page',
@@ -194,6 +222,60 @@ export class FindingsPage {
       }))
       .sort((a, b) => Math.abs(b.annualCents) - Math.abs(a.annualCents));
   });
+
+  // -------------------------------------------------- evidence charges ---
+
+  /**
+   * The ids to ask for, in the order the reader meets them.
+   *
+   * Flattened from `groups` rather than from `findings` because the budget has to
+   * spend itself top-down on the page as rendered, and the API's paging order is
+   * not that order.
+   */
+  private readonly evidenceIds = computed(() =>
+    evidenceIdsForPage(this.groups().flatMap((group) => group.findings)),
+  );
+
+  /**
+   * §6.4's charges, in one request for the whole page.
+   *
+   * `includeInternalTransfers` and `includeExcluded` are both on, against the
+   * defaults §6.3 sets for browsing. An id list is an explicit selection, not a
+   * browse: a rule cited these exact rows, and if the user has since marked one
+   * an internal transfer the honest thing is to show a card whose charges match
+   * its own count. Silently dropping it would leave "6 charges" above five rows
+   * with no account of the sixth.
+   *
+   * `limit` matches the request rather than defaulting to 100 — the union is
+   * already bounded by `EVIDENCE_ID_BUDGET`, and a second, quieter cap underneath
+   * it would truncate the bottom of the page for a reason nothing on screen
+   * explains.
+   */
+  private readonly evidenceResource = resource({
+    params: () => ({ ids: this.evidenceIds(), revision: this.revision() }),
+    loader: ({ params }) =>
+      params.ids.length === 0
+        ? Promise.resolve([])
+        : this.api
+            .listTransactions({
+              ids: params.ids.join(','),
+              includeInternalTransfers: true,
+              includeExcluded: true,
+              limit: params.ids.length,
+            })
+            .then((page) => page.rows.map((row) => row.transaction)),
+    defaultValue: [] as Transaction[],
+  });
+
+  private readonly chargesById = computed(
+    () => new Map(this.evidenceResource.value().map((row) => [row.id, row])),
+  );
+
+  /** The rows one card renders. Resolved here because the page owns the request;
+   *  the card is handed transactions and renders them. */
+  protected chargesFor(finding: Finding): readonly Transaction[] {
+    return chargesFor(finding, this.chargesById());
+  }
 
   /**
    * Which groups the reader has folded away.

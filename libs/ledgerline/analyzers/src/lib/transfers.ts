@@ -47,7 +47,11 @@
  * says nothing about whether it is some other one.
  */
 
-import { addDaysIso, daysBetweenIso } from '@metrum/ledgerline-domain';
+import {
+  addDaysIso,
+  daysBetweenIso,
+  isSpendAtRealMerchant as spendAtRealMerchant,
+} from '@metrum/ledgerline-domain';
 
 import type { AnalyzerConfig, TransferConfig } from './config.js';
 import type {
@@ -580,16 +584,20 @@ function inSpendSeries(row: SnapshotTransaction, context: MatchContext): boolean
 }
 
 /**
- * §2.6's second penalty, read literally: "**category `kind` is `spend`** with a
- * **non-transfer canonical merchant**". Both halves are required, so an
- * unresolved descriptor sitting in a spend category does not attract it — there is
- * no canonical merchant there to vouch that the money went to a real payee.
+ * §2.6's second penalty. The rule itself is `domain`'s `isSpendAtRealMerchant`;
+ * this resolves a snapshot row against the run's category and merchant tables and
+ * hands it over.
+ *
+ * Split that way because §6.3's manual transfer toggle needs the same judgement
+ * about a single row and cannot import this lib (§2.2). One rule, two callers —
+ * see `transfer-signals.ts` for why a copy in the UI was the wrong answer.
  */
 function isSpendAtRealMerchant(row: SnapshotTransaction, context: MatchContext): boolean {
-  if (row.categoryId === null || row.merchantId === null) return false;
-  if (context.categories.get(row.categoryId)?.kind !== 'spend') return false;
-  const merchant = context.merchants.get(row.merchantId);
-  return merchant !== undefined && !merchant.isTransferKind;
+  const merchant = row.merchantId === null ? undefined : context.merchants.get(row.merchantId);
+  return spendAtRealMerchant({
+    categoryKind: (row.categoryId === null ? null : context.categories.get(row.categoryId)?.kind) ?? null,
+    merchantIsTransferKind: merchant === undefined ? null : merchant.isTransferKind,
+  });
 }
 
 /**

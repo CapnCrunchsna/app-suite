@@ -25,6 +25,28 @@
  * template and its output is never read back (§7.3). The one place a human types
  * money is the amount filter, and that goes through `domain`'s own
  * `parseMoneyToCents`.
+ *
+ * ## The transfer chip knows when it is being silly
+ *
+ * §6.3 puts a transfer toggle on every row, and it used to offer itself in the
+ * same tone on all of them — "not spending" beside an Amazon purchase exactly as
+ * beside a credit-card payment. §2.6 already scores that: a row whose category
+ * kind is `spend` at a non-transfer canonical merchant takes a −2, which on its
+ * own is below the floor that would let a pair be *proposed* at all. The chip
+ * reads the same predicate — `domain`'s `isSpendAtRealMerchant`, the one the
+ * matcher itself calls — and dims where it fires.
+ *
+ * **Dimmed, not disabled.** §4.3 puts a user's decision above every rule, and a
+ * merchant can be miscategorized; refusing the toggle would make a wrong category
+ * unfixable from the page whose job is fixing wrong categories. The chip stays
+ * clickable and says what it thinks in its tooltip.
+ *
+ * Only the *second* of §2.6's two negative signals is applied. The first —
+ * "already belongs to a `recurring_series` whose merchant is not transfer-kind" —
+ * needs series membership per row, which is not on `TransactionSearchRow` and
+ * would be a second contract change on §2.3 for a case the second signal almost
+ * always catches anyway: a series has a resolved merchant by construction, and a
+ * subscription charge lands in a spend category.
  */
 
 import {
@@ -41,13 +63,14 @@ import {
 } from '@angular/core';
 import type { ElementRef } from '@angular/core';
 import { Panel } from '@metrum/ui';
-import { formatCents } from '@metrum/ledgerline-domain';
+import { formatCents, isSpendAtRealMerchant } from '@metrum/ledgerline-domain';
 import type {
   Account,
   Category,
   Job,
   ListTransactionsQuery,
   Merchant,
+  Transaction,
   TransactionDetail,
   TransactionFilter as BulkFilter,
   TransactionSearchRow,
@@ -577,6 +600,42 @@ export class TransactionsPage {
 
   protected isProvisional(merchantId: string | null): boolean {
     return merchantId !== null && this.merchantsById().get(merchantId)?.source === 'rule';
+  }
+
+  /**
+   * §2.6's spend-category signal, for one row and its own transfer chip.
+   *
+   * False while the merchant and category lists are still loading, which is the
+   * right way round: a chip that starts dim and brightens has told the user
+   * something about a row it had not looked at yet.
+   */
+  protected looksLikeSpend(transaction: Transaction): boolean {
+    const merchant =
+      transaction.merchantId === null ? undefined : this.merchantsById().get(transaction.merchantId);
+    return isSpendAtRealMerchant({
+      categoryKind:
+        (transaction.categoryId === null
+          ? null
+          : this.categoriesById().get(transaction.categoryId)?.kind) ?? null,
+      merchantIsTransferKind: merchant === undefined ? null : merchant.isTransferKind,
+    });
+  }
+
+  /** What the dimmed chip says it thinks, naming the merchant so the sentence is
+   *  about this row rather than about the rule. */
+  protected transferChipTitle(transaction: Transaction): string {
+    if (transaction.isInternalTransfer) {
+      return 'Marked as money moving between your own accounts. Click to unmark.';
+    }
+    if (!this.looksLikeSpend(transaction)) {
+      return 'Mark as money moving between your own accounts, not spending.';
+    }
+    const name = this.merchantLabel(transaction.merchantId);
+    return (
+      `This looks like spending at ${name}, not a transfer — a real merchant in a ` +
+      'spend category is what the transfer matcher scores against. Still clickable: ' +
+      'if the category is wrong, your call wins.'
+    );
   }
 
   protected categoryLabel(categoryId: string | null): string {

@@ -176,6 +176,7 @@ export type MergeAccountBody = {
 };
 
 export interface ListTransactionsQuery {
+  readonly ids?: string;
   readonly accountIds?: string;
   readonly merchantIds?: string;
   readonly categoryIds?: string;

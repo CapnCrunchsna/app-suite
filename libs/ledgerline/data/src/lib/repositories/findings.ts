@@ -654,10 +654,30 @@ export class FindingRepository {
     };
   }
 
+  /**
+   * A finding's evidence ids, **oldest charge first**.
+   *
+   * This used to order by `transaction_id`, which is stable and means nothing:
+   * ids are `randomUUID` (see `clock.ts`), so that ordering is a shuffle that
+   * happens to be reproducible. It was harmless while the only consumer was a
+   * count. §6.4's mini-table changed that — a card shows a few charges, not all
+   * of a `micro.v1` group, and "a few" is only a defensible sample if the caller
+   * can tell which end of the list is recent. Chronological order is what lets
+   * the page take the tail and get the newest charges rather than an arbitrary
+   * handful.
+   *
+   * `effective_date` is §7.1's one date. `transaction_id` stays as the tiebreak
+   * so the order is still total: a merchant billing twice on one day must not
+   * reorder between two reads of the same row set.
+   */
   listEvidence(findingId: string): string[] {
     return this.db
       .prepare<[string], { transaction_id: string }>(
-        `SELECT transaction_id FROM finding_evidence WHERE finding_id = ? ORDER BY transaction_id`,
+        `SELECT fe.transaction_id
+           FROM finding_evidence AS fe
+           JOIN "transaction" AS t ON t.id = fe.transaction_id
+          WHERE fe.finding_id = ?
+          ORDER BY t.effective_date, fe.transaction_id`,
       )
       .all(findingId)
       .map((row) => row.transaction_id);

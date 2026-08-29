@@ -55,6 +55,34 @@ export type TransactionSort = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount
 
 export interface TransactionQuery {
   readonly accountIds?: readonly string[];
+  /**
+   * Exactly these transactions, by surrogate id.
+   *
+   * §5.1's evidence is "explicit transaction ids", and §6.4 wants the rows behind
+   * a card inline — "a compact charge history or mini-table, **not a link to go
+   * find it**". Without this filter the only way to honour that was
+   * `GET /api/transactions/:id` per evidence row, which turns one twelve-charge
+   * series into twelve requests.
+   *
+   * **Bound as one JSON parameter, not as `n` placeholders.** Every other list
+   * filter here expands to `IN (?, ?, …)`, which is fine when the list is a
+   * handful of account or category ids chosen from a picker. This one is sized by
+   * how much evidence a run happened to produce — `micro.v1` cites every charge in
+   * a high-frequency group and `trend.v1` cites a month of a category — so the
+   * placeholder count is data, and data that grows into SQLite's
+   * `SQLITE_MAX_VARIABLE_NUMBER` ceiling (32,766 here, 999 on an older build)
+   * produces a runtime error at exactly the sizes this filter exists for.
+   * `json_each` takes the whole list as a single bound value, so the statement's
+   * parameter count no longer depends on the input at all. Chunking was the
+   * alternative and it does not survive `buildFilter`: one filter has to compile
+   * to one clause for `search`, `countMatching` and `applyBulk` alike, and a
+   * chunked `applyBulk` is several transactions where §6.3 promised one.
+   *
+   * An **empty array matches nothing**, unlike the other list filters, which
+   * treat empty as absent. A caller asking for "these zero rows" — a findings page
+   * whose cards all cite nothing — must not be handed the whole table.
+   */
+  readonly ids?: readonly string[];
   readonly dateRange?: DateRange;
   readonly minAmountCents?: number;
   readonly maxAmountCents?: number;
@@ -500,6 +528,13 @@ export class TransactionRepository {
     if (query.accountIds?.length) {
       where.push(`t.account_id IN (${query.accountIds.map(() => '?').join(', ')})`);
       params.push(...query.accountIds);
+    }
+    // One bound value whatever the length — see `TransactionQuery.ids`. Tested
+    // for `undefined` rather than `?.length`, because `ids: []` has to reach
+    // `json_each` as an empty array and match nothing.
+    if (query.ids !== undefined) {
+      where.push('t.id IN (SELECT value FROM json_each(?))');
+      params.push(JSON.stringify([...query.ids]));
     }
     if (query.dateRange) {
       where.push('t.effective_date >= ? AND t.effective_date <= ?');

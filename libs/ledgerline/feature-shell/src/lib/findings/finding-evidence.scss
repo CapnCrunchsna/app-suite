@@ -24,10 +24,24 @@
   color: var(--text-dim, #7ea8a1);
 }
 
+/* The second caption sits under a block rather than at the top of one, so it
+ * needs the space above that the first one gets from the panel. */
+.evidence__caption--charges {
+  margin-top: 9px;
+}
+
 .evidence__count {
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* The pre-§9v rendering, still reached while the page's one request is in flight
+ * and for any card past its id budget. */
+.evidence__count--alone {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
 }
 
 /* Two columns rather than a table: the rows are label/value pairs, and a <dl>
@@ -56,4 +70,50 @@
 
 .evidence__value--down {
   color: var(--accent-2, #34d399);
+}
+
+/* §6.4's mini-table. Three columns: date, descriptor, money.
+ *
+ * Fixed layout, so a long descriptor cannot push the amount column off the card.
+ * The descriptor is the only cell allowed to lose characters, and it keeps the
+ * whole string in its `title`. */
+.charges {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.charges__row + .charges__row .charges__date,
+.charges__row + .charges__row .charges__desc,
+.charges__row + .charges__row .charges__amount {
+  border-top: 1px solid color-mix(in srgb, var(--border, #1f4a47) 55%, transparent);
+}
+
+.charges__date,
+.charges__desc,
+.charges__amount {
+  padding: 3px 0;
+  vertical-align: baseline;
+}
+
+.charges__date {
+  width: 5.6rem;
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.charges__desc {
+  padding-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.charges__amount {
+  width: 5.6rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }

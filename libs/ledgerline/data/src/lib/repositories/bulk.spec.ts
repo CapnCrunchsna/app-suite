@@ -187,6 +187,90 @@ describe('TransactionRepository — the bulk correction surface (§6.3)', () => 
     });
   });
 
+  /**
+   * §9w's `ids` filter, at the level where the interesting decision was made.
+   *
+   * It is bound as one JSON value through `json_each` rather than as `n`
+   * placeholders, because this is the one list filter whose length is data:
+   * `micro.v1` cites every charge in a group, and a placeholder per id walks into
+   * `SQLITE_MAX_VARIABLE_NUMBER` at exactly the sizes it exists for. The property
+   * that matters is that it behaves like every other filter while doing so.
+   */
+  describe('the ids filter', () => {
+    it('selects exactly the named rows', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+      const wanted = [inserted[0].id, inserted[2].id];
+
+      const page = store.transactions.search({ ids: wanted, limit: 100 });
+
+      expect(page.total).toBe(2);
+      expect(page.rows.map((row) => row.transaction.id).sort()).toEqual([...wanted].sort());
+
+      store.close();
+    });
+
+    it('reads an empty list as nothing, not as an absent filter', () => {
+      const store = openStore();
+      seed(store, SPOTIFY_HISTORY);
+
+      // Every other list filter here treats empty as absent. This one must not:
+      // a caller asking for zero specific rows would otherwise be handed the
+      // whole table.
+      expect(store.transactions.countMatching({ ids: [] })).toBe(0);
+      expect(store.transactions.countMatching({})).toBe(5);
+
+      store.close();
+    });
+
+    it('takes more ids than SQLite would bind as placeholders', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+
+      // 40,000 is past both the 999 an older SQLite allows and the 32,766 this
+      // one does. One bound parameter, so neither ceiling is in the way.
+      const ids = [inserted[1].id, ...Array.from({ length: 40_000 }, (_unused, i) => `x${i}`)];
+
+      expect(store.transactions.countMatching({ ids })).toBe(1);
+
+      store.close();
+    });
+
+    it('agrees across search, countMatching and applyBulk', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+      const filter = { ids: [inserted[0].id, inserted[1].id] };
+
+      // The three-caller property this whole `buildFilter` exists for: an id list
+      // that compiled to one clause for the count and a chunked one for the write
+      // is how "apply to all 47 matching" comes to update some other number.
+      expect(store.transactions.countMatching(filter)).toBe(2);
+      expect(store.transactions.search({ ...filter, limit: 1 }).total).toBe(2);
+
+      const applied = store.transactions.applyBulk(filter, { merchantId: 'spotify' });
+      expect(applied.matched).toBe(2);
+      expect([...applied.transactionIds].sort()).toEqual([...filter.ids].sort());
+
+      store.close();
+    });
+
+    it('narrows alongside the other filters rather than replacing them', () => {
+      const store = openStore();
+      const { inserted } = seed(store, SPOTIFY_HISTORY);
+
+      // One of these three rows is a `SPOTIFYUSA` charge; the intersection is
+      // what comes back, not the id list and not the descriptor set.
+      const ids = [inserted[0].id, inserted[3].id, inserted[4].id];
+
+      expect(store.transactions.countMatching({ ids })).toBe(3);
+      expect(
+        store.transactions.countMatching({ ids, descriptorsNormalized: ['SPOTIFYUSA'] }),
+      ).toBe(1);
+
+      store.close();
+    });
+  });
+
   describe('applyBulk', () => {
     it('updates exactly the rows the dry-run counted, and reports their ids', () => {
       const store = openStore();

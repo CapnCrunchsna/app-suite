@@ -18,7 +18,24 @@ import { enqueueRenormalize, writeUserMerchantAlias } from '../merchant-correcti
 
 const SORTS: readonly TransactionSort[] = ['date_desc', 'date_asc', 'amount_desc', 'amount_asc'];
 
+/**
+ * How long the `ids` query string may be — about 220 UUIDs.
+ *
+ * The repository takes any number of ids for one bound parameter, so this bound
+ * is HTTP's and not SQLite's: Node caps a request's whole header block, request
+ * line included, at 16 KB by default, and a URL that trips it fails as a socket
+ * error with no route ever entered and nothing useful in the log. A declared
+ * `maxLength` turns that into the 400 the schema gives every other malformed
+ * query. 8 KB leaves the rest of the header block room it will never need on
+ * loopback.
+ *
+ * The caller's job is to stay well under it — §6.4's page caps each card's
+ * evidence long before this — and this is the backstop that says so out loud.
+ */
+const MAX_IDS_QUERY_LENGTH = 8192;
+
 interface TransactionQueryString {
+  ids?: string;
   accountIds?: string;
   merchantIds?: string;
   categoryIds?: string;
@@ -39,6 +56,7 @@ interface TransactionQueryString {
 /** The body half of `POST /api/transactions/bulk`. Field names match the query
  *  string above, because they select the same set. */
 interface TransactionFilterBody {
+  ids?: string[];
   accountIds?: string[];
   merchantIds?: string[];
   categoryIds?: string[];
@@ -76,6 +94,10 @@ const nonEmpty = (value: string[] | undefined): string[] | undefined =>
  *  dry-run count, the apply, and the table the user is reading cannot disagree. */
 function toQuery(input: TransactionFilterBody): TransactionQuery {
   return {
+    // Not through `nonEmpty`: the repository reads an empty `ids` as "match
+    // nothing", and collapsing it to `undefined` here would turn a request for
+    // zero specific rows into a request for the whole table.
+    ids: input.ids,
     accountIds: nonEmpty(input.accountIds),
     merchantIds: nonEmpty(input.merchantIds),
     categoryIds: nonEmpty(input.categoryIds),
@@ -105,6 +127,14 @@ export function registerTransactionRoutes(app: FastifyInstance, context: Ledgerl
         querystring: {
           type: 'object',
           properties: {
+            ids: {
+              type: 'string',
+              maxLength: MAX_IDS_QUERY_LENGTH,
+              description:
+                'Comma-separated transaction ids — exactly these rows, in the requested sort ' +
+                "order. Backs spec 6.4's inline evidence: a finding's charges are one request, " +
+                'not one per cited row. Present but empty matches nothing.',
+            },
             accountIds: {
               type: 'string',
               description: 'Comma-separated account ids',
@@ -146,6 +176,10 @@ export function registerTransactionRoutes(app: FastifyInstance, context: Ledgerl
 
       const query: TransactionQuery = {
         ...toQuery({
+          // A present-but-empty `ids` is an empty set, not an absent filter.
+          // `csv('')` is `undefined`, and letting that mean "no id filter" would
+          // answer "give me these zero rows" with every row in the account.
+          ids: q.ids === undefined ? undefined : (csv(q.ids) ?? []),
           accountIds: csv(q.accountIds),
           merchantIds: csv(q.merchantIds),
           categoryIds: csv(q.categoryIds),

@@ -201,13 +201,18 @@
           } @if (entry.row.hasFinding) {
           <span class="chip chip--finding" title="Cited as evidence by a finding."> finding </span>
           }
+          <!-- Dimmed, not disabled, where the transfer matcher's spend-category
+               signal fires: a purchase at a real merchant is implausible as a
+               transfer, and a wrong category is exactly what this page is for
+               fixing. -->
           <button
             type="button"
             class="chip chip--toggle"
             [class.chip--on]="t.isInternalTransfer"
+            [class.chip--implausible]="!t.isInternalTransfer && looksLikeSpend(t)"
             (click)="toggleInternalTransfer(entry.row)"
             [disabled]="busy()"
-            title="Mark as money moving between your own accounts, not spending."
+            [title]="transferChipTitle(t)"
           >
             transfer
           </button>

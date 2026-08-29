@@ -334,6 +334,7 @@ export interface TransferProposeResult {
 }
 
 export interface TransactionFilter {
+  readonly ids?: string[];
   readonly accountIds?: string[];
   readonly merchantIds?: string[];
   readonly categoryIds?: string[];

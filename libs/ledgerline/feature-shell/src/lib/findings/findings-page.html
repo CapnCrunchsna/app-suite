@@ -88,6 +88,7 @@
     <ll-finding-card
       [finding]="finding"
       [merchantName]="merchantNameFor(finding)"
+      [charges]="chargesFor(finding)"
       [busy]="busy()"
       (acted)="onAction($event)"
       (openSubscription)="onOpenSubscription($event)"

@@ -366,6 +366,90 @@ describe('ledgerline-api transactions surface (§6.3)', () => {
     });
   });
 
+  /**
+   * §9w. §5.1's evidence is "explicit transaction ids", and §6.4 wants the rows
+   * behind a card on the card. Before this filter existed the only way to get
+   * them was `GET /api/transactions/:id` per cited row.
+   */
+  describe('filters by id — §6.4’s inline evidence', () => {
+    it('returns exactly the named rows in one request', async () => {
+      const netflix = await search('merchantIds=netflix&limit=1000');
+      const ids = netflix.rows.map((row) => row.transaction.id);
+      expect(ids.length).toBe(3);
+
+      const byId = await search(`ids=${ids.join(',')}&limit=1000`);
+
+      expect(byId.total).toBe(3);
+      expect(byId.rows.map((row) => row.transaction.id).sort()).toEqual([...ids].sort());
+    });
+
+    it('reads an empty list as a selection of nothing, not as no filter', async () => {
+      // The dangerous direction: a page whose cards cite nothing must not be
+      // handed the whole table.
+      expect((await search('ids=&limit=1000')).total).toBe(0);
+    });
+
+    it('leaves out an id it does not have rather than failing the request', async () => {
+      const row = await oneRow(`q=ZELLE&accountIds=${checkingId}`);
+
+      // §3.3 can delete a transaction with its import while a finding still
+      // cites it, so a stale id is an ordinary thing to be handed.
+      const page = await search(`ids=${row.id},00000000-0000-4000-8000-000000000000&limit=1000`);
+
+      expect(page.total).toBe(1);
+      expect(page.rows[0].transaction.id).toBe(row.id);
+    });
+
+    it('composes with the other filters rather than overriding them', async () => {
+      const all = await search('limit=1000');
+      const ids = all.rows.map((row) => row.transaction.id);
+
+      const januaryOnly = await search(`ids=${ids.join(',')}&from=2026-02-01&to=2026-02-28&limit=1000`);
+
+      expect(januaryOnly.total).toBe(4);
+    });
+
+    it('an id list still obeys the internal-transfer default, so callers opt in', async () => {
+      // §6.3's default is off, and it is the whole filter's default rather than
+      // the id filter's — which is why §6.4's page passes both include flags: a
+      // card citing a row the user later marked a transfer must still show it.
+      const payment = await oneRow(
+        `q=ONLINE PMT CARDINAL&includeInternalTransfers=true&accountIds=${checkingId}`,
+      );
+
+      expect((await search(`ids=${payment.id}&limit=1000`)).total).toBe(0);
+      expect(
+        (await search(`ids=${payment.id}&includeInternalTransfers=true&limit=1000`)).total,
+      ).toBe(1);
+    });
+
+    it('refuses an over-long list as a 400 rather than letting Node drop the socket', async () => {
+      const ids = Array.from(
+        { length: 400 },
+        () => '00000000-0000-4000-8000-000000000000',
+      ).join(',');
+
+      const response = await app.inject({ method: 'GET', url: `/api/transactions?ids=${ids}` });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ error: 'bad_request' });
+    });
+
+    it('takes more ids than SQLite would bind as placeholders', async () => {
+      // The clause is one bound JSON value, so the statement's parameter count
+      // does not grow with the list. A thousand ids is comfortably past the 999
+      // an older SQLite would allow and nowhere near the 8 KB the route caps at,
+      // because these are short.
+      const all = await search('limit=1000');
+      const real = all.rows.map((row) => row.transaction.id);
+      const padding = Array.from({ length: 1000 }, (_, i) => `x${i}`);
+
+      const page = await search(`ids=${[...real, ...padding].join(',')}&limit=1000`);
+
+      expect(page.total).toBe(real.length);
+    });
+  });
+
   // -------------------------------------------------------------- search ---
 
   describe('full-text search across raw and normalized descriptors', () => {

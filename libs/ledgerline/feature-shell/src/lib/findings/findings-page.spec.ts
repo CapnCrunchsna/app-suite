@@ -22,11 +22,21 @@ import type {
   FindingsSummary,
   Job,
   ListFindingsQuery,
+  ListTransactionsQuery,
   Merchant,
   SetFindingStateBody,
+  Transaction,
+  TransactionPage,
 } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
+import {
+  EVIDENCE_ID_BUDGET,
+  EVIDENCE_PER_CARD,
+  chargesFor,
+  evidenceIdsFor,
+  evidenceIdsForPage,
+} from './evidence-charges.js';
 import { FindingsPage } from './findings-page.js';
 import { evidenceFor } from './finding-evidence.js';
 
@@ -121,14 +131,63 @@ const MERCHANTS: Merchant[] = [
   },
 ];
 
+/** A cited charge. Dates ascend with the index, matching the order
+ *  `listEvidence` now returns ids in. */
+function charge(id: string, overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    id,
+    accountId: 'a1',
+    rawRowId: null,
+    postedDate: null,
+    transactionDate: null,
+    effectiveDate: '2026-01-05',
+    amountCents: -1549,
+    balanceCents: null,
+    currency: 'USD',
+    descriptionRaw: 'NETFLIX.COM 866-579-7172',
+    descriptionNormalized: 'NETFLIX COM',
+    merchantId: 'netflix',
+    categoryId: 'streaming',
+    categorySource: 'rule',
+    isPending: false,
+    isInternalTransfer: false,
+    transferPairId: null,
+    refundPairId: null,
+    isExcluded: false,
+    allowsZeroAmount: false,
+    dedupeKey: id,
+    dedupeKeyVersion: 'v1',
+    occurrenceIndex: 0,
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  };
+}
+
 class ApiStub {
   readonly queries: ListFindingsQuery[] = [];
+  readonly transactionQueries: ListTransactionsQuery[] = [];
   readonly states: { id: string; body: SetFindingStateBody }[] = [];
   readonly rules: CreateDismissalRuleBody[] = [];
   runs = 0;
 
   rows: Finding[] = [finding()];
   summary: FindingsSummary = SUMMARY;
+  /** What `GET /api/transactions?ids=…` will answer with, keyed by id. */
+  charges: Transaction[] = [
+    charge('t1', { effectiveDate: '2025-01-05', amountCents: -899 }),
+    charge('t2', { effectiveDate: '2025-09-05' }),
+    charge('t3', { effectiveDate: '2026-08-05' }),
+  ];
+
+  listTransactions(query: ListTransactionsQuery): Promise<TransactionPage> {
+    this.transactionQueries.push(query);
+    const wanted = new Set((query.ids ?? '').split(',').filter((id) => id !== ''));
+    const rows = this.charges
+      .filter((row) => wanted.has(row.id))
+      .map((transaction) => ({ transaction, hasFinding: true }));
+    return Promise.resolve({ rows, total: rows.length, limit: query.limit ?? 100, offset: 0 });
+  }
 
   listFindings(query: ListFindingsQuery): Promise<FindingPage> {
     this.queries.push(query);
@@ -480,8 +539,107 @@ describe('FindingsPage', () => {
       const evidence = el.querySelector('.evidence')?.textContent?.replace(/\s+/g, ' ') ?? '';
       expect(evidence).toContain('$8.99 → $15.49');
       expect(evidence).toContain('+72.3%');
-      // The evidence count reassures without fetching the rows themselves.
-      expect(evidence).toContain('3 charges');
+    });
+  });
+
+  /**
+   * §6.4's "a compact charge history or mini-table, **not a link to go find it**",
+   * which needed §9v's by-ids filter before it could be honoured at a sane cost.
+   */
+  describe('the charges a card was built from (§6.4, §9v)', () => {
+    it('shows the real transactions, newest first', async () => {
+      const { el } = await render();
+
+      const rows = [...el.querySelectorAll('.charges__row')].map((row) => ({
+        date: row.querySelector('.charges__date')?.textContent?.trim(),
+        desc: row.querySelector('.charges__desc')?.textContent?.trim(),
+        amount: row.querySelector('.charges__amount')?.textContent?.trim(),
+      }));
+
+      expect(rows).toEqual([
+        { date: '2026-08-05', desc: 'NETFLIX.COM 866-579-7172', amount: '-$15.49' },
+        { date: '2025-09-05', desc: 'NETFLIX.COM 866-579-7172', amount: '-$15.49' },
+        { date: '2025-01-05', desc: 'NETFLIX.COM 866-579-7172', amount: '-$8.99' },
+      ]);
+    });
+
+    it("keeps the rule's own detail payload above the charges, not instead of it", async () => {
+      const { el } = await render();
+
+      const evidence = el.querySelector('.evidence') as HTMLElement;
+      const captions = [...evidence.querySelectorAll('.evidence__caption')].map((n) =>
+        n.textContent?.trim().split(/\s{2,}|\n/)[0]?.trim(),
+      );
+
+      // The price-step table first — it says more than three rows of the same
+      // merchant — and the charges under it.
+      expect(captions).toEqual(['Price history', 'The charges']);
+      expect(evidence.querySelector('.evidence__rows')).not.toBeNull();
+    });
+
+    it('fetches every card on the page in one request', async () => {
+      api.rows = [
+        finding({ id: 'a', evidenceTransactionIds: ['t1', 't2'] }),
+        finding({ id: 'b', ruleId: 'lapsed.v1', title: 'A lapsed', evidenceTransactionIds: ['t3'] }),
+        finding({
+          id: 'c',
+          ruleId: 'duplicate.v1',
+          title: 'A dupe',
+          // Shared with card `a`: asking twice would spend budget on a row
+          // already in hand.
+          evidenceTransactionIds: ['t2'],
+        }),
+      ];
+      const { el } = await render();
+
+      expect(api.transactionQueries.length).toBe(1);
+      expect(api.transactionQueries[0]?.ids?.split(',').sort()).toEqual(['t1', 't2', 't3']);
+      expect(el.querySelectorAll('.charges__row').length).toBe(4);
+    });
+
+    it('asks for rows a browse would hide, because an id list is a selection', async () => {
+      await render();
+
+      // §6.3's defaults drop internal transfers and excluded rows. A card citing
+      // one must not show "3 charges" above two rows.
+      expect(api.transactionQueries[0]?.includeInternalTransfers).toBe(true);
+      expect(api.transactionQueries[0]?.includeExcluded).toBe(true);
+    });
+
+    it('says so when it is showing a sample rather than the lot', async () => {
+      const ids = Array.from({ length: 32 }, (_, i) => `t${i}`);
+      api.charges = ids.map((id, i) =>
+        charge(id, { effectiveDate: `2026-0${(i % 9) + 1}-0${(i % 9) + 1}` }),
+      );
+      api.rows = [finding({ evidenceTransactionIds: ids })];
+      const { el } = await render();
+
+      expect(el.querySelectorAll('.charges__row').length).toBe(EVIDENCE_PER_CARD);
+      expect(el.querySelector('.evidence__count')?.textContent?.trim()).toBe(
+        '6 most recent of 32',
+      );
+    });
+
+    it('says nothing when the table is the whole of the evidence', async () => {
+      const { el } = await render();
+
+      expect(el.querySelector('.charges__row')).not.toBeNull();
+      expect(el.querySelector('.evidence__count')).toBeNull();
+    });
+
+    it('falls back to the count for a card whose charges did not arrive', async () => {
+      api.charges = [];
+      const { el } = await render();
+
+      expect(el.querySelector('.charges')).toBeNull();
+      expect(el.querySelector('.evidence__count--alone')?.textContent?.trim()).toBe('3 charges');
+    });
+
+    it('makes no request at all when nothing on the page cites anything', async () => {
+      api.rows = [finding({ evidenceTransactionIds: [] })];
+      await render();
+
+      expect(api.transactionQueries.length).toBe(0);
     });
   });
 
@@ -583,3 +741,83 @@ describe('evidenceFor', () => {
     expect(evidenceFor(finding({ ruleId: 'unknown.v1', detail: {} })).rows).toEqual([]);
   });
 });
+
+describe('evidence-charges', () => {
+  /** Pure, so the two caps can be asserted without a DOM or a fetch. */
+  it('takes the most recent charges, which is why listEvidence orders by date', () => {
+    const ids = Array.from({ length: 32 }, (_, i) => `t${i}`);
+
+    // The tail, not the head: ids are random UUIDs, so "the first six" would be
+    // six arbitrary charges presented as though they were a sample.
+    expect(evidenceIdsFor(finding({ evidenceTransactionIds: ids }))).toEqual([
+      't26',
+      't27',
+      't28',
+      't29',
+      't30',
+      't31',
+    ]);
+  });
+
+  it('asks for everything when a finding cites less than a cardful', () => {
+    expect(evidenceIdsFor(finding({ evidenceTransactionIds: ['t1', 't2'] }))).toEqual(['t1', 't2']);
+    expect(evidenceIdsFor(finding({ evidenceTransactionIds: [] }))).toEqual([]);
+  });
+
+  it('deduplicates the union across cards', () => {
+    const ids = evidenceIdsForPage([
+      finding({ id: 'a', evidenceTransactionIds: ['t1', 't2'] }),
+      finding({ id: 'b', evidenceTransactionIds: ['t2', 't3'] }),
+    ]);
+
+    expect(ids).toEqual(['t1', 't2', 't3']);
+  });
+
+  it('spends the id budget top-down, so it runs out at the bottom of the page', () => {
+    // Enough cards to exhaust the budget several times over.
+    const cards = Array.from({ length: 80 }, (_, card) =>
+      finding({
+        id: `f${card}`,
+        evidenceTransactionIds: Array.from(
+          { length: EVIDENCE_PER_CARD },
+          (_unused, i) => `c${card}-t${i}`,
+        ),
+      }),
+    );
+
+    const ids = evidenceIdsForPage(cards);
+
+    expect(ids.length).toBe(EVIDENCE_ID_BUDGET);
+    // The first card is served in full; the last is not served at all.
+    expect(ids).toContain('c0-t0');
+    expect(ids).toContain('c0-t5');
+    expect(ids).not.toContain('c79-t0');
+  });
+
+  it('stays inside the length GET /api/transactions will accept', () => {
+    const ids = evidenceIdsForPage(
+      Array.from({ length: 80 }, (_, card) =>
+        finding({
+          id: `f${card}`,
+          evidenceTransactionIds: Array.from(
+            { length: EVIDENCE_PER_CARD },
+            // A real id's length is what the budget was sized against.
+            (_unused, i) => `00000000-0000-4000-8000-0000000${String(card * 6 + i).padStart(5, '0')}`,
+          ),
+        }),
+      ),
+    );
+
+    // The route declares `maxLength: 8192` and a longer URL fails as a socket
+    // error rather than a 400 — this budget is what keeps the ceiling the API's
+    // to enforce instead of Node's to hit.
+    expect(ids.join(',').length).toBeLessThan(8192);
+  });
+
+  it('skips an id with no row rather than rendering a gap', () => {
+    // §3.3 can delete a transaction with its import while a finding still cites
+    // it, until the next analysis run resolves the finding.
+    expect(chargesFor(finding({ evidenceTransactionIds: ['t1', 't3'] }), new Map())).toEqual([]);
+  });
+});
+

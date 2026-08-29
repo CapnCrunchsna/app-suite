@@ -405,3 +405,19 @@
   color: var(--on-accent, #06201c);
   font-weight: 600;
 }
+
+/* The transfer matcher's spend-category signal fired on this row: an Amazon
+ * purchase is not a transfer, however round the number.
+ *
+ * Recessive rather than removed — the toggle is a user override and §4.3 puts a
+ * user above every rule, so it keeps its full hover state and its cursor. What it
+ * loses is the invitation: a dashed border and less contrast, until pointed at. */
+.chip--implausible {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--border, #1f4a47) 70%, transparent);
+  color: color-mix(in srgb, var(--text-dim, #7ea8a1) 65%, transparent);
+
+  &:hover:not(:disabled) {
+    border-style: solid;
+  }
+}

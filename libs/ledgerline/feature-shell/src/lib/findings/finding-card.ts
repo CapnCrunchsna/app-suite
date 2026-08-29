@@ -37,7 +37,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { formatCents } from '@metrum/ledgerline-domain';
-import type { Finding } from '@metrum/api-client';
+import type { Finding, Transaction } from '@metrum/api-client';
 
 import { FindingEvidence } from './finding-evidence.js';
 
@@ -74,6 +74,10 @@ export class FindingCard {
   /** Resolved display name for the finding's merchant, when it has one. The page
    *  looks it up; the card does not fetch. */
   readonly merchantName = input<string | null>(null);
+  /** The transactions this finding cites, already fetched and capped by the page
+   *  (§6.4). Empty is normal — the request has not landed, or the card is past
+   *  the page's id budget — and the evidence block degrades to its count. */
+  readonly charges = input<readonly Transaction[]>([]);
   readonly busy = input(false);
 
   readonly acted = output<FindingActionEvent>();

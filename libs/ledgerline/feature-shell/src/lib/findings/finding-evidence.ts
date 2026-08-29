@@ -2,24 +2,31 @@
  * §6.4's inline evidence: "a compact charge history or mini-table, **not a link
  * to go find it**."
  *
- * ## Where the evidence comes from, and why not from the transactions
+ * ## Two kinds of evidence, and the card wants both
  *
- * Every `Finding` carries `evidenceTransactionIds`, and the obvious reading is
- * that this component should fetch those rows. It deliberately does not. Each
- * rule's `detail` payload already carries the numbers that *make* the finding —
- * `price_creep.v1` ships every step with its dates, cents, percent and
- * annualized impact; `duplicate.v1` ships the per-series annual costs; `lapsed.v1`
- * ships the silence in days against the account's coverage end. Those are the
- * facts §6.4 wants on the card, and they arrive with the finding.
+ * **What the rule concluded** comes from its `detail` payload and is rendered by
+ * `evidenceFor` below. `price_creep.v1` ships every step with its dates, cents,
+ * percent and annualized impact; `duplicate.v1` ships the per-series annual
+ * costs; `lapsed.v1` ships the silence in days against the account's coverage
+ * end. This is the material that *makes* the finding, it arrives with the finding
+ * at no cost, and a price-step table says more than twelve rows of the same
+ * merchant ever could. It stays first on the card and it stays primary.
  *
- * Fetching the transactions instead would be both worse and more expensive:
- * `ListTransactionsQuery` has no by-ids filter, so a card would issue one
- * `GET /api/transactions/:id` per evidence row — a twelve-charge series is twelve
- * requests to rebuild a history the rule already summarised. Adding that filter
- * is a contract change and a client regeneration, not a UI decision, and nothing
- * on this page needs it. `evidenceTransactionIds` is still carried through to the
- * DOM as a count, because "12 charges" is the reassurance that the number came
- * from somewhere.
+ * **What it concluded it from** is the charge list, and until §9w there was no
+ * way to show it that was worth the price. `ListTransactionsQuery` had no by-ids
+ * filter, so a card wanting its rows had to issue one `GET /api/transactions/:id`
+ * per cited transaction — twelve requests to rebuild a history the rule had
+ * already summarised. The count alone stood in for it: "12 charges" as the
+ * reassurance that the number came from somewhere, with no way to see the twelve.
+ * That was the honest answer to a missing contract, not a judgement that the rows
+ * did not matter — reading "$8.99 → $15.49" without being shown one of the actual
+ * charges asks the reader to take the rule's word for it.
+ *
+ * §9w added the filter. The charges now arrive as an input: the page fetches the
+ * union for every card in one request and hands each card its slice, so this
+ * component still fetches nothing. `charges` empty is an ordinary state — the
+ * request has not landed yet, or the card fell past the page's id budget — and
+ * the block degrades to exactly what it rendered before.
  *
  * ## The renderer is a pure function over `detail`
  *
@@ -32,7 +39,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { formatCents } from '@metrum/ledgerline-domain';
-import type { Finding } from '@metrum/api-client';
+import type { Finding, Transaction } from '@metrum/api-client';
 
 /** One line of the mini-table. `value` is pre-formatted because the formatting
  *  rule differs per row — money through `formatCents`, dates as ISO, counts bare. */
@@ -246,28 +253,58 @@ function recurrenceEvidence(detail: Record<string, unknown>): Evidence {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let ev = evidence();
-    @if (ev.rows.length > 0) {
+    @let rows = charges();
+    @if (ev.rows.length > 0 || rows.length > 0 || chargeCount() > 0) {
       <div class="evidence">
-        <h4 class="evidence__caption">
-          {{ ev.caption }}
-          @if (chargeCount() > 0) {
-            <span class="evidence__count">
-              {{ chargeCount() }} {{ chargeCount() === 1 ? 'charge' : 'charges' }}
-            </span>
-          }
-        </h4>
-        <dl class="evidence__rows">
-          @for (row of ev.rows; track $index) {
-            <dt class="evidence__label">{{ row.label }}</dt>
-            <dd
-              class="evidence__value"
-              [class.evidence__value--up]="row.tone === 'up'"
-              [class.evidence__value--down]="row.tone === 'down'"
-            >
-              {{ row.value }}
-            </dd>
-          }
-        </dl>
+        @if (ev.rows.length > 0) {
+          <h4 class="evidence__caption">{{ ev.caption }}</h4>
+          <dl class="evidence__rows">
+            @for (row of ev.rows; track $index) {
+              <dt class="evidence__label">{{ row.label }}</dt>
+              <dd
+                class="evidence__value"
+                [class.evidence__value--up]="row.tone === 'up'"
+                [class.evidence__value--down]="row.tone === 'down'"
+              >
+                {{ row.value }}
+              </dd>
+            }
+          </dl>
+        }
+
+        @if (rows.length > 0) {
+          <h4 class="evidence__caption evidence__caption--charges">
+            {{ chargeCount() === 1 ? 'The charge' : 'The charges' }}
+            @if (chargeNote(); as note) {
+              <span class="evidence__count">{{ note }}</span>
+            }
+          </h4>
+          <!-- A real table, unlike the <dl> above: these rows share three
+               columns with the same meaning in each, which is the one thing a
+               <dl> cannot say. Headerless because the columns are a date, a
+               descriptor and money, and labelling them would cost a row of the
+               six this block is allowed. -->
+          <table class="charges">
+            <tbody>
+              @for (charge of rows; track charge.id) {
+                <tr class="charges__row">
+                  <td class="charges__date">{{ charge.effectiveDate }}</td>
+                  <td class="charges__desc" [title]="charge.descriptionRaw">
+                    {{ charge.descriptionRaw }}
+                  </td>
+                  <td class="charges__amount">{{ formatCents(charge.amountCents) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else if (chargeCount() > 0) {
+          <!-- The charges have not landed, or this card fell past the page's id
+               budget. The count is what this block showed before §9w, and it is
+               still the reassurance that the number came from somewhere. -->
+          <p class="evidence__count evidence__count--alone">
+            {{ chargeCount() }} {{ chargeCount() === 1 ? 'charge' : 'charges' }}
+          </p>
+        }
       </div>
     }
   `,
@@ -275,7 +312,24 @@ function recurrenceEvidence(detail: Record<string, unknown>): Evidence {
 })
 export class FindingEvidence {
   readonly finding = input.required<Finding>();
+  /** Fetched and capped by the page — this component never fetches. */
+  readonly charges = input<readonly Transaction[]>([]);
+
+  protected readonly formatCents = formatCents;
 
   protected readonly evidence = computed(() => evidenceFor(this.finding()));
   protected readonly chargeCount = computed(() => this.finding().evidenceTransactionIds.length);
+
+  /**
+   * How the shown charges relate to the cited ones, said only when they differ.
+   *
+   * A card showing all seven of seven needs no note; a card showing six of
+   * thirty-two must not let the reader count the rows and conclude the rule
+   * looked at six.
+   */
+  protected readonly chargeNote = computed(() => {
+    const shown = this.charges().length;
+    const cited = this.chargeCount();
+    return shown < cited ? `${shown} most recent of ${cited}` : '';
+  });
 }
