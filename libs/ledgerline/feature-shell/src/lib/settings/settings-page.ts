@@ -42,7 +42,7 @@ import {
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
 import { LedgerlineApiError } from '@metrum/api-client';
-import type { DegradedCallLog, LlmHealth, Settings } from '@metrum/api-client';
+import type { DegradedCallLog, LlmHealth, LlmSettings, Settings } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { AnalyzerSettings } from './analyzer-settings.js';
@@ -136,6 +136,33 @@ export class SettingsPage {
   protected readonly failure = computed(() => this.settingsResource.error());
 
   /**
+   * §6.8's provider block, defaulted rather than passed straight through.
+   *
+   * A `ledgerline-api` older than §2.4's seam serves a settings payload with no `llm`
+   * key at all, and the template used to bind `all.llm` into a required input — so the
+   * panel got `undefined` and threw on the first read of `providerId`, taking the whole
+   * Settings page down before anything on it could be used. The header had the same
+   * bug against the same payload.
+   *
+   * The default is §6.8's shipped state, which is the honest reading of an API that
+   * has no provider support: nothing configured, nothing sent, redaction on. It errs
+   * the one safe direction — `none` and local, never the reverse — so a stale binary
+   * can never make this page under-report where the data goes.
+   */
+  protected readonly llm = computed<LlmSettings>(
+    () =>
+      this.settings()?.llm ?? {
+        providerId: 'none',
+        model: null,
+        redaction: true,
+        redactionLocked: false,
+        sendsDataOffMachine: false,
+        cachedResponses: 0,
+        degradedCallCount: 0,
+      },
+  );
+
+  /**
    * §6.8's degraded-call log, on the same revision as the settings.
    *
    * Tied to `revision` rather than its own counter because the two move together:
@@ -205,7 +232,7 @@ export class SettingsPage {
       this.health.set(await this.api.getLlmHealth());
     } catch (cause) {
       this.health.set({
-        providerId: this.settings()?.llm.providerId ?? 'none',
+        providerId: this.settings()?.llm?.providerId ?? 'none',
         ok: false,
         detail:
           cause instanceof LedgerlineApiError

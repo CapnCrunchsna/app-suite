@@ -21,7 +21,7 @@
   <ui-panel heading="AI assistance">
     @if (all) {
       <ll-llm-settings
-        [settings]="all.llm"
+        [settings]="llm()"
         [busy]="busy()"
         [health]="health()"
         [probing]="probing()"

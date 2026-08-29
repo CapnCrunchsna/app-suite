@@ -130,6 +130,21 @@ function settingsOf(overrides: Partial<Settings> = {}): Settings {
   };
 }
 
+/**
+ * What a `ledgerline-api` older than §2.4's seam serves: the same payload with no
+ * `llm` block at all.
+ *
+ * Derived from `settingsOf()` by dropping the one key, so the rest of the page still
+ * has rules and thresholds to render — the bug is about a missing block, not an empty
+ * response. `apps/ledgerline-ui`'s spec holds the same fixture for the header's
+ * version of this; it is written twice rather than shared because §2.2's dep rules do
+ * not let a lib import from an app.
+ */
+function settingsWithoutLlm(): Settings {
+  const { llm: _llm, ...rest } = settingsOf();
+  return rest as unknown as Settings;
+}
+
 class ApiStub {
   readonly updates: UpdateSettingsBody[] = [];
   readonly wipes: unknown[] = [];
@@ -173,6 +188,10 @@ class ApiStub {
   // must never call it on render — a spec that could not observe the call could
   // not catch a regression that started one.
   healthProbes = 0;
+  /** Set to make the probe itself fail rather than answer. §6.8's Test Connection
+   *  has an error path, and the page builds a `health` object of its own to render
+   *  it — so the failure has to come from the stub, not from a bad `health`. */
+  healthFailure: Error | null = null;
   health: LlmHealth = {
     providerId: 'none',
     ok: false,
@@ -184,7 +203,7 @@ class ApiStub {
 
   getLlmHealth(): Promise<LlmHealth> {
     this.healthProbes += 1;
-    return Promise.resolve(this.health);
+    return this.healthFailure ? Promise.reject(this.healthFailure) : Promise.resolve(this.health);
   }
 
   degradedLog: DegradedCallLog = { entries: [], total: 0 };
@@ -471,5 +490,39 @@ describe('SettingsPage', () => {
   it('renders the provider section against the shipped default', async () => {
     const { el } = await render();
     expect(el.querySelector('ll-llm-settings')).not.toBeNull();
+  });
+
+  /**
+   * §2.4's seam is newer than the API binary a user may still have running, and one
+   * older than it serves a settings payload with no `llm` block at all.
+   *
+   * The header had the same bug and threw on every page load, which is why it was
+   * fixed first. This one is the error path of an error path — it needs someone to
+   * open Settings, press Test Connection, *and* the probe to reject — but it fails
+   * worse when it does happen: the line it throws on is building the fallback
+   * `health` object **for** a failed probe, so the throw replaces a legible "the
+   * check itself failed" with an unhandled TypeError. The user pressed a button and
+   * is told nothing at all.
+   *
+   * The page renders the panel against §6.8's shipped default in this state, for the
+   * reason the header's fix argues: `none`, local, and never the reverse.
+   */
+  it('still reports a failed probe when the payload predates the llm block', async () => {
+    api.current = settingsWithoutLlm();
+    api.healthFailure = new Error('spawn claude ENOENT');
+
+    const { el, fixture } = await render();
+
+    // The panel has to survive the render before anyone can press the button: it
+    // takes a required input, and the page used to hand it the missing block.
+    expect(el.querySelector('ll-llm-settings .provider--selected')?.textContent).toContain('None');
+
+    (el.querySelector('.test button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(api.healthProbes).toBe(1);
+    const result = el.querySelector('.test__result')?.textContent;
+    expect(result).toContain('The check itself failed');
+    expect(result).toContain('spawn claude ENOENT');
   });
 });
