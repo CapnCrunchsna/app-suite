@@ -178,6 +178,10 @@ function buildSettings(context: LedgerlineContext, config: ApiConfig) {
   // `dismissed` is a *user* status, not a lifecycle one — see `FindingQuery`. And
   // `visibility: 'all'` because a dismissed finding is hidden by default, which is the
   // whole reason it needs counting here.
+  // §7.6's corpus, beside the thresholds it exists to re-derive (§9z). Precision
+  // only — nothing here can measure what the rules failed to find.
+  const accuracy = context.store.findingLabels.accuracyByRule();
+
   const dismissed = context.store.findings.totals({
     statuses: ['active', 'resolved', 'suppressed'],
     userStatuses: ['dismissed'],
@@ -195,6 +199,13 @@ function buildSettings(context: LedgerlineContext, config: ApiConfig) {
       enabledKey: rule.enabledKey,
       enabled: fieldsOf(effective[rule.section as Section])[rule.enabledKey] === true,
       activeFindings: active[rule.id] ?? 0,
+      labelled: accuracy.get(rule.id) ?? {
+        ruleId: rule.id,
+        correct: 0,
+        incorrect: 0,
+        unsure: 0,
+        stale: 0,
+      },
       dismissedFindings: dismissed[rule.id] ?? 0,
     })),
     thresholds,

@@ -221,3 +221,58 @@
   font-size: 0.68rem;
   color: var(--text-dim, #7ea8a1);
 }
+
+/* §7.6's judgement (§9z). Quiet by design: it sits in the footer beside the rule id
+ * rather than competing with the dismiss controls, because it is a question the app
+ * is asking *you* rather than an action you came here to take. */
+.judge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.judge__ask {
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.judge__button {
+  padding: 2px 9px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.judge__button:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--text, #dcefeb);
+}
+
+.judge__button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* An answered question, stated rather than shown as a tick: "marked correct" is
+ * legible without a legend, and a coloured dot is not. */
+.judge__given {
+  font-size: 0.7rem;
+  color: var(--accent-2, #34d399);
+}
+
+.judge__given--incorrect {
+  color: var(--warn, #d9a441);
+}
+
+/* Spec 5.1's staleness, applied to a label: the judgement stands but the claim it
+ * was about has moved, so it is shown greyed with the question re-asked beside it
+ * rather than silently recounted. */
+.judge__given--stale {
+  color: var(--text-dim, #7ea8a1);
+  font-style: italic;
+}

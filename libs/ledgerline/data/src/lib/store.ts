@@ -27,7 +27,7 @@ import { applyMigrations } from './migrations/runner.js';
 import type { MigrationOutcome } from './migrations/runner.js';
 import { AccountRepository } from './repositories/accounts.js';
 import { AnalysisRepository } from './repositories/analysis.js';
-import { FindingRepository } from './repositories/findings.js';
+import { FindingLabelRepository, FindingRepository } from './repositories/findings.js';
 import { FormatProfileRepository } from './repositories/format-profiles.js';
 import { ImportRepository } from './repositories/imports.js';
 import { JobRepository } from './repositories/jobs.js';
@@ -54,6 +54,9 @@ export class LedgerlineStore {
   readonly settings: SettingsRepository;
   readonly jobs: JobRepository;
   readonly findings: FindingRepository;
+  /** §7.6’s corpus, collected from use (§9z). Separate from `findings` because a
+   *  label outlives the finding it judged. */
+  readonly findingLabels: FindingLabelRepository;
   readonly analysis: AnalysisRepository;
   /** §2.6's `transfer_link` / `transfer_rule`, and the flags a live link sets. */
   readonly transfers: TransferRepository;
@@ -76,6 +79,7 @@ export class LedgerlineStore {
     this.settings = new SettingsRepository(db, clock);
     this.jobs = new JobRepository(db, clock);
     this.findings = new FindingRepository(db, clock);
+    this.findingLabels = new FindingLabelRepository(db, clock);
     this.analysis = new AnalysisRepository(db, clock, this.tombstones);
     this.transfers = new TransferRepository(db, clock);
     this.llm = new LlmRepository(db, clock);

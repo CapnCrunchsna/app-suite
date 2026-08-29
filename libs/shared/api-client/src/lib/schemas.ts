@@ -195,6 +195,8 @@ export interface Finding {
   readonly firstDetectedAt: string;
   readonly status: 'active' | 'resolved' | 'suppressed';
   readonly userStatus: 'acknowledged' | 'snoozed' | 'dismissed' | null;
+  readonly verdict: 'correct' | 'incorrect' | 'unsure' | null;
+  readonly verdictStale: boolean;
   readonly snoozeUntil: string | null;
   readonly changedSinceDismissal: boolean;
   readonly reEvaluated: boolean;
@@ -510,6 +512,14 @@ export interface SettingUnsettable {
   readonly reason: string;
 }
 
+export interface RuleAccuracy {
+  readonly ruleId: string;
+  readonly correct: number;
+  readonly incorrect: number;
+  readonly unsure: number;
+  readonly stale: number;
+}
+
 export interface SettingRule {
   readonly id: string;
   readonly label: string;
@@ -518,6 +528,7 @@ export interface SettingRule {
   readonly enabledKey: string;
   readonly enabled: boolean;
   readonly activeFindings: number;
+  readonly labelled: RuleAccuracy;
   readonly dismissedFindings: number;
 }
 

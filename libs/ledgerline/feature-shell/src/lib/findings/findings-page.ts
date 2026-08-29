@@ -428,6 +428,26 @@ export class FindingsPage {
           );
         });
         return;
+
+      /**
+       * §7.6's judgement (§9z), and the one action here that hides nothing.
+       *
+       * The notice says so explicitly, because the button sits beside four that all
+       * make things disappear and a "No" that removed the card would teach everyone
+       * that the honest answer costs them the finding. It is a note for calibration,
+       * not a verdict on whether they want to look at it.
+       */
+      case 'label':
+        await this.write(async () => {
+          await this.api.labelFinding(finding.id, { verdict: action.verdict });
+          this.notice.set(
+            action.verdict === 'correct'
+              ? 'Noted as correct. Settings shows what each rule has scored so far.'
+              : 'Noted as wrong, and left on screen — this is a note for tuning the rules, ' +
+                  'not a dismissal. Use Dismiss if you also want it gone.',
+          );
+        });
+        return;
     }
   }
 

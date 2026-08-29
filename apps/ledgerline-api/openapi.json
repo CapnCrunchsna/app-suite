@@ -785,6 +785,21 @@
               null
             ]
           },
+          "verdict": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "enum": [
+              "correct",
+              "incorrect",
+              "unsure",
+              null
+            ]
+          },
+          "verdictStale": {
+            "type": "boolean"
+          },
           "snoozeUntil": {
             "type": [
               "null",
@@ -825,6 +840,8 @@
           "firstDetectedAt",
           "status",
           "userStatus",
+          "verdict",
+          "verdictStale",
           "snoozeUntil",
           "changedSinceDismissal",
           "reEvaluated",
@@ -2121,6 +2138,33 @@
           "reason"
         ]
       },
+      "RuleAccuracy": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "correct": {
+            "type": "integer"
+          },
+          "incorrect": {
+            "type": "integer"
+          },
+          "unsure": {
+            "type": "integer"
+          },
+          "stale": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ruleId",
+          "correct",
+          "incorrect",
+          "unsure",
+          "stale"
+        ]
+      },
       "SettingRule": {
         "type": "object",
         "properties": {
@@ -2145,6 +2189,9 @@
           "activeFindings": {
             "type": "integer"
           },
+          "labelled": {
+            "$ref": "#/components/schemas/RuleAccuracy"
+          },
           "dismissedFindings": {
             "type": "integer"
           }
@@ -2157,6 +2204,7 @@
           "enabledKey",
           "enabled",
           "activeFindings",
+          "labelled",
           "dismissedFindings"
         ]
       },
@@ -6697,6 +6745,128 @@
                     "minimum": 1,
                     "maximum": 3650,
                     "description": "Snooze length in days. Defaults to 90 (spec 5.1)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Finding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/findings/{id}/label": {
+      "post": {
+        "operationId": "labelFinding",
+        "summary": "Record whether this finding was right (spec 7.6)",
+        "tags": [
+          "analysis"
+        ],
+        "description": "Spec 7.6 asks for \"a hand-labelled year of real statements with the expected findings written down\" before any spec 5 threshold is treated as settled. This collects that corpus a finding at a time, while its evidence is on screen. Deliberately not the same as a dismissal: this is whether the rule was correct, not whether you want to see it. Measures precision only — nothing in the app can show you what the rules failed to find.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "verdict"
+                ],
+                "properties": {
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "correct",
+                      "incorrect",
+                      "unsure"
+                    ]
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 1000
                   }
                 }
               }

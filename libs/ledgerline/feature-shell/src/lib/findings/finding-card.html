@@ -124,6 +124,48 @@
     </button>
     }
 
+    <!-- §7.6's corpus, collected where the evidence already is. Separate from the
+         dismiss controls above and worded as a different question, because it is
+         one: that group asks whether you want to see this, and this asks whether
+         it was right (§9z). -->
+    <span class="judge" role="group" aria-label="Was this finding right?">
+      @if (verdict(); as given) {
+        <span
+          class="judge__given"
+          [class.judge__given--incorrect]="given === 'incorrect'"
+          [class.judge__given--stale]="verdictStale()"
+        >
+          @if (verdictStale()) {
+            You called this {{ given }}, before the amounts changed
+          } @else {
+            Marked {{ given }}
+          }
+        </span>
+      }
+
+      @if (!verdict() || verdictStale()) {
+        <span class="judge__ask">{{ verdictStale() ? 'Still right?' : 'Was this right?' }}</span>
+        <button
+          type="button"
+          class="judge__button"
+          [disabled]="busy()"
+          (click)="act({ kind: 'label', verdict: 'correct' })"
+          title="Records this as a correct finding, for tuning the rules against (spec 7.6)."
+        >
+          Yes
+        </button>
+        <button
+          type="button"
+          class="judge__button"
+          [disabled]="busy()"
+          (click)="act({ kind: 'label', verdict: 'incorrect' })"
+          title="Records this as a wrong finding. It stays on screen — this is not a dismissal."
+        >
+          No
+        </button>
+      }
+    </span>
+
     <span class="card__rule" [title]="'Rule ' + f.ruleVersion + ', config ' + f.configHash">
       {{ f.ruleId }}
     </span>

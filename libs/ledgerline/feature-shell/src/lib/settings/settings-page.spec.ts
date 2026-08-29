@@ -38,6 +38,7 @@ function settingsOf(overrides: Partial<Settings> = {}): Settings {
         enabled: true,
         activeFindings: 3,
         dismissedFindings: 0,
+        labelled: { ruleId: '', correct: 0, incorrect: 0, unsure: 0, stale: 0 },
       },
       {
         id: 'duplicate.v1',
@@ -48,6 +49,7 @@ function settingsOf(overrides: Partial<Settings> = {}): Settings {
         enabled: true,
         activeFindings: 1,
         dismissedFindings: 2,
+        labelled: { ruleId: '', correct: 0, incorrect: 0, unsure: 0, stale: 0 },
       },
       {
         id: 'duplicate.v1',
@@ -58,6 +60,7 @@ function settingsOf(overrides: Partial<Settings> = {}): Settings {
         enabled: true,
         activeFindings: 0,
         dismissedFindings: 1,
+        labelled: { ruleId: '', correct: 0, incorrect: 0, unsure: 0, stale: 0 },
       },
     ],
     thresholds: [

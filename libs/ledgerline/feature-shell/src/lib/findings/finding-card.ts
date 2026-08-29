@@ -48,7 +48,16 @@ export type FindingAction =
   | { readonly kind: 'snooze' }
   | { readonly kind: 'dismiss_finding' }
   | { readonly kind: 'dismiss_merchant' }
-  | { readonly kind: 'dismiss_rule' };
+  | { readonly kind: 'dismiss_rule' }
+  /**
+   * §7.6's judgement, and deliberately in the same union as the dismissals.
+   *
+   * They travel together because they are answered together — you judge a finding
+   * while looking at the evidence that would also make you dismiss it — and they
+   * are separate *members* because they mean different things. The container sends
+   * one to `/state` and the other to `/label`, and nothing here decides that.
+   */
+  | { readonly kind: 'label'; readonly verdict: 'correct' | 'incorrect' };
 
 export interface FindingActionEvent {
   readonly finding: Finding;
@@ -109,6 +118,12 @@ export class FindingCard {
   /** §6.4 lists "Open subscription" as a per-card action, which only means
    *  something for a finding whose subject is one. */
   protected readonly isSeries = computed(() => this.finding().subjectType === 'series');
+
+  /** §7.6, shown only where a judgement can mean something: a finding the user
+   *  has already dismissed is still judgeable, but one that never fired is not on
+   *  screen to judge. */
+  protected readonly verdict = computed(() => this.finding().verdict);
+  protected readonly verdictStale = computed(() => this.finding().verdictStale);
 
   protected act(action: FindingAction): void {
     this.picking.set(false);

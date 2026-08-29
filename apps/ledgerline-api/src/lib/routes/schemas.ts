@@ -851,6 +851,12 @@ const finding = {
     firstDetectedAt: { type: 'string' },
     status: { type: 'string', enum: FINDING_STATUSES },
     userStatus: { type: ['string', 'null'], enum: [...FINDING_USER_STATUSES, null] },
+    /** Spec 7.6's judgement on this finding, or null if nobody has given one
+     *  (spec 9z). Distinct from `userStatus`, which is about wanting to see it. */
+    verdict: { type: ['string', 'null'], enum: ['correct', 'incorrect', 'unsure', null] },
+    /** True when the evidence has moved since that judgement — the same staleness
+     *  test spec 5.1 applies to a dismissal. */
+    verdictStale: { type: 'boolean' },
     snoozeUntil: nullableString,
     /** §5.1: the evidence hash moved since the dismissal — "changed since you
      *  dismissed this". */
@@ -975,6 +981,29 @@ const settingUnsettable = {
  * `config_hash`, "separately toggleable in Settings" in that section's own words.
  * `enabledKey` is which boolean in `section` carries this row's switch.
  */
+/**
+ * §7.6's corpus for one rule, as §6.8 shows it beside that rule's thresholds.
+ *
+ * Precision only, and the field names say so: there is no `missed` here because
+ * nothing in the app can show a reader what the rules failed to find. Recall needs
+ * the hand-built corpus §7.6 describes; this is the half that can be collected from
+ * use (spec 9z).
+ */
+const ruleAccuracy = {
+  $id: 'RuleAccuracy',
+  type: 'object',
+  properties: {
+    ruleId: { type: 'string' },
+    correct: { type: 'integer' },
+    incorrect: { type: 'integer' },
+    unsure: { type: 'integer' },
+    /** Judgements whose evidence has moved since. Excluded from the others and
+     *  counted here, so an accuracy figure resting on two current labels cannot
+     *  read as one resting on forty. */
+    stale: { type: 'integer' },
+  },
+} as const;
+
 const settingRule = {
   $id: 'SettingRule',
   type: 'object',
@@ -986,6 +1015,8 @@ const settingRule = {
     enabledKey: { type: 'string' },
     enabled: { type: 'boolean' },
     activeFindings: { type: 'integer' },
+    /** Spec 7.6's corpus for this rule. */
+    labelled: ref('RuleAccuracy'),
     /** What spec 6.8's re-evaluation warning is warning about — a count, so the
      *  warning is a statement rather than a disclaimer. */
     dismissedFindings: { type: 'integer' },
@@ -1617,6 +1648,7 @@ const SHARED = [
   // nature, so they declare their own shapes above.
   allRequired(settingThreshold),
   allRequired(settingUnsettable),
+  allRequired(ruleAccuracy),
   allRequired(settingRule),
   // §6.8's LLM provider, Redaction, and the degraded-call log in Data. Before
   // `settings`, which `$ref`s the first of them.

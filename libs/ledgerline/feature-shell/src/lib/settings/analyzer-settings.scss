@@ -200,3 +200,9 @@
    above rather than a duplicate node: `title` alone is not announced reliably on
    a non-interactive element, and a visually-hidden copy would put the text into
    the label's own `textContent`, where it does not belong. */
+
+/* Spec 7.6 corpus tally (spec 9z). Same weight as the other counts beside it: it
+ * is one more fact about the rule, not a score. */
+.switch__scored {
+  color: var(--text-dim, #7ea8a1);
+}

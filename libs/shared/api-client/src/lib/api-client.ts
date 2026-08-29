@@ -257,6 +257,11 @@ export type SetFindingStateBody = {
   readonly snoozeDays?: number;
 };
 
+export type LabelFindingBody = {
+  readonly verdict: 'correct' | 'incorrect' | 'unsure';
+  readonly note?: string | null;
+};
+
 export type ListDismissalRulesResponse = DismissalRule[];
 
 export type CreateDismissalRuleBody = {
@@ -665,6 +670,17 @@ export class LedgerlineApi {
    */
   setFindingState(id: string, body: SetFindingStateBody): Promise<Finding> {
     return this.request<Finding>('POST', `/api/findings/${encodeURIComponent(String(id))}/state`, {
+      body,
+    });
+  }
+
+  /**
+   * Record whether this finding was right (spec 7.6)
+   *
+   * Spec 7.6 asks for "a hand-labelled year of real statements with the expected findings written down" before any spec 5 threshold is treated as settled. This collects that corpus a finding at a time, while its evidence is on screen. Deliberately not the same as a dismissal: this is whether the rule was correct, not whether you want to see it. Measures precision only — nothing in the app can show you what the rules failed to find.
+   */
+  labelFinding(id: string, body: LabelFindingBody): Promise<Finding> {
+    return this.request<Finding>('POST', `/api/findings/${encodeURIComponent(String(id))}/label`, {
       body,
     });
   }

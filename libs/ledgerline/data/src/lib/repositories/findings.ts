@@ -872,3 +872,195 @@ export class FindingRepository {
     return this.db.prepare('DELETE FROM dismissal_rule WHERE id = ?').run(id).changes > 0;
   }
 }
+
+
+// ============================================================ §7.6's corpus ===
+
+/** §7.6's judgement, in the three answers a person can actually give. `unsure`
+ *  is not a cop-out — it is the honest answer for a finding whose evidence a
+ *  reader cannot check without a bank statement in front of them, and counting
+ *  it as either of the others would put noise into the one number tuning reads. */
+export type FindingVerdict = 'correct' | 'incorrect' | 'unsure';
+
+export interface FindingLabelInput {
+  readonly naturalKey: string;
+  readonly ruleId: string;
+  readonly verdict: FindingVerdict;
+  readonly note?: string | null;
+  /** What was true when the judgement was made — see migration 007. */
+  readonly evidenceHash: string;
+  readonly configHash: string;
+}
+
+export interface FindingLabelRecord extends FindingLabelInput {
+  readonly id: string;
+  readonly note: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+/** Per-rule accuracy, as §6.8's Analyzers section shows it beside the thresholds. */
+export interface RuleAccuracy {
+  readonly ruleId: string;
+  readonly correct: number;
+  readonly incorrect: number;
+  readonly unsure: number;
+  /**
+   * Labels whose evidence has moved since the judgement was made.
+   *
+   * Counted and excluded rather than silently dropped: a rule whose labels are
+   * mostly stale has an accuracy figure resting on a handful of current ones, and
+   * a reader about to move a threshold on the strength of it should be told.
+   */
+  readonly stale: number;
+}
+
+interface LabelRow {
+  id: string;
+  natural_key: string;
+  rule_id: string;
+  verdict: FindingVerdict;
+  note: string | null;
+  labelled_evidence_hash: string;
+  labelled_config_hash: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const SELECT_LABEL = `SELECT id, natural_key, rule_id, verdict, note, labelled_evidence_hash,
+                             labelled_config_hash, created_at, updated_at
+                        FROM finding_label`;
+
+function toLabel(row: LabelRow): FindingLabelRecord {
+  return {
+    id: row.id,
+    naturalKey: row.natural_key,
+    ruleId: row.rule_id,
+    verdict: row.verdict,
+    note: row.note,
+    evidenceHash: row.labelled_evidence_hash,
+    configHash: row.labelled_config_hash,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * §7.6's fixture corpus, collected a finding at a time (§9z).
+ *
+ * Separate from `FindingRepository` because a label **outlives the finding it
+ * judged**. §5.1 resolves a finding that stops firing rather than deleting it, but a
+ * threshold change can remove it from every future run — and the judgement about
+ * how the rule behaved at the old threshold is exactly what tuning wants to look
+ * back at. Keeping labels in their own table with their own `rule_id` is what makes
+ * that possible; joining them to `finding` would lose the ones that matter most.
+ */
+export class FindingLabelRepository {
+  constructor(
+    private readonly db: Database,
+    private readonly clock: Clock
+  ) {}
+
+  get(naturalKey: string): FindingLabelRecord | null {
+    const row = this.db
+      .prepare<[string], LabelRow>(`${SELECT_LABEL} WHERE natural_key = ?`)
+      .get(naturalKey);
+    return row ? toLabel(row) : null;
+  }
+
+  /** Every label, newest judgement first. `GET /api/findings/labels` and the
+   *  export both read this — §7.6's corpus is meant to leave the machine. */
+  list(limit = 500): FindingLabelRecord[] {
+    const bounded = Math.min(Math.max(limit, 1), 5000);
+    return this.db
+      .prepare<[number], LabelRow>(`${SELECT_LABEL} ORDER BY updated_at DESC LIMIT ?`)
+      .all(bounded)
+      .map(toLabel);
+  }
+
+  /** Set or change the judgement on one claim. Changing your mind updates the row;
+   *  §7.6 wants the current best answer, not an audit trail. */
+  put(input: FindingLabelInput): FindingLabelRecord {
+    const stamp = newStamp(this.clock);
+    this.db
+      .prepare(
+        `INSERT INTO finding_label
+           (id, natural_key, rule_id, verdict, note, labelled_evidence_hash,
+            labelled_config_hash, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (natural_key) DO UPDATE SET
+           rule_id = excluded.rule_id,
+           verdict = excluded.verdict,
+           note = excluded.note,
+           labelled_evidence_hash = excluded.labelled_evidence_hash,
+           labelled_config_hash = excluded.labelled_config_hash,
+           updated_at = excluded.updated_at`
+      )
+      .run(
+        stamp.id,
+        input.naturalKey,
+        input.ruleId,
+        input.verdict,
+        input.note ?? null,
+        input.evidenceHash,
+        input.configHash,
+        stamp.createdAt,
+        stamp.updatedAt
+      );
+
+    return this.get(input.naturalKey) as FindingLabelRecord;
+  }
+
+  remove(naturalKey: string): boolean {
+    return (
+      this.db.prepare('DELETE FROM finding_label WHERE natural_key = ?').run(naturalKey).changes > 0
+    );
+  }
+
+  /**
+   * Accuracy per rule, with stale labels separated out.
+   *
+   * "Stale" is decided by joining back to the current `finding` row and comparing
+   * `evidence_hash` — the same test §5.1 applies to a dismissal. A label on a claim
+   * that has since changed is a label about a different claim, and the join is a
+   * LEFT one because a finding that no longer exists at all is *not* stale: the
+   * judgement about it stands, and it is exactly the history a threshold change
+   * should be measured against.
+   */
+  accuracyByRule(): Map<string, RuleAccuracy> {
+    const rows = this.db
+      .prepare<[], { rule_id: string; verdict: FindingVerdict; stale: number; n: number }>(
+        `SELECT l.rule_id AS rule_id,
+                l.verdict AS verdict,
+                CASE WHEN f.natural_key IS NOT NULL
+                      AND f.evidence_hash <> l.labelled_evidence_hash
+                     THEN 1 ELSE 0 END AS stale,
+                COUNT(*) AS n
+           FROM finding_label AS l
+           LEFT JOIN finding AS f ON f.natural_key = l.natural_key
+          GROUP BY l.rule_id, l.verdict, stale`
+      )
+      .all();
+
+    const byRule = new Map<string, RuleAccuracy>();
+    const blank = (ruleId: string): RuleAccuracy => ({
+      ruleId,
+      correct: 0,
+      incorrect: 0,
+      unsure: 0,
+      stale: 0,
+    });
+
+    for (const row of rows) {
+      const current = byRule.get(row.rule_id) ?? blank(row.rule_id);
+      byRule.set(
+        row.rule_id,
+        row.stale === 1
+          ? { ...current, stale: current.stale + row.n }
+          : { ...current, [row.verdict]: current[row.verdict] + row.n }
+      );
+    }
+
+    return byRule;
+  }
+}

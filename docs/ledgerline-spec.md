@@ -95,7 +95,7 @@ records what it proposes — nor **one of §6's nine pages** — §6.6's
 Insights. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions, §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x and §9y list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y and §9z list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2334,6 +2334,62 @@ requires the third — "An answer with no visible data behind it is not shown" �
 enforced in the service rather than in the page, because an empty result with a confident
 paragraph over it is the most misleading thing this feature can produce and the page
 should not have to remember to guard against it.
+
+## 9z. Amendments from implementation — 2026-08-29 (§7.6, §5.1, §6.4, §6.8)
+
+§7.6 has been the standing caveat on every number in §5 since this document was written:
+"Nothing in §5 has been run against a real statement. The first phase that ships
+analyzers also ships a fixture corpus — a hand-labelled year of real statements with the
+expected findings written down — and every threshold is re-derived against it before the
+numbers in this document are treated as settled."
+
+That corpus has not been built, and the reason is not that anybody forgot. It is an
+afternoon of sitting with a year of statements writing out what *should* be found, before
+seeing what was — a task with no partial credit and no natural moment to start. This
+amendment builds the half that does have a natural moment: judging a finding while
+looking at the evidence, thirty seconds at a time.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 (new) | **`finding_label`** — one verdict per natural key, with the note, the rule id, and the evidence and config hashes in force when the judgement was made. | §7.6 describes the corpus as a file. A table is what lets it accumulate from use, and the hashes are what stop a judgement being counted after the claim it was about has moved. |
+| 2.3 (new) | **`POST /api/findings/:id/label`**, taking `correct` / `incorrect` / `unsure`. | §5.1's `/state` already exists and answers a different question — see below. |
+| 6.4 | **The card asks "was this right?"** beside the dismiss controls, and a "No" **does not hide the finding**. | A judgement that cost the reader the card would be a judgement nobody gives honestly. |
+| 6.8 | **The tally sits beside each rule's thresholds** in Analyzers — "you marked 4 right, 1 wrong" — as counts, never a percentage. | §7.4 put the thresholds there so tuning is a normal afternoon; the evidence for a change belongs in the same place as the change. Eleven judgements do not support "82% accurate", and a figure that looks like a rate invites being acted on as one. |
+
+**A label is not a dismissal, and conflating them would have been unrecoverable.**
+`finding_state` records acknowledged / snoozed / dismissed, and it is tempting to read a
+dismissal as "wrong" and save a table. The two come apart in both directions: a *correct*
+finding about a subscription you have already decided to keep gets dismissed, and an
+*incorrect* one sits unread at the bottom of the page for a month. Tuning §5 against
+dismissals would therefore calibrate every threshold toward what annoys the reader rather
+than toward what errs — and because the two verdicts would already be mixed in one
+column, nobody could separate them afterwards. That is the whole argument for the second
+table.
+
+**`unsure` is a real answer, not a cop-out.** Some findings cannot be judged without a
+bank statement to hand, and forcing those into `correct` or `incorrect` puts noise into
+the one number tuning reads. It is recorded and counted separately.
+
+**A label outlives the finding it judged**, which is why the table stands alone rather
+than being a column on `finding`. §5.1 resolves a finding that stops firing rather than
+deleting it, but a *threshold change* can remove it from every future run — and the
+judgement about how the rule behaved at the old threshold is exactly what tuning wants to
+look back at. `rule_id` is denormalised onto the label for the same reason.
+
+**Staleness reuses §5.1's mechanism.** A label whose finding's `evidence_hash` has since
+moved is a judgement about a different claim, so it is shown as "you called this correct,
+before the amounts changed", excluded from the rule's tally, and counted separately. A
+rule whose labels are mostly stale has an accuracy figure resting on a handful of current
+ones, and a reader about to move a threshold on the strength of it should be told.
+
+**What this cannot do, stated because the gap is easy to miss.** It measures
+**precision** — of the findings that fired, how many were right. It cannot measure
+**recall**, because the app has no way to show a reader what it *failed* to find, and
+§7.6's corpus as described is recall-capable precisely because the expected findings are
+written down before the rules run. So this instrument tunes a threshold **down** (too
+many false positives) on real evidence, and says nothing about tuning one **up**. §7.6's
+afternoon is still owed; what changes is that it is no longer the only source of
+evidence, and the thresholds most likely to be wrong now announce themselves.
 
 ## 10. Open discrepancies — recorded, not resolved
 

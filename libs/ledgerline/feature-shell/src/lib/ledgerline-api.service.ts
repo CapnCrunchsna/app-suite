@@ -24,6 +24,7 @@ import type {
   Account,
   AccountCoverage,
   AccountMergeResult,
+  LabelFindingBody,
   AskBody,
   AskResult,
   ApiError,
@@ -201,6 +202,14 @@ export class LedgerlineApiService {
    */
   ask(body: AskBody): Promise<AskResult> {
     return this.api.ask(body);
+  }
+
+  /**
+   * Spec 7.6s judgement on one finding. Distinct from setFindingState: that one
+   * asks whether you want to see it, this asks whether it was right (spec 9z).
+   */
+  labelFinding(id: string, body: LabelFindingBody): Promise<Finding> {
+    return this.api.labelFinding(id, body);
   }
 
   /** §2.7: the UI polls a job rather than blocking on it. */

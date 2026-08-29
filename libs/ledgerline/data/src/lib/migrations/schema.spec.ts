@@ -44,6 +44,10 @@ const SPEC_TABLES = [
   // neither, because the spec describes the feature and stops short of the row.
   'llm_degraded_call',
   'llm_proposal',
+  // §9z: §7.6 asks for a hand-labelled corpus and §3.1 lists no table for one,
+  // because the corpus was imagined as a file rather than as something the app
+  // collects.
+  'finding_label',
   'tombstone',
   'settings',
   'schema_migrations',

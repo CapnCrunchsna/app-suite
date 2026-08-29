@@ -75,6 +75,8 @@ function finding(overrides: Partial<Finding> = {}): Finding {
     impactMonthlyCents: 650,
     impactAnnualCents: 7800,
     llmDependent: false,
+    verdict: null,
+    verdictStale: false,
     evidenceHash: 'e'.repeat(32),
     evidenceTransactionIds: ['t1', 't2', 't3'],
     firstDetectedAt: '2026-08-14T00:00:00.000Z',

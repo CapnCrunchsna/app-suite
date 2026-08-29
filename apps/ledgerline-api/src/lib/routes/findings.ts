@@ -29,9 +29,11 @@ import type { FastifyInstance } from 'fastify';
 
 import type {
   FindingBand,
+  FindingLabelRecord,
   FindingLifecycleStatus,
   FindingQuery,
   FindingUserStatus,
+  FindingVerdict,
   FindingView,
   FindingVisibility,
 } from '@metrum/ledgerline-data';
@@ -86,7 +88,7 @@ function toQuery(query: FindingQueryString): FindingQuery {
  * API can serialize them without either one parsing a sentence", and handing the
  * client a string to `JSON.parse` would put the parsing back.
  */
-function toWire(view: FindingView) {
+function toWire(view: FindingView, label?: FindingLabelRecord | null) {
   const { finding, state } = view;
 
   // §5.1: the finding "returns flagged **'changed since you dismissed this'**"
@@ -123,6 +125,18 @@ function toWire(view: FindingView) {
     firstDetectedAt: finding.firstDetectedAt,
     status: finding.status,
     userStatus: state?.status ?? null,
+    /**
+     * §7.6's judgement, carried beside §5.1's verdict and never merged into it.
+     *
+     * Two fields rather than one combined status, because they answer different
+     * questions — *was it true* and *do I want to see it* — and a card that had to
+     * derive one from the other is where the distinction would quietly collapse
+     * (§9z).
+     */
+    verdict: label?.verdict ?? null,
+    // The same staleness test §5.1 applies to a dismissal: a judgement about
+    // evidence that has since moved is a judgement about a different claim.
+    verdictStale: label != null && label.evidenceHash !== finding.evidenceHash,
     snoozeUntil: state?.snoozeUntil ?? null,
     changedSinceDismissal: changedSinceDismissal ?? false,
     reEvaluated: reEvaluated ?? false,
@@ -207,8 +221,15 @@ export function registerFindingRoutes(app: FastifyInstance, context: LedgerlineC
     },
     async (request) => {
       const page = context.store.findings.search(toQuery(request.query));
+      // One lookup for the whole page rather than one per row: a findings page is
+      // up to 500 cards, and a label read per card would be 500 statements to
+      // decorate a list that already cost one.
+      const labels = new Map(
+        context.store.findingLabels.list(5000).map((entry) => [entry.naturalKey, entry] as const),
+      );
+
       return {
-        rows: page.rows.map(toWire),
+        rows: page.rows.map((row) => toWire(row, labels.get(row.finding.naturalKey) ?? null)),
         total: page.total,
         limit: page.limit,
         offset: page.offset,
@@ -320,11 +341,88 @@ export function registerFindingRoutes(app: FastifyInstance, context: LedgerlineC
         configHash: finding.configHash,
       });
 
-      return toWire({
-        finding,
-        state: context.store.findings.getState(finding.naturalKey),
-        evidenceTransactionIds: context.store.findings.listEvidence(finding.id),
+      return toWire(
+        {
+          finding,
+          state: context.store.findings.getState(finding.naturalKey),
+          evidenceTransactionIds: context.store.findings.listEvidence(finding.id),
+        },
+        context.store.findingLabels.get(finding.naturalKey),
+      );
+    },
+  );
+
+  /**
+   * §7.6's judgement, which is a different question from §5.1's verdict above.
+   *
+   * `POST /api/findings/:id/state` asks *do I want to see this*. This asks *was it
+   * true*, and the two come apart in both directions: a correct finding about a
+   * subscription you have already decided to keep gets dismissed, and an incorrect
+   * one sits unread at the bottom of the page for a month. §7.6 needs the second
+   * question answered to re-derive §5's thresholds, and reading it off the first
+   * would calibrate them toward what annoys the reader rather than toward what is
+   * wrong (§9z).
+   *
+   * The evidence and config hashes are captured from the finding as it stands, for
+   * the same reason the dismissal captures them: a judgement is about *this* claim,
+   * and one whose evidence later moves is a judgement about a different one.
+   */
+  app.post<{
+    Params: { id: string };
+    Body: { verdict: FindingVerdict; note?: string | null };
+  }>(
+    '/api/findings/:id/label',
+    {
+      schema: {
+        summary: 'Record whether this finding was right (spec 7.6)',
+        operationId: 'labelFinding',
+        description:
+          'Spec 7.6 asks for "a hand-labelled year of real statements with the expected ' +
+          'findings written down" before any spec 5 threshold is treated as settled. This ' +
+          'collects that corpus a finding at a time, while its evidence is on screen. ' +
+          'Deliberately not the same as a dismissal: this is whether the rule was correct, ' +
+          'not whether you want to see it. Measures precision only — nothing in the app can ' +
+          'show you what the rules failed to find.',
+        tags: ['analysis'],
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
+        body: {
+          type: 'object',
+          required: ['verdict'],
+          properties: {
+            verdict: { type: 'string', enum: ['correct', 'incorrect', 'unsure'] },
+            note: { type: ['string', 'null'], maxLength: 1000 },
+          },
+        },
+        response: { 200: ref('Finding'), ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const finding = context.store.findings.get(request.params.id);
+      if (!finding) {
+        return reply.code(404).send({ error: 'not_found', message: 'no such finding' });
+      }
+
+      const label = context.store.findingLabels.put({
+        naturalKey: finding.naturalKey,
+        ruleId: finding.ruleId,
+        verdict: request.body.verdict,
+        note: request.body.note ?? null,
+        evidenceHash: finding.evidenceHash,
+        configHash: finding.configHash,
       });
+
+      return toWire(
+        {
+          finding,
+          state: context.store.findings.getState(finding.naturalKey),
+          evidenceTransactionIds: context.store.findings.listEvidence(finding.id),
+        },
+        label,
+      );
     },
   );
 

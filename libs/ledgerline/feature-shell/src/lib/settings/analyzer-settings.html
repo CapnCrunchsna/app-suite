@@ -49,6 +49,20 @@
                 @if (rule.dismissedFindings > 0) {
                   · {{ rule.dismissedFindings }} dismissed
                 }
+                <!-- §7.6's corpus, beside the thresholds it exists to re-derive
+                     (§9z). Shown as a raw tally rather than a percentage: eleven
+                     judgements do not support a "82% accurate", and a number that
+                     looks like a rate invites acting on it as one. -->
+                @if (rule.labelled.correct + rule.labelled.incorrect > 0) {
+                  ·
+                  <span class="switch__scored">
+                    you marked {{ rule.labelled.correct }} right,
+                    {{ rule.labelled.incorrect }} wrong
+                    @if (rule.labelled.stale > 0) {
+                      ({{ rule.labelled.stale }} since changed)
+                    }
+                  </span>
+                }
               </span>
             </label>
           }
