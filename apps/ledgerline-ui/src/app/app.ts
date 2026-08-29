@@ -81,9 +81,15 @@ export class App {
     loader: () => this.api.getSettings(),
   });
 
-  protected readonly llmProvider = computed(() => this.settings.value()?.llm.providerId ?? 'none');
+  // `?.llm?.` and not `?.llm.`: the optional chain has to reach the property, not
+  // just the response. An API older than §2.4 serves a settings payload with no
+  // `llm` block at all, and the version of this that stopped chaining after
+  // `value()` threw on every render of a header that is on every page. Falling
+  // through to the defaults is the same safe direction the comment above argues
+  // for — `none`, local, and never the reverse.
+  protected readonly llmProvider = computed(() => this.settings.value()?.llm?.providerId ?? 'none');
   protected readonly sendsDataOffMachine = computed(
-    () => this.settings.value()?.llm.sendsDataOffMachine ?? false,
+    () => this.settings.value()?.llm?.sendsDataOffMachine ?? false,
   );
 
   constructor() {

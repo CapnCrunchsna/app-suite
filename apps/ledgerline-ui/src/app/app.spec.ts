@@ -76,6 +76,23 @@ function settingsWith(llm: Partial<Settings['llm']>): Settings {
   } as Settings;
 }
 
+/**
+ * What `GET /api/settings` served before §2.4 put the LLM block on it — the same
+ * row minus `llm`, which is what an API binary older than the UI still returns.
+ * Cast because the shape is deliberately not a `Settings`: the point of the test
+ * is what the shell does when the payload it is handed is not one.
+ */
+function settingsWithoutLlm(): Settings {
+  return {
+    configHash: 'abc0123456789def',
+    rules: [],
+    thresholds: [],
+    unsettable: [],
+    databaseFile: ':memory:',
+    backupDir: '',
+  } as unknown as Settings;
+}
+
 /** The two reads the shell makes, plus the three the home page makes when a test
  *  navigates to `/`. What the home page renders is `home-page.spec.ts`'s
  *  business; this stub exists only so routing to it does not reach the network. */
@@ -155,6 +172,34 @@ describe('App', () => {
     const badge = el.querySelector('.header__provider');
     expect(badge?.textContent).toContain('Sending data off this machine');
     expect(badge?.classList.contains('header__provider--remote')).toBe(true);
+  });
+
+  /**
+   * The indicator is chrome, so it renders on every page — which makes a throw
+   * here an error on every page, and one that nothing visibly fails on. An API
+   * older than §2.4 serves settings with no `llm` block at all; the shell has to
+   * read that as "nothing configured" rather than as a crash, because the two
+   * look identical in the header and only one of them is silent.
+   *
+   * The console assertion is here because the app swallows this, and the spec
+   * does not. In the browser `provideBrowserGlobalErrorListeners` catches the
+   * throw, the header still renders "Local only", and the only trace is a console
+   * error — so the text assertion alone is exactly the check that passed while
+   * the bug was live. This spec has no such listener and would fail on the throw,
+   * but pinning the console keeps the test honest if that ever changes.
+   */
+  it('falls back to the defaults when the settings row predates the llm block', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    api.settings = settingsWithoutLlm();
+
+    const el = await render();
+
+    expect(el.querySelector('.header__provider')?.textContent).toContain('Local only');
+    expect(el.querySelector('.header__provider')?.classList.contains('header__provider--remote')).toBe(
+      false,
+    );
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
   });
 
   it('says a local model is local, which is not the same as none', async () => {
