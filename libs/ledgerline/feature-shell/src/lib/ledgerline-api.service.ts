@@ -24,6 +24,8 @@ import type {
   Account,
   AccountCoverage,
   AccountMergeResult,
+  AskBody,
+  AskResult,
   ApiError,
   BulkUpdateTransactionsBody,
   Category,
@@ -190,6 +192,15 @@ export class LedgerlineApiService {
    *  sweeps the history. Permanent and top-precedence. */
   mergeMerchant(id: string, body: MergeMerchantBody): Promise<MerchantMergeResult> {
     return this.api.mergeMerchant(id, body);
+  }
+
+  /**
+   * §6.7's Q&A. Throws `LedgerlineApiError` with code `llm_disabled` when no
+   * provider is configured — §2.3 makes that reason machine-readable precisely so
+   * the page can render it as a state with a link rather than as a failure.
+   */
+  ask(body: AskBody): Promise<AskResult> {
+    return this.api.ask(body);
   }
 
   /** §2.7: the UI polls a job rather than blocking on it. */

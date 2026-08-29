@@ -1,0 +1,111 @@
+<h2 class="title">Ask</h2>
+
+<!-- §6.7: "disabled with a clear explanation and a link to Settings when the
+     provider is `none`." The explanation is the API's own, because it names the
+     setting; the link is this page's, because the API has no routes. -->
+@if (disabledReason(); as reason) {
+  <ui-panel heading="Ask needs a provider">
+    <p class="disabled__body">{{ reason }}</p>
+    <a class="button button--primary" routerLink="/settings">Open Settings</a>
+    <p class="note">
+      Ollama runs the model on this machine, so nothing leaves it. The Claude CLI option sends
+      merchant descriptors and aggregated amounts to Anthropic, and says so before you turn it on.
+    </p>
+  </ui-panel>
+} @else {
+  <ui-panel heading="Ask a question">
+    <p class="lede">
+      Questions are answered by running one of six fixed queries over your ledger and describing
+      what came back. The model never sees your rows and never writes a query of its own — it
+      picks one, and the numbers you read are checked against the result before you see them.
+    </p>
+
+    <form class="asker" (submit)="$event.preventDefault(); submit()">
+      <input
+        type="text"
+        class="asker__input"
+        name="question"
+        autocomplete="off"
+        placeholder="What did I spend on groceries this year?"
+        maxlength="500"
+        [disabled]="asking()"
+        [ngModel]="question()"
+        (ngModelChange)="question.set($event)"
+      />
+      <button type="submit" class="button button--primary" [disabled]="!canAsk()">
+        {{ asking() ? 'Asking…' : 'Ask' }}
+      </button>
+    </form>
+
+    @if (failure(); as problem) {
+      <p class="note note--bad" role="alert">{{ problem }}</p>
+    }
+
+    @if (exchanges().length === 0 && !asking()) {
+      <ul class="examples">
+        @for (example of examples; track example) {
+          <li>
+            <button type="button" class="example" (click)="use(example)">{{ example }}</button>
+          </li>
+        }
+      </ul>
+    }
+  </ui-panel>
+}
+
+@for (exchange of exchanges(); track exchange) {
+  @let answer = exchange.result;
+
+  <ui-panel [heading]="exchange.question">
+    <!-- §6.7: every answer "names the query it ran". Above the prose, because it is
+         the thing that makes the prose checkable. -->
+    @if (answer.queryDescription) {
+      <p class="ran">Ran: <strong>{{ answer.queryDescription }}</strong></p>
+    }
+
+    @if (answer.answer) {
+      <p class="answer">{{ answer.answer }}</p>
+    } @else if (answer.withheldReason) {
+      <!-- §6.7: "An answer that fails validation is not shown; the table is shown
+           instead with a note." -->
+      <p class="withheld" role="status">{{ answer.withheldReason }}</p>
+    }
+
+    @if (answer.rows.length > 0) {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">What</th>
+              <th scope="col" class="table__num">Amount</th>
+              <th scope="col" class="table__num">Charges</th>
+              <th scope="col">When</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of answer.rows; track $index) {
+              <tr>
+                <td>{{ row.label }}</td>
+                <td class="table__num">{{ money(row.amountCents) }}</td>
+                <td class="table__num">{{ row.count ?? '' }}</td>
+                <td>{{ row.date ?? '' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <p class="note">
+        {{ answer.rowCount }} {{ answer.rowCount === 1 ? 'row' : 'rows' }}, {{ money(answer.totalCents) }}
+        in total.
+        @if (answer.withheldP2P > 0) {
+          {{ answer.withheldP2P }}
+          {{ answer.withheldP2P === 1 ? 'payment to a person was' : 'payments to people were' }}
+          left out of what the model saw — they are in the table, and they never leave this
+          machine.
+        }
+        <a routerLink="/transactions">View the rows</a>
+      </p>
+    }
+  </ui-panel>
+}

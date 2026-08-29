@@ -249,8 +249,8 @@ describe('App', () => {
     ]);
   });
 
-  // A rail item becomes a link only once its page exists. Two of the nine are
-  // spans, so none of them can be clicked into a blank screen.
+  // A rail item becomes a link only once its page exists. One of the nine is a
+  // span, so none of them can be clicked into a blank screen.
   it('links only the sections that are built', async () => {
     const el = await render();
 
@@ -261,9 +261,11 @@ describe('App', () => {
       'Review',
       'Findings',
       'Subscriptions',
+      'Ask',
       'Settings',
     ]);
-    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(2);
+    // §6.6's Insights, and only that — §6.7's Ask became a link in §9y.
+    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(1);
   });
 
   describe('§6.9’s badge', () => {

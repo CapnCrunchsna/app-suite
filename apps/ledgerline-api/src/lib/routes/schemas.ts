@@ -1112,6 +1112,46 @@ const llmProposalRun = {
   },
 } as const;
 
+/**
+ * One row of an Ask answer’s table (spec 6.7).
+ *
+ * Flat on purpose: spec 6.7 requires every answer to render "the underlying table or
+ * chart", and one shape for all six queries is what lets the page render any of them
+ * without a component per query. A field a given query has no notion of is null.
+ */
+const askRow = {
+  $id: 'AskRow',
+  type: 'object',
+  properties: {
+    label: { type: 'string' },
+    amountCents: nullableInteger,
+    count: nullableInteger,
+    date: nullableString,
+    /** Present for row-level queries, so spec 6.7’s "view the rows" can link. */
+    transactionId: nullableString,
+  },
+} as const;
+
+const askResult = {
+  $id: 'AskResult',
+  type: 'object',
+  properties: {
+    question: { type: 'string' },
+    /** Spec 6.7: every answer "names the query it ran". */
+    queryDescription: nullableString,
+    queryName: nullableString,
+    rows: { type: 'array', items: ref('AskRow') },
+    rowCount: { type: 'integer' },
+    totalCents: { type: 'integer' },
+    /** Null when the model was unreachable, when its prose failed spec 6.7’s numeric
+     *  check, or when the query returned nothing — the table is shown either way. */
+    answer: nullableString,
+    withheldReason: nullableString,
+    /** Spec 2.4’s hard filter, counted rather than silent. */
+    withheldP2P: { type: 'integer' },
+    providerId: { type: 'string' },
+  },
+} as const;
 const settings = {
   $id: 'Settings',
   type: 'object',
@@ -1586,6 +1626,8 @@ const SHARED = [
   allRequired(degradedCallLog),
   allRequired(llmProposal),
   allRequired(llmProposalRun),
+  allRequired(askRow),
+  allRequired(askResult),
   allRequired(settings),
   allRequired(settingsUpdate),
   allRequired(wipeResult),

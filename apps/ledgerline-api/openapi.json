@@ -2395,6 +2395,107 @@
           "jobId"
         ]
       },
+      "AskRow": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "count": {
+            "type": [
+              "null",
+              "integer"
+            ]
+          },
+          "date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "transactionId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "label",
+          "amountCents",
+          "count",
+          "date",
+          "transactionId"
+        ]
+      },
+      "AskResult": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "queryDescription": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "queryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AskRow"
+            }
+          },
+          "rowCount": {
+            "type": "integer"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "answer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "withheldReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "withheldP2P": {
+            "type": "integer"
+          },
+          "providerId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "queryDescription",
+          "queryName",
+          "rows",
+          "rowCount",
+          "totalCents",
+          "answer",
+          "withheldReason",
+          "withheldP2P",
+          "providerId"
+        ]
+      },
       "Settings": {
         "type": "object",
         "properties": {
@@ -7918,6 +8019,108 @@
                       "type": "boolean"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ask": {
+      "post": {
+        "operationId": "ask",
+        "summary": "Ask a question about the ledger (spec 6.7)",
+        "tags": [
+          "llm"
+        ],
+        "description": "Not text-to-SQL. The model chooses one of six validated query functions, the function runs deterministically, and the model then writes prose over what it returned — with every numeric token in that prose checked against the result before it is shown. Row-level queries send the provider a count, the totals and at most twenty redacted descriptors; the rows themselves never leave. Answers `409 llm_disabled` when no provider is configured, because choosing a query is the one step with no deterministic equivalent.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "question"
+                ],
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResult"
                 }
               }
             }

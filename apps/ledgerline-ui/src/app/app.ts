@@ -22,7 +22,7 @@ const SECTIONS = [
   { label: 'Findings', path: 'findings', badge: false },
   { label: 'Subscriptions', path: 'subscriptions', badge: false },
   { label: 'Insights', path: null, badge: false },
-  { label: 'Ask', path: null, badge: false },
+  { label: 'Ask', path: 'ask', badge: false },
   { label: 'Settings', path: 'settings', badge: false },
 ] as const;
 

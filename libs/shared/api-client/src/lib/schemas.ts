@@ -578,6 +578,27 @@ export interface LlmProposalRun {
   readonly jobId: string | null;
 }
 
+export interface AskRow {
+  readonly label: string;
+  readonly amountCents: number | null;
+  readonly count: number | null;
+  readonly date: string | null;
+  readonly transactionId: string | null;
+}
+
+export interface AskResult {
+  readonly question: string;
+  readonly queryDescription: string | null;
+  readonly queryName: string | null;
+  readonly rows: AskRow[];
+  readonly rowCount: number;
+  readonly totalCents: number;
+  readonly answer: string | null;
+  readonly withheldReason: string | null;
+  readonly withheldP2P: number;
+  readonly providerId: string;
+}
+
 export interface Settings {
   readonly configHash: string;
   readonly rules: SettingRule[];

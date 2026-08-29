@@ -1,0 +1,177 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text, #dcefeb);
+}
+
+.lede {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.note--bad {
+  color: var(--warn, #d9a441);
+}
+
+.note a {
+  color: var(--accent, #2dd4bf);
+}
+
+.disabled__body {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+}
+
+.asker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.asker__input {
+  flex: 1 1 20rem;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.asker__input:focus {
+  outline: none;
+  border-color: var(--accent, #2dd4bf);
+}
+
+.button {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button--primary {
+  border-color: var(--accent, #2dd4bf);
+}
+
+/* Examples, because "chat over the data" gives no clue what the data is. Buttons
+ * rather than static text: reading one and retyping it is a pointless step. */
+.examples {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.example {
+  padding: 4px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.example:hover {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--text, #dcefeb);
+}
+
+/* §6.7: the answer "names the query it ran". Above the prose and quieter than it —
+ * it is the provenance, not the content. */
+.ran {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.answer {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text, #dcefeb);
+}
+
+/* A withheld answer is a normal outcome, not a failure — amber rather than red,
+ * and it sits where the prose would have been so the shape of the panel does not
+ * change depending on whether the numbers checked out. */
+.withheld {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--warn, #d9a441);
+  font-size: 0.76rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.table th {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border, #1f4a47);
+  text-align: left;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 45%, transparent);
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

@@ -41,6 +41,7 @@ import type {
   DeleteImportResult,
   LlmHealth,
   DegradedCallLog,
+  AskResult,
   Settings,
   SettingsUpdate,
   WipeResult,
@@ -307,6 +308,10 @@ export type ProposeMerchantsResponse = {
   readonly jobId: string;
   readonly providerId: string;
   readonly willDoNothing: boolean;
+};
+
+export type AskBody = {
+  readonly question: string;
 };
 
 /**
@@ -807,6 +812,17 @@ export class LedgerlineApi {
    */
   proposeMerchants(): Promise<ProposeMerchantsResponse> {
     return this.request<ProposeMerchantsResponse>('POST', `/api/llm/propose-merchants`, {
+    });
+  }
+
+  /**
+   * Ask a question about the ledger (spec 6.7)
+   *
+   * Not text-to-SQL. The model chooses one of six validated query functions, the function runs deterministically, and the model then writes prose over what it returned — with every numeric token in that prose checked against the result before it is shown. Row-level queries send the provider a count, the totals and at most twenty redacted descriptors; the rows themselves never leave. Answers `409 llm_disabled` when no provider is configured, because choosing a query is the one step with no deterministic equivalent.
+   */
+  ask(body: AskBody): Promise<AskResult> {
+    return this.request<AskResult>('POST', `/api/ask`, {
+      body,
     });
   }
   // ------------------------------------------------------------ plumbing ---

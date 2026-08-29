@@ -89,13 +89,13 @@ the move, the badge, and where the count lives.
 Redaction sections, §4.2's merchant-proposal stage, and the degraded-call log in Data — §9t.
 `none` remains the default and the app is complete without a provider (§2.4).
 
-PDF ingest is **not** built, nor are the merchant-alias, insights and ask endpoints of
+PDF ingest is **not** built, nor are the merchant-alias and insights endpoints of
 §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
-records what it proposes — nor **two of §6's nine pages** — §6.6's
-Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
-§6.5's Subscriptions, §6.8's Settings and §6.9's Review exist and are all reachable from the
+records what it proposes — nor **one of §6's nine pages** — §6.6's
+Insights. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
+§6.5's Subscriptions, §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w and §9x list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x and §9y list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2294,6 +2294,46 @@ cannot come to disagree about who wins.
 list and so a later proposal does not overwrite an earlier one. That falls out of the
 precedence rather than being arranged separately, which is the reason to state the
 precedence once rather than special-case the re-run.
+
+## 9y. Amendments from implementation — 2026-08-29 (§6.7, §2.3)
+
+§6.7 is the last section of §6 to be built and the only one whose central claim is a
+*negative* — "no hallucinated numbers, no arbitrary database access from generated SQL,
+and data minimization". Building it was mostly a matter of making each of those three
+checkable rather than asserted, and two of them needed a decision §6.7 does not make.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3 (new) | **`POST /api/ask`**, answering `409 llm_disabled` when the provider is `none` — the one §2.3 specified and nothing served. | Ask is the only feature in this system with **no deterministic half**. Everywhere else a provider improves on an answer the rules already produced; here nothing but a model turns a sentence into one of §6.7's six queries. So there is no fallback to return and 409 is the honest status. |
+| 6.7 | **`merchantHistory` is treated as row-level**, not as an aggregate — the same twenty-descriptor cap and redaction `transactionSearch` gets. | §6.7 names only `transactionSearch` in its data-minimization clause, but `merchantHistory` returns individual charges too. Applying the rule to the query's *shape* rather than to its name is the reading that survives a seventh query being added. |
+| 6.7 | **The prose call sees `providerView`, never `rows`** — a separate structure built beside the result rather than a filtered copy of it. | A filter is a thing someone can forget to apply. Two structures built together, where only one is ever passed to a provider, is the same argument §4.2's batch type makes: the object handed to the model has no field the rows could travel in. |
+| 6.7 | **Small integers (≤12) are exempt from numeric validation.** | They are ordinals and counts — "the top 3", "over 12 months" — far more often than they are claims, and anything at that scale which *is* a money figure is also below the scale at which being wrong matters. Without the exemption almost every well-formed answer fails. |
+
+**The check has to allow rounding, and that is not a weakening.** §6.7 says every numeric
+token "must appear in the returned rows or be a simple aggregate of them". Read strictly
+that rejects "about $1,100" over a value of $1,099.40 — which is a model rounding, not
+inventing, and rejecting it serves nobody. Comparison is therefore to two decimal places
+with a 0.5% relative tolerance. A figure that is merely *close to nothing* in the result
+still fails, which is the property that matters.
+
+**Cents and dollars are the same number.** `amountCents: 109_900` has to admit
+"$1,099.00", because cents are an implementation detail the prose has no reason to know
+about. That conversion is the one scale conversion the check performs, and it is admitted
+because §3.1 makes cents the only integer money scale in the system.
+
+**Pairwise derivation is bounded and says so.** §6.7's four allowed forms include
+differences and percentages "of two present values", which is O(n²). That is affordable
+only because the input is small by construction — an aggregate result is category or
+month totals, and a row-level one is capped at twenty descriptors before a model sees it.
+`MAX_PAIRWISE` states the bound rather than inheriting it, so a future query returning
+more rows degrades to "unvalidatable" instead of quietly spending a second there.
+
+**An answer can be withheld three ways and the table is shown in all of them**: the model
+was unreachable, its prose failed the numeric check, or the query returned nothing. §6.7
+requires the third — "An answer with no visible data behind it is not shown" — and it is
+enforced in the service rather than in the page, because an empty result with a confident
+paragraph over it is the most misleading thing this feature can produce and the page
+should not have to remember to guard against it.
 
 ## 10. Open discrepancies — recorded, not resolved
 

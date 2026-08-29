@@ -24,6 +24,7 @@ import type { ApiConfig } from './config.js';
 import type { LedgerlineContext } from './context.js';
 import { ImportNotReadyError } from './import-service.js';
 import { registerAccountRoutes } from './routes/accounts.js';
+import { registerAskRoutes } from './routes/ask.js';
 import { registerDataRoutes } from './routes/data.js';
 import { registerFindingRoutes } from './routes/findings.js';
 import { registerFormatProfileRoutes } from './routes/format-profiles.js';
@@ -215,6 +216,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerDataRoutes(app, options.context, options.config);
   registerSettingsRoutes(app, options.context, options.config);
   registerLlmRoutes(app, options.context);
+  registerAskRoutes(app, options.context);
 
   await app.ready();
   return app;
