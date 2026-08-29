@@ -390,7 +390,7 @@ describe('TransactionRepository — the bulk correction surface (§6.3)', () => 
       const selector = { descriptorsNormalized: ['SPOTIFYUSA'] };
       store.transactions.applyBulk(selector, { merchantId: 'spotify' });
       const categorized = store.transactions.applyBulk(
-        { ...selector, excludeUserCategorized: true },
+        { ...selector, preserveCategorySources: ['user'] },
         { categoryId: 'dining', categorySource: 'rule' },
       );
 

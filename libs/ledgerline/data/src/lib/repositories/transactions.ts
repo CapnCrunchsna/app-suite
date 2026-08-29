@@ -107,7 +107,7 @@ export interface TransactionQuery {
   readonly includeInternalTransfers?: boolean;
   readonly includeExcluded?: boolean;
   /**
-   * Drop rows a human has categorized — `category_source = 'user'`.
+   * Drop rows whose category came from one of these sources — leave them alone.
    *
    * §4.3's precedence in the one place a rule could quietly overrule it: the
    * re-normalize sweep (§2.7) repoints a corrected merchant across four years of
@@ -116,8 +116,16 @@ export interface TransactionQuery {
    * because "which rows" is a filter question, and because the merchant half of
    * the same sweep still has to touch every row — a user's category is not a
    * reason to leave their merchant wrong.
+   *
+   * **A list rather than the boolean it replaced (§9x).** Categories do not share
+   * §4.3's alias precedence and it took §4.2's category having nowhere to land to
+   * notice: an alias claims *identity*, where a rule beats a model, but a category
+   * claims *classification*, and §2.5 has the rule go first and the model improve
+   * on it — "category assigned by rule, then optionally by LLM". So a sweep passes
+   * `['user', 'llm']` where it used to pass `user` alone, and the one caller that
+   * genuinely means only-the-user still says so.
    */
-  readonly excludeUserCategorized?: boolean;
+  readonly preserveCategorySources?: readonly ProvenanceSource[];
   /** Full-text across raw and normalized descriptors (§6.3). */
   readonly text?: string;
   readonly sort?: TransactionSort;
@@ -572,8 +580,13 @@ export class TransactionRepository {
     if (!query.includeExcluded) {
       where.push('t.is_excluded = 0');
     }
-    if (query.excludeUserCategorized) {
-      where.push(`(t.category_source IS NULL OR t.category_source <> 'user')`);
+    if (query.preserveCategorySources && query.preserveCategorySources.length > 0) {
+      // A fixed enum, so the values can be inlined — but they come from a caller,
+      // so they go through placeholders anyway (§3.4: "no caller string reaches SQL
+      // uninterpreted").
+      const holes = query.preserveCategorySources.map(() => '?').join(', ');
+      where.push(`(t.category_source IS NULL OR t.category_source NOT IN (${holes}))`);
+      params.push(...query.preserveCategorySources);
     }
     if (query.text) {
       where.push(

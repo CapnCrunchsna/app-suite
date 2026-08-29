@@ -50,7 +50,7 @@ import type { LlmProvider } from '@metrum/ledgerline-llm';
 import type { LlmProposalRecord } from '@metrum/ledgerline-data';
 
 import type { LedgerlineContext } from './context.js';
-import { enqueueRenormalize } from './merchant-corrections.js';
+import { PRESERVED_CATEGORY_SOURCES, enqueueRenormalize } from './merchant-corrections.js';
 import {
   createLlmProvider,
   degradedCallSink,
@@ -483,12 +483,9 @@ function applyProposal(
     context.store.llm.upsertProposal({
       descriptor,
       merchantName: proposal.merchantName,
-      // §4.2 asks the model for a category and this is where it stops: writing it
-      // to `transaction.category_source = 'llm'` would be overwritten within
-      // seconds by §4.3's re-normalize, which sets the category from the *new*
-      // merchant's default (§2.5's rule). Recorded here so the review card can
-      // show what the model thought; not applied, because two mechanisms writing
-      // one column is how a category starts flickering. Recorded in §9s.
+      // Recorded whatever the outcome, so a review card can show what the model
+      // thought even where the grouping was withheld. It is *applied* only on the
+      // applied path — see `applyProposedCategory` (§9x).
       categoryName: proposal.category,
       confidence: proposal.confidence,
       status,
@@ -550,5 +547,50 @@ function applyProposal(
   }
 
   aliasKeysWritten.push(descriptor);
+
+  // §2.5's "category assigned by rule, then optionally by LLM", which until §9x had
+  // nowhere to land. Applied only here — on a proposal that cleared the floor, the
+  // settled-series exception and the never-overwrite rule — because a category the
+  // model attached to a grouping it was not confident enough to make would be a
+  // classification resting on an identity nobody accepted.
+  applyProposedCategory(context, descriptor, proposal.category);
+
   return record('applied', null);
+}
+
+/**
+ * Write the model's category, if it names one this taxonomy has.
+ *
+ * **Only onto rows no stronger source has claimed.** `PRESERVED_CATEGORY_SOURCES`
+ * is the same list §4.3's sweep honours, so the two cannot disagree about who wins
+ * — and it includes `llm` itself, which makes a re-run idempotent rather than a
+ * second write of the same value.
+ *
+ * **An unknown name is dropped, not created.** §6.8 files the taxonomy under
+ * Categories as an editor that does not exist yet, and a model inventing rows in it
+ * would be the one write on this path with no human anywhere near it. Matching is
+ * case-insensitive on the name because that is the only thing the model was given.
+ */
+function applyProposedCategory(
+  context: LedgerlineContext,
+  descriptor: string,
+  categoryName: string | null,
+): void {
+  if (categoryName === null) return;
+
+  const wanted = categoryName.trim().toUpperCase();
+  const category = context.store.merchants
+    .listCategories()
+    .find((entry) => entry.name.toUpperCase() === wanted);
+  if (!category) return;
+
+  context.store.transactions.applyBulk(
+    {
+      descriptorsNormalized: [descriptor],
+      includeInternalTransfers: true,
+      includeExcluded: true,
+      preserveCategorySources: PRESERVED_CATEGORY_SOURCES,
+    },
+    { categoryId: category.id, categorySource: 'llm' },
+  );
 }

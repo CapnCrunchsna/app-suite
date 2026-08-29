@@ -26,6 +26,22 @@ import type { RenormalizedRow } from '@metrum/ledgerline-data';
 import type { LedgerlineContext } from './context.js';
 
 /**
+ * Category sources a re-normalize leaves alone (§9x).
+ *
+ * `user` because §4.3 calls a correction permanent. `llm` because §2.5 orders the
+ * two — "category assigned by rule, then optionally by LLM" — which makes a model's
+ * category an improvement on the rule's rather than a weaker version of it. That is
+ * the reverse of how the same two sources rank for *aliases*, and deliberately: an
+ * alias claims identity, where §4.1's chain is the better authority, and a category
+ * claims classification, which is the question the model was asked precisely because
+ * the merchant's default was absent or generic.
+ *
+ * One constant rather than a literal at each call site, because the two halves of a
+ * sweep that disagreed about it would silently clobber on one path and not the other.
+ */
+export const PRESERVED_CATEGORY_SOURCES = ['user', 'llm'] as const;
+
+/**
  * §2.7's incremental re-normalization: "only transactions whose current
  * `description_normalized` falls in the affected alias key-space are
  * re-resolved."
@@ -253,7 +269,9 @@ export function runFullRenormalize(
       // §4.3: a `user` category is permanent. Everything else follows the merchant,
       // including being cleared when the new merchant has no default — the rule now
       // says nothing, so the rule's answer goes rather than being left behind.
-      const keepCategory = row.categorySource === 'user';
+      const keepCategory =
+        row.categorySource !== null &&
+        (PRESERVED_CATEGORY_SOURCES as readonly string[]).includes(row.categorySource);
       const ruleCategory = merchantId === null ? null : categoryOf(merchantId);
 
       writes.push({
@@ -319,11 +337,15 @@ export function runFullRenormalize(
  * belongs to. The new merchant having **no** default is the same statement — the
  * rule now says nothing, so the rule's answer is cleared rather than kept.
  *
- * **A `user` category is never touched.** §4.3 puts `user` above every other
- * source and calls a correction "permanent"; `category_source` is what records
- * which is which, and `excludeUserCategorized` is the filter that honours it. The
- * merchant on those rows still moves — a hand-picked category is not a reason to
- * leave a merchant wrong.
+ * **A `user` or `llm` category is never touched.** §4.3 puts `user` above every
+ * other source and calls a correction "permanent". `llm` joins it here and only
+ * here: §2.5 has the rule assign a category "then optionally by LLM", so a model's
+ * category is an *improvement on* the rule's answer rather than a weaker version of
+ * it — the opposite of how the same two sources rank for aliases, and §9x argues
+ * why the two rank differently. `category_source` is what records which is which
+ * and `preserveCategorySources` is the filter that honours it. The merchant on
+ * those rows still moves — a hand-picked category is not a reason to leave a
+ * merchant wrong.
  *
  * Internal transfers and excluded rows are re-pointed too. They are hidden from
  * §6.3's table by default, not deleted, and leaving them on a stale merchant
@@ -381,7 +403,7 @@ export function runRenormalize(
     const categoryId =
       context.store.merchants.get(resolution.merchantId)?.defaultCategoryId ?? null;
     context.store.transactions.applyBulk(
-      { ...selector, excludeUserCategorized: true },
+      { ...selector, preserveCategorySources: PRESERVED_CATEGORY_SOURCES },
       { categoryId, categorySource: categoryId === null ? null : 'rule' },
     );
 

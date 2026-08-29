@@ -673,6 +673,114 @@ describe('ledgerline-api LLM surface (§2.4, §4.2, §6.8)', () => {
       expect(alias?.aliasKey).not.toContain('redacted');
     });
 
+    // ------------------------------------------- §2.5's category, §9x's home for it ---
+
+    describe('the category §4.2 asks for (§2.5, §9x)', () => {
+      const rowFor = (fragment: string) =>
+        (
+          context.store.db
+            .prepare(
+              `SELECT category_id, category_source FROM "transaction"
+                WHERE description_raw LIKE ? LIMIT 1`,
+            )
+            .get(`%${fragment}%`) as { category_id: string | null; category_source: string | null }
+        );
+
+      const proposeCategory = async (name: string | null, confidence = 0.95) => {
+        provider = new ScriptedProvider((prompt) => ({
+          proposals: descriptorsIn(prompt)
+            .filter((descriptor) => descriptor.includes('BLUE BOTTLE'))
+            .map((descriptor) => ({
+              descriptor,
+              merchant_name: 'Netflix',
+              category: name,
+              confidence,
+            })),
+        }));
+        await setProvider('ollama');
+        await propose();
+      };
+
+      it('applies it as `category_source = "llm"` when the grouping applied', async () => {
+        const [category] = context.store.merchants.listCategories();
+        await proposeCategory(category.name);
+
+        expect(rowFor('BLUE BOTTLE')).toMatchObject({
+          category_id: category.id,
+          category_source: 'llm',
+        });
+      });
+
+      /**
+       * §2.5 orders the two — "category assigned by rule, then optionally by LLM" —
+       * so a sweep must not put the merchant's default back over the model's answer.
+       * That is the reverse of how the same two sources rank for *aliases*, which is
+       * exactly the asymmetry §9x exists to state.
+       */
+      it('survives a re-normalize, which would once have clobbered it', async () => {
+        const [category] = context.store.merchants.listCategories();
+        await proposeCategory(category.name);
+
+        await app.inject({ method: 'POST', url: '/api/jobs/renormalize' });
+        await context.jobRunner.drain();
+
+        expect(rowFor('BLUE BOTTLE')).toMatchObject({
+          category_id: category.id,
+          category_source: 'llm',
+        });
+      });
+
+      it('never overwrites a category the user chose (§4.3)', async () => {
+        const categories = context.store.merchants.listCategories();
+        const [first, second] = categories;
+        context.store.db
+          .prepare(
+            `UPDATE "transaction" SET category_id = ?, category_source = 'user'
+              WHERE description_raw LIKE ?`,
+          )
+          .run(second.id, '%BLUE BOTTLE%');
+
+        await proposeCategory(first.name);
+
+        expect(rowFor('BLUE BOTTLE')).toMatchObject({
+          category_id: second.id,
+          category_source: 'user',
+        });
+      });
+
+      it('applies nothing when the grouping itself was withheld', async () => {
+        const [category] = context.store.merchants.listCategories();
+        const before = rowFor('BLUE BOTTLE');
+
+        // Sub-floor: §4.2 says such a proposal "applies to nothing", and a category
+        // resting on an identity nobody accepted is still something.
+        await proposeCategory(category.name, LLM_CONFIDENCE_FLOOR - 0.1);
+
+        expect(rowFor('BLUE BOTTLE')).toMatchObject({
+          category_source: before.category_source,
+        });
+      });
+
+      it('drops a category name this taxonomy does not have, rather than creating one', async () => {
+        await proposeCategory('Artisanal Nitro Cold Brew');
+
+        // §6.8 files the taxonomy under an editor that does not exist yet. A model
+        // inventing rows in it would be the one write on this path with no human
+        // anywhere near it.
+        expect(context.store.merchants.listCategories().map((c) => c.name)).not.toContain(
+          'Artisanal Nitro Cold Brew',
+        );
+        // The *alias* still applied, so the row moved to Netflix and §2.5's rule
+        // re-derived a category from that merchant's default — which is the rule
+        // doing its job, not the model's answer landing. `llm` is what would mean
+        // the invented name was written.
+        expect(rowFor('BLUE BOTTLE').category_source).not.toBe('llm');
+        expect(
+          context.store.merchants.listAliases().some((entry) => entry.source === 'llm'),
+        ).toBe(true);
+      });
+    });
+
     it('holds a sub-floor proposal in the review queue and applies nothing', async () => {
       provider = new ScriptedProvider((prompt) => ({
         proposals: descriptorsIn(prompt)

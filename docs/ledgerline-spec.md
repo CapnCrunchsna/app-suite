@@ -95,7 +95,7 @@ records what it proposes — nor **two of §6's nine pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u and §9v list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w and §9x list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2260,6 +2260,40 @@ whose job is fixing wrong categories. Only §2.6's *second* negative signal is a
 membership per row, which is not on `TransactionSearchRow`; that is a second §2.3 change for a
 case the second signal almost always catches anyway, since a series has a resolved merchant by
 construction and a subscription charge lands in a spend category.
+
+## 9x. Amendments from implementation — 2026-08-29 (§2.5, §4.2, §4.3)
+
+§9t built §4.2's stage and left one field of its response schema with nowhere to go: the
+model is asked for `{ descriptor, merchant_name, category, confidence }` and only three
+of those did anything. The category was recorded on the proposal and applied to no row,
+because §4.3's re-normalize would have overwritten it within seconds with the merchant's
+default. Resolving that turned out to need a precedence rule §4.3 does not state.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.5, 4.3 | **Category precedence is `user` → `llm` → `rule`**, which is *not* §4.3's alias precedence (`user` → `seed` → `rule` → `llm`). | §2.5 already orders them — "category assigned by rule, then optionally by LLM" — and "then" is the whole argument: the model is asked *because* the rule's answer was absent or generic, so treating its answer as the weaker of the two discards the thing that was wanted. |
+| 4.2 | **A proposal's category applies only where its grouping applied.** Sub-floor and settled-series-blocked proposals write no category, at any confidence. | A classification resting on an identity nobody accepted is still something applied. §4.2 says such a proposal "applies to nothing", and a category is not nothing. |
+| 4.2 | **A category name the taxonomy does not have is dropped, never created.** | §6.8 files the taxonomy under a Categories editor that does not exist yet. A model inserting rows into it would be the only write on this path with no human anywhere near it. |
+
+**The two precedences differ because the two claims differ.** An alias claims *identity* —
+this descriptor **is** that merchant — and on identity §4.1's chain is the better
+authority, which is why §4.3 ranks `rule` above `llm` and why `upsertAlias` goes further
+and refuses any `llm` overwrite at all. A category claims *classification*, and there the
+rule's answer is a single inherited default with no view of the descriptor. Ranking the
+two the same way in both places would mean either a model that cannot improve a category
+or a model that can silently rename a merchant, and neither is what §2.5 and §4.2
+describe when read together.
+
+**`excludeUserCategorized` became `preserveCategorySources`.** The boolean encoded the old
+assumption in its name, and a second boolean beside it would have been two overlapping
+filters over one column. The list makes the sweep's rule legible at the call site, and
+`PRESERVED_CATEGORY_SOURCES` is one constant so the incremental path and the full sweep
+cannot come to disagree about who wins.
+
+**A re-run is idempotent rather than a second write**, because `llm` is in the preserved
+list and so a later proposal does not overwrite an earlier one. That falls out of the
+precedence rather than being arranged separately, which is the reason to state the
+precedence once rather than special-case the re-run.
 
 ## 10. Open discrepancies — recorded, not resolved
 
