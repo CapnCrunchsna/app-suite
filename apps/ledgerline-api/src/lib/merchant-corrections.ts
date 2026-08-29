@@ -19,8 +19,9 @@
  * is).
  */
 
-import { normalizeBatch, SEED_MERCHANT_KEYS } from '@metrum/ledgerline-normalize';
+import { normalizeBatch, normalizeDescriptor, SEED_MERCHANT_KEYS } from '@metrum/ledgerline-normalize';
 import type { MerchantAlias } from '@metrum/ledgerline-normalize';
+import type { RenormalizedRow } from '@metrum/ledgerline-data';
 
 import type { LedgerlineContext } from './context.js';
 
@@ -36,13 +37,31 @@ import type { LedgerlineContext } from './context.js';
 export interface RenormalizePayload {
   readonly transactionIds: readonly string[];
   readonly aliasKeys: readonly string[];
+  /**
+   * §2.7's other half: "A full sweep is available explicitly from Settings."
+   *
+   * A separate flag rather than a sentinel alias key, because the two are different
+   * operations rather than the same one over a wider set — the incremental path
+   * re-points merchants inside a known key-space, and the sweep re-runs §4.1's chain
+   * from the raw descriptor and may rewrite `description_normalized` (§9v).
+   */
+  readonly full?: boolean;
 }
 
+/**
+ * Coalesce two payloads (§2.7).
+ *
+ * `full` is OR-ed, and that is the whole of why the sweep can share a job kind with
+ * the incremental path: a full sweep **subsumes** any incremental work queued beside
+ * it, because it re-resolves every row rather than a key-space. Merging the two into
+ * one job therefore loses nothing, where dropping either would.
+ */
 function mergeRenormalize(existing: string | null, incoming: RenormalizePayload): string {
   const carried = existing ? (JSON.parse(existing) as Partial<RenormalizePayload>) : null;
   return JSON.stringify({
     transactionIds: [...new Set([...(carried?.transactionIds ?? []), ...incoming.transactionIds])],
     aliasKeys: [...new Set([...(carried?.aliasKeys ?? []), ...incoming.aliasKeys])],
+    full: (carried?.full ?? false) || (incoming.full ?? false),
   } satisfies RenormalizePayload);
 }
 
@@ -112,6 +131,163 @@ export interface RenormalizeResult {
   readonly descriptorsConsidered: number;
   readonly transactionsRepointed: number;
   readonly merchantsAffected: number;
+  /** §2.7's full sweep only: rows whose `description_normalized` the current chain
+   *  no longer agrees with. Zero on the incremental path by construction. */
+  readonly descriptorsRewritten?: number;
+  /** §4.1 step 7 merchants the sweep had to create because the new chain produced a
+   *  cleaned name nothing had seen before. */
+  readonly merchantsCreated?: number;
+}
+
+/** How many rows the sweep holds in memory at once. Uncalibrated (§7.6); chosen so
+ *  §2.2's heavy household is ~120 pages rather than one 58,000-row array. */
+const SWEEP_PAGE = 500;
+
+/**
+ * §2.7's **full sweep**: "A full sweep is available explicitly from Settings."
+ *
+ * ## Why this is a different function rather than a wider `runRenormalize`
+ *
+ * §9q predicted the fix would be `TransactionPatch` learning to carry
+ * `description_normalized`, and building it that way would have been wrong. The
+ * incremental path selects a *group* of rows by their shared current
+ * `description_normalized`, runs the chain over one representative raw descriptor,
+ * and applies the answer to the group. That is sound while the chain is fixed,
+ * because the grouping was the chain's own. It stops being sound the moment the
+ * chain changes — which is the only reason to run a sweep at all: two raw
+ * descriptors the old chain merged may be ones the new chain separates, and one
+ * sample's answer written across the group would merge them permanently.
+ *
+ * So the unit of work here is the **raw descriptor**, one row at a time. §4.1's
+ * chain is a pure function of it, and nothing about the stored grouping is trusted.
+ *
+ * ## What it may and may not rewrite
+ *
+ * `description_normalized` and `merchant_id`, and the category where §4.3 allows it.
+ * Never `dedupe_key` — §3.3 computes that from the raw descriptor through the frozen
+ * `collapse_v1`, and §4 opens by separating the growing chain from the frozen one
+ * precisely so a sweep like this is safe to run.
+ *
+ * Never a `user` category, for §4.3's reason: a correction is permanent, and
+ * `category_source` is what records which is which. The merchant on those rows still
+ * moves — a hand-picked category is not a reason to leave a merchant wrong.
+ *
+ * ## Only rows that actually changed are written
+ *
+ * A sweep over a database the chain already agrees with must be a no-op, not 58,000
+ * `updated_at` stamps: §3.4's watermark re-index reads that column, and a sweep that
+ * touched every row would hand it the whole table to re-index for nothing.
+ */
+export function runFullRenormalize(
+  context: LedgerlineContext,
+  report: (progress: number, message: string) => void = () => undefined,
+): RenormalizeResult {
+  const total = context.store.transactions.countAll();
+  if (total === 0) {
+    return {
+      descriptorsConsidered: 0,
+      transactionsRepointed: 0,
+      merchantsAffected: 0,
+      descriptorsRewritten: 0,
+      merchantsCreated: 0,
+    };
+  }
+
+  const aliases: MerchantAlias[] = context.store.merchants.listAliases().map((alias) => ({
+    aliasKey: alias.aliasKey,
+    merchantId: alias.merchantId,
+    matchType: alias.matchType,
+    confidence: alias.confidence ?? 1,
+    source: alias.source,
+  }));
+
+  // The merchant's default category, looked up once per merchant rather than once
+  // per row: on a real statement that is 21 lookups instead of 326, and on §2.2's
+  // ceiling it is the difference between hundreds and tens of thousands.
+  const defaultCategories = new Map<string, string | null>();
+  const categoryOf = (merchantId: string): string | null => {
+    if (!defaultCategories.has(merchantId)) {
+      defaultCategories.set(merchantId, context.store.merchants.get(merchantId)?.defaultCategoryId ?? null);
+    }
+    return defaultCategories.get(merchantId) ?? null;
+  };
+
+  const merchantsTouched = new Set<string>();
+  let afterId: string | null = null;
+  let seen = 0;
+  let repointed = 0;
+  let rewritten = 0;
+  let created = 0;
+
+  for (;;) {
+    const page = context.store.transactions.listForRenormalize(SWEEP_PAGE, afterId);
+    if (page.length === 0) break;
+
+    const writes: RenormalizedRow[] = [];
+
+    for (const row of page) {
+      const resolved = normalizeDescriptor(row.descriptionRaw, {
+        aliases,
+        knownMerchantKeys: SEED_MERCHANT_KEYS,
+        trace: false,
+      });
+
+      // §4.1 step 7, applied by the sweep rather than by an import: a descriptor the
+      // chain cleans but cannot match becomes a provisional merchant. This is the
+      // branch `runRenormalize` skips — and skipping it is what §9q measured at 17
+      // merchants of 21 on the first real statement, which is most of the ledger.
+      let merchantId: string | null = null;
+      if (resolved.resolution.kind === 'alias') {
+        merchantId = resolved.resolution.merchantId;
+      } else if (resolved.resolution.name.trim() !== '') {
+        const before = context.store.merchants.findByCanonicalName(resolved.resolution.name);
+        const merchant = context.store.merchants.getOrCreateProvisional(resolved.resolution.name);
+        if (!before) created += 1;
+        merchantId = merchant.id;
+      }
+
+      const descriptorMoved = row.descriptionNormalized !== resolved.descriptionNormalized;
+      const merchantMoved = row.merchantId !== merchantId;
+      if (!descriptorMoved && !merchantMoved) continue;
+
+      // §4.3: a `user` category is permanent. Everything else follows the merchant,
+      // including being cleared when the new merchant has no default — the rule now
+      // says nothing, so the rule's answer goes rather than being left behind.
+      const keepCategory = row.categorySource === 'user';
+      const ruleCategory = merchantId === null ? null : categoryOf(merchantId);
+
+      writes.push({
+        id: row.id,
+        descriptionNormalized: resolved.descriptionNormalized,
+        merchantId,
+        categoryId: keepCategory ? row.categoryId : ruleCategory,
+        categorySource: keepCategory ? row.categorySource : ruleCategory === null ? null : 'rule',
+      });
+
+      if (descriptorMoved) rewritten += 1;
+      if (merchantMoved) repointed += 1;
+      if (merchantId !== null) merchantsTouched.add(merchantId);
+    }
+
+    context.store.transactions.applyRenormalized(writes);
+
+    seen += page.length;
+    afterId = page[page.length - 1].id;
+    report(
+      Math.min(95, Math.round((seen / total) * 95)),
+      `re-normalized ${seen} of ${total} transactions`,
+    );
+
+    if (page.length < SWEEP_PAGE) break;
+  }
+
+  return {
+    descriptorsConsidered: seen,
+    transactionsRepointed: repointed,
+    merchantsAffected: merchantsTouched.size,
+    descriptorsRewritten: rewritten,
+    merchantsCreated: created,
+  };
 }
 
 /**

@@ -123,6 +123,43 @@ export interface BulkApplyResult {
   readonly transactionIds: readonly string[];
 }
 
+/**
+ * One row as §2.7's **full sweep** needs to see it.
+ *
+ * Lean on purpose: no `hasFinding` join, no balance, no dates. A sweep reads every
+ * row in the database and the only inputs it has are the raw descriptor and what is
+ * currently stored against it — everything else would be bytes carried across
+ * 58,000 rows (§2.2's heavy household) to be ignored.
+ *
+ * `descriptionRaw` is the one that matters and is why this type exists at all. §4.1's
+ * chain is a pure function of the raw descriptor, so the raw descriptor is the unit
+ * of work — see `listForRenormalize`.
+ */
+export interface RenormalizeCandidate {
+  readonly id: string;
+  readonly descriptionRaw: string;
+  readonly descriptionNormalized: string;
+  readonly merchantId: string | null;
+  readonly categoryId: string | null;
+  readonly categorySource: ProvenanceSource | null;
+}
+
+/**
+ * What the sweep decided for one row, ready to be written.
+ *
+ * Every field is the **final intended value**, not a delta. The caller enumerated
+ * the row, so it already holds the current values and is the only party that can
+ * apply §4.3's precedence — "a `user` category is never touched" is a decision about
+ * provenance, and `data` may not reach the chain that would justify it (§2.2).
+ */
+export interface RenormalizedRow {
+  readonly id: string;
+  readonly descriptionNormalized: string;
+  readonly merchantId: string | null;
+  readonly categoryId: string | null;
+  readonly categorySource: ProvenanceSource | null;
+}
+
 export interface MerchantDebits {
   readonly merchantId: string | null;
   readonly merchantName: string;
@@ -160,6 +197,15 @@ const COLUMNS = `id, account_id, raw_row_id, posted_date, transaction_date, effe
                  dedupe_key, dedupe_key_version, occurrence_index, created_at, updated_at`;
 
 const SELECT = `SELECT ${COLUMNS} FROM "transaction"`;
+
+interface RenormalizeCandidateRow {
+  id: string;
+  description_raw: string;
+  description_normalized: string;
+  merchant_id: string | null;
+  category_id: string | null;
+  category_source: ProvenanceSource | null;
+}
 
 /** A fixed map, so a sort key can never reach SQL uninterpreted. */
 const SORT_SQL: Readonly<Record<TransactionSort, string>> = {
@@ -647,6 +693,92 @@ export class TransactionRepository {
       }
 
       return { matched: ids.length, transactionIds: ids };
+    })();
+  }
+
+  /**
+   * One page of §2.7's full sweep, in `id` order.
+   *
+   * ## Keyset, not offset
+   *
+   * The sweep writes to the rows it is paging through, so an `OFFSET` walk would be
+   * reading a moving target: a row whose sort key changed mid-walk is either visited
+   * twice or skipped, and skipped is the one that leaves a descriptor on the old
+   * chain's output with nothing to say so. `id > ?` cannot drift, because the sweep
+   * never writes `id`.
+   *
+   * `id` rather than `effective_date`: the four sorts `search` offers are all
+   * date-first, and a sweep has no reason to prefer one date over another. What it
+   * needs is a total order that is stable under its own writes, and the primary key
+   * is the only column that is guaranteed both.
+   */
+  listForRenormalize(limit: number, afterId: string | null): RenormalizeCandidate[] {
+    const bounded = Math.min(Math.max(limit, 1), 5000);
+    const rows = this.db
+      .prepare<[string, number], RenormalizeCandidateRow>(
+        `SELECT id, description_raw, description_normalized, merchant_id, category_id, category_source
+           FROM "transaction"
+          WHERE id > ?
+          ORDER BY id
+          LIMIT ?`,
+      )
+      .all(afterId ?? '', bounded);
+
+    return rows.map((row) => ({
+      id: row.id,
+      descriptionRaw: row.description_raw,
+      descriptionNormalized: row.description_normalized,
+      merchantId: row.merchant_id,
+      categoryId: row.category_id,
+      categorySource: row.category_source,
+    }));
+  }
+
+  /**
+   * Write what the sweep decided (§2.7, §4.3).
+   *
+   * ## `description_normalized` moves here and nowhere else
+   *
+   * §4.3's incremental job deliberately does not write this column — a merchant
+   * correction changes the *alias table*, not the chain, so the normalized form
+   * comes back identical and rewriting it would stamp `updated_at` on rows nothing
+   * happened to. A **chain amendment** breaks that premise (§9o), and this is the
+   * one path that exists for it.
+   *
+   * `dedupe_key` is untouched and must stay that way. §3.3 computes it from the raw
+   * descriptor through the frozen `collapse_v1`, which is precisely why §4 opens by
+   * separating the two: the growing chain may be rewritten under a stored row, and
+   * the frozen one may never be. A sweep that moved `dedupe_key` would re-key rows
+   * the merge rule has already reasoned about.
+   *
+   * The caller passes only rows that actually changed, so `updated_at` still means
+   * "something happened to this row" and §3.4's watermark re-index does not wake up
+   * to a whole table.
+   */
+  applyRenormalized(rows: readonly RenormalizedRow[]): number {
+    if (rows.length === 0) return 0;
+
+    return this.db.transaction(() => {
+      const statement = this.db.prepare(
+        `UPDATE "transaction"
+            SET description_normalized = ?, merchant_id = ?, category_id = ?,
+                category_source = ?, updated_at = ?
+          WHERE id = ?`,
+      );
+      const now = this.clock.now();
+
+      let written = 0;
+      for (const row of rows) {
+        written += statement.run(
+          row.descriptionNormalized,
+          row.merchantId,
+          row.categoryId,
+          row.categorySource,
+          now,
+          row.id,
+        ).changes;
+      }
+      return written;
     })();
   }
 

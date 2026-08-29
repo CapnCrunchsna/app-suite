@@ -14,6 +14,7 @@
 import { TestBed } from '@angular/core/testing';
 import type {
   DegradedCallLog,
+  Job,
   LlmHealth,
   Settings,
   SettingsUpdate,
@@ -210,6 +211,43 @@ class ApiStub {
 
   listDegradedCalls(): Promise<DegradedCallLog> {
     return Promise.resolve(this.degradedLog);
+  }
+
+  // §6.8's re-normalize trigger. The count is the API's, because it is the number
+  // the button promises.
+  transactions = 326;
+
+  getHealth(): Promise<{ ok: boolean; schemaVersion: number; transactions: number; profileLoadErrors: string[] }> {
+    return Promise.resolve({
+      ok: true,
+      schemaVersion: 6,
+      transactions: this.transactions,
+      profileLoadErrors: [],
+    });
+  }
+
+  sweeps = 0;
+  jobStates: Job['state'][] = ['succeeded'];
+
+  renormalizeAll(): Promise<{ id: string; coalesced: boolean; transactions: number }> {
+    this.sweeps += 1;
+    return Promise.resolve({ id: 'sweep-1', coalesced: false, transactions: this.transactions });
+  }
+
+  getJob(): Promise<Job> {
+    // Shift through the scripted states so a test can make the job run before it
+    // lands, which is the only way to observe the progress bar at all.
+    const state = this.jobStates.length > 1 ? (this.jobStates.shift() as Job['state']) : this.jobStates[0];
+    return Promise.resolve({
+      id: 'sweep-1',
+      kind: 'renormalize',
+      state,
+      progress: state === 'succeeded' ? 100 : 40,
+      message: state === 'succeeded' ? null : 're-normalized 130 of 326 transactions',
+      resultJson: null,
+      createdAt: '',
+      updatedAt: '',
+    } as Job);
   }
 }
 
@@ -451,10 +489,12 @@ describe('SettingsPage', () => {
   it('no longer carries the merchant review queue (§9s)', async () => {
     const { el } = await render();
 
-    // §9t adds AI assistance between them; the queue is still absent.
+    // §9t added AI assistance and §9v added Merchant names — which is the sweep,
+    // not the queue. The queue is still absent, which is the point.
     expect(text(el, '.panel__heading')).toEqual([
       'Analyzers',
       'AI assistance',
+      'Merchant names',
       'Data',
       'Not built yet',
     ]);
@@ -524,5 +564,75 @@ describe('SettingsPage', () => {
     const result = el.querySelector('.test__result')?.textContent;
     expect(result).toContain('The check itself failed');
     expect(result).toContain('spawn claude ENOENT');
+  });
+
+  // --------------------------------------------- §6.8's re-normalize trigger ---
+
+  /**
+   * §6.8 asks for "a re-normalize trigger with job progress", and §9v built it. The
+   * two things worth asserting from the container are the two it owns: the count on
+   * the button is the API's, and the bar is fed by §2.7's job rather than invented.
+   */
+  describe('the re-normalize trigger (§6.8, §9v)', () => {
+    it('promises the count the API gave it, not one derived from the page', async () => {
+      const { el } = await render();
+
+      const button = [...el.querySelectorAll('ll-renormalize-settings button')].find((n) =>
+        n.textContent?.includes('Re-read'),
+      );
+      expect(button?.textContent).toContain('326');
+    });
+
+    it('offers nothing to re-read on an empty database', async () => {
+      api.transactions = 0;
+      const { el } = await render();
+
+      expect(el.querySelector('ll-renormalize-settings button')).toBeNull();
+      expect(el.querySelector('ll-renormalize-settings')?.textContent).toContain(
+        'nothing to re-read',
+      );
+    });
+
+    it('starts the sweep and reports what it did', async () => {
+      const { fixture, el } = await render();
+
+      const button = [...el.querySelectorAll('ll-renormalize-settings button')].find((n) =>
+        n.textContent?.includes('Re-read'),
+      ) as HTMLButtonElement;
+      button.click();
+      await fixture.whenStable();
+
+      expect(api.sweeps).toBe(1);
+      // The notice names the count the API returned rather than the one on screen —
+      // they should agree, and on the day they do not the user is owed the true one.
+      expect(text(el, '.notice')[0]).toContain('326');
+      expect(text(el, '.notice')[0]).toContain('recalculated');
+    });
+
+    /**
+     * §2.7: "`GET /api/jobs/:id` reports `{ state, progress, message }`; the UI
+     * polls." The bar shows the job's own message, so the phase named on screen is
+     * the phase the runner is in rather than a percentage the page made up.
+     */
+    it('shows the job’s own progress while it runs', async () => {
+      api.jobStates = ['running', 'running', 'succeeded'];
+      const { fixture, el } = await render();
+
+      const button = [...el.querySelectorAll('ll-renormalize-settings button')].find((n) =>
+        n.textContent?.includes('Re-read'),
+      ) as HTMLButtonElement;
+      button.click();
+      await fixture.whenStable();
+
+      // `whenStable` returns before the poll's own wait, so this catches the bar
+      // mid-sweep — which is the state worth asserting. The label is the *job's*
+      // message verbatim, so what a user reads is the phase the runner is in rather
+      // than a percentage this page invented.
+      expect(el.querySelector('.progress')).not.toBeNull();
+      expect(el.querySelector('.progress__label')?.textContent).toContain(
+        're-normalized 130 of 326 transactions',
+      );
+      expect(el.querySelector('.progress__label')?.textContent).toContain('40%');
+    });
   });
 });

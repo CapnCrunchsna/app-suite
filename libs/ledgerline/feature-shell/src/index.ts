@@ -31,3 +31,4 @@ export * from './lib/settings/settings-page.js';
 export * from './lib/settings/analyzer-settings.js';
 export * from './lib/settings/data-settings.js';
 export * from './lib/settings/llm-settings.js';
+export * from './lib/settings/renormalize-settings.js';

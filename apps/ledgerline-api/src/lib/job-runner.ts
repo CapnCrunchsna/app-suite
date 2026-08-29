@@ -68,7 +68,7 @@ import type { JobRecord, LedgerlineStore } from '@metrum/ledgerline-data';
 import { runAnalysis } from './analysis-service.js';
 import type { LedgerlineContext } from './context.js';
 import { runLlmMerchantProposals } from './llm-merchants.js';
-import { runRenormalize } from './merchant-corrections.js';
+import { runFullRenormalize, runRenormalize } from './merchant-corrections.js';
 import type { RenormalizePayload } from './merchant-corrections.js';
 
 /** Progress channel handed to a handler. §2.7's `{ state, progress, message }`. */
@@ -112,8 +112,17 @@ export const JOB_HANDLERS: Readonly<Record<string, JobHandler>> = {
       aliasKeys: [],
     };
 
+    // §2.7's two shapes, dispatched on the payload rather than on a second job
+    // kind. They coalesce into one another — a sweep subsumes any incremental work
+    // queued beside it (see `mergeRenormalize`) — and two kinds could not, because
+    // the queue coalesces within a kind.
     report(10, 'reapplying the merchant chain');
-    const renormalized = runRenormalize(context, payload);
+    const renormalized = payload.full
+      ? runFullRenormalize(context, (progress, message) =>
+          // The sweep owns 10–50; its own 0–95 is rescaled into that.
+          report(10 + (progress * 40) / 95, message),
+        )
+      : runRenormalize(context, payload);
 
     report(50, 're-running analysis');
     const analysis = runAnalysis(context, (progress, message) =>

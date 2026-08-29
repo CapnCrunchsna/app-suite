@@ -40,6 +40,7 @@ import type {
   FormatProfile,
   FormatProfilePreview,
   GetFindingsSummaryQuery,
+  GetHealthResponse,
   ImportReview,
   Job,
   ListFindingsQuery,
@@ -53,6 +54,7 @@ import type {
   MergeMerchantBody,
   PreviewFormatProfileBody,
   ProposeMerchantsResponse,
+  RenormalizeAllResponse,
   Series,
   SeriesPatch,
   Settings,
@@ -380,6 +382,18 @@ export class LedgerlineApiService {
   /** §4.2's stage. Returns §2.7's job id; the page polls it like every other. */
   proposeMerchants(): Promise<ProposeMerchantsResponse> {
     return this.api.proposeMerchants();
+  }
+
+  /** §2.7's full sweep, §6.8's trigger. Returns a job id and the row count it will
+   *  walk, so the page can say what it started without counting anything itself. */
+  renormalizeAll(): Promise<RenormalizeAllResponse> {
+    return this.api.renormalizeAll();
+  }
+
+  /** Liveness, and the transaction count §6.8's re-normalize trigger shows before
+   *  anyone presses it. */
+  getHealth(): Promise<GetHealthResponse> {
+    return this.api.getHealth();
   }
 
   /** §2.3's backup: a consistent copy, returning the path it wrote. */

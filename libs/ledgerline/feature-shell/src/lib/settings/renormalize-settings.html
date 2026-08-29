@@ -1,0 +1,47 @@
+<p class="lede">
+  Merchant names are worked out from the statement line by a set of rules, and those rules get
+  better over time. Rows imported before an improvement keep the old answer until they are
+  re-read — so if a merchant looks wrong in a way that correcting it one row at a time does not
+  fix, this is the thing that fixes it.
+</p>
+
+<p class="note">
+  It re-reads every charge from the line the bank printed and works the merchant out again. Your
+  own corrections are kept: they outrank anything the app decides for itself. Subscriptions and
+  findings are recalculated afterwards.
+</p>
+
+@if (empty()) {
+  <p class="note">Nothing imported yet, so there is nothing to re-read.</p>
+} @else {
+  <button
+    type="button"
+    class="button button--primary"
+    [disabled]="busy() || running() !== null"
+    (click)="start()"
+  >
+    Re-read {{ transactionCount() }} {{ transactionCount() === 1 ? 'charge' : 'charges' }}
+  </button>
+}
+
+<!-- §6.8 asks for "job progress" and §2.7 says the UI polls for it. The message is
+     the job's own, so the phase named here is the phase the runner is actually in. -->
+@if (running(); as job) {
+  <div class="progress" role="status" aria-live="polite">
+    <div
+      class="progress__track"
+      role="progressbar"
+      [attr.aria-valuenow]="percent()"
+      aria-valuemin="0"
+      aria-valuemax="100"
+    >
+      <div class="progress__fill" [style.width.%]="percent()"></div>
+    </div>
+    <p class="progress__label">
+      {{ job.done ? 'Done.' : job.message ?? 'Working…' }}
+      @if (!job.done) {
+        <span class="progress__percent">{{ percent() }}%</span>
+      }
+    </p>
+  </div>
+}

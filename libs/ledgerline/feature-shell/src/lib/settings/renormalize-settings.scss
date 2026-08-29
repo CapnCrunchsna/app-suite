@@ -1,0 +1,73 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.lede {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.note {
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.button {
+  padding: 5px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button--primary {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.progress {
+  margin-top: 12px;
+}
+
+.progress__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2, #143034);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  background: var(--accent, #2dd4bf);
+  /* Short, because the bar moves in page-sized steps rather than continuously —
+   * a long ease would still be catching up when the next page lands. */
+  transition: width 120ms linear;
+}
+
+.progress__label {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.progress__percent {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}

@@ -6069,6 +6069,104 @@
         }
       }
     },
+    "/api/jobs/renormalize": {
+      "post": {
+        "operationId": "renormalizeAll",
+        "summary": "Re-run spec 4.1’s chain over every stored transaction",
+        "tags": [
+          "jobs"
+        ],
+        "description": "Spec 2.7’s full sweep. Re-resolves every row from its raw descriptor rather than from the grouping the old chain produced, so a chain amendment reaches rows that were imported before it. Rewrites `description_normalized` and the merchant, and the category where spec 4.3 allows it; never `dedupe_key`, which spec 3.3 computes through the frozen `collapse_v1`. Only rows the chain no longer agrees with are written. Ends by re-running the analysis, like every other re-normalize.",
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "coalesced",
+                    "transactions"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "coalesced": {
+                      "type": "boolean"
+                    },
+                    "transactions": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/analysis/run": {
       "post": {
         "operationId": "runAnalysis",

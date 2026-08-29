@@ -223,6 +223,12 @@ export interface ListJobsQuery {
 
 export type ListJobsResponse = Job[];
 
+export type RenormalizeAllResponse = {
+  readonly id: string;
+  readonly coalesced: boolean;
+  readonly transactions: number;
+};
+
 export interface ListFindingsQuery {
   readonly ruleIds?: string;
   readonly bands?: string;
@@ -601,6 +607,16 @@ export class LedgerlineApi {
   listJobs(query: ListJobsQuery = {}): Promise<ListJobsResponse> {
     return this.request<ListJobsResponse>('GET', `/api/jobs`, {
       query,
+    });
+  }
+
+  /**
+   * Re-run spec 4.1’s chain over every stored transaction
+   *
+   * Spec 2.7’s full sweep. Re-resolves every row from its raw descriptor rather than from the grouping the old chain produced, so a chain amendment reaches rows that were imported before it. Rewrites `description_normalized` and the merchant, and the category where spec 4.3 allows it; never `dedupe_key`, which spec 3.3 computes through the frozen `collapse_v1`. Only rows the chain no longer agrees with are written. Ends by re-running the analysis, like every other re-normalize.
+   */
+  renormalizeAll(): Promise<RenormalizeAllResponse> {
+    return this.request<RenormalizeAllResponse>('POST', `/api/jobs/renormalize`, {
     });
   }
 

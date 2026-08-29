@@ -31,6 +31,18 @@
     }
   </ui-panel>
 
+  <!-- §6.8's Merchant aliases, reduced by §9s to the one thing on it that is
+       configuration rather than data: the sweep. Above Data because it is an action
+       on the ledger, and Data is where the ledger is backed up and thrown away. -->
+  <ui-panel heading="Merchant names">
+    <ll-renormalize-settings
+      [busy]="busy()"
+      [transactionCount]="transactionCount()"
+      [running]="sweep()"
+      (renormalize)="onRenormalizeAll()"
+    />
+  </ui-panel>
+
   <ui-panel heading="Data">
     @if (all) {
       <ll-data-settings

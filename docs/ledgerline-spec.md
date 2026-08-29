@@ -95,7 +95,7 @@ records what it proposes — nor **two of §6's nine pages** — §6.6's
 Insights and §6.7's Ask. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
 §6.5's Subscriptions, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t and §9u list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u and §9v list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2118,6 +2118,65 @@ links to Findings instead, which is where the button already is and where the re
 anyway. And the way home is the app name, which is the one navigation convention every user
 already has — a tenth entry above §6's nine would make the front door look like a section it is
 not.
+
+## 9v. Amendments from implementation — 2026-08-28 (§2.7, §2.3, §6.8)
+
+§9q deferred §6.8's re-normalize trigger and named two blockers. Both were real; one of
+them turned out to have the wrong fix attached, and finding that out is most of what
+this change is.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3 (new) | **`POST /api/jobs/renormalize`** — §2.3 lists it and nothing served it. Enqueues §2.7's full sweep and returns a job id and the row count it will walk. | §2.7 says "a full sweep is available explicitly from Settings", and **explicitly** is the whole of it: an *incremental* re-normalize is a consequence of a correction and never something a user asks for, so an endpoint for it would have been a button for a thing that already happens. |
+| 2.7 | **The sweep's unit of work is the raw descriptor, one row at a time** — not the descriptor group the stored `description_normalized` defines. | §9q predicted the fix would be `TransactionPatch` learning to carry `description_normalized`. Building it that way would have been wrong; see below. |
+| 3.1 | **`transaction.description_normalized` is writable**, by exactly one path. `dedupe_key` remains untouchable. | §4.3's job was written on the premise that rewriting the normalized form is a no-op, which is true of a correction and false of a chain amendment (§9o). |
+| 6.8 | **Merchant aliases is built**, as the one thing §9s left it: a trigger with §2.7's job progress. | The queue moved to §6.9 because it is work on the data. A sweep rebuilds derived state, which is maintenance, which is what the rest of that page is. |
+
+**Why the group is the wrong unit, which is the part §9q got wrong.** The incremental
+path selects rows by their shared current `description_normalized`, runs the chain over
+*one representative* raw descriptor, and applies the answer to the whole group. That is
+sound while the chain is fixed, because the grouping was the chain's own work. It stops
+being sound the moment the chain changes — which is the only reason to run a sweep at
+all. Two raw descriptors the old chain merged may be two the new chain separates, and
+one sample's answer written across the group would merge them **permanently**, in the
+name of repairing them. Widening `TransactionPatch` would have shipped exactly that: a
+sweep that looks like it worked and quietly destroys the distinction it was run to
+restore. So the sweep reads rows rather than groups, and trusts nothing about the stored
+grouping.
+
+**The provisional skip bites in a narrower case than it sounds, and the case is the one
+that matters.** §9q measured `runRenormalize`'s early return for non-alias resolutions
+at "17 merchants of 21", which reads as though the incremental path is broken for most
+of a ledger. It is not: §4.1 step 7 leaves a `rule` alias behind for every provisional
+merchant it creates, so re-running the chain over a freshly imported ledger resolves
+through those aliases and the skip never fires. What reaches it is precisely §9o's
+condition — the chain changed, so it now produces a cleaned name that no alias covers.
+The skip is therefore harmless in every case except the one a sweep exists for, which is
+why it stayed invisible. `renormalize-api.spec.ts` reproduces it by deleting the alias,
+because that is what "the chain's output is a name nothing has an alias for" looks like
+without keeping two versions of the chain around.
+
+**The sweep runs §4.1 step 7 itself.** A descriptor the new chain cleans but cannot match
+becomes a provisional merchant, created here rather than at import. That is what makes a
+sweep able to repair a chain amendment rather than merely re-point what the old chain
+already grouped.
+
+**Only rows that disagree with the chain are written**, and that is not an optimisation.
+§3.4's watermark re-index reads `updated_at`; a sweep that stamped every row would hand
+it the whole table to re-index for nothing, on an operation whose whole purpose is that
+running it should be safe. A sweep over a converged database is a no-op that says so.
+
+**Keyset paging, because the sweep writes to what it is reading.** An `OFFSET` walk over
+rows the walk itself is updating either visits a row twice or skips it, and skipped is
+the failure that leaves a descriptor on the old chain's output with nothing to say so.
+`id > ?` cannot drift, because the sweep never writes `id`. The four sorts `search`
+offers are all date-first and none of them is what this needs.
+
+**The sweep and the incremental path share a job kind, and coalesce.** §2.7 coalesces
+within a kind, and merging the two is lossless in one direction only: a sweep
+**subsumes** incremental work, because it re-resolves every row rather than a key-space.
+So `full` is OR-ed when payloads merge, and the incremental payload is still carried
+rather than discarded.
 
 ## 10. Open discrepancies — recorded, not resolved
 

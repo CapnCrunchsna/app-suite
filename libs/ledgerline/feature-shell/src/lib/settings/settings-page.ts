@@ -15,12 +15,13 @@
  *   sentence, and it shows for the *armed* choice rather than the stored one (§9t).
  * - **Data** — built: database path, backup, export, §2.3's wipe, and §6.8's
  *   degraded-LLM-call log.
- * - **Merchant aliases** — built, and **not here**. It lived on this page for a day
- *   (§9r) and moved to §6.9's Review page the next (§9s). Settings is where you go to
- *   configure the app; the review queue is where you go to answer a question about
- *   your own data, and it needs to be noticed rather than found. It is not in
- *   `UNBUILT` below for that reason: it exists, it is just not this page's. §4.2's
- *   sub-floor proposals joined it there rather than here, for the same reason.
+ * - **Merchant aliases** — built, and mostly **not here**. The queue lived on this
+ *   page for a day (§9r) and moved to §6.9's Review page the next (§9s), taking
+ *   §4.2's proposals with it: Settings is where you go to configure the app, and the
+ *   queue is where you go to answer a question about your own data. What stayed is
+ *   the half §6.8 describes as "a re-normalize trigger with job progress" — a sweep
+ *   rebuilds derived state and is maintenance, which is what the rest of this page
+ *   is (§9v).
  * - **Categories** — not built. Editing the taxonomy and assigning §5.4's overlap
  *   groups needs write endpoints §2.3 lists and §1 counts as missing.
  *
@@ -49,6 +50,8 @@ import { AnalyzerSettings } from './analyzer-settings.js';
 import type { SettingChange } from './analyzer-settings.js';
 import { DataSettings } from './data-settings.js';
 import { LlmSettingsPanel } from './llm-settings.js';
+import { RenormalizeSettings } from './renormalize-settings.js';
+import type { RenormalizeProgress } from './renormalize-settings.js';
 import type { LlmChange } from './llm-settings.js';
 import type { DataAction } from './data-settings.js';
 
@@ -95,7 +98,7 @@ const UNBUILT = [
 
 @Component({
   selector: 'll-settings-page',
-  imports: [Panel, AnalyzerSettings, DataSettings, LlmSettingsPanel],
+  imports: [Panel, AnalyzerSettings, DataSettings, LlmSettingsPanel, RenormalizeSettings],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
@@ -178,6 +181,28 @@ export class SettingsPage {
 
   protected readonly degradedCalls = computed(() => this.degradedResource.value());
 
+  /**
+   * §6.8's re-normalize trigger: what the sweep would walk, and how it is going.
+   *
+   * The count comes from `GET /api/health` rather than being derived from anything
+   * on this page, because it is the number the button *promises* — "re-read 326
+   * charges" has to mean 326, and the only thing that knows is the store. The API
+   * returns the same count when the job is enqueued, so the two cannot disagree.
+   */
+  private readonly healthResource = resource({
+    params: () => this.revision(),
+    loader: () => this.api.getHealth(),
+    defaultValue: { ok: true, schemaVersion: 0, transactions: 0, profileLoadErrors: [] },
+  });
+
+  protected readonly transactionCount = computed(
+    () => this.healthResource.value()?.transactions ?? 0,
+  );
+
+  /** Null when no sweep is in flight. §2.7's `{ state, progress, message }`, which
+   *  §6.8 asks to be shown rather than a spinner. */
+  protected readonly sweep = signal<RenormalizeProgress | null>(null);
+
   // ---------------------------------------------------------- handlers ---
 
   /**
@@ -221,6 +246,62 @@ export class SettingsPage {
       this.health.set(null);
       this.notice.set(describeLlmChange(change));
     });
+  }
+
+  /**
+   * §6.8's re-normalize trigger, and §2.7's poll.
+   *
+   * Not routed through `write`, for the reason the progress bar exists: a sweep over
+   * §2.2's ceiling is tens of thousands of rows, and greying out the whole Settings
+   * page for the duration would make the bar something you watch rather than
+   * something you glance at. The button disables itself instead.
+   *
+   * The poll is bounded and a timeout is not a failure — §2.7 makes the queue a
+   * table, so the work finishes whether or not this page is still watching. What the
+   * page stops doing is claiming to know.
+   */
+  protected async onRenormalizeAll(): Promise<void> {
+    if (this.sweep() !== null) return;
+    this.sweep.set({ progress: 0, message: 'starting…', done: false });
+
+    try {
+      const started = await this.api.renormalizeAll();
+
+      let job = await this.api.getJob(started.id);
+      for (
+        let attempt = 0;
+        attempt < 600 && (job.state === 'queued' || job.state === 'running');
+        attempt += 1
+      ) {
+        this.sweep.set({ progress: job.progress, message: job.message, done: false });
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        job = await this.api.getJob(started.id);
+      }
+
+      const settled = job.state === 'succeeded';
+      this.sweep.set({
+        progress: settled ? 100 : job.progress,
+        message: job.message,
+        done: settled,
+      });
+      this.notice.set(
+        settled
+          ? `Re-read ${started.transactions} ${started.transactions === 1 ? 'charge' : 'charges'}. ` +
+              'Subscriptions and findings have been recalculated.'
+          : job.state === 'failed'
+            ? `The re-read did not finish: ${job.message ?? 'no reason given'}`
+            : 'Still working. It will finish whether or not this page is open.',
+      );
+      // The counts on this page are derived from what the sweep just moved.
+      this.revision.update((n) => n + 1);
+    } catch (cause) {
+      this.sweep.set(null);
+      this.notice.set(
+        cause instanceof LedgerlineApiError
+          ? cause.message
+          : `That did not work: ${(cause as Error).message}`,
+      );
+    }
   }
 
   /** §6.8's Test Connection. Not a `write` — it changes nothing, and routing it
