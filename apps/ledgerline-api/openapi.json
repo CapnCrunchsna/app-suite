@@ -2373,6 +2373,226 @@
           "unavailableReason"
         ]
       },
+      "TransactionLabel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "transactionId": {
+            "type": "string"
+          },
+          "expectedMerchantId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isRecurring": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "isFee": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "isTransfer": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "isOutlier": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "chainMerchantId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "chainDescriptionNormalized": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "review",
+              "correction"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "transactionId",
+          "expectedMerchantId",
+          "isRecurring",
+          "isFee",
+          "isTransfer",
+          "isOutlier",
+          "note",
+          "chainMerchantId",
+          "chainDescriptionNormalized",
+          "origin",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CalibrationProgress": {
+        "type": "object",
+        "properties": {
+          "labelled": {
+            "type": "integer"
+          },
+          "fromReview": {
+            "type": "integer"
+          },
+          "fromCorrection": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "labelled",
+          "fromReview",
+          "fromCorrection",
+          "total"
+        ]
+      },
+      "NormalizationSplit": {
+        "type": "object",
+        "properties": {
+          "compared": {
+            "type": "integer"
+          },
+          "agreed": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "compared",
+          "agreed"
+        ]
+      },
+      "NormalizationCalibration": {
+        "type": "object",
+        "properties": {
+          "compared": {
+            "type": "integer"
+          },
+          "agreed": {
+            "type": "integer"
+          },
+          "disagreed": {
+            "type": "integer"
+          },
+          "fromReview": {
+            "$ref": "#/components/schemas/NormalizationSplit"
+          },
+          "fromCorrection": {
+            "$ref": "#/components/schemas/NormalizationSplit"
+          }
+        },
+        "required": [
+          "compared",
+          "agreed",
+          "disagreed",
+          "fromReview",
+          "fromCorrection"
+        ]
+      },
+      "RuleCalibration": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "judgedCorrect": {
+            "type": "integer"
+          },
+          "judgedIncorrect": {
+            "type": "integer"
+          },
+          "expected": {
+            "type": "integer"
+          },
+          "found": {
+            "type": "integer"
+          },
+          "missed": {
+            "type": "integer"
+          },
+          "falsePositives": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ruleId",
+          "judgedCorrect",
+          "judgedIncorrect",
+          "expected",
+          "found",
+          "missed",
+          "falsePositives"
+        ]
+      },
+      "Calibration": {
+        "type": "object",
+        "properties": {
+          "progress": {
+            "$ref": "#/components/schemas/CalibrationProgress"
+          },
+          "normalization": {
+            "$ref": "#/components/schemas/NormalizationCalibration"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleCalibration"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionLabel"
+            }
+          },
+          "unavailableReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "progress",
+          "normalization",
+          "rules",
+          "labels",
+          "unavailableReason"
+        ]
+      },
       "SettingThreshold": {
         "type": "object",
         "properties": {
@@ -9149,6 +9369,327 @@
           }
         }
       }
+    },
+    "/api/transactions/{id}/label": {
+      "put": {
+        "operationId": "labelTransaction",
+        "summary": "Record what this row really is (spec 7.6)",
+        "tags": [
+          "calibration"
+        ],
+        "description": "Spec 7.6’s corpus, written against the ledger rather than against findings — which is what makes it able to measure what the rules **missed**. Every field is three-valued: absent leaves it alone, `null` clears it back to \"not asserted\", and a boolean asserts. That distinction is load-bearing: an unlabelled row and a row labelled \"not a fee\" are different facts, and treating them alike would count every unexamined transaction as evidence the rules are right.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedMerchantId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "isRecurring": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "isFee": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "isTransfer": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "isOutlier": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionLabel"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unlabelTransaction",
+        "summary": "Withdraw a judgement (spec 7.6)",
+        "tags": [
+          "calibration"
+        ],
+        "description": "Removes the row from the corpus entirely, which is different from asserting everything false about it — a withdrawn judgement is one nobody has made.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "removed"
+                  ],
+                  "properties": {
+                    "removed": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calibration": {
+      "get": {
+        "operationId": "getCalibration",
+        "summary": "What the corpus says about the rules (spec 7.6)",
+        "tags": [
+          "calibration"
+        ],
+        "description": "Precision from spec 9z’s finding labels, recall from spec 9ab’s transaction labels, and spec 4’s normalization accuracy from the merchant every label carries. Counts throughout and never a percentage: eleven judgements do not support \"82% accurate\", and two figures shaped like rates invite being divided into each other.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calibration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "tags": [
@@ -9183,6 +9724,10 @@
     {
       "name": "data",
       "description": "Backup and export"
+    },
+    {
+      "name": "calibration",
+      "description": "Spec 7.6’s hand-labelled corpus: what each row really is, and what that says about the rules"
     },
     {
       "name": "insights",

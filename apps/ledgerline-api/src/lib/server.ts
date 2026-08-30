@@ -25,6 +25,7 @@ import type { LedgerlineContext } from './context.js';
 import { ImportNotReadyError } from './import-service.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerAskRoutes } from './routes/ask.js';
+import { registerCalibrationRoutes } from './routes/calibration.js';
 import { registerDataRoutes } from './routes/data.js';
 import { registerFindingRoutes } from './routes/findings.js';
 import { registerFormatProfileRoutes } from './routes/format-profiles.js';
@@ -79,6 +80,12 @@ export const OPENAPI_DOCUMENT = {
       description: 'Analysis runs, findings and their dismissals',
     },
     { name: 'data', description: 'Backup and export' },
+    {
+      name: 'calibration',
+      description:
+        'Spec 7.6’s hand-labelled corpus: what each row really is, and what that says ' +
+        'about the rules',
+    },
     {
       name: 'insights',
       description: 'Spec 6.6’s category, mover, fee, outlier and small-spend views',
@@ -140,7 +147,11 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
 
   app.options('/api/*', { schema: { hide: true } }, async (request, reply) =>
     reply
-      .header('access-control-allow-methods', 'GET, POST, PATCH, DELETE, OPTIONS')
+      // Every method any route uses. `PUT` arrived with §7.6's label (§9ab) and its
+      // absence here was invisible to the whole suite: `app.inject` dispatches
+      // straight at the router, so nothing that does not go through a browser can
+      // see a preflight refusal.
+      .header('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
       .header(
         'access-control-allow-headers',
         request.headers['access-control-request-headers'] ?? 'content-type',
@@ -223,6 +234,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerLlmRoutes(app, options.context);
   registerAskRoutes(app, options.context);
   registerInsightRoutes(app, options.context);
+  registerCalibrationRoutes(app, options.context);
 
   await app.ready();
   return app;

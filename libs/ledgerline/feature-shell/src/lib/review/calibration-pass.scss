@@ -1,0 +1,161 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+  outline: none;
+}
+
+/* The pass is keyboard-driven, so the component takes focus — and has to say so.
+ * An invisible focus ring on the thing the arrow keys drive is how a reader
+ * concludes the keys are broken. */
+:host(:focus-visible) {
+  outline: 1px solid var(--accent, #2dd4bf);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.lede {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.note {
+  margin: 10px 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.keys {
+  margin: 0 0 12px;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 3px;
+  background: var(--surface-2, #143034);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.68rem;
+  color: var(--text, #dcefeb);
+}
+
+.pass {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content 8rem;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  cursor: pointer;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 40%, transparent);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+/* The focused row, marked with a left edge rather than a fill: the list scrolls
+ * under a fixed cursor and a filled row reads as selected-for-an-action, which is
+ * not what this is. */
+.row--current {
+  background: color-mix(in srgb, var(--accent, #2dd4bf) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent, #2dd4bf);
+}
+
+.row__date {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.row__desc {
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+/* The one thing worth interrupting a pass for: you named a merchant and §4.1
+ * reached a different one. That is a normalization miss with a row number. */
+.row__disagree {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid var(--warn, #d9a441);
+  font-size: 0.62rem;
+  color: var(--warn, #d9a441);
+  white-space: nowrap;
+}
+
+.row__amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text, #dcefeb);
+  white-space: nowrap;
+}
+
+.row__verdict {
+  font-size: 0.7rem;
+  color: var(--accent-2, #34d399);
+  overflow-wrap: anywhere;
+}
+
+.row__unjudged {
+  color: var(--text-dim, #7ea8a1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.actions__for {
+  margin-right: 4px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+  overflow-wrap: anywhere;
+}
+
+.button {
+  padding: 4px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* "Nothing special" is the primary action, which looks wrong until you have used
+ * the pass: it is the true answer for most rows, and the corpus is worthless
+ * without those — a set of nothing but positives scores every rule perfectly. */
+.button--primary {
+  border-color: var(--accent, #2dd4bf);
+}

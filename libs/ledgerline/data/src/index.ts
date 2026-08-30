@@ -16,5 +16,6 @@ export * from './lib/repositories/llm.js';
 export * from './lib/repositories/merchants.js';
 export * from './lib/repositories/settings.js';
 export * from './lib/repositories/tombstones.js';
+export * from './lib/repositories/transaction-labels.js';
 export * from './lib/repositories/transactions.js';
 export * from './lib/repositories/transfers.js';

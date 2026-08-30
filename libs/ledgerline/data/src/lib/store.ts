@@ -35,6 +35,7 @@ import { LlmRepository } from './repositories/llm.js';
 import { MerchantRepository } from './repositories/merchants.js';
 import { SettingsRepository } from './repositories/settings.js';
 import { TombstoneRepository } from './repositories/tombstones.js';
+import { TransactionLabelRepository } from './repositories/transaction-labels.js';
 import { TransactionRepository } from './repositories/transactions.js';
 import { TransferRepository } from './repositories/transfers.js';
 
@@ -57,6 +58,9 @@ export class LedgerlineStore {
   /** §7.6’s corpus, collected from use (§9z). Separate from `findings` because a
    *  label outlives the finding it judged. */
   readonly findingLabels: FindingLabelRepository;
+  /** §7.6’s other half (§9ab): what *should* be found, written against the rows,
+   *  which is the only thing that can measure a miss. */
+  readonly transactionLabels: TransactionLabelRepository;
   readonly analysis: AnalysisRepository;
   /** §2.6's `transfer_link` / `transfer_rule`, and the flags a live link sets. */
   readonly transfers: TransferRepository;
@@ -80,6 +84,7 @@ export class LedgerlineStore {
     this.jobs = new JobRepository(db, clock);
     this.findings = new FindingRepository(db, clock);
     this.findingLabels = new FindingLabelRepository(db, clock);
+    this.transactionLabels = new TransactionLabelRepository(db, clock);
     this.analysis = new AnalysisRepository(db, clock, this.tombstones);
     this.transfers = new TransferRepository(db, clock);
     this.llm = new LlmRepository(db, clock);

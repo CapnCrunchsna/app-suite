@@ -37,3 +37,98 @@
 .empty--bad {
   color: var(--warn, #f0b429);
 }
+
+/* §9ab. Tabs rather than two panels: the two halves of this page are opposite
+ * kinds of work, and stacking them buries the one with the badge. */
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.mode {
+  padding: 5px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.mode:hover {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.mode--on {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--text, #dcefeb);
+  background: color-mix(in srgb, var(--accent, #2dd4bf) 10%, transparent);
+}
+
+.mode__count {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent, #2dd4bf);
+  color: var(--bg, #0a1517);
+  font-size: 0.68rem;
+}
+
+.score {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+}
+
+.score dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.score dd {
+  margin: 3px 0 0;
+  color: var(--text, #dcefeb);
+}
+
+.score__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.score__table th {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border, #1f4a47);
+  text-align: left;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.score__table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 45%, transparent);
+  color: var(--text, #dcefeb);
+}
+
+.score__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The number this page exists for. Amber rather than red: a miss is information,
+ * not a fault — it is what a threshold is about to be tuned against. */
+.score__miss {
+  color: var(--warn, #d9a441);
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}

@@ -43,6 +43,8 @@ import type {
   MoversInsight,
   FeesInsight,
   RuleBackedInsight,
+  TransactionLabel,
+  Calibration,
   LlmHealth,
   DegradedCallLog,
   AskResult,
@@ -340,6 +342,19 @@ export interface GetFeesInsightQuery {
   readonly to?: string;
   readonly accountIds?: string;
 }
+
+export type LabelTransactionBody = {
+  readonly expectedMerchantId?: string | null;
+  readonly isRecurring?: boolean | null;
+  readonly isFee?: boolean | null;
+  readonly isTransfer?: boolean | null;
+  readonly isOutlier?: boolean | null;
+  readonly note?: string | null;
+};
+
+export type UnlabelTransactionResponse = {
+  readonly removed: boolean;
+};
 
 /**
  * Every operation in the emitted contract, one method each.
@@ -914,6 +929,37 @@ export class LedgerlineApi {
    */
   getSmallSpendInsight(): Promise<RuleBackedInsight> {
     return this.request<RuleBackedInsight>('GET', `/api/insights/small-spend`, {
+    });
+  }
+
+  /**
+   * Record what this row really is (spec 7.6)
+   *
+   * Spec 7.6’s corpus, written against the ledger rather than against findings — which is what makes it able to measure what the rules **missed**. Every field is three-valued: absent leaves it alone, `null` clears it back to "not asserted", and a boolean asserts. That distinction is load-bearing: an unlabelled row and a row labelled "not a fee" are different facts, and treating them alike would count every unexamined transaction as evidence the rules are right.
+   */
+  labelTransaction(id: string, body: LabelTransactionBody): Promise<TransactionLabel> {
+    return this.request<TransactionLabel>('PUT', `/api/transactions/${encodeURIComponent(String(id))}/label`, {
+      body,
+    });
+  }
+
+  /**
+   * Withdraw a judgement (spec 7.6)
+   *
+   * Removes the row from the corpus entirely, which is different from asserting everything false about it — a withdrawn judgement is one nobody has made.
+   */
+  unlabelTransaction(id: string): Promise<UnlabelTransactionResponse> {
+    return this.request<UnlabelTransactionResponse>('DELETE', `/api/transactions/${encodeURIComponent(String(id))}/label`, {
+    });
+  }
+
+  /**
+   * What the corpus says about the rules (spec 7.6)
+   *
+   * Precision from spec 9z’s finding labels, recall from spec 9ab’s transaction labels, and spec 4’s normalization accuracy from the merchant every label carries. Counts throughout and never a percentage: eleven judgements do not support "82% accurate", and two figures shaped like rates invite being divided into each other.
+   */
+  getCalibration(): Promise<Calibration> {
+    return this.request<Calibration>('GET', `/api/calibration`, {
     });
   }
   // ------------------------------------------------------------ plumbing ---

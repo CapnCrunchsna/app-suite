@@ -95,7 +95,7 @@ records what it proposes — — **every one of §6's nine pages now exists**. �
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z and §9aa list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa and §9ab list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2433,6 +2433,52 @@ consequence worth stating because it reads as a bug the first time it is seen: *
 the account selection can **widen** the covered window. A month where one account has a
 statement and another does not is a month whose total is missing a card's worth of
 spending, so it is not covered — until that account is deselected.
+
+## 9ab. Amendments from implementation — 2026-08-29 (§7.6, §6.9, §4.3, §2.3)
+
+§9z built half of §7.6's corpus and said plainly what it could not do: it "measures
+**precision** [...] It cannot measure **recall**, because the app has no way to show a
+reader what it *failed* to find." This is the other half, and it closes that gap by
+labelling the **ledger** rather than the findings.
+
+The distinction is the whole amendment. A finding that never fired leaves nothing to
+judge — but a charge marked "this is part of a subscription", whose merchant has no
+`recurring_series`, is a miss with a row number. §7.6 asks for "the **expected**
+findings written down", and *expected* is the word that makes absence measurable.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 (new) | **`transaction_label`** — per row: the merchant it really is, and nullable flags for recurring / fee / transfer / outlier. | §7.6 describes the corpus as a file. Against the rows it becomes something the app can score itself with. |
+| 2.3 (new) | **`PUT`/`DELETE /api/transactions/:id/label`** and **`GET /api/calibration`**. | The write is the pass; the read is the scorecard, and a corpus whose effect nobody can see is a corpus nobody finishes. |
+| 4.3 | **A merchant correction writes a label as a side effect**, capturing the chain's answer *before* the alias lands. | See below — without this, correcting destroys the evidence it produces. |
+| 6.9 | **Review gains a second mode**: a keyboard-driven pass over the charges in date order, with the scorecard beneath it. | Both halves of §6.9 are work on your data, but they are opposite: the queue is the app asking you something, the pass is you volunteering what it never thought to ask. |
+
+**Every flag is three-valued, and that is what makes recall real.** `NULL` means nobody
+looked; `0` means somebody looked and said no. A schema that could not tell those apart
+would count every unexamined transaction as evidence the rules are right — which is
+exactly backwards, because the unexamined rows are where a miss hides. It is also why
+the pass makes **"nothing special"** its primary action and gives it one key: a corpus of
+nothing but positives scores every rule perfectly.
+
+**A correction is the strongest ground truth this app gets, and it erases itself.**
+Somebody looked at a row and said what it actually is — but the moment §4.3's `user`
+alias lands, the chain resolves correctly and nothing remembers that it had not. So the
+label is written first, carrying the merchant the chain *had* reached. Corrections are
+recorded under `origin = 'correction'` and counted separately from a deliberate pass,
+because they are by definition the rows the chain got wrong: totalling them together
+would libel §4.1.
+
+**Recall is refused before an analysis has run.** Every figure compares a label to what
+the rules concluded, and with no run to compare against, "everything was missed" would be
+a statement about the rules rather than about the corpus. §4's normalization accuracy is
+reported anyway — it compares your answer to the chain's, which runs at import.
+
+**A CORS preflight that did not list `PUT`.** The label route is the first `PUT` in this
+API, and `access-control-allow-methods` had not grown one. Two hundred and ninety-seven
+tests passed and the first keystroke in the real page failed, because `app.inject`
+dispatches straight at the router and never sends a preflight. There is now a test that
+asserts the header names the methods the routes use — the only kind of test that could
+have caught it without a browser.
 
 ## 10. Open discrepancies — recorded, not resolved
 

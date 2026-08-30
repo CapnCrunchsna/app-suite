@@ -1085,6 +1085,106 @@ const ruleBackedInsight = {
   },
 } as const;
 
+/**
+ * Spec 7.6's ground truth for one row (spec 9ab).
+ *
+ * Every assertion is nullable and the null means "nobody said", not "no". An
+ * unlabelled row and a row labelled "not a fee" are different facts, and the recall
+ * figures on `Calibration` are only meaningful because the schema can tell them
+ * apart.
+ */
+const transactionLabel = {
+  $id: 'TransactionLabel',
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    transactionId: { type: 'string' },
+    expectedMerchantId: nullableString,
+    isRecurring: { type: ['boolean', 'null'] },
+    isFee: { type: ['boolean', 'null'] },
+    isTransfer: { type: ['boolean', 'null'] },
+    isOutlier: { type: ['boolean', 'null'] },
+    note: nullableString,
+    /** What spec 4.1's chain concluded when the judgement was made — the other half
+     *  of every normalization comparison. */
+    chainMerchantId: nullableString,
+    chainDescriptionNormalized: { type: 'string' },
+    /** `review` is the deliberate pass; `correction` is the side effect of a spec
+     *  4.3 merchant edit. Separated because corrections are by definition the rows
+     *  the chain got wrong. */
+    origin: { type: 'string', enum: ['review', 'correction'] },
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+  },
+} as const;
+
+const calibrationProgress = {
+  $id: 'CalibrationProgress',
+  type: 'object',
+  properties: {
+    labelled: { type: 'integer' },
+    fromReview: { type: 'integer' },
+    fromCorrection: { type: 'integer' },
+    total: { type: 'integer' },
+  },
+} as const;
+
+const normalizationSplit = {
+  $id: 'NormalizationSplit',
+  type: 'object',
+  properties: {
+    compared: { type: 'integer' },
+    agreed: { type: 'integer' },
+  },
+} as const;
+
+const normalizationCalibration = {
+  $id: 'NormalizationCalibration',
+  type: 'object',
+  properties: {
+    compared: { type: 'integer' },
+    agreed: { type: 'integer' },
+    disagreed: { type: 'integer' },
+    fromReview: ref('NormalizationSplit'),
+    fromCorrection: ref('NormalizationSplit'),
+  },
+} as const;
+
+/** One rule, judged from both directions (spec 9ab). */
+const ruleCalibration = {
+  $id: 'RuleCalibration',
+  type: 'object',
+  properties: {
+    ruleId: { type: 'string' },
+    /** Precision, from spec 9z's finding labels. */
+    judgedCorrect: { type: 'integer' },
+    judgedIncorrect: { type: 'integer' },
+    /** Recall, from spec 9ab's transaction labels. `expected` counts only rows
+     *  where somebody asserted — a null flag is not evidence either way. */
+    expected: { type: 'integer' },
+    found: { type: 'integer' },
+    missed: { type: 'integer' },
+    falsePositives: { type: 'integer' },
+  },
+} as const;
+
+const calibrationReport = {
+  $id: 'Calibration',
+  type: 'object',
+  properties: {
+    progress: ref('CalibrationProgress'),
+    normalization: ref('NormalizationCalibration'),
+    rules: { type: 'array', items: ref('RuleCalibration') },
+    /** The judgements themselves — the pass reads them back to show what it has
+     *  already said, and one request keeps them in step with the progress. */
+    labels: { type: 'array', items: ref('TransactionLabel') },
+    /** Set when no analysis has finished: every recall figure compares a label to
+     *  what the rules concluded, and "everything was missed" would be a lie about
+     *  the rules rather than a fact about the corpus. */
+    unavailableReason: nullableString,
+  },
+} as const;
+
 const settingThreshold = {
   $id: 'SettingThreshold',
   type: 'object',
@@ -1796,6 +1896,13 @@ const SHARED = [
   allRequired(feesInsight),
   allRequired(ruleBackedRow),
   allRequired(ruleBackedInsight),
+  // §7.6’s corpus (§9ab).
+  allRequired(transactionLabel),
+  allRequired(calibrationProgress),
+  allRequired(normalizationSplit),
+  allRequired(normalizationCalibration),
+  allRequired(ruleCalibration),
+  allRequired(calibrationReport),
   allRequired(settingThreshold),
   allRequired(settingUnsettable),
   allRequired(ruleAccuracy),

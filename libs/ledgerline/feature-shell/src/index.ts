@@ -27,6 +27,7 @@ export * from './lib/subscriptions/subscriptions-page.js';
 export * from './lib/subscriptions/month-strip.js';
 export * from './lib/subscriptions/series-detail.js';
 export * from './lib/review/review-page.js';
+export * from './lib/review/calibration-pass.js';
 export * from './lib/review/review-queue.service.js';
 export * from './lib/review/merchant-review.js';
 export * from './lib/settings/settings-page.js';

@@ -1,0 +1,90 @@
+<p class="lede">
+  Go down the list and say what each charge actually is. This is the only way the app can
+  find out what it <em>missed</em> — a rule that never fired leaves nothing to correct, so
+  the misses are invisible until somebody writes down what should have been found.
+</p>
+
+<p class="keys">
+  <kbd>j</kbd> <kbd>k</kbd> move ·
+  <kbd>r</kbd> recurring ·
+  <kbd>f</kbd> fee ·
+  <kbd>t</kbd> transfer ·
+  <kbd>o</kbd> unusual ·
+  <kbd>n</kbd> nothing special ·
+  <kbd>x</kbd> undo
+</p>
+
+@if (progress(); as done) {
+  <p class="note">
+    {{ done.labelled }} of {{ done.total }} charges have a verdict.
+    @if (done.labelled === 0) {
+      Marking the ordinary ones matters as much as the interesting ones — a rule only looks
+      good because most rows are genuinely unremarkable.
+    }
+  </p>
+}
+
+@if (rows().length === 0) {
+  <p class="note">Nothing imported yet, so there is nothing to go through.</p>
+} @else {
+  <!-- `aria-activedescendant` rather than a focusable option each: the host owns the
+       keyboard for the whole pass, and moving DOM focus per row would fight it. The
+       ids are what let a screen reader follow the cursor. -->
+  <ol
+    class="pass"
+    role="listbox"
+    aria-label="Charges to judge"
+    [attr.aria-activedescendant]="current() ? 'pass-row-' + current()!.id : null"
+  >
+    @for (row of rows(); track row.id; let i = $index) {
+      <li
+        class="row"
+        role="option"
+        [id]="'pass-row-' + row.id"
+        tabindex="-1"
+        [class.row--current]="i === cursor()"
+        [attr.aria-selected]="i === cursor()"
+        (click)="select(i)"
+        (keydown.enter)="select(i)"
+      >
+        <span class="row__date">{{ row.effectiveDate }}</span>
+        <span class="row__desc">
+          {{ row.descriptionNormalized }}
+          @if (disagrees(row)) {
+            <span class="row__disagree" title="The app worked out a different merchant than you did.">
+              app disagrees
+            </span>
+          }
+        </span>
+        <span class="row__amount">{{ money(row.amountCents) }}</span>
+        <span class="row__verdict">
+          @if (summaryOf(row); as said) {
+            {{ said }}
+          } @else {
+            <span class="row__unjudged">—</span>
+          }
+        </span>
+      </li>
+    }
+  </ol>
+
+  @if (current(); as row) {
+    <div class="actions">
+      <span class="actions__for">{{ row.descriptionNormalized }}</span>
+      <button type="button" class="button" [disabled]="busy()" (click)="assert('recurring')">
+        Recurring
+      </button>
+      <button type="button" class="button" [disabled]="busy()" (click)="assert('fee')">Fee</button>
+      <button type="button" class="button" [disabled]="busy()" (click)="assert('transfer')">
+        Transfer
+      </button>
+      <button type="button" class="button" [disabled]="busy()" (click)="assert('outlier')">
+        Unusual
+      </button>
+      <button type="button" class="button button--primary" [disabled]="busy()" (click)="assert('nothing')">
+        Nothing special
+      </button>
+      <button type="button" class="button" [disabled]="busy()" (click)="assert('clear')">Undo</button>
+    </div>
+  }
+}

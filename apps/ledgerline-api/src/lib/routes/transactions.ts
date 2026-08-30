@@ -9,7 +9,11 @@
 
 import type { FastifyInstance } from 'fastify';
 
-import type { TransactionQuery, TransactionSort } from '@metrum/ledgerline-data';
+import type {
+  TransactionQuery,
+  TransactionRecord,
+  TransactionSort,
+} from '@metrum/ledgerline-data';
 
 import { errorResponses } from './errors.js';
 import { ref } from './schemas.js';
@@ -111,6 +115,40 @@ function toQuery(input: TransactionFilterBody): TransactionQuery {
     includeExcluded: input.includeExcluded,
     text: input.q,
   };
+}
+
+/**
+ * Turn a merchant correction into evidence (§7.6, §9ab).
+ *
+ * A correction is the strongest ground truth this app ever gets: somebody looked at
+ * a row and said what it actually is. It is also self-erasing — the moment the
+ * §4.3 alias lands, the chain resolves correctly and nothing remembers it had not.
+ * So the label is written first, carrying the merchant the chain *had* reached.
+ *
+ * `origin: 'correction'` rather than `'review'`, and the scorecard keeps them apart:
+ * these rows are by definition the ones the chain got wrong, so counting them beside
+ * a deliberate pass would make normalization look far worse than it is.
+ *
+ * Silent on failure. This is a diagnostic riding along with a write the user asked
+ * for, and a corpus that could refuse a correction would be a corpus nobody keeps.
+ */
+function recordCorrectionLabel(
+  context: LedgerlineContext,
+  before: TransactionRecord,
+  merchantId: string,
+): void {
+  if (before.merchantId === merchantId) return;
+  try {
+    context.store.transactionLabels.put({
+      transactionId: before.id,
+      expectedMerchantId: merchantId,
+      chainMerchantId: before.merchantId,
+      chainDescriptionNormalized: before.descriptionNormalized,
+      origin: 'correction',
+    });
+  } catch {
+    // See above.
+  }
 }
 
 export function registerTransactionRoutes(app: FastifyInstance, context: LedgerlineContext): void {
@@ -268,6 +306,12 @@ export function registerTransactionRoutes(app: FastifyInstance, context: Ledgerl
       });
 
       if (request.body.merchantId !== undefined && request.body.merchantId !== null) {
+        // §7.6's corpus, from work the user was doing anyway (§9ab). Captured
+        // *before* the alias is written, which is the whole point: after the
+        // correction the chain resolves correctly, and nothing would remember that
+        // it had not — the edit would destroy the evidence it produced.
+        recordCorrectionLabel(context, before, request.body.merchantId);
+
         writeUserMerchantAlias(context, [before.descriptionNormalized], request.body.merchantId);
         enqueueRenormalize(context, {
           transactionIds: [updated.id],
@@ -357,6 +401,14 @@ export function registerTransactionRoutes(app: FastifyInstance, context: Ledgerl
       // alias rows are written against.
       const descriptors = context.store.transactions.listMatchingDescriptors(query);
 
+      // §9ab, and before the write for the same reason the single-row path captures
+      // it first: the rows this is about are exactly the ones the chain got wrong,
+      // and applying the correction is what makes that unrecoverable.
+      const correctedRows =
+        change.merchantId !== undefined && change.merchantId !== null
+          ? context.store.transactions.search({ ...query, limit: 500 }).rows.map((row) => row.transaction)
+          : [];
+
       const applied = context.store.transactions.applyBulk(query, {
         ...change,
         categorySource: change.categoryId !== undefined ? 'user' : undefined,
@@ -366,6 +418,8 @@ export function registerTransactionRoutes(app: FastifyInstance, context: Ledgerl
       let renormalize: { id: string; coalesced: boolean } | null = null;
 
       if (change.merchantId !== undefined && change.merchantId !== null && applied.matched > 0) {
+        for (const row of correctedRows) recordCorrectionLabel(context, row, change.merchantId);
+
         aliasKeysWritten = writeUserMerchantAlias(context, descriptors, change.merchantId);
         renormalize = enqueueRenormalize(context, {
           transactionIds: applied.transactionIds,

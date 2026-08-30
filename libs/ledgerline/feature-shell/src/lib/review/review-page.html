@@ -4,17 +4,114 @@
     setting — it is all about the data you imported, and an answer is permanent.
   </p>
 
+  <!-- Two kinds of work, one page, one at a time (§9ab). The queue is the app asking
+       you something it could not settle; the pass is you telling it things it never
+       thought to ask. Showing both at once buries the half with the badge. -->
+  <div class="modes" role="tablist" aria-label="What to work on">
+    <button
+      type="button"
+      role="tab"
+      class="mode"
+      [class.mode--on]="mode() === 'queue'"
+      [attr.aria-selected]="mode() === 'queue'"
+      (click)="setMode('queue')"
+    >
+      Questions waiting
+      @if (outstanding() > 0) {
+        <span class="mode__count">{{ outstanding() }}</span>
+      }
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="mode"
+      [class.mode--on]="mode() === 'calibrate'"
+      [attr.aria-selected]="mode() === 'calibrate'"
+      (click)="setMode('calibrate')"
+    >
+      Go through the charges
+    </button>
+  </div>
+
   @if (notice()) {
     <p class="notice" role="status">{{ notice() }}</p>
   }
 
-  <ui-panel heading="Merchants">
-    @if (loading() && nothingHeld()) {
-      <p class="empty">Reading the queue…</p>
-    } @else if (failure() && nothingHeld()) {
-      <p class="empty empty--bad">The queue did not load: {{ $any(failure()).message }}</p>
-    } @else {
-      <ll-merchant-review [queue]="queue()" [busy]="busy()" (merge)="onMerge($event)" />
+  @if (mode() === 'queue') {
+    <ui-panel heading="Merchants">
+      @if (loading() && nothingHeld()) {
+        <p class="empty">Reading the queue…</p>
+      } @else if (failure() && nothingHeld()) {
+        <p class="empty empty--bad">The queue did not load: {{ $any(failure()).message }}</p>
+      } @else {
+        <ll-merchant-review [queue]="queue()" [busy]="busy()" (merge)="onMerge($event)" />
+      }
+    </ui-panel>
+  } @else {
+    <ui-panel heading="What each charge really is">
+      <ll-calibration-pass
+        [rows]="passRows()"
+        [labels]="passLabels()"
+        [busy]="busy()"
+        [progress]="passProgress()"
+        (asserted)="onAsserted($event)"
+      />
+    </ui-panel>
+
+    <!-- The payoff, on the same screen as the work: §7.6 exists to re-derive §5's
+         thresholds, and a corpus whose effect you cannot see is a corpus nobody
+         finishes. -->
+    @if (calibration(); as report) {
+      <ui-panel heading="What that says about the rules">
+        <dl class="score">
+          <dt>Merchant names</dt>
+          <dd>
+            @if (report.normalization.compared === 0) {
+              Nothing to compare yet — name a merchant on a charge, or correct one on the
+              Transactions page, and the app’s own answer is recorded beside yours.
+            } @else {
+              The app agreed with you on {{ report.normalization.agreed }} of
+              {{ report.normalization.compared }}.
+              @if (report.normalization.fromCorrection.compared > 0) {
+                {{ report.normalization.fromCorrection.compared }} of those came from
+                corrections you made, which are the charges it got wrong by definition — the
+                {{ report.normalization.fromReview.compared }} you went through deliberately are
+                the fairer measure.
+              }
+            }
+          </dd>
+        </dl>
+
+        @if (report.unavailableReason) {
+          <p class="note">{{ report.unavailableReason }}</p>
+        } @else if (report.rules.length > 0) {
+          <table class="score__table">
+            <thead>
+              <tr>
+                <th scope="col">Rule</th>
+                <th scope="col" class="score__num">You said</th>
+                <th scope="col" class="score__num">Found</th>
+                <th scope="col" class="score__num">Missed</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (rule of report.rules; track rule.ruleId) {
+                <tr>
+                  <td>{{ rule.ruleId }}</td>
+                  <td class="score__num">{{ rule.expected }}</td>
+                  <td class="score__num">{{ rule.found }}</td>
+                  <td class="score__num" [class.score__miss]="rule.missed > 0">{{ rule.missed }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p class="note">
+            “Missed” is the number this page exists for: charges you said were a subscription, a
+            fee or unusual that no rule picked up. Nothing else in the app can show you those —
+            a rule that never fires leaves nothing to correct.
+          </p>
+        }
+      </ui-panel>
     }
-  </ui-panel>
+  }
 </div>

@@ -41,6 +41,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 5, name: '005-recurring-series-charge-history' },
   { version: 6, name: '006-llm-degraded-call-and-proposal' },
   { version: 7, name: '007-finding-label' },
+  { version: 8, name: '008-transaction-label' },
 ];
 
 /**

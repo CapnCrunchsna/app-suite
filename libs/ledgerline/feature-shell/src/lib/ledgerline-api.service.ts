@@ -29,6 +29,7 @@ import type {
   AskResult,
   ApiError,
   BulkUpdateTransactionsBody,
+  Calibration,
   Category,
   CategoryInsight,
   FeesInsight,
@@ -74,6 +75,8 @@ import type {
   TransactionBulkResult,
   TransactionDetail,
   TransactionFilter,
+  TransactionLabel,
+  LabelTransactionBody,
   TransactionPage,
   TransferLink,
   TransferProposeResult,
@@ -247,6 +250,28 @@ export class LedgerlineApiService {
   /** §5.11's, likewise — the annualized figure is the rule's own. */
   getSmallSpendInsight(): Promise<RuleBackedInsight> {
     return this.api.getSmallSpendInsight();
+  }
+
+  // ------------------------------------------------------------- §7.6 ---
+
+  /**
+   * §7.6's corpus, one row at a time (§9ab).
+   *
+   * Every field is three-valued — absent leaves it alone, null clears it back to
+   * "nobody said", a boolean asserts. The distinction is what makes recall
+   * computable, so the caller has to be able to express all three.
+   */
+  labelTransaction(id: string, body: LabelTransactionBody): Promise<TransactionLabel> {
+    return this.api.labelTransaction(id, body);
+  }
+
+  unlabelTransaction(id: string): Promise<{ readonly removed: boolean }> {
+    return this.api.unlabelTransaction(id) as Promise<{ removed: boolean }>;
+  }
+
+  /** What the corpus says about the rules — §7.6's scorecard. */
+  getCalibration(): Promise<Calibration> {
+    return this.api.getCalibration();
   }
 
   /** §2.7: the UI polls a job rather than blocking on it. */

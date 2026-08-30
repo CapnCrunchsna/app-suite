@@ -573,6 +573,60 @@ export interface RuleBackedInsight {
   readonly unavailableReason: string | null;
 }
 
+export interface TransactionLabel {
+  readonly id: string;
+  readonly transactionId: string;
+  readonly expectedMerchantId: string | null;
+  readonly isRecurring: boolean | null;
+  readonly isFee: boolean | null;
+  readonly isTransfer: boolean | null;
+  readonly isOutlier: boolean | null;
+  readonly note: string | null;
+  readonly chainMerchantId: string | null;
+  readonly chainDescriptionNormalized: string;
+  readonly origin: 'review' | 'correction';
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CalibrationProgress {
+  readonly labelled: number;
+  readonly fromReview: number;
+  readonly fromCorrection: number;
+  readonly total: number;
+}
+
+export interface NormalizationSplit {
+  readonly compared: number;
+  readonly agreed: number;
+}
+
+export interface NormalizationCalibration {
+  readonly compared: number;
+  readonly agreed: number;
+  readonly disagreed: number;
+  readonly fromReview: NormalizationSplit;
+  readonly fromCorrection: NormalizationSplit;
+}
+
+export interface RuleCalibration {
+  readonly ruleId: string;
+  readonly judgedCorrect: number;
+  readonly judgedIncorrect: number;
+  readonly expected: number;
+  readonly found: number;
+  readonly missed: number;
+  readonly falsePositives: number;
+}
+
+export interface Calibration {
+  readonly progress: CalibrationProgress;
+  readonly normalization: NormalizationCalibration;
+  readonly rules: RuleCalibration[];
+  readonly labels: TransactionLabel[];
+  readonly unavailableReason: string | null;
+}
+
 export interface SettingThreshold {
   readonly section: string;
   readonly key: string;

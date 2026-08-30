@@ -29,18 +29,28 @@
  * because the rail's badge renders the same number — that file argues it.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { Panel } from '@metrum/ui';
 import { LedgerlineApiError } from '@metrum/api-client';
+import type { Calibration } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
+import { CalibrationPass } from './calibration-pass.js';
+import type { AssertionEvent } from './calibration-pass.js';
 import { MerchantReview } from './merchant-review.js';
 import type { MergeRequest } from './merchant-review.js';
 import { ReviewQueue } from './review-queue.service.js';
 
 @Component({
   selector: 'll-review-page',
-  imports: [Panel, MerchantReview],
+  imports: [Panel, MerchantReview, CalibrationPass],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './review-page.html',
   styleUrl: './review-page.scss',
@@ -62,6 +72,98 @@ export class ReviewPage {
   protected readonly nothingHeld = computed(
     () => this.outstanding() === 0 && this.queue().provisional.length === 0,
   );
+
+  /**
+   * §7.6's pass, behind a mode switch rather than beside the queue (§9ab).
+   *
+   * Both halves of this page are work on your data, which is why §9s put the queue
+   * here — but they are opposite kinds of work. The queue is the app asking *you* a
+   * question it could not settle; the pass is you volunteering answers it never
+   * thought to ask. Showing both at once would make the page a wall, and would bury
+   * the queue, which is the half with a badge and a reason to be noticed.
+   */
+  protected readonly mode = signal<'queue' | 'calibrate'>('queue');
+  private readonly passRevision = signal(0);
+
+  /** Date order, oldest first: §7.6 describes an afternoon with a year of
+   *  statements, and that is the order they arrive in. */
+  private readonly passResource = resource({
+    params: () => ({ revision: this.passRevision(), on: this.mode() }),
+    loader: ({ params }) =>
+      params.on === 'calibrate'
+        ? this.api.listTransactions({ sort: 'date_asc', limit: 500, includeInternalTransfers: true })
+        : Promise.resolve(null),
+    defaultValue: null,
+  });
+
+  private readonly calibrationResource = resource<Calibration | null, number>({
+    params: () => this.passRevision(),
+    loader: () => this.api.getCalibration(),
+    defaultValue: null,
+  });
+
+  protected readonly passRows = computed(
+    () => this.passResource.value()?.rows.map((row) => row.transaction) ?? [],
+  );
+
+  /** Keyed by transaction id, because the pass renders one row at a time and a
+   *  linear scan per row would be quadratic over a year of statements. */
+  protected readonly passLabels = computed(() => {
+    const report = this.calibrationResource.value();
+    const byId: Record<string, NonNullable<typeof report>['labels'][number]> = {};
+    for (const label of report?.labels ?? []) byId[label.transactionId] = label;
+    return byId;
+  });
+
+  protected readonly calibration = computed(() => this.calibrationResource.value());
+
+  protected readonly passProgress = computed(() => {
+    const report = this.calibrationResource.value();
+    return report ? { labelled: report.progress.labelled, total: report.progress.total } : null;
+  });
+
+  protected setMode(mode: 'queue' | 'calibrate'): void {
+    this.mode.set(mode);
+  }
+
+  /**
+   * One keystroke, one write, and the row's other assertions left alone.
+   *
+   * `nothing` sends four falses rather than clearing: §9ab's schema makes
+   * "asserted false" and "nobody said" different facts, and the whole recall
+   * figure rests on most rows being explicitly ordinary rather than merely
+   * unexamined.
+   */
+  protected async onAsserted(event: AssertionEvent): Promise<void> {
+    const bodies: Record<string, Record<string, boolean | null>> = {
+      recurring: { isRecurring: true },
+      fee: { isFee: true },
+      transfer: { isTransfer: true },
+      outlier: { isOutlier: true },
+      nothing: { isRecurring: false, isFee: false, isTransfer: false, isOutlier: false },
+    };
+
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      if (event.assertion === 'clear') {
+        await this.api.unlabelTransaction(event.transaction.id);
+      } else {
+        await this.api.labelTransaction(event.transaction.id, bodies[event.assertion]);
+      }
+      // One counter drives both the label map and the scorecard, so a keystroke
+      // cannot leave the two disagreeing about what has been said.
+      this.passRevision.update((n) => n + 1);
+    } catch (cause) {
+      this.notice.set(
+        cause instanceof LedgerlineApiError
+          ? cause.message
+          : `That did not work: ${(cause as Error).message}`,
+      );
+    } finally {
+      this.busy.set(false);
+    }
+  }
 
   constructor() {
     // Entering the page is a re-read. The rail's copy can be a few minutes old —

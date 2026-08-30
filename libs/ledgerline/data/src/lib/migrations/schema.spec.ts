@@ -48,6 +48,10 @@ const SPEC_TABLES = [
   // because the corpus was imagined as a file rather than as something the app
   // collects.
   'finding_label',
+  // §9ab: §7.6 asks for "the expected findings written down" and §3.1 has no row
+  // for them, because the corpus was imagined as a file rather than as the ledger
+  // annotated in place.
+  'transaction_label',
   'tombstone',
   'settings',
   'schema_migrations',
