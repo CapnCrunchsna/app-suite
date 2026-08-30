@@ -346,6 +346,69 @@ describe('ledgerline-api calibration (§7.6, §9ab)', () => {
     });
   });
 
+  // ------------------------------------- keeping the corpus current (§9ac) ---
+
+  describe('the sweep re-captures what the chain now says', () => {
+    const sweep = async () => {
+      const response = await app.inject({ method: 'POST', url: '/api/jobs/renormalize' });
+      expect(response.statusCode).toBe(202);
+      await context.jobRunner.drain();
+    };
+
+    /**
+     * The trap this whole change is about.
+     *
+     * A correction writes a `user` alias, so afterwards the chain *does* resolve the
+     * descriptor to the corrected merchant. Re-capturing the ordinary answer would
+     * therefore make every corrected row agree with itself and report perfect
+     * accuracy — worse than the stale number it replaced, because it would be
+     * confidently wrong. The refresh resolves without user aliases for that reason.
+     */
+    it('does not let a correction make the chain look right', async () => {
+      const gym = rowFor('ANYTIME FITNESS');
+      const chainMerchant = gym.merchantId;
+      const [target] = context.store.merchants.list().filter((m) => m.id !== chainMerchant);
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/transactions/${gym.id}`,
+        payload: { merchantId: target.id },
+      });
+      await context.jobRunner.drain();
+      await sweep();
+
+      // Still a disagreement: the app only reaches `target` because it was told.
+      expect(context.store.transactionLabels.get(gym.id)?.chainMerchantId).toBe(chainMerchant);
+      expect((await calibration()).normalization).toMatchObject({ agreed: 0, disagreed: 1 });
+    });
+
+    it('reports how many labels it brought up to date', async () => {
+      await label(rowFor('SAFEWAY').id, { isFee: false });
+      await sweep();
+
+      const job = context.store.jobs.list(5).find((entry) => entry.kind === 'renormalize');
+      const result = JSON.parse(job?.resultJson ?? '{}') as {
+        renormalized?: { chainAnswersRefreshed?: number };
+      };
+
+      expect(result.renormalized?.chainAnswersRefreshed).toBe(1);
+    });
+
+    it('leaves the assertions alone — a sweep has no opinion about them', async () => {
+      const row = rowFor('SAFEWAY');
+      await label(row.id, { isFee: false, isRecurring: true, note: 'checked against the paper statement' });
+
+      await sweep();
+
+      expect(context.store.transactionLabels.get(row.id)).toMatchObject({
+        isFee: false,
+        isRecurring: true,
+        note: 'checked against the paper statement',
+        origin: 'review',
+      });
+    });
+  });
+
   // ------------------------------------------------------------- progress ---
 
   it('reports how far the pass has got, split by where the judgements came from', async () => {

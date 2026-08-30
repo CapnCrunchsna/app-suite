@@ -214,6 +214,59 @@ export class TransactionLabelRepository {
     return this.get(input.transactionId) as TransactionLabelRecord;
   }
 
+  /**
+   * Re-record what the chain now concludes, for labels the sweep has re-resolved
+   * (§9ac).
+   *
+   * Narrow on purpose: it touches only the two chain columns, never the assertions.
+   * A sweep is the app recomputing its own answer, and it has no business editing
+   * what a person said about a row.
+   *
+   * The caller supplies the merchant the chain reaches **without user aliases** —
+   * see `runFullRenormalize`. Passing the ordinary resolution here would make every
+   * corrected row agree with itself and report perfect accuracy.
+   */
+  refreshChainAnswers(
+    rows: readonly {
+      readonly transactionId: string;
+      readonly chainMerchantId: string | null;
+      readonly chainDescriptionNormalized: string;
+    }[]
+  ): number {
+    if (rows.length === 0) return 0;
+
+    return this.db.transaction(() => {
+      const statement = this.db.prepare(
+        `UPDATE transaction_label
+            SET chain_merchant_id = ?, chain_description_normalized = ?, updated_at = ?
+          WHERE transaction_id = ?`
+      );
+      const now = this.clock.now();
+
+      let written = 0;
+      for (const row of rows) {
+        written += statement.run(
+          row.chainMerchantId,
+          row.chainDescriptionNormalized,
+          now,
+          row.transactionId
+        ).changes;
+      }
+      return written;
+    })();
+  }
+
+  /** Which rows carry a judgement, so a sweep can skip the second resolve for the
+   *  ones that do not — on a real ledger that is most of them. */
+  labelledTransactionIds(): Set<string> {
+    return new Set(
+      this.db
+        .prepare<[], { transaction_id: string }>('SELECT transaction_id FROM transaction_label')
+        .all()
+        .map((row) => row.transaction_id)
+    );
+  }
+
   remove(transactionId: string): boolean {
     return (
       this.db

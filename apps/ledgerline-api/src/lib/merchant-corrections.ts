@@ -153,6 +153,9 @@ export interface RenormalizeResult {
   /** §4.1 step 7 merchants the sweep had to create because the new chain produced a
    *  cleaned name nothing had seen before. */
   readonly merchantsCreated?: number;
+  /** §7.6 labels whose record of the chain's answer the sweep brought up to date
+   *  (§9ac). Zero where nothing has been labelled. */
+  readonly chainAnswersRefreshed?: number;
 }
 
 /** How many rows the sweep holds in memory at once. Uncalibrated (§7.6); chosen so
@@ -206,6 +209,7 @@ export function runFullRenormalize(
       merchantsAffected: 0,
       descriptorsRewritten: 0,
       merchantsCreated: 0,
+      chainAnswersRefreshed: 0,
     };
   }
 
@@ -228,6 +232,34 @@ export function runFullRenormalize(
     return defaultCategories.get(merchantId) ?? null;
   };
 
+  /**
+   * §7.6's corpus, brought back into step with the chain (§9ac).
+   *
+   * A label stores what the chain concluded when the judgement was made, which is
+   * right for "was it correct then" and wrong for "is it getting better" — §9ab
+   * shipped only the first, so the normalization figure never moved however much
+   * §4.1 improved. A sweep is the one operation that re-derives every row's answer,
+   * so it is where the snapshot can be refreshed without a second traversal.
+   *
+   * **Resolved without `user` aliases, and that is the whole of why this is not a
+   * one-line change.** After a correction the user's own alias resolves the
+   * descriptor to the corrected merchant, so re-capturing the ordinary answer would
+   * make every corrected row agree with itself and report perfect accuracy — worse
+   * than the stale number it replaced, because it would be confidently wrong. What
+   * is measured here is what the app reaches *without being told*.
+   *
+   * `llm` aliases are deliberately kept. A model's grouping is still the app
+   * concluding something, gated by §4.2's floor and its settled-series exception —
+   * the exclusion is of the human, not of the machinery.
+   */
+  const withoutUserAliases = aliases.filter((alias) => alias.source !== 'user');
+  const labelled = context.store.transactionLabels.labelledTransactionIds();
+  const chainRefresh: {
+    transactionId: string;
+    chainMerchantId: string | null;
+    chainDescriptionNormalized: string;
+  }[] = [];
+
   const merchantsTouched = new Set<string>();
   let afterId: string | null = null;
   let seen = 0;
@@ -247,6 +279,27 @@ export function runFullRenormalize(
         knownMerchantKeys: SEED_MERCHANT_KEYS,
         trace: false,
       });
+
+      // Only for rows carrying a judgement — on a real ledger that is a handful,
+      // and the second resolve is the expensive half of this loop.
+      if (labelled.has(row.id)) {
+        const unaided = normalizeDescriptor(row.descriptionRaw, {
+          aliases: withoutUserAliases,
+          knownMerchantKeys: SEED_MERCHANT_KEYS,
+          trace: false,
+        });
+        chainRefresh.push({
+          transactionId: row.id,
+          // A provisional resolution names a merchant that may not exist yet; the
+          // label records the chain's *conclusion*, and "it could not place this"
+          // is honestly a null rather than an invented id.
+          chainMerchantId:
+            unaided.resolution.kind === 'alias'
+              ? unaided.resolution.merchantId
+              : (context.store.merchants.findByCanonicalName(unaided.resolution.name)?.id ?? null),
+          chainDescriptionNormalized: unaided.descriptionNormalized,
+        });
+      }
 
       // §4.1 step 7, applied by the sweep rather than by an import: a descriptor the
       // chain cleans but cannot match becomes a provisional merchant. This is the
@@ -299,12 +352,18 @@ export function runFullRenormalize(
     if (page.length < SWEEP_PAGE) break;
   }
 
+  // After the walk rather than per page: this touches only §7.6's corpus, and one
+  // transaction over a handful of rows is cheaper than a transaction per page.
+  const chainAnswersRefreshed =
+    context.store.transactionLabels.refreshChainAnswers(chainRefresh);
+
   return {
     descriptorsConsidered: seen,
     transactionsRepointed: repointed,
     merchantsAffected: merchantsTouched.size,
     descriptorsRewritten: rewritten,
     merchantsCreated: created,
+    chainAnswersRefreshed,
   };
 }
 

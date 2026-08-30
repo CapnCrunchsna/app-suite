@@ -95,7 +95,7 @@ records what it proposes — — **every one of §6's nine pages now exists**. �
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa and §9ab list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab and §9ac list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2479,6 +2479,42 @@ tests passed and the first keystroke in the real page failed, because `app.injec
 dispatches straight at the router and never sends a preflight. There is now a test that
 asserts the header names the methods the routes use — the only kind of test that could
 have caught it without a browser.
+
+## 9ac. Amendments from implementation — 2026-08-29 (§7.6, §2.7)
+
+§9ab stored, on every label, the merchant §4.1's chain had reached when the judgement
+was made — and nothing ever updated it. That is right for "was the chain correct then"
+and wrong for the question anyone tuning would actually ask, which is "is it getting
+better". The normalization figure would have stayed frozen at its worst reading however
+much §4 improved.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.7 | **§9v's full sweep refreshes each label's record of the chain's answer**, and reports how many it brought up to date. | The sweep is the one operation that already re-derives every row's answer, so the refresh costs one extra resolve for the handful of rows that carry a judgement and no second traversal. |
+| 7.6 | **The refreshed answer is resolved *without* `user` aliases.** | This is the whole of the change; see below. |
+
+**A naive refresh would have been worse than the stale number.** A correction writes a
+`user` alias, so once it lands the chain genuinely *does* resolve that descriptor to the
+corrected merchant. Re-capturing the ordinary answer would therefore make every corrected
+row agree with itself and report perfect normalization accuracy — confidently wrong,
+where the stale figure was merely out of date. What is measured instead is what the app
+reaches **without being told**: the same chain, over the same descriptor, with the
+human's own aliases withheld.
+
+**`llm` aliases are kept in.** The exclusion is of the human, not of the machinery: a
+model's grouping is still the app concluding something, and §4.2 already gates it behind
+a confidence floor and the settled-series exception. Excluding it would measure a chain
+the app does not actually run.
+
+**The sweep never edits an assertion.** It touches the two chain columns and nothing
+else. A sweep is the app recomputing its own answer, and it has no business revising what
+a person said about a row — there is a test named after that, because the alternative is
+a corpus that quietly rewrites its own ground truth.
+
+**A provisional resolution records `null`, not an invented id.** Where the unaided chain
+cleans a descriptor but matches no merchant, the honest entry is that it could not place
+it — which is a different fact from placing it wrongly, and §4.1 step 7's queue is where
+that one belongs.
 
 ## 10. Open discrepancies — recorded, not resolved
 
