@@ -1,0 +1,232 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text, #dcefeb);
+}
+
+.lede {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.range__field {
+  display: grid;
+  gap: 3px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.range__field input {
+  padding: 5px 8px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.button {
+  padding: 5px 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--accent, #2dd4bf);
+}
+
+/* ------------------------------------------------------------------ chart --- */
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 180px;
+  padding-top: 18px;
+  overflow-x: auto;
+}
+
+.chart__col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 28px;
+  height: 100%;
+}
+
+.chart__bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent, #2dd4bf);
+  position: relative;
+}
+
+.chart__value {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.chart__label {
+  margin-top: 4px;
+  font-size: 0.62rem;
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * §6.6's hatching, and the most load-bearing rule on this page.
+ *
+ * "Months that are not fully covered are rendered hatched rather than omitted, so a
+ * gap reads as a gap and not as a drop in spending." The column keeps its width and
+ * its place on the axis; what changes is that the *footprint* is striped and the bar
+ * itself is absent. A short solid bar would say "you spent a little"; this says "we
+ * do not know", which is the true statement.
+ */
+.chart__col--uncovered {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    color-mix(in srgb, var(--text-dim, #7ea8a1) 28%, transparent) 3px,
+    color-mix(in srgb, var(--text-dim, #7ea8a1) 28%, transparent) 6px
+  );
+  border-radius: 2px;
+}
+
+.chart__col--uncovered .chart__bar {
+  background: transparent;
+  min-height: 0;
+}
+
+.chart__col--uncovered .chart__label {
+  font-style: italic;
+}
+
+/* ----------------------------------------------------------------- movers --- */
+
+.movers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .movers {
+    grid-template-columns: 1fr;
+  }
+}
+
+.movers__title {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------------------- fees --- */
+
+.fees__account + .fees__account {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #1f4a47);
+}
+
+.fees__name {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  color: var(--text, #dcefeb);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fees__total {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------------------ table --- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.table th {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border, #1f4a47);
+  text-align: left;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 45%, transparent);
+  color: var(--text, #dcefeb);
+  overflow-wrap: anywhere;
+}
+
+.table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Direction, not judgement: §6.6 is a page about what happened, and spending less
+ * on groceries is not automatically good news. Both read as emphasis rather than
+ * as a verdict. */
+.table__up {
+  color: var(--warn, #d9a441);
+}
+
+.table__down {
+  color: var(--accent-2, #34d399);
+}

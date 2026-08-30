@@ -249,9 +249,14 @@ describe('App', () => {
     ]);
   });
 
-  // A rail item becomes a link only once its page exists. One of the nine is a
-  // span, so none of them can be clicked into a blank screen.
-  it('links only the sections that are built', async () => {
+  /**
+   * Every §6 section now has a page (§9aa), so this asserts the whole rail rather
+   * than a subset — and the pending count is zero rather than the case being
+   * deleted. The rule it guards outlives the last unbuilt section: a rail item that
+   * routes nowhere is a link to a blank screen, and §6 is not the last section this
+   * app will grow.
+   */
+  it('links every section, now that all nine are built', async () => {
     const el = await render();
 
     expect(labels(el, 'a.rail__item')).toEqual([
@@ -261,11 +266,11 @@ describe('App', () => {
       'Review',
       'Findings',
       'Subscriptions',
+      'Insights',
       'Ask',
       'Settings',
     ]);
-    // §6.6's Insights, and only that — §6.7's Ask became a link in §9y.
-    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(1);
+    expect(el.querySelectorAll('.rail__item--pending')).toHaveLength(0);
   });
 
   describe('§6.9’s badge', () => {

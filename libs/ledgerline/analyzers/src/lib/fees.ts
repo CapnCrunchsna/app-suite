@@ -46,7 +46,7 @@ export const FEES_RULE_ID = 'fees.v1';
  *  0.75 when only the category vouched for it. */
 type FeeBasis = 'keyword' | 'category';
 
-interface FeeCharge {
+export interface FeeCharge {
   readonly transaction: SnapshotTransaction;
   readonly basis: FeeBasis;
   /** The keyword that matched, for the breakdown and for the avoidable test. */
@@ -162,6 +162,24 @@ function eligible(row: SnapshotTransaction): boolean {
     row.amountCents < 0 && !row.isPending && !row.isExcluded && !row.isInternalTransfer &&
     row.refundPairId === null
   );
+}
+
+/**
+ * §5.8’s identification, exported because §6.6 needs the same answer without
+ * §5.8’s judgement (§9aa).
+ *
+ * The Insights fee rollup totals what is a fee; §5.8 decides which fees are worth
+ * reporting and applies §5.1’s floor. Those are different questions over the same
+ * predicate, and a second copy of the predicate in the Insights service would drift
+ * from this one the first time either moved — the keyword list is §7.4 config a user
+ * can tune, so drifting is not hypothetical.
+ */
+export function classifyFeeCharge(
+  row: SnapshotTransaction,
+  feeCategories: ReadonlySet<string>,
+  config: FeesConfig,
+): FeeCharge | null {
+  return classify(row, feeCategories, config);
 }
 
 function classify(

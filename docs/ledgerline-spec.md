@@ -89,13 +89,13 @@ the move, the badge, and where the count lives.
 Redaction sections, §4.2's merchant-proposal stage, and the degraded-call log in Data — §9t.
 `none` remains the default and the app is complete without a provider (§2.4).
 
-PDF ingest is **not** built, nor are the merchant-alias and insights endpoints of
+PDF ingest is **not** built, nor are the merchant-alias endpoints of
 §2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
-records what it proposes — nor **one of §6's nine pages** — §6.6's
-Insights. §6.1's Import, §6.2's Accounts, §6.3's Transactions, §6.4's Findings,
-§6.5's Subscriptions, §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
+records what it proposes — — **every one of §6's nine pages now exists**. §6.1's Import, §6.2's Accounts,
+§6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
+§6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y and §9z list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z and §9aa list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2390,6 +2390,49 @@ written down before the rules run. So this instrument tunes a threshold **down**
 many false positives) on real evidence, and says nothing about tuning one **up**. §7.6's
 afternoon is still owed; what changes is that it is no longer the only source of
 evidence, and the thresholds most likely to be wrong now announce themselves.
+
+## 9aa. Amendments from implementation — 2026-08-29 (§6.6, §2.3, §5.8)
+
+§6.6 was the last §6 page with nothing behind it. Building it is mostly §7.2's coverage
+rule, which §6.6 states from the display side in one sentence: "Months that are not
+fully covered are rendered hatched rather than omitted, so a gap reads as a gap and not
+as a drop in spending."
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3 (new) | **Five routes** under `/api/insights/*` — `categories`, `movers`, `fees`, `outliers`, `small-spend` — rather than one. | §2.3 lists them as one row, but they have different shapes and different costs. A single endpoint would make opening the page pay for four views nobody is looking at. |
+| 6.6 | **`movers` compares the last two *covered* months**, not the last two. | Comparing a complete month against a half-imported one produces a table of enormous fallers that are all the same artefact — the exact distortion §7.2 exists to prevent, arriving through the comparison instead of through the total. |
+| 5.8 (new) | **`classifyFeeCharge` is exported** from §5.8, and §6.6's rollup calls it. | See below. |
+| 6.6 | **The outliers and small-spend views read §5.9's and §5.11's findings** rather than re-deriving them, and say so when no analysis has run. | Those two are *judgements* with thresholds §7.4 keeps in one config object. A second implementation in Insights would carry its own copy and drift the first time either moved. |
+
+**The fee rollup has to use §5.8's predicate, and finding that out took a failing test.**
+The first version filtered on `category.kind = 'fee'` and was empty on any fresh ledger
+— because §2.5 assigns a category from the *merchant's* default, and a maintenance fee
+normalizes to a provisional merchant that has none. The rows that most obviously are
+fees are precisely the ones carrying no category. §5.8 had already solved this and says
+so in its own words: "a fee whose category was never assigned is still a fee — and the
+converse, a fee-kind category with no recognisable keyword, is still a fee." So the
+predicate is exported and shared, while the *judgement* stays behind: §5.8 decides which
+fees clear §5.1's floor and are worth a card, and a rollup is a sum that applies neither.
+One definition matters more than it looks here, because the keyword list is §7.4
+configuration a user can tune.
+
+**Hatching is a footprint, not a short bar.** An uncovered month keeps its width and its
+place on the axis; what changes is that the column is striped and the bar is *absent*. A
+short solid bar would say "you spent a little", which is the false statement §6.6 is
+written to prevent — the true one is "we do not know", and only an obviously different
+mark says it.
+
+**The axis is scaled over covered months only.** An uncovered month holds whatever part
+of it happened to be imported, and letting that set the peak would shrink every complete
+month beside it — §7.2's exclusion arriving through the scale rather than through the
+sum, which is the same error in a place nobody would look for it.
+
+**Coverage is the intersection across the accounts in scope**, per §7.2, which has a
+consequence worth stating because it reads as a bug the first time it is seen: *narrowing*
+the account selection can **widen** the covered window. A month where one account has a
+statement and another does not is a month whose total is missing a card's worth of
+spending, so it is not covered — until that account is deselected.
 
 ## 10. Open discrepancies — recorded, not resolved
 

@@ -30,6 +30,11 @@ import type {
   ApiError,
   BulkUpdateTransactionsBody,
   Category,
+  CategoryInsight,
+  FeesInsight,
+  GetCategoryInsightQuery,
+  MoversInsight,
+  RuleBackedInsight,
   CommitImportBody,
   CommitResult,
   CreateDismissalRuleBody,
@@ -210,6 +215,38 @@ export class LedgerlineApiService {
    */
   labelFinding(id: string, body: LabelFindingBody): Promise<Finding> {
     return this.api.labelFinding(id, body);
+  }
+
+  // ------------------------------------------------------------- §6.6 ---
+
+  /**
+   * §6.6's five views. Separate calls because they have separate costs — a
+   * stacked chart wants every month and an outlier list wants none of them.
+   *
+   * The range and account selection travel on three of them; §7.2's coverage is
+   * the intersection across the selected accounts, so narrowing the selection can
+   * *widen* the covered window.
+   */
+  getCategoryInsight(query: GetCategoryInsightQuery = {}): Promise<CategoryInsight> {
+    return this.api.getCategoryInsight(query);
+  }
+
+  getMoversInsight(query: GetCategoryInsightQuery = {}): Promise<MoversInsight> {
+    return this.api.getMoversInsight(query);
+  }
+
+  getFeesInsight(query: GetCategoryInsightQuery = {}): Promise<FeesInsight> {
+    return this.api.getFeesInsight(query);
+  }
+
+  /** §5.9's answer, not a second opinion about it. */
+  getOutlierInsight(): Promise<RuleBackedInsight> {
+    return this.api.getOutlierInsight();
+  }
+
+  /** §5.11's, likewise — the annualized figure is the rule's own. */
+  getSmallSpendInsight(): Promise<RuleBackedInsight> {
+    return this.api.getSmallSpendInsight();
   }
 
   /** §2.7: the UI polls a job rather than blocking on it. */

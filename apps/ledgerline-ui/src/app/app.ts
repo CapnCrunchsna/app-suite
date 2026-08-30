@@ -4,8 +4,9 @@ import { ThemeSwitcher } from '@metrum/ui';
 import { LedgerlineApiService, ReviewQueue } from '@metrum/ledgerline-feature-shell';
 
 /**
- * Spec §6's nine sections. `path` is null until the page exists — a rail item that
- * routes nowhere is a link to a blank screen.
+ * Spec §6's nine sections, every one of which now has a page (§9aa). `path` stays
+ * nullable because the rule it encodes outlives the last unbuilt section: a rail
+ * item that routes nowhere is a link to a blank screen.
  *
  * Spec order, with one deliberate exception. §6.9's Review is the newest section
  * and so the last one numbered, but it sits here with the three pages about *your
@@ -14,17 +15,26 @@ import { LedgerlineApiService, ReviewQueue } from '@metrum/ledgerline-feature-sh
  * in: the questions Review asks are the ones the import raised, and answering them
  * is what makes the analysis below it correct.
  */
-const SECTIONS = [
+interface Section {
+  readonly label: string;
+  /** Null until the page exists. Still nullable with every §6 section built,
+   *  because the rule outlives the last one: a rail item that routes nowhere is a
+   *  link to a blank screen, and §6 is not the last section this app will grow. */
+  readonly path: string | null;
+  readonly badge: boolean;
+}
+
+const SECTIONS: readonly Section[] = [
   { label: 'Import', path: 'imports', badge: false },
   { label: 'Accounts', path: 'accounts', badge: false },
   { label: 'Transactions', path: 'transactions', badge: false },
   { label: 'Review', path: 'review', badge: true },
   { label: 'Findings', path: 'findings', badge: false },
   { label: 'Subscriptions', path: 'subscriptions', badge: false },
-  { label: 'Insights', path: null, badge: false },
+  { label: 'Insights', path: 'insights', badge: false },
   { label: 'Ask', path: 'ask', badge: false },
   { label: 'Settings', path: 'settings', badge: false },
-] as const;
+];
 
 /**
  * The app shell — header, section rail, content area.

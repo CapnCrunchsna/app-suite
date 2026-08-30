@@ -39,6 +39,10 @@ import type {
   UploadResult,
   CommitResult,
   DeleteImportResult,
+  CategoryInsight,
+  MoversInsight,
+  FeesInsight,
+  RuleBackedInsight,
   LlmHealth,
   DegradedCallLog,
   AskResult,
@@ -318,6 +322,24 @@ export type ProposeMerchantsResponse = {
 export type AskBody = {
   readonly question: string;
 };
+
+export interface GetCategoryInsightQuery {
+  readonly from?: string;
+  readonly to?: string;
+  readonly accountIds?: string;
+}
+
+export interface GetMoversInsightQuery {
+  readonly from?: string;
+  readonly to?: string;
+  readonly accountIds?: string;
+}
+
+export interface GetFeesInsightQuery {
+  readonly from?: string;
+  readonly to?: string;
+  readonly accountIds?: string;
+}
 
 /**
  * Every operation in the emitted contract, one method each.
@@ -839,6 +861,59 @@ export class LedgerlineApi {
   ask(body: AskBody): Promise<AskResult> {
     return this.request<AskResult>('POST', `/api/ask`, {
       body,
+    });
+  }
+
+  /**
+   * Category spend by month (spec 6.6)
+   *
+   * Spec 6.6’s stacked bars. Every month in the window is returned with its coverage state, including the uncovered ones — spec 6.6 requires those to be rendered hatched rather than omitted, "so a gap reads as a gap and not as a drop in spending". `window` reports what spec 7.2 considered covered.
+   */
+  getCategoryInsight(query: GetCategoryInsightQuery = {}): Promise<CategoryInsight> {
+    return this.request<CategoryInsight>('GET', `/api/insights/categories`, {
+      query,
+    });
+  }
+
+  /**
+   * Biggest risers and fallers, month over month (spec 6.6)
+   *
+   * Compares the last two **covered** months rather than the last two months: a complete month against a half-imported one produces a table of enormous fallers that are all the same artefact (spec 7.2). With fewer than two covered months the answer is empty rather than a comparison against a month that is not there.
+   */
+  getMoversInsight(query: GetMoversInsightQuery = {}): Promise<MoversInsight> {
+    return this.request<MoversInsight>('GET', `/api/insights/movers`, {
+      query,
+    });
+  }
+
+  /**
+   * Fees and interest rollup per account (spec 6.6)
+   *
+   * Everything the taxonomy calls a fee, totalled per account — not spec 5.8’s findings. Spec 5.8 makes a judgement about which fees are worth reporting and applies spec 5.1’s floor; this makes none, so the rollup does not go blank when every individual fee falls below it.
+   */
+  getFeesInsight(query: GetFeesInsightQuery = {}): Promise<FeesInsight> {
+    return this.request<FeesInsight>('GET', `/api/insights/fees`, {
+      query,
+    });
+  }
+
+  /**
+   * Spec 5.9’s outlier charges (spec 6.6)
+   *
+   * Read from spec 5.9’s findings rather than re-derived: the z-score and the baseline are that rule’s business, and a second implementation here would carry its own copy of thresholds spec 7.4 keeps in one config object. Includes dismissed rows — spec 6.6 is a page about what your money did, and a dismissed outlier is still an outlier.
+   */
+  getOutlierInsight(): Promise<RuleBackedInsight> {
+    return this.request<RuleBackedInsight>('GET', `/api/insights/outliers`, {
+    });
+  }
+
+  /**
+   * Spec 5.11’s high-frequency small spend, annualized (spec 6.6)
+   *
+   * Read from spec 5.11’s findings, for the same reason the outliers are. The annualized figure is the rule’s own `impactAnnualCents`, so the page and the finding card cannot disagree about it.
+   */
+  getSmallSpendInsight(): Promise<RuleBackedInsight> {
+    return this.request<RuleBackedInsight>('GET', `/api/insights/small-spend`, {
     });
   }
   // ------------------------------------------------------------ plumbing ---

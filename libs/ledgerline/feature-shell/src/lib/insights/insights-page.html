@@ -1,0 +1,208 @@
+<h2 class="title">Insights</h2>
+
+<!-- §6.6's date-range selector. Empty means the whole ledger — the API defaults to
+     the first and last row rather than to a window the data may not cover. -->
+<form class="range" (submit)="$event.preventDefault()">
+  <label class="range__field">
+    <span>From</span>
+    <input type="date" [ngModel]="range().from" name="from" (ngModelChange)="setRange('from', $event)" />
+  </label>
+  <label class="range__field">
+    <span>To</span>
+    <input type="date" [ngModel]="range().to" name="to" (ngModelChange)="setRange('to', $event)" />
+  </label>
+  @if (range().from || range().to) {
+    <button type="button" class="button" (click)="clearRange()">Whole ledger</button>
+  }
+</form>
+
+<ui-panel heading="Spending by category">
+  @let cat = categories();
+
+  @if (cat.months.length === 0) {
+    <p class="note">Nothing imported in this range yet.</p>
+  } @else {
+    <!-- §6.6: uncovered months are hatched rather than omitted, "so a gap reads as a
+         gap and not as a drop in spending". The bar sits at zero and the footprint
+         carries the hatching, so the month keeps its place on the axis. -->
+    <div class="chart" role="img" [attr.aria-label]="'Monthly spend across ' + cat.months.length + ' months'">
+      @for (month of cat.months; track month.month) {
+        <div class="chart__col" [class.chart__col--uncovered]="!month.covered">
+          <div class="chart__bar" [style.height.%]="heightOf(month.totalCents, month.covered)">
+            @if (month.covered && month.totalCents !== 0) {
+              <span class="chart__value">{{ money(month.totalCents) }}</span>
+            }
+          </div>
+          <span class="chart__label">{{ month.month.slice(5) }}</span>
+        </div>
+      }
+    </div>
+
+    <p class="note">
+      {{ cat.window.coveredMonths }} fully covered
+      {{ cat.window.coveredMonths === 1 ? 'month' : 'months' }} in this range.
+      @if (cat.window.uncoveredMonths.length > 0) {
+        <strong>{{ cat.window.uncoveredMonths.length }}</strong>
+        {{ cat.window.uncoveredMonths.length === 1 ? 'month is' : 'months are' }} hatched —
+        no statement covers {{ cat.window.uncoveredMonths.length === 1 ? 'it' : 'them' }} end to
+        end, so {{ cat.window.uncoveredMonths.length === 1 ? 'it is' : 'they are' }} left out of
+        every total on this page. That is a gap in what you imported, not a month you spent
+        nothing.
+      }
+    </p>
+
+    @if (cat.categories.length > 0) {
+      <p class="note">Categories in view: {{ cat.categories.join(' · ') }}</p>
+    }
+  }
+</ui-panel>
+
+<ui-panel heading="What moved">
+  @let mov = movers();
+
+  @if (mov.fromMonth === null) {
+    <p class="note">
+      Two fully covered months are needed to compare, and this range has
+      {{ mov.window.coveredMonths }}. Comparing a complete month against a half-imported one
+      produces a table of large falls that are all the same artefact.
+    </p>
+  } @else {
+    <p class="lede">{{ mov.fromMonth }} → {{ mov.toMonth }}, the last two months covered end to end.</p>
+
+    <div class="movers">
+      <section>
+        <h4 class="movers__title">Up</h4>
+        @if (mov.risers.length === 0) {
+          <p class="note">Nothing rose.</p>
+        } @else {
+          <table class="table">
+            <tbody>
+              @for (row of mov.risers; track row.category) {
+                <tr>
+                  <td>{{ row.category }}</td>
+                  <td class="table__num">{{ money(row.fromCents) }} → {{ money(row.toCents) }}</td>
+                  <td class="table__num table__up">{{ percent(row.percent) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section>
+        <h4 class="movers__title">Down</h4>
+        @if (mov.fallers.length === 0) {
+          <p class="note">Nothing fell.</p>
+        } @else {
+          <table class="table">
+            <tbody>
+              @for (row of mov.fallers; track row.category) {
+                <tr>
+                  <td>{{ row.category }}</td>
+                  <td class="table__num">{{ money(row.fromCents) }} → {{ money(row.toCents) }}</td>
+                  <td class="table__num table__down">{{ percent(row.percent) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+    </div>
+  }
+</ui-panel>
+
+<ui-panel heading="Fees and interest">
+  @let fee = fees();
+
+  @if (fee.accounts.length === 0) {
+    <p class="note">
+      No fees in this range. This counts everything the category taxonomy calls a fee, so it is
+      not the same list as the Findings page — that one applies a floor and asks whether a fee
+      was avoidable.
+    </p>
+  } @else {
+    <p class="lede">{{ money(fee.totalCents) }} across {{ fee.accounts.length }}
+      {{ fee.accounts.length === 1 ? 'account' : 'accounts' }}.</p>
+
+    @for (account of fee.accounts; track account.accountId) {
+      <section class="fees__account">
+        <h4 class="fees__name">
+          {{ account.displayName }}
+          <span class="fees__total">{{ money(account.totalCents) }} · {{ account.count }}
+            {{ account.count === 1 ? 'charge' : 'charges' }}</span>
+        </h4>
+        <table class="table">
+          <tbody>
+            @for (row of account.byMerchant; track row.label) {
+              <tr>
+                <td>{{ row.label }}</td>
+                <td class="table__num">{{ row.count }}</td>
+                <td class="table__num">{{ money(row.amountCents) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+  }
+</ui-panel>
+
+<ui-panel heading="Outliers">
+  @let out = outliers();
+
+  @if (out.unavailableReason) {
+    <p class="note">{{ out.unavailableReason }}</p>
+  } @else if (out.rows.length === 0) {
+    <p class="note">No charge stood out against its own merchant’s history.</p>
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">What</th>
+          <th scope="col" class="table__num">Over the usual</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of out.rows; track row.findingId) {
+          <tr>
+            <td>{{ row.title }}</td>
+            <td class="table__num">{{ money(row.impactAnnualCents) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</ui-panel>
+
+<ui-panel heading="Small spend, added up">
+  @let small = smallSpend();
+
+  @if (small.unavailableReason) {
+    <p class="note">{{ small.unavailableReason }}</p>
+  } @else if (small.rows.length === 0) {
+    <p class="note">Nothing here yet — this fills in once there is a year of habit to add up.</p>
+  } @else {
+    <p class="lede">
+      Money you are already choosing to spend, totalled because you have probably never seen it
+      totalled. Nothing here is a saving on its own.
+    </p>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">What</th>
+          <th scope="col" class="table__num">A month</th>
+          <th scope="col" class="table__num">A year</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of small.rows; track row.findingId) {
+          <tr>
+            <td>{{ row.title }}</td>
+            <td class="table__num">{{ money(row.impactMonthlyCents) }}</td>
+            <td class="table__num">{{ money(row.impactAnnualCents) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</ui-panel>

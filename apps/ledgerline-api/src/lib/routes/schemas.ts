@@ -947,6 +947,144 @@ const dismissalRule = {
  * Derived by walking the shipped defaults rather than declared, so a threshold added
  * to spec 5 appears here without a second list to update — see `routes/settings.ts`.
  */
+/**
+ * What spec 6.6's numbers were computed over, said out loud.
+ *
+ * Spec 7.2 requires it — "reports the window it used" — and spec 6.6's hatching
+ * depends on it: a reader looking at eleven solid bars and one hatched one needs to
+ * know the totals exclude the hatched one, or the chart is saying something false
+ * about a month they can see.
+ */
+const coverageWindow = {
+  $id: 'CoverageWindow',
+  type: 'object',
+  properties: {
+    from: { type: 'string' },
+    to: { type: 'string' },
+    coveredMonths: { type: 'integer' },
+    uncoveredMonths: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+const categorySlice = {
+  $id: 'CategorySlice',
+  type: 'object',
+  properties: {
+    category: { type: 'string' },
+    amountCents: { type: 'integer' },
+  },
+} as const;
+
+const categoryMonth = {
+  $id: 'CategoryMonth',
+  type: 'object',
+  properties: {
+    month: { type: 'string' },
+    /** Spec 7.2's answer for *every* account in scope, not any one of them. A false
+     *  here is what spec 6.6 renders hatched. */
+    covered: { type: 'boolean' },
+    totalCents: { type: 'integer' },
+    slices: { type: 'array', items: ref('CategorySlice') },
+  },
+} as const;
+
+const categoryInsight = {
+  $id: 'CategoryInsight',
+  type: 'object',
+  properties: {
+    months: { type: 'array', items: ref('CategoryMonth') },
+    /** Every category in the window, so a stacked chart assigns one colour per
+     *  series rather than re-keying per month. */
+    categories: { type: 'array', items: { type: 'string' } },
+    window: ref('CoverageWindow'),
+  },
+} as const;
+
+const mover = {
+  $id: 'Mover',
+  type: 'object',
+  properties: {
+    category: { type: 'string' },
+    fromCents: { type: 'integer' },
+    toCents: { type: 'integer' },
+    deltaCents: { type: 'integer' },
+    /** Null where the earlier month was zero: a rise from nothing has no
+     *  percentage, and ∞ or 100% would both be a number that means neither. */
+    percent: { type: ['number', 'null'] },
+  },
+} as const;
+
+const moversInsight = {
+  $id: 'MoversInsight',
+  type: 'object',
+  properties: {
+    /** The last two *covered* months, or null when there are fewer than two. */
+    fromMonth: nullableString,
+    toMonth: nullableString,
+    risers: { type: 'array', items: ref('Mover') },
+    fallers: { type: 'array', items: ref('Mover') },
+    window: ref('CoverageWindow'),
+  },
+} as const;
+
+const feeMerchant = {
+  $id: 'FeeMerchant',
+  type: 'object',
+  properties: {
+    label: { type: 'string' },
+    amountCents: { type: 'integer' },
+    count: { type: 'integer' },
+  },
+} as const;
+
+const feeAccount = {
+  $id: 'FeeAccount',
+  type: 'object',
+  properties: {
+    accountId: { type: 'string' },
+    displayName: { type: 'string' },
+    totalCents: { type: 'integer' },
+    count: { type: 'integer' },
+    byMerchant: { type: 'array', items: ref('FeeMerchant') },
+  },
+} as const;
+
+const feesInsight = {
+  $id: 'FeesInsight',
+  type: 'object',
+  properties: {
+    accounts: { type: 'array', items: ref('FeeAccount') },
+    totalCents: { type: 'integer' },
+    window: ref('CoverageWindow'),
+  },
+} as const;
+
+/** One row of spec 5.9's or spec 5.11's answer, as spec 6.6 lists it. */
+const ruleBackedRow = {
+  $id: 'RuleBackedRow',
+  type: 'object',
+  properties: {
+    findingId: { type: 'string' },
+    title: { type: 'string' },
+    subjectId: { type: 'string' },
+    band: { type: 'string', enum: FINDING_BANDS },
+    impactAnnualCents: { type: 'integer' },
+    impactMonthlyCents: { type: 'integer' },
+    detail: { type: 'object', additionalProperties: true },
+  },
+} as const;
+
+const ruleBackedInsight = {
+  $id: 'RuleBackedInsight',
+  type: 'object',
+  properties: {
+    rows: { type: 'array', items: ref('RuleBackedRow') },
+    /** Set when no analysis has finished, so the page can say "run one" rather than
+     *  "there are none" — two very different statements about an empty list. */
+    unavailableReason: nullableString,
+  },
+} as const;
+
 const settingThreshold = {
   $id: 'SettingThreshold',
   type: 'object',
@@ -1646,6 +1784,18 @@ const SHARED = [
   // means in `parsing`. `formatProfileDraft` is a request body.
   // §6.8's config surface. `unsettable` and `deletedByTable` are open maps by
   // nature, so they declare their own shapes above.
+  // §6.6 (§9aa). `CoverageWindow` before the three that $ref it.
+  allRequired(coverageWindow),
+  allRequired(categorySlice),
+  allRequired(categoryMonth),
+  allRequired(categoryInsight),
+  allRequired(mover),
+  allRequired(moversInsight),
+  allRequired(feeMerchant),
+  allRequired(feeAccount),
+  allRequired(feesInsight),
+  allRequired(ruleBackedRow),
+  allRequired(ruleBackedInsight),
   allRequired(settingThreshold),
   allRequired(settingUnsettable),
   allRequired(ruleAccuracy),

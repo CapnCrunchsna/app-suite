@@ -497,6 +497,82 @@ export interface DeleteImportResult {
   readonly retainedTransactionIds: string[];
 }
 
+export interface CoverageWindow {
+  readonly from: string;
+  readonly to: string;
+  readonly coveredMonths: number;
+  readonly uncoveredMonths: string[];
+}
+
+export interface CategorySlice {
+  readonly category: string;
+  readonly amountCents: number;
+}
+
+export interface CategoryMonth {
+  readonly month: string;
+  readonly covered: boolean;
+  readonly totalCents: number;
+  readonly slices: CategorySlice[];
+}
+
+export interface CategoryInsight {
+  readonly months: CategoryMonth[];
+  readonly categories: string[];
+  readonly window: CoverageWindow;
+}
+
+export interface Mover {
+  readonly category: string;
+  readonly fromCents: number;
+  readonly toCents: number;
+  readonly deltaCents: number;
+  readonly percent: number | null;
+}
+
+export interface MoversInsight {
+  readonly fromMonth: string | null;
+  readonly toMonth: string | null;
+  readonly risers: Mover[];
+  readonly fallers: Mover[];
+  readonly window: CoverageWindow;
+}
+
+export interface FeeMerchant {
+  readonly label: string;
+  readonly amountCents: number;
+  readonly count: number;
+}
+
+export interface FeeAccount {
+  readonly accountId: string;
+  readonly displayName: string;
+  readonly totalCents: number;
+  readonly count: number;
+  readonly byMerchant: FeeMerchant[];
+}
+
+export interface FeesInsight {
+  readonly accounts: FeeAccount[];
+  readonly totalCents: number;
+  readonly window: CoverageWindow;
+}
+
+export interface RuleBackedRow {
+  readonly findingId: string;
+  readonly title: string;
+  readonly subjectId: string;
+  readonly band: 'high' | 'medium' | 'low' | 'suppressed';
+  readonly impactAnnualCents: number;
+  readonly impactMonthlyCents: number;
+  readonly detail: Record<string, unknown>;
+}
+
+export interface RuleBackedInsight {
+  readonly rows: RuleBackedRow[];
+  readonly unavailableReason: string | null;
+}
+
 export interface SettingThreshold {
   readonly section: string;
   readonly key: string;

@@ -2078,6 +2078,301 @@
           "retainedTransactionIds"
         ]
       },
+      "CoverageWindow": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "coveredMonths": {
+            "type": "integer"
+          },
+          "uncoveredMonths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "coveredMonths",
+          "uncoveredMonths"
+        ]
+      },
+      "CategorySlice": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "amountCents"
+        ]
+      },
+      "CategoryMonth": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "covered": {
+            "type": "boolean"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "slices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategorySlice"
+            }
+          }
+        },
+        "required": [
+          "month",
+          "covered",
+          "totalCents",
+          "slices"
+        ]
+      },
+      "CategoryInsight": {
+        "type": "object",
+        "properties": {
+          "months": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryMonth"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "window": {
+            "$ref": "#/components/schemas/CoverageWindow"
+          }
+        },
+        "required": [
+          "months",
+          "categories",
+          "window"
+        ]
+      },
+      "Mover": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "fromCents": {
+            "type": "integer"
+          },
+          "toCents": {
+            "type": "integer"
+          },
+          "deltaCents": {
+            "type": "integer"
+          },
+          "percent": {
+            "type": [
+              "null",
+              "number"
+            ]
+          }
+        },
+        "required": [
+          "category",
+          "fromCents",
+          "toCents",
+          "deltaCents",
+          "percent"
+        ]
+      },
+      "MoversInsight": {
+        "type": "object",
+        "properties": {
+          "fromMonth": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "toMonth": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "risers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Mover"
+            }
+          },
+          "fallers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Mover"
+            }
+          },
+          "window": {
+            "$ref": "#/components/schemas/CoverageWindow"
+          }
+        },
+        "required": [
+          "fromMonth",
+          "toMonth",
+          "risers",
+          "fallers",
+          "window"
+        ]
+      },
+      "FeeMerchant": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "amountCents": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "amountCents",
+          "count"
+        ]
+      },
+      "FeeAccount": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "byMerchant": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeeMerchant"
+            }
+          }
+        },
+        "required": [
+          "accountId",
+          "displayName",
+          "totalCents",
+          "count",
+          "byMerchant"
+        ]
+      },
+      "FeesInsight": {
+        "type": "object",
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeeAccount"
+            }
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "window": {
+            "$ref": "#/components/schemas/CoverageWindow"
+          }
+        },
+        "required": [
+          "accounts",
+          "totalCents",
+          "window"
+        ]
+      },
+      "RuleBackedRow": {
+        "type": "object",
+        "properties": {
+          "findingId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "band": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "suppressed"
+            ]
+          },
+          "impactAnnualCents": {
+            "type": "integer"
+          },
+          "impactMonthlyCents": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "findingId",
+          "title",
+          "subjectId",
+          "band",
+          "impactAnnualCents",
+          "impactMonthlyCents",
+          "detail"
+        ]
+      },
+      "RuleBackedInsight": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleBackedRow"
+            }
+          },
+          "unavailableReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "rows",
+          "unavailableReason"
+        ]
+      },
       "SettingThreshold": {
         "type": "object",
         "properties": {
@@ -8357,6 +8652,503 @@
           }
         }
       }
+    },
+    "/api/insights/categories": {
+      "get": {
+        "operationId": "getCategoryInsight",
+        "summary": "Category spend by month (spec 6.6)",
+        "tags": [
+          "insights"
+        ],
+        "description": "Spec 6.6’s stacked bars. Every month in the window is returned with its coverage state, including the uncovered ones — spec 6.6 requires those to be rendered hatched rather than omitted, \"so a gap reads as a gap and not as a drop in spending\". `window` reports what spec 7.2 considered covered.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "description": "YYYY-MM-DD. Defaults to the first row in the ledger."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "description": "YYYY-MM-DD. Defaults to the last row in the ledger."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "accountIds",
+            "required": false,
+            "description": "Comma-separated. Spec 7.2’s coverage is the intersection across these accounts, so narrowing the selection can *widen* the covered window."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryInsight"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/movers": {
+      "get": {
+        "operationId": "getMoversInsight",
+        "summary": "Biggest risers and fallers, month over month (spec 6.6)",
+        "tags": [
+          "insights"
+        ],
+        "description": "Compares the last two **covered** months rather than the last two months: a complete month against a half-imported one produces a table of enormous fallers that are all the same artefact (spec 7.2). With fewer than two covered months the answer is empty rather than a comparison against a month that is not there.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "description": "YYYY-MM-DD. Defaults to the first row in the ledger."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "description": "YYYY-MM-DD. Defaults to the last row in the ledger."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "accountIds",
+            "required": false,
+            "description": "Comma-separated. Spec 7.2’s coverage is the intersection across these accounts, so narrowing the selection can *widen* the covered window."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoversInsight"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/fees": {
+      "get": {
+        "operationId": "getFeesInsight",
+        "summary": "Fees and interest rollup per account (spec 6.6)",
+        "tags": [
+          "insights"
+        ],
+        "description": "Everything the taxonomy calls a fee, totalled per account — not spec 5.8’s findings. Spec 5.8 makes a judgement about which fees are worth reporting and applies spec 5.1’s floor; this makes none, so the rollup does not go blank when every individual fee falls below it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "description": "YYYY-MM-DD. Defaults to the first row in the ledger."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "description": "YYYY-MM-DD. Defaults to the last row in the ledger."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "accountIds",
+            "required": false,
+            "description": "Comma-separated. Spec 7.2’s coverage is the intersection across these accounts, so narrowing the selection can *widen* the covered window."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeesInsight"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/outliers": {
+      "get": {
+        "operationId": "getOutlierInsight",
+        "summary": "Spec 5.9’s outlier charges (spec 6.6)",
+        "tags": [
+          "insights"
+        ],
+        "description": "Read from spec 5.9’s findings rather than re-derived: the z-score and the baseline are that rule’s business, and a second implementation here would carry its own copy of thresholds spec 7.4 keeps in one config object. Includes dismissed rows — spec 6.6 is a page about what your money did, and a dismissed outlier is still an outlier.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleBackedInsight"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/small-spend": {
+      "get": {
+        "operationId": "getSmallSpendInsight",
+        "summary": "Spec 5.11’s high-frequency small spend, annualized (spec 6.6)",
+        "tags": [
+          "insights"
+        ],
+        "description": "Read from spec 5.11’s findings, for the same reason the outliers are. The annualized figure is the rule’s own `impactAnnualCents`, so the page and the finding card cannot disagree about it.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleBackedInsight"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "tags": [
@@ -8391,6 +9183,10 @@
     {
       "name": "data",
       "description": "Backup and export"
+    },
+    {
+      "name": "insights",
+      "description": "Spec 6.6’s category, mover, fee, outlier and small-spend views"
     },
     {
       "name": "llm",
