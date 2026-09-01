@@ -43,6 +43,16 @@
     />
   </ui-panel>
 
+  <!-- §6.8's Categories. Above Data for the reason AI assistance is: it holds a
+       decision — §5.4's overlap groups — and Data is housekeeping. -->
+  <ui-panel heading="Categories">
+    <ll-category-settings
+      [usage]="categories()"
+      [busy]="busy()"
+      (acted)="onCategoryAction($event)"
+    />
+  </ui-panel>
+
   <ui-panel heading="Data">
     @if (all) {
       <ll-data-settings
@@ -53,19 +63,5 @@
         (acted)="onDataAction($event)"
       />
     }
-  </ui-panel>
-
-  <!-- §6.8's one remaining section, stated rather than omitted. -->
-  <ui-panel heading="Not built yet">
-    <p class="empty">
-      §6.8 names six sections. This one has nothing underneath it, and a control that does
-      nothing is worse than an absence that explains itself.
-    </p>
-    <dl class="pending">
-      @for (item of unbuilt; track item.title) {
-        <dt>{{ item.title }}</dt>
-        <dd>{{ item.detail }}</dd>
-      }
-    </dl>
   </ui-panel>
 </div>

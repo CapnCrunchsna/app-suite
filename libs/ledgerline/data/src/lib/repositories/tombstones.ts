@@ -22,14 +22,16 @@ import type { TombstoneRecord } from '../records.js';
  * entity types to route on. `recurring_series` joined it when analysis started
  * writing: a re-run that re-groups a merchant's charges deletes the superseded
  * series, and a watermark query cannot see that any more than it can see a
- * deleted import.
+ * deleted import. `category` joined it when §6.8's taxonomy editor made a
+ * category something a person can remove.
  */
 export type TombstoneEntity =
   | 'account'
   | 'statement_import'
   | 'transaction'
   | 'raw_row'
-  | 'recurring_series';
+  | 'recurring_series'
+  | 'category';
 
 interface TombstoneRow {
   id: string;

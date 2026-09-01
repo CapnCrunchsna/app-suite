@@ -26,6 +26,11 @@ export interface ApiError {
   readonly message?: string;
   /** Present on `zero_amount_rows`: the rows that parsed to $0.00. */
   readonly rowIndexes?: number[];
+  readonly categoryUsage?: {
+    readonly transactions?: number;
+    readonly merchants?: number;
+    readonly children?: number;
+  };
 }
 
 export interface Account {
@@ -160,6 +165,30 @@ export interface Category {
   readonly parentId: string | null;
   readonly kind: 'spend' | 'fee' | 'transfer' | 'income';
   readonly overlapGroup: string | null;
+  readonly source: 'seed' | 'user';
+}
+
+export interface CategoryUsage {
+  readonly category: Category;
+  readonly transactions: number;
+  readonly merchants: number;
+  readonly children: number;
+  readonly deletable: boolean;
+}
+
+export interface CategoryUpdate {
+  readonly category: Category;
+  readonly kindChangedFrom: string | null;
+  readonly transactionsRepartitioned: number;
+  readonly rulesAffected: string[];
+}
+
+export interface CategoryDeleteResult {
+  readonly deletedId: string;
+  readonly reassignedTo: string | null;
+  readonly transactionsMoved: number;
+  readonly merchantsMoved: number;
+  readonly childrenPromoted: number;
 }
 
 export interface Job {

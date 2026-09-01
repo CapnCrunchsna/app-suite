@@ -1,8 +1,8 @@
 /**
  * §6.8, the Settings page.
  *
- * §6.8 names six sections. Five are built here and one is not, and which is which is
- * decided by what exists underneath rather than by what was quickest:
+ * §6.8 names six sections and, as of §9ad, all six are built. What each one is
+ * built *on* was decided by what exists underneath rather than by what was quickest:
  *
  * - **Analyzers** — built. §7.4's machinery has existed since the analyzers landed
  *   ("Every threshold in §5 is a default in a config object; Settings overrides it"),
@@ -22,12 +22,11 @@
  *   the half §6.8 describes as "a re-normalize trigger with job progress" — a sweep
  *   rebuilds derived state and is maintenance, which is what the rest of this page
  *   is (§9v).
- * - **Categories** — not built. Editing the taxonomy and assigning §5.4's overlap
- *   groups needs write endpoints §2.3 lists and §1 counts as missing.
- *
- * The one that remains unbuilt is rendered as a stated absence rather than omitted,
- * for the same reason the shell's rail renders an unbuilt section as a span: a page
- * that quietly lacks half its parts reads as a page that is finished.
+ * - **Categories** — built (§9ad), and the last of the six. It is two things wearing
+ *   one heading: a taxonomy editor, which is CRUD, and §5.4's overlap-group
+ *   assignment, which is not — a group shared by two categories is the claim that
+ *   they describe the same spending, and §9d recorded that path as dead because the
+ *   seed set deliberately left the column unset. This is where it stops being dead.
  *
  * Same split as the other five pages: the container owns all state and every request,
  * the children are presentational, and `LedgerlineApiService` is the one seam.
@@ -43,17 +42,68 @@ import {
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
 import { LedgerlineApiError } from '@metrum/api-client';
-import type { DegradedCallLog, LlmHealth, LlmSettings, Settings } from '@metrum/api-client';
+import type {
+  CategoryUpdate,
+  CategoryUsage,
+  DegradedCallLog,
+  LlmHealth,
+  LlmSettings,
+  Settings,
+  UpdateCategoryBody,
+} from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { AnalyzerSettings } from './analyzer-settings.js';
 import type { SettingChange } from './analyzer-settings.js';
+import { CategorySettings } from './category-settings.js';
+import type { CategoryAction } from './category-settings.js';
 import { DataSettings } from './data-settings.js';
 import { LlmSettingsPanel } from './llm-settings.js';
 import { RenormalizeSettings } from './renormalize-settings.js';
 import type { RenormalizeProgress } from './renormalize-settings.js';
 import type { LlmChange } from './llm-settings.js';
 import type { DataAction } from './data-settings.js';
+
+/**
+ * What a category edit actually did, in the terms §6.8 owes the user.
+ *
+ * A rename is a rename and says so briefly. A **kind** change is the one edit on this
+ * page whose whole effect is somewhere else, so it reports the API's count and the
+ * rules that read the column — never a count derived from what the page is holding.
+ * An **overlap group** names the claim it just made, because "saved" would describe a
+ * text field rather than the thing §5.4 will do with it.
+ */
+function describeCategoryEdit(
+  result: CategoryUpdate,
+  patch: UpdateCategoryBody,
+): string {
+  if (result.kindChangedFrom !== null) {
+    const moved = result.transactionsRepartitioned;
+    const rules = result.rulesAffected.join(' and ');
+    return (
+      `"${result.category.name}" is now ${result.category.kind} rather than ` +
+      `${result.kindChangedFrom}. ${moved} ${moved === 1 ? 'charge' : 'charges'} ` +
+      `${moved === 1 ? 'moves' : 'move'} between ${rules || 'the rules that read it'} ` +
+      'on the next analysis run.'
+    );
+  }
+
+  if (patch.overlapGroup !== undefined) {
+    return result.category.overlapGroup === null
+      ? `"${result.category.name}" is no longer in an overlap group.`
+      : `"${result.category.name}" is in the "${result.category.overlapGroup}" group. Two or ` +
+          'more categories in one group is what the duplicate check looks for — run an ' +
+          'analysis to see it applied.';
+  }
+
+  if (patch.parentId !== undefined) {
+    return result.category.parentId === null
+      ? `"${result.category.name}" moved to the top level.`
+      : `"${result.category.name}" moved under another category.`;
+  }
+
+  return `Renamed to "${result.category.name}".`;
+}
 
 /**
  * What a provider change actually did, in the terms the user was deciding in.
@@ -85,20 +135,16 @@ function describeLlmChange(change: LlmChange): string {
   }
 }
 
-/** §6.8's sections with nothing behind them yet, and the reason in each case. Stated
- *  rather than omitted — see the header. */
-const UNBUILT = [
-  {
-    title: 'Categories',
-    detail:
-      'The taxonomy is seeded and readable (§5’s categories, `GET /api/categories`), but ' +
-      'editing it and assigning §5.4’s overlap groups needs write endpoints that do not exist.',
-  },
-] as const;
-
 @Component({
   selector: 'll-settings-page',
-  imports: [Panel, AnalyzerSettings, DataSettings, LlmSettingsPanel, RenormalizeSettings],
+  imports: [
+    Panel,
+    AnalyzerSettings,
+    CategorySettings,
+    DataSettings,
+    LlmSettingsPanel,
+    RenormalizeSettings,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
@@ -109,7 +155,6 @@ export class SettingsPage {
   protected readonly notice = signal<string | null>(null);
   protected readonly busy = signal(false);
   protected readonly lastBackupPath = signal<string | null>(null);
-  protected readonly unbuilt = UNBUILT;
 
   /**
    * §6.8's Test Connection, held here rather than in the panel.
@@ -202,6 +247,23 @@ export class SettingsPage {
   /** Null when no sweep is in flight. §2.7's `{ state, progress, message }`, which
    *  §6.8 asks to be shown rather than a spinner. */
   protected readonly sweep = signal<RenormalizeProgress | null>(null);
+
+  /**
+   * §6.8's taxonomy, with what points at each row.
+   *
+   * On `revision` like everything else here, because a re-normalize moves the counts
+   * this section renders: §2.5's normalize stage assigns a category from the
+   * merchant's default, so a sweep can change how many charges sit in one. A section
+   * that refreshed on its own would show a delete button for a category that had
+   * acquired forty charges while the page was open.
+   */
+  private readonly categoriesResource = resource({
+    params: () => this.revision(),
+    loader: () => this.api.listCategoryUsage(),
+    defaultValue: [] as CategoryUsage[],
+  });
+
+  protected readonly categories = computed(() => this.categoriesResource.value() ?? []);
 
   // ---------------------------------------------------------- handlers ---
 
@@ -325,6 +387,64 @@ export class SettingsPage {
       });
     } finally {
       this.probing.set(false);
+    }
+  }
+
+  /**
+   * §6.8's Categories writes, and the two that owe the user a sentence.
+   *
+   * **A kind change** is reported with the API's own count and rule list rather than
+   * a generic "saved". §5.8 and §6.6 read `kind = 'fee'` and §5.10 trends only
+   * `kind = 'spend'`, so moving a category between them moves every charge in it
+   * between those rules — the one edit on this page whose consequence is entirely
+   * off-screen.
+   *
+   * **A delete** reports what it moved. `category_in_use` comes back as the API's own
+   * message, which names the counts and the way through; nothing here rewords it,
+   * because the page's version of that sentence would be a second copy of a rule the
+   * database owns.
+   *
+   * An **overlap-group** change says the least, deliberately: the claim it makes is
+   * §5.4's to act on at the next analysis run, and this page cannot know how many
+   * series will land in the group without re-deriving the rule.
+   */
+  protected async onCategoryAction(action: CategoryAction): Promise<void> {
+    switch (action.kind) {
+      case 'create':
+        await this.write(async () => {
+          const created = await this.api.createCategory(action.draft);
+          this.notice.set(`"${created.name}" added.`);
+        });
+        return;
+
+      case 'edit':
+        await this.write(async () => {
+          const result = await this.api.updateCategory(action.id, action.patch);
+          this.notice.set(describeCategoryEdit(result, action.patch));
+        });
+        return;
+
+      case 'delete':
+        await this.write(async () => {
+          const result = await this.api.deleteCategory(
+            action.id,
+            action.reassignTo === null ? {} : { reassignTo: action.reassignTo },
+          );
+          this.notice.set(
+            result.reassignedTo === null
+              ? 'Category deleted.'
+              : `Category deleted. ${result.transactionsMoved} ` +
+                  `${result.transactionsMoved === 1 ? 'charge' : 'charges'} and ` +
+                  `${result.merchantsMoved} ${result.merchantsMoved === 1 ? 'merchant' : 'merchants'} ` +
+                  'moved.' +
+                  (result.childrenPromoted > 0
+                    ? ` ${result.childrenPromoted} ` +
+                      `${result.childrenPromoted === 1 ? 'subcategory' : 'subcategories'} ` +
+                      'moved to the top level.'
+                    : ''),
+          );
+        });
+        return;
     }
   }
 

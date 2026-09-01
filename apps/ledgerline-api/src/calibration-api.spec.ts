@@ -151,6 +151,11 @@ describe('ledgerline-api calibration (§7.6, §9ab)', () => {
    * other case here reaches the router through `app.inject`, which never sends a
    * preflight — so a PUT route the CORS header did not list passed 297 tests and
    * failed on the first keystroke in the actual page.
+   *
+   * It is asserted over the whole verb list rather than only this route's, because
+   * the failure it guards is *adding* a method — §6.8's Categories editor was the
+   * next thing to reach for POST, PATCH and DELETE on a surface that had only ever
+   * read (§9ad).
    */
   it('allows the methods its own routes use, so a browser can reach them', async () => {
     const response = await app.inject({
@@ -159,8 +164,10 @@ describe('ledgerline-api calibration (§7.6, §9ab)', () => {
       headers: { origin: 'http://localhost:4200' },
     });
 
-    expect(response.headers['access-control-allow-methods']).toContain('PUT');
-    expect(response.headers['access-control-allow-methods']).toContain('DELETE');
+    const allowed = response.headers['access-control-allow-methods'] as string;
+    for (const method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) {
+      expect(allowed).toContain(method);
+    }
   });
 
   // ------------------------------------------------------------- the write ---

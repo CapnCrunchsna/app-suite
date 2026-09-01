@@ -77,7 +77,7 @@ export class LedgerlineStore {
     this.tombstones = new TombstoneRepository(db, clock);
     this.accounts = new AccountRepository(db, clock, this.tombstones);
     this.formatProfiles = new FormatProfileRepository(db, clock);
-    this.merchants = new MerchantRepository(db, clock);
+    this.merchants = new MerchantRepository(db, clock, this.tombstones);
     this.imports = new ImportRepository(db, clock, this.tombstones);
     this.transactions = new TransactionRepository(db, clock, this.tombstones);
     this.settings = new SettingsRepository(db, clock);

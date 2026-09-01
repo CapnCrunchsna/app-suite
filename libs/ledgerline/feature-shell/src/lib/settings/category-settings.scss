@@ -1,0 +1,250 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.lede {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: var(--text, #dcefeb);
+}
+
+.note {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.none {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.block {
+  margin-bottom: 18px;
+}
+
+.block:last-child {
+  margin-bottom: 0;
+}
+
+.block__title {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text, #dcefeb);
+}
+
+/* ---------------------------------------------------- §5.4's overlap groups --- */
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 6px;
+  background: var(--surface-2, #143034);
+  font-size: 0.74rem;
+}
+
+/* A group of one cannot overlap with anything, so it is drawn as the label it is
+ * rather than as a rule that is about to fire. */
+.group--inert {
+  opacity: 0.62;
+}
+
+.group__name {
+  font-family: var(--mono, ui-monospace, Menlo, monospace);
+  color: var(--accent, #2dd4bf);
+}
+
+.group__members {
+  color: var(--text, #dcefeb);
+}
+
+.group__member::after {
+  content: ', ';
+}
+
+.group__member:last-child::after {
+  content: '';
+}
+
+.group__state {
+  margin-left: auto;
+  color: var(--text-dim, #7ea8a1);
+}
+
+/* ------------------------------------------------------------ the taxonomy --- */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  padding: 4px 0;
+}
+
+/* The one visual difference a child gets. Two levels is the whole depth, so an
+ * indent is enough and a tree line would be scaffolding for a structure that
+ * cannot grow. */
+.row--child {
+  padding-left: 18px;
+}
+
+.row__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.row__name,
+.row__group,
+.row__kind,
+.row__parent,
+.add__name,
+.add__kind,
+.add__parent,
+.confirm__target {
+  padding: 3px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface, #0f2124);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.74rem;
+  min-width: 0;
+}
+
+.row__name,
+.add__name {
+  flex: 1 1 150px;
+}
+
+.row__group,
+.add__kind,
+.add__parent,
+.row__kind,
+.row__parent {
+  flex: 0 1 auto;
+}
+
+.row__group {
+  width: 130px;
+}
+
+.row__name:focus,
+.row__group:focus,
+.add__name:focus {
+  outline: none;
+  border-color: var(--accent, #2dd4bf);
+}
+
+.row__parent--fixed {
+  padding: 3px 7px;
+  font-size: 0.72rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.row__usage {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+}
+
+.row__source {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2, #143034);
+  font-size: 0.65rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.row__delete,
+.confirm__go,
+.confirm__cancel,
+.add__go {
+  padding: 3px 10px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 4px;
+  background: var(--surface-2, #143034);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.row__delete:hover:not(:disabled),
+.confirm__cancel:hover:not(:disabled) {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.add__go {
+  border-color: var(--accent, #2dd4bf);
+}
+
+.row__delete:disabled,
+.confirm__go:disabled,
+.add__go:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------- the confirm --- */
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger-soft, #eda596);
+  border-radius: 6px;
+  background: var(--surface-2, #143034);
+  font-size: 0.73rem;
+  color: var(--text, #dcefeb);
+}
+
+.confirm__note {
+  flex-basis: 100%;
+  font-size: 0.7rem;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.confirm__go {
+  border-color: var(--danger-soft, #eda596);
+  color: var(--danger-soft, #eda596);
+}
+
+/* ----------------------------------------------------------------- the add --- */
+
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}

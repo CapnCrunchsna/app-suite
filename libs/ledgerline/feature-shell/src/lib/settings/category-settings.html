@@ -1,0 +1,234 @@
+<p class="lede">
+  The categories your charges are filed under. Renaming one is cosmetic; the two things
+  here that change what the app finds are the <strong>kind</strong> and the
+  <strong>overlap group</strong>.
+</p>
+
+<!-- §5.4's input, and the half of this section with analytical weight. First, because
+     it is the thing someone came here to do — the rest is housekeeping. -->
+<section class="block">
+  <h3 class="block__title">Overlap groups</h3>
+  <p class="note">
+    Two categories sharing a group is the claim that they describe the same spending —
+    three music services, two cloud drives. That is what lets Ledgerline say "you have 3
+    music subscriptions totalling $32/mo". A group with one category in it is just a
+    label: nothing can overlap with itself.
+  </p>
+
+  @if (groups().length === 0) {
+    <p class="none">
+      No category carries a group yet, so that half of the duplicate check currently
+      finds nothing. Set one on two or more categories below to turn it on.
+    </p>
+  } @else {
+    <ul class="groups">
+      @for (group of groups(); track group.name) {
+        <li class="group" [class.group--inert]="!group.live">
+          <code class="group__name">{{ group.name }}</code>
+          <span class="group__members">{{ group.members.length }}:
+            @for (member of group.members; track member.id) {
+              <span class="group__member">{{ member.name }}</span>
+            }
+          </span>
+          @if (!group.live) {
+            <span class="group__state">only one category — nothing to compare it with</span>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<!-- The taxonomy itself. Two levels deep and no more: nothing in the analyzers rolls a
+     child into its parent, so a third level would be structure the app never reads. -->
+<section class="block">
+  <h3 class="block__title">Taxonomy</h3>
+
+  <datalist id="ll-overlap-groups">
+    @for (group of knownGroups(); track group) {
+      <option [value]="group"></option>
+    }
+  </datalist>
+
+  <ul class="rows">
+    @for (row of rows(); track row.usage.category.id) {
+      @let category = row.usage.category;
+      <!-- The id on the row rather than only in the bindings: every root's name also
+           appears inside every other row's parent `<select>`, so "the row for
+           Groceries" is not a thing text can identify. -->
+      <li class="row" [class.row--child]="row.child" [attr.data-category]="category.id">
+        <div class="row__main">
+          <input
+            class="row__name"
+            type="text"
+            [value]="category.name"
+            [disabled]="busy()"
+            [attr.aria-label]="'Name of ' + category.name"
+            (blur)="rename(row.usage, $any($event.target).value)"
+            (keydown.enter)="rename(row.usage, $any($event.target).value)"
+          />
+
+          <select
+            class="row__kind"
+            [value]="category.kind"
+            [disabled]="busy()"
+            [title]="kindConsequence[category.kind]"
+            [attr.aria-label]="'Kind of ' + category.name"
+            (change)="setKind(row.usage, $any($event.target).value)"
+          >
+            @for (kind of kinds; track kind.id) {
+              <option [value]="kind.id">{{ kind.label }}</option>
+            }
+          </select>
+
+          <input
+            class="row__group"
+            type="text"
+            list="ll-overlap-groups"
+            placeholder="no group"
+            [value]="category.overlapGroup ?? ''"
+            [disabled]="busy()"
+            [attr.aria-label]="'Overlap group of ' + category.name"
+            (blur)="setGroup(row.usage, $any($event.target).value)"
+            (keydown.enter)="setGroup(row.usage, $any($event.target).value)"
+          />
+
+          @if (row.usage.children > 0) {
+            <span class="row__parent row__parent--fixed" title="It has subcategories of its own, and the taxonomy is two levels deep."
+              >top level</span
+            >
+          } @else {
+            <select
+              class="row__parent"
+              [value]="category.parentId ?? ''"
+              [disabled]="busy()"
+              [attr.aria-label]="'Parent of ' + category.name"
+              (change)="setParent(row.usage, $any($event.target).value)"
+            >
+              <option value="">top level</option>
+              @for (parent of parents(); track parent.id) {
+                @if (parent.id !== category.id) {
+                  <option [value]="parent.id">under {{ parent.name }}</option>
+                }
+              }
+            </select>
+          }
+
+          <span class="row__usage">{{ usageLabel(row.usage) }}</span>
+
+          <!-- §7.5: shown, never acted on. It is here because an edited seed row stops
+               moving with the shipped set, and that is worth knowing before you edit one. -->
+          @if (category.source === 'user') {
+            <span class="row__source" title="Yours. The shipped taxonomy no longer updates it."
+              >yours</span
+            >
+          }
+
+          @if (arming() !== category.id) {
+            <button
+              type="button"
+              class="row__delete"
+              [disabled]="busy()"
+              (click)="arm(row.usage)"
+            >
+              Delete
+            </button>
+          }
+        </div>
+
+        <!-- Armed, not applied. A second explicit click performs it — §6.9's rule,
+             inherited because it is the same decision. -->
+        @if (arming() === category.id) {
+          <div class="confirm" role="group" [attr.aria-label]="'Delete ' + category.name">
+            @if (row.usage.deletable) {
+              <span class="confirm__what">Nothing points at {{ category.name }}. Delete it?</span>
+            } @else {
+              <span class="confirm__what">
+                {{ usageLabel(row.usage) }} still point at {{ category.name }}. Move
+                @if (row.usage.children > 0) { the charges and merchants } @else { them }
+                to
+              </span>
+              <select
+                class="confirm__target"
+                [disabled]="busy()"
+                aria-label="Move to"
+                (change)="reassignTo.set($any($event.target).value)"
+              >
+                <option value="">choose a category…</option>
+                @for (target of targetsFor(category.id); track target.id) {
+                  <option [value]="target.id">{{ target.name }}</option>
+                }
+              </select>
+              @if (row.usage.children > 0) {
+                <span class="confirm__note">
+                  Its subcategories move to the top level rather than following it.
+                </span>
+              }
+            }
+
+            <button
+              type="button"
+              class="confirm__go"
+              [disabled]="busy() || !canConfirm(row.usage)"
+              (click)="confirmDelete(row.usage)"
+            >
+              @if (row.usage.deletable) { Delete } @else { Move and delete }
+            </button>
+            <button type="button" class="confirm__cancel" (click)="disarm()">Cancel</button>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+</section>
+
+<section class="block">
+  <h3 class="block__title">Add a category</h3>
+  <div class="add">
+    <input
+      class="add__name"
+      type="text"
+      placeholder="Name"
+      aria-label="New category name"
+      [disabled]="busy()"
+      [ngModel]="draftName()"
+      (ngModelChange)="draftName.set($event)"
+      (keydown.enter)="create()"
+    />
+
+    <select
+      class="add__kind"
+      aria-label="New category kind"
+      [disabled]="busy()"
+      [ngModel]="draftKind()"
+      (ngModelChange)="draftKind.set($event)"
+    >
+      @for (kind of kinds; track kind.id) {
+        <option [value]="kind.id">{{ kind.label }}</option>
+      }
+    </select>
+
+    <select
+      class="add__parent"
+      aria-label="New category parent"
+      [disabled]="busy()"
+      [ngModel]="draftParent()"
+      (ngModelChange)="draftParent.set($event)"
+    >
+      <option value="">top level</option>
+      @for (parent of parents(); track parent.id) {
+        <option [value]="parent.id">under {{ parent.name }}</option>
+      }
+    </select>
+
+    <button
+      type="button"
+      class="add__go"
+      [disabled]="busy() || draftName().trim() === ''"
+      (click)="create()"
+    >
+      Add
+    </button>
+  </div>
+  <p class="note">{{ kindConsequence[draftKind()] }}</p>
+</section>

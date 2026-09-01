@@ -26,6 +26,7 @@ import { ImportNotReadyError } from './import-service.js';
 import { registerAccountRoutes } from './routes/accounts.js';
 import { registerAskRoutes } from './routes/ask.js';
 import { registerCalibrationRoutes } from './routes/calibration.js';
+import { registerCategoryRoutes } from './routes/categories.js';
 import { registerDataRoutes } from './routes/data.js';
 import { registerFindingRoutes } from './routes/findings.js';
 import { registerFormatProfileRoutes } from './routes/format-profiles.js';
@@ -226,6 +227,7 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerTransactionRoutes(app, options.context);
   registerTransferRoutes(app, options.context);
   registerMerchantRoutes(app, options.context);
+  registerCategoryRoutes(app, options.context);
   registerJobRoutes(app, options.context);
   registerFindingRoutes(app, options.context);
   registerSeriesRoutes(app, options.context);

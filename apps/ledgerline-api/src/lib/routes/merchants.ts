@@ -1,6 +1,10 @@
 /**
- * `GET /api/merchants` (§2.3), the category list behind it, §4.1 step 7's review
- * queue, and the one action that resolves what the queue asks.
+ * `GET /api/merchants` (§2.3), §4.1 step 7's review queue, and the one action that
+ * resolves what the queue asks.
+ *
+ * The category surface used to live here as a single `GET`. It moved to
+ * `categories.ts` when §6.8's editor gave it four more routes and an argument of its
+ * own — see that file's header.
  *
  * §2.3's `PATCH /api/merchants/:id` and `POST /api/merchants/aliases` remain
  * unbuilt: the alias write a merchant *correction* makes still happens as a
@@ -226,21 +230,5 @@ export function registerMerchantRoutes(app: FastifyInstance, context: Ledgerline
 
       return { merchantId: intoMerchantId, aliasKeysWritten, transactionsAffected, jobId, coalesced };
     },
-  );
-
-  app.get(
-    '/api/categories',
-    {
-      schema: {
-        summary: 'Spend categories',
-        operationId: 'listCategories',
-        tags: ['merchants'],
-        response: {
-          200: { type: 'array', items: ref('Category') },
-          ...errorResponses,
-        },
-      },
-    },
-    async () => context.store.merchants.listCategories(),
   );
 }

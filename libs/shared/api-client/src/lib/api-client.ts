@@ -23,6 +23,9 @@ import type {
   MerchantReviewQueue,
   MerchantMergeResult,
   Category,
+  CategoryUsage,
+  CategoryUpdate,
+  CategoryDeleteResult,
   Job,
   Finding,
   FindingPage,
@@ -224,6 +227,26 @@ export type MergeMerchantBody = {
 };
 
 export type ListCategoriesResponse = Category[];
+
+export type CreateCategoryBody = {
+  readonly name: string;
+  readonly kind: 'spend' | 'fee' | 'transfer' | 'income';
+  readonly parentId?: string | null;
+  readonly overlapGroup?: string | null;
+};
+
+export type ListCategoryUsageResponse = CategoryUsage[];
+
+export type UpdateCategoryBody = {
+  readonly name?: string;
+  readonly kind?: 'spend' | 'fee' | 'transfer' | 'income';
+  readonly parentId?: string | null;
+  readonly overlapGroup?: string | null;
+};
+
+export interface DeleteCategoryQuery {
+  readonly reassignTo?: string;
+}
 
 export interface ListJobsQuery {
   readonly limit?: number;
@@ -638,6 +661,49 @@ export class LedgerlineApi {
   /** Spend categories */
   listCategories(): Promise<ListCategoriesResponse> {
     return this.request<ListCategoriesResponse>('GET', `/api/categories`, {
+    });
+  }
+
+  /**
+   * Create a category
+   *
+   * Spec 6.8. The row is `source = "user"` and the boot re-seed will never overwrite it (migration 009).
+   */
+  createCategory(body: CreateCategoryBody): Promise<Category> {
+    return this.request<Category>('POST', `/api/categories`, {
+      body,
+    });
+  }
+
+  /**
+   * Every category with what refers to it
+   *
+   * Spec 6.8’s taxonomy editor. `deletable` is the answer spec 3.2’s `ON DELETE RESTRICT` would give: false when any transaction, merchant default or subcategory still points here.
+   */
+  listCategoryUsage(): Promise<ListCategoryUsageResponse> {
+    return this.request<ListCategoryUsageResponse>('GET', `/api/categories/usage`, {
+    });
+  }
+
+  /**
+   * Rename, reparent, re-kind or group a category
+   *
+   * Spec 6.8, including spec 5.4’s `overlapGroup`. A `kind` change is reported rather than performed silently: spec 5.8 and spec 6.6 read `fee` and spec 5.10 reads `spend`, so moving between them moves every charge in this category between those rules on the next analysis run. Any edit sets `source = "user"`, which is what stops the next boot’s re-seed from undoing it.
+   */
+  updateCategory(id: string, body: UpdateCategoryBody): Promise<CategoryUpdate> {
+    return this.request<CategoryUpdate>('PATCH', `/api/categories/${encodeURIComponent(String(id))}`, {
+      body,
+    });
+  }
+
+  /**
+   * Delete a category, optionally moving what points at it first
+   *
+   * Refuses with `category_in_use` and the counts when anything still references it (spec 3.2). Pass `reassignTo` to move transactions and merchant defaults to another category first; subcategories are promoted to the top level rather than moved, since only a root may have children.
+   */
+  deleteCategory(id: string, query: DeleteCategoryQuery = {}): Promise<CategoryDeleteResult> {
+    return this.request<CategoryDeleteResult>('DELETE', `/api/categories/${encodeURIComponent(String(id))}`, {
+      query,
     });
   }
 

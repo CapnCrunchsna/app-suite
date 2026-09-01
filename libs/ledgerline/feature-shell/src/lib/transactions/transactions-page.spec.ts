@@ -155,6 +155,7 @@ const CATEGORIES: Category[] = [
     parentId: null,
     kind: 'spend',
     overlapGroup: null,
+    source: 'seed',
   },
   {
     id: 'groceries',
@@ -162,6 +163,7 @@ const CATEGORIES: Category[] = [
     parentId: null,
     kind: 'spend',
     overlapGroup: null,
+    source: 'seed',
   },
   {
     id: 'shopping',
@@ -169,6 +171,7 @@ const CATEGORIES: Category[] = [
     parentId: null,
     kind: 'spend',
     overlapGroup: null,
+    source: 'seed',
   },
   {
     id: 'transfers',
@@ -176,6 +179,7 @@ const CATEGORIES: Category[] = [
     parentId: null,
     kind: 'transfer',
     overlapGroup: null,
+    source: 'seed',
   },
 ];
 

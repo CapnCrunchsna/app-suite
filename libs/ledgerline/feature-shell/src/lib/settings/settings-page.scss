@@ -32,19 +32,5 @@
   color: var(--warn, #f0b429);
 }
 
-.pending {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 8px 16px;
-  margin: 14px 0 0;
-  font-size: 0.78rem;
-}
-
-.pending dt {
-  color: var(--text, #dcefeb);
-}
-
-.pending dd {
-  margin: 0;
-  color: var(--text-dim, #7ea8a1);
-}
+/* `.pending` went with §6.8's last stated absence — Categories was built in §9ad and
+ * there is nothing left for the "Not built yet" panel to hold. */

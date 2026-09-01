@@ -1,0 +1,32 @@
+-- Where a category came from — the column §6.8's taxonomy editor cannot work without.
+--
+-- §3.1 gives `merchant_canonical` a `source` and `category` none, which was harmless
+-- for as long as the only writer was the seed. It stops being harmless the moment a
+-- person can edit the taxonomy: `seedMerchants()` re-upserts every row of
+-- `SEED_CATEGORIES` at **every boot**, by id, with `ON CONFLICT DO UPDATE`. Rename
+-- "Dining & Coffee" to "Eating out" in the editor and the next restart renames it back,
+-- silently, with no error and nothing on screen to explain it.
+--
+-- §4.3 already settled this argument for aliases: "a `user` alias, permanent,
+-- top-precedence, immune to a later re-seed or a better model." The same rule, applied
+-- to the same problem — a shipped judgement and a human one competing for one row —
+-- gives the same answer, so this column is that rule's storage rather than a new idea.
+-- The seed upsert carries a `WHERE source = 'seed'` on its conflict clause, and a row
+-- a person has touched is one the seed no longer owns.
+--
+-- ## Two values, not §4.3's four
+--
+-- `merchant_alias.source` has four because four different things write aliases. Two
+-- things write categories: the shipped set, and a person. `rule` and `llm` are absent
+-- deliberately — §9x resolved that "a category name the taxonomy does not have is
+-- dropped, never created", so no model has ever inserted a row here and none may.
+--
+-- ## Editing a seed row makes it yours, and that is one-way
+--
+-- There is no path back to `seed`. That is the same asymmetry §4.3 accepts: the
+-- alternative is a "restore the shipped version" affordance that would have to decide
+-- what happens to the transactions categorized under the name you are discarding, and
+-- deleting your own edit is already spelled `PATCH` back to the old name.
+
+ALTER TABLE category ADD COLUMN source TEXT NOT NULL DEFAULT 'seed'
+  CHECK (source IN ('seed', 'user'));

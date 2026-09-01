@@ -75,9 +75,10 @@ As of 2026-08-25 §6.8's **Settings page** is built on §2.3's `/api/settings`, 
 stops being a promise: every threshold in §5 is editable with its shipped default beside it, the
 current `config_hash` is on the page, and each rule has a switch that moves that hash — so §5.1
 re-evaluates the rule's dismissals when it comes back. §2.3's `DELETE /api/data` is built
-alongside it and takes its own backup before deleting anything. **One of §6.8's six sections
-cannot be built yet** — Categories needs endpoints §2.3 lists as missing — and it is stated on
-the page rather than omitted. §9k records the reasoning.
+alongside it and takes its own backup before deleting anything. §9k recorded that one of that
+page's six sections could not be built at all; **as of 2026-09-01 all six are built**, the last
+being **Categories** — a taxonomy editor and, with it, the first way anything has ever written
+§5.4's `overlap_group`, which §9d recorded as a dead path. §9ad records what that needed.
 
 §4.1 step 7's **review queue reached a person on 2026-08-27** as a section of that page (§9r)
 and **moved off it the next day** into **§6.9's Review page**, with a count in the rail — a
@@ -95,7 +96,7 @@ records what it proposes — — **every one of §6's nine pages now exists**. �
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab and §9ac list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac and §9ad list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -263,6 +264,9 @@ serialization out of the box, and a clean Nx build target.
 | `POST` | `/api/transactions/bulk` | Apply one change to a filter-matched set. `?dryRun=true` returns the match count only — this is what backs the UI's "apply to all 47 matching". |
 | `GET` | `/api/merchants` · `PATCH /:id` · `POST /api/merchants/aliases` | Canonical merchants and alias management. |
 | `GET` | `/api/categories` | Spend categories, for §6.3's category filter and inline assignment. |
+| `GET` | `/api/categories/usage` | Every category with what points at it, and whether §3.2 would let it be deleted — §6.8's taxonomy editor. Separate from the list above because that one is a dropdown and a dropdown does not need three counts per entry (§9ad). |
+| `POST` | `/api/categories` · `PATCH /:id` | Create and edit, including §5.4's `overlapGroup`. A `kind` change returns how many charges it re-partitions and which rules read the column — §5.8 and §6.6 read `fee`, §5.10 reads `spend`. Any edit makes the row `source = 'user'`, which is what stops the boot re-seed undoing it. |
+| `DELETE` | `/api/categories/:id` | Refuses with a count while anything still points at it (§3.2). `?reassignTo=` moves the charges and merchant defaults first; subcategories are promoted to the top level. |
 | `GET` | `/api/merchants/review-queue` | **Merge candidates**, provisional merchants, and sub-floor LLM proposals awaiting a decision. A merge candidate is a pair of merchants the chain resolved separately and cannot itself tell apart — §9p. Read-only: it proposes, and §4.3 owns every write. |
 | `POST` | `/api/merchants/:id/merge` | Treat this merchant as another one, retroactively. Writes a `user` alias for every descriptor spelling of `:id` and enqueues §4.3's re-normalize job. The answer to a merge candidate above, and the only write on this surface — §9q. |
 | `POST` | `/api/transfers/propose` · `POST /api/transfers/:id/confirm` · `DELETE /api/transfers/:id` | Transfer link proposals and their resolution (§2.6). |
@@ -507,7 +511,7 @@ Migrations are numbered SQL files applied at boot and tracked in `schema_migrati
 | `transaction_source` | `transaction_id`, `import_id` — many-to-many; a row present in two overlapping statements has two sources |
 | `merchant_canonical` | `id`, `canonical_name`, `display_name`, `website`, `default_category_id`, `is_known_subscription`, `is_transfer_kind`, `overlap_group`, `source` |
 | `merchant_alias` | `id`, `alias_key`, `merchant_id`, `match_type` (exact/prefix/fuzzy), `confidence`, `source` (seed/rule/llm/user) |
-| `category` | `id`, `name`, `parent_id`, `kind` (spend/fee/transfer/income), `overlap_group` |
+| `category` | `id`, `name`, `parent_id`, `kind` (spend/fee/transfer/income), `overlap_group`, `source` (seed/user — migration 009, §9ad) |
 | `recurring_series` | `id`, `merchant_id`, `account_id`, `cadence_days`, `cadence_label`, `cadences_per_year`, `amount_cents_current`, `amount_cents_first`, `first_seen`, `last_seen`, `next_expected`, `occurrence_count`, `status` (active/lapsed/cancelled), `user_status`, `cancellation_url`, `notes`, `regularity`, `confidence` |
 | `transfer_link` | `id`, `debit_transaction_id`, `credit_transaction_id`, `score`, `state` (proposed/confirmed/rejected/auto), `rule_id`, `created_at` |
 | `transfer_rule` | `id`, `descriptor_pattern`, `debit_account_id`, `credit_account_id`, `created_at` |
@@ -2515,6 +2519,71 @@ a corpus that quietly rewrites its own ground truth.
 cleans a descriptor but matches no merchant, the honest entry is that it could not place
 it — which is a different fact from placing it wrongly, and §4.1 step 7's queue is where
 that one belongs.
+
+## 9ad. Amendments from implementation — 2026-09-01 (§6.8, §3.1, §2.3, §5.4)
+
+§6.8's **Categories** section — "taxonomy editor and overlap-group assignment" — was the
+last of that section's six with nothing underneath it, and §9k had rendered it as a stated
+absence since 2026-08-25. Building it needed five decisions this document does not make,
+one column §3.1 does not have, and one limitation worth naming rather than discovering.
+
+The section is two things wearing one heading, and they are not the same weight. Renaming
+a category and moving it under a parent is CRUD: worth having, because a taxonomy nobody
+can edit stays wrong, but nothing downstream changes shape when "Dining & Coffee" becomes
+"Eating out". `overlap_group` is not CRUD. §5.4 defines it as "a curated subset of
+categories where redundancy is meaningful", and putting two categories in one group is the
+claim **these describe the same spending** — the entire input to that rule's
+category-overlap half. §9d recorded that path as dead, because §9a's `SEED_CATEGORIES`
+deliberately left the column unset rather than guess at the answer to the rule's hardest
+question. This is where it stops being dead, and the guess is still not the app's to make.
+
+| § | Amendment | Why |
+|---|---|---|
+| 3.1 | **`category` gains a `source`** (`seed` / `user`, migration 009), and the boot re-seed may only overwrite a row that is still `seed`. | §3.1 gives `merchant_canonical` a `source` and `category` none, which was harmless while the seed was the only writer. It stops being harmless the instant a person can edit the taxonomy: the composition root re-upserts every row of `SEED_CATEGORIES` **at every boot**, by id. Without the guard, a rename lasts until the next restart and `overlap_group` goes quietly back to NULL, taking §5.4's only claim with it. §4.3 settled the identical question for aliases — "permanent, top-precedence, immune to a later re-seed" — and this is that rule's storage rather than a new idea. |
+| 2.3 | **`POST /api/categories`, `PATCH /api/categories/:id`, `DELETE /api/categories/:id` and `GET /api/categories/usage`.** | §2.3 lists one category row, the `GET` §9a added for §6.3's dropdown. §6.8 names a section that cannot be built from a read. |
+| 6.8 | **A `kind` change is reported, never performed silently:** the write returns how many charges move and which rules read the column. | §5.8's fee rollup and §6.6's Insights select `kind = 'fee'`; §5.10 trends only `kind = 'spend'`. Flipping one moves every charge in the category between those rules, and it is the one edit on that page whose entire effect is off-screen. A row returned as though it were a rename would be the most consequential invisible write in the app. |
+| 6.8 | **A category in use cannot be deleted, and the refusal carries the counts and the way through** — `?reassignTo=` moves the rows first. | §3.2's `ON DELETE RESTRICT` would refuse anyway; the database is not the problem. The problem is that a foreign-key error names nothing the person can see, on a screen that offered them the button. Reassignment is not a second endpoint because it is not a second intention: nobody moves 42 charges to Groceries for its own sake, and splitting it in two would let the move succeed and the delete fail, leaving a merge nobody asked for. |
+| 3.1 | **The taxonomy is capped at two levels: a parent must itself be a root.** | `parent_id` is in §3.1 and **nothing in §5 or §6 reads it** — no rule sums a child into its parent, and §5.10 trends each category id on its own. A deeper hierarchy would be structure the app displays and never uses. Two levels is the depth the editor can draw, and an editor that cannot draw what it can create is how a taxonomy becomes unnavigable. |
+| 3.1 | **Category names are unique case-insensitively, enforced at the API rather than by a constraint.** | §3.1 puts no UNIQUE on the column and adding one now would need a migration over rows that may already violate it. Two categories called "Streaming" and "streaming" are one mistake rather than two categories, and the write is the place that knows which. |
+
+**Editing a shipped category makes it yours, and that is one-way.** Any `PATCH` sets
+`source = 'user'`, including on a seed row, because an edit the next boot reverts is worse
+than no editor at all. There is no path back to `seed`. That is the same asymmetry §4.3
+accepts for aliases: the alternative is a "restore the shipped version" affordance that
+would have to decide what happens to the charges filed under the name being discarded, and
+discarding your own edit is already spelled as editing it back.
+
+**A reassignment does not rewrite `category_source`.** Moving 42 charges out of a category
+that is about to be deleted is a *merge of two categories*, not a re-categorization of the
+rows in them. The person who filed a charge under "Streaming" still filed it, and
+overwriting their provenance to make the app look like the author would cost §7.6 the
+distinction it measures normalization accuracy with.
+
+**Subcategories are promoted to the top level rather than following the delete.** Only a
+root may have children under the cap above, so promotion is always legal where re-parenting
+under an arbitrary target would not be — the target may itself be a child.
+
+**§5.4's primary path still has no editor, and this section is not it.** §9d records that
+the rule "reads the **merchant's** `overlap_group` first and the charges' categories
+second", because a series has a merchant but no single category. §6.8 files overlap groups
+under **Categories**, so that is what was built, and it is enough to make the rule fire for
+the first time. But the merchant-level column — the one that wins — is still writable only
+by the seed. That is a gap in §6, not in this section: it belongs beside the merchant, and
+§6.3's merchant edit or §6.9's Review is where it would go.
+
+**Two `source` values, not §4.3's four.** Four things write aliases; two write categories.
+`rule` and `llm` are absent deliberately — §9x settled that "a category name the taxonomy
+does not have is dropped, never created", so no model has ever inserted a row here and
+none may.
+
+**Deletion writes a §3.4 tombstone**, which adds `category` to that table's closed entity
+set. It is the first row type a person can delete outright rather than archive or merge:
+§6.2 archives an account, §9q merges merchants by writing aliases so the losing row
+survives as the explanation. A category has no such role to play once nothing points at it.
+
+**§6.8 has no stated absences left.** §9k's "Not built yet" panel — five sections built and
+one explained — is gone with this, and so is §1's count of what §2.3 lists as missing on
+this surface.
 
 ## 10. Open discrepancies — recorded, not resolved
 

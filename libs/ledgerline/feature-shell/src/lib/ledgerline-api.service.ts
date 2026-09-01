@@ -31,7 +31,13 @@ import type {
   BulkUpdateTransactionsBody,
   Calibration,
   Category,
+  CategoryDeleteResult,
   CategoryInsight,
+  CategoryUpdate,
+  CategoryUsage,
+  CreateCategoryBody,
+  DeleteCategoryQuery,
+  UpdateCategoryBody,
   FeesInsight,
   GetCategoryInsightQuery,
   MoversInsight,
@@ -189,6 +195,28 @@ export class LedgerlineApiService {
 
   listCategories(): Promise<Category[]> {
     return this.api.listCategories();
+  }
+
+  /** §6.8's taxonomy editor read: the categories plus what points at each one, which
+   *  is what decides whether a delete is offered at all. */
+  listCategoryUsage(): Promise<CategoryUsage[]> {
+    return this.api.listCategoryUsage();
+  }
+
+  createCategory(body: CreateCategoryBody): Promise<Category> {
+    return this.api.createCategory(body);
+  }
+
+  /** §6.8, including §5.4's `overlapGroup`. The result says what a `kind` change
+   *  re-partitioned, because §5.8 and §5.10 read that column. */
+  updateCategory(id: string, body: UpdateCategoryBody): Promise<CategoryUpdate> {
+    return this.api.updateCategory(id, body);
+  }
+
+  /** Refuses with `category_in_use` unless `reassignTo` names somewhere for the
+   *  rows to go (§3.2). */
+  deleteCategory(id: string, query: DeleteCategoryQuery = {}): Promise<CategoryDeleteResult> {
+    return this.api.deleteCategory(id, query);
   }
 
   /** §4.1 step 7: what the chain could not settle on its own. A read — it

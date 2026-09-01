@@ -37,6 +37,9 @@ export { LLM_PROVIDER_IDS };
 
 export const ACCOUNT_TYPES = ['checking', 'savings', 'credit_card'] as const;
 export const CATEGORY_KINDS = ['spend', 'fee', 'transfer', 'income'] as const;
+/** Migration 009. Two, not `PROVENANCE_SOURCES`' four: only the shipped set and a
+ *  person write categories — spec 9x forbids the model from creating one. */
+export const CATEGORY_SOURCES = ['seed', 'user'] as const;
 export const PROVENANCE_SOURCES = ['seed', 'rule', 'llm', 'user'] as const;
 export const IMPORT_STATUSES = [
   'uploaded',
@@ -158,6 +161,22 @@ const apiError = {
       type: 'array',
       items: { type: 'integer' },
       description: 'Present on `zero_amount_rows`: the rows that parsed to $0.00.',
+    },
+    /**
+     * Present on `category_in_use`: what refused the delete.
+     *
+     * Inline rather than a `$ref` to `CategoryUsage`, because `ApiError` is
+     * registered first and a shared schema cannot reference one declared after it.
+     * The prose message says the same thing; this is for the caller that wants to
+     * branch rather than read.
+     */
+    categoryUsage: {
+      type: 'object',
+      properties: {
+        transactions: { type: 'integer' },
+        merchants: { type: 'integer' },
+        children: { type: 'integer' },
+      },
     },
   },
 } as const;
@@ -799,7 +818,76 @@ const category = {
     name: { type: 'string' },
     parentId: nullableString,
     kind: { type: 'string', enum: CATEGORY_KINDS },
+    /** Spec 5.4's curated group. Two categories sharing one is the claim "these
+     *  describe the same spending", and it is the whole input to that rule's
+     *  category-overlap half. */
     overlapGroup: nullableString,
+    /** Migration 009. `seed` is the shipped taxonomy, `user` a row spec 6.8's editor
+     *  created or touched — and which the boot re-seed may therefore not overwrite.
+     *  Shown, never branched on (spec 7.5). */
+    source: { type: 'string', enum: CATEGORY_SOURCES },
+  },
+} as const;
+
+/**
+ * One category and what points at it — spec 6.8's editor read.
+ *
+ * Separate from `Category` rather than folded into it, because `GET /api/categories`
+ * is spec 6.3's dropdown and a dropdown does not need three `COUNT(*)`s per entry on
+ * every page load. The counts exist for one screen and are read by that screen.
+ */
+const categoryUsage = {
+  $id: 'CategoryUsage',
+  type: 'object',
+  properties: {
+    category: ref('Category'),
+    /** Every row holding the foreign key, excluded and internal-transfer rows
+     *  included: spec 3.2's RESTRICT does not care which ones the UI hides. */
+    transactions: { type: 'integer' },
+    merchants: { type: 'integer' },
+    children: { type: 'integer' },
+    /** Whether `DELETE` would succeed without a `reassignTo`. Computed here rather
+     *  than by the caller summing three numbers, so the page and the constraint
+     *  cannot disagree about what "in use" means. */
+    deletable: { type: 'boolean' },
+  },
+} as const;
+
+/**
+ * What a `PATCH` did, in the terms spec 6.8 says a kind change has to be reported in.
+ *
+ * A rename is CRUD. A **kind** change re-partitions the analyzers: spec 5.8's fee
+ * rollup and spec 6.6's Insights select `kind = 'fee'`, and spec 5.10 trends only
+ * `kind = 'spend'`. Changing one silently moves every charge in the category between
+ * those, so the write says how many and which rules see them next run.
+ */
+const categoryUpdate = {
+  $id: 'CategoryUpdate',
+  type: 'object',
+  properties: {
+    category: ref('Category'),
+    /** Null when the kind did not move. */
+    kindChangedFrom: nullableString,
+    /** Rows that change partition — 0 unless the kind moved. */
+    transactionsRepartitioned: { type: 'integer' },
+    /** Rule ids whose input this change alters, for the next analysis run. Empty
+     *  when nothing analytical moved. */
+    rulesAffected: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+/** What a delete moved before it deleted (spec 2.3, spec 6.8). */
+const categoryDeleteResult = {
+  $id: 'CategoryDeleteResult',
+  type: 'object',
+  properties: {
+    deletedId: { type: 'string' },
+    /** The category the rows were moved to, or null when there were none to move. */
+    reassignedTo: nullableString,
+    transactionsMoved: { type: 'integer' },
+    merchantsMoved: { type: 'integer' },
+    /** Subcategories promoted to the top level — see `reassignCategory`. */
+    childrenPromoted: { type: 'integer' },
   },
 } as const;
 
@@ -1837,6 +1925,10 @@ const SHARED = [
   allRequired(merchantReviewQueue),
   allRequired(merchantMergeResult),
   allRequired(category),
+  // §6.8's editor. `Category` first — the three below all $ref it.
+  allRequired(categoryUsage),
+  allRequired(categoryUpdate),
+  allRequired(categoryDeleteResult),
   allRequired(job),
 
   // §5.1 and §6.4. `finding.detail` is the one free-shaped field on the wire and

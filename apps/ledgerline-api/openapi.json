@@ -23,6 +23,20 @@
               "type": "integer"
             },
             "description": "Present on `zero_amount_rows`: the rows that parsed to $0.00."
+          },
+          "categoryUsage": {
+            "type": "object",
+            "properties": {
+              "transactions": {
+                "type": "integer"
+              },
+              "merchants": {
+                "type": "integer"
+              },
+              "children": {
+                "type": "integer"
+              }
+            }
           }
         }
       },
@@ -626,6 +640,13 @@
               "null",
               "string"
             ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "seed",
+              "user"
+            ]
           }
         },
         "required": [
@@ -633,7 +654,94 @@
           "name",
           "parentId",
           "kind",
-          "overlapGroup"
+          "overlapGroup",
+          "source"
+        ]
+      },
+      "CategoryUsage": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "transactions": {
+            "type": "integer"
+          },
+          "merchants": {
+            "type": "integer"
+          },
+          "children": {
+            "type": "integer"
+          },
+          "deletable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "category",
+          "transactions",
+          "merchants",
+          "children",
+          "deletable"
+        ]
+      },
+      "CategoryUpdate": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "kindChangedFrom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "transactionsRepartitioned": {
+            "type": "integer"
+          },
+          "rulesAffected": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "kindChangedFrom",
+          "transactionsRepartitioned",
+          "rulesAffected"
+        ]
+      },
+      "CategoryDeleteResult": {
+        "type": "object",
+        "properties": {
+          "deletedId": {
+            "type": "string"
+          },
+          "reassignedTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "transactionsMoved": {
+            "type": "integer"
+          },
+          "merchantsMoved": {
+            "type": "integer"
+          },
+          "childrenPromoted": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deletedId",
+          "reassignedTo",
+          "transactionsMoved",
+          "merchantsMoved",
+          "childrenPromoted"
         ]
       },
       "Job": {
@@ -6493,6 +6601,440 @@
                   "items": {
                     "$ref": "#/components/schemas/Category"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createCategory",
+        "summary": "Create a category",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Spec 6.8. The row is `source = \"user\"` and the boot re-seed will never overwrite it (migration 009).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "kind"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "spend",
+                      "fee",
+                      "transfer",
+                      "income"
+                    ]
+                  },
+                  "parentId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "overlapGroup": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories/usage": {
+      "get": {
+        "operationId": "listCategoryUsage",
+        "summary": "Every category with what refers to it",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Spec 6.8’s taxonomy editor. `deletable` is the answer spec 3.2’s `ON DELETE RESTRICT` would give: false when any transaction, merchant default or subcategory still points here.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryUsage"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "patch": {
+        "operationId": "updateCategory",
+        "summary": "Rename, reparent, re-kind or group a category",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Spec 6.8, including spec 5.4’s `overlapGroup`. A `kind` change is reported rather than performed silently: spec 5.8 and spec 6.6 read `fee` and spec 5.10 reads `spend`, so moving between them moves every charge in this category between those rules on the next analysis run. Any edit sets `source = \"user\"`, which is what stops the next boot’s re-seed from undoing it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "spend",
+                      "fee",
+                      "transfer",
+                      "income"
+                    ]
+                  },
+                  "parentId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "overlapGroup": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryUpdate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCategory",
+        "summary": "Delete a category, optionally moving what points at it first",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Refuses with `category_in_use` and the counts when anything still references it (spec 3.2). Pass `reassignTo` to move transactions and merchant defaults to another category first; subcategories are promoted to the top level rather than moved, since only a root may have children.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "reassignTo",
+            "required": false,
+            "description": "Category to move transactions and merchant defaults to."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryDeleteResult"
                 }
               }
             }

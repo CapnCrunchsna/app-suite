@@ -13,11 +13,18 @@
 
 import { TestBed } from '@angular/core/testing';
 import type {
+  Category,
+  CategoryDeleteResult,
+  CategoryUpdate,
+  CategoryUsage,
+  CreateCategoryBody,
   DegradedCallLog,
+  DeleteCategoryQuery,
   Job,
   LlmHealth,
   Settings,
   SettingsUpdate,
+  UpdateCategoryBody,
   UpdateSettingsBody,
   WipeResult,
 } from '@metrum/api-client';
@@ -149,6 +156,27 @@ function settingsWithoutLlm(): Settings {
   return rest as unknown as Settings;
 }
 
+/** One row of §6.8's taxonomy read, defaulted to the boring case so a test only
+ *  states the part it is about. */
+function usageOf(
+  category: Partial<Category> & { id: string; name: string },
+  counts: Partial<Pick<CategoryUsage, 'transactions' | 'merchants' | 'children'>> = {},
+): CategoryUsage {
+  const filled = {
+    parentId: null,
+    kind: 'spend' as const,
+    overlapGroup: null,
+    source: 'seed' as const,
+    ...category,
+  };
+  const used = { transactions: 0, merchants: 0, children: 0, ...counts };
+  return {
+    category: filled,
+    ...used,
+    deletable: used.transactions + used.merchants + used.children === 0,
+  };
+}
+
 class ApiStub {
   readonly updates: UpdateSettingsBody[] = [];
   readonly wipes: unknown[] = [];
@@ -229,6 +257,57 @@ class ApiStub {
     });
   }
 
+  // §6.8's Categories (§9ad). The counts are the API's, because they are what
+  // decides whether a delete is offered at all.
+  categories: CategoryUsage[] = [
+    usageOf({ id: 'groceries', name: 'Groceries' }, { transactions: 42, merchants: 1 }),
+    usageOf({ id: 'entertainment', name: 'Entertainment', overlapGroup: 'video_streaming' }),
+    usageOf({ id: 'music', name: 'Music', overlapGroup: 'video_streaming', source: 'user' }),
+    usageOf({ id: 'stationery', name: 'Stationery' }),
+  ];
+  readonly categoryWrites: unknown[] = [];
+  categoryUpdate: CategoryUpdate | null = null;
+
+  listCategoryUsage(): Promise<CategoryUsage[]> {
+    return Promise.resolve(this.categories);
+  }
+
+  createCategory(body: CreateCategoryBody): Promise<Category> {
+    this.categoryWrites.push({ create: body });
+    return Promise.resolve({
+      id: 'new',
+      name: body.name,
+      parentId: body.parentId ?? null,
+      kind: body.kind,
+      overlapGroup: body.overlapGroup ?? null,
+      source: 'user',
+    });
+  }
+
+  updateCategory(id: string, body: UpdateCategoryBody): Promise<CategoryUpdate> {
+    this.categoryWrites.push({ update: id, body });
+    const existing = this.categories.find((row) => row.category.id === id) as CategoryUsage;
+    return Promise.resolve(
+      this.categoryUpdate ?? {
+        category: { ...existing.category, ...body } as Category,
+        kindChangedFrom: null,
+        transactionsRepartitioned: 0,
+        rulesAffected: [],
+      },
+    );
+  }
+
+  deleteCategory(id: string, query: DeleteCategoryQuery = {}): Promise<CategoryDeleteResult> {
+    this.categoryWrites.push({ delete: id, query });
+    return Promise.resolve({
+      deletedId: id,
+      reassignedTo: query.reassignTo ?? null,
+      transactionsMoved: query.reassignTo ? 42 : 0,
+      merchantsMoved: query.reassignTo ? 1 : 0,
+      childrenPromoted: 0,
+    });
+  }
+
   sweeps = 0;
   jobStates: Job['state'][] = ['succeeded'];
 
@@ -274,6 +353,11 @@ describe('SettingsPage', () => {
 
   const text = (el: HTMLElement, selector: string) =>
     [...el.querySelectorAll(selector)].map((n) => n.textContent?.replace(/\s+/g, ' ').trim());
+
+  /** By id, not by text: every root's name appears inside every other row's parent
+   *  `<select>`, so text picks the wrong row and does it silently. */
+  const rowFor = (el: HTMLElement, id: string) =>
+    el.querySelector(`.row[data-category="${id}"]`) as HTMLElement;
 
   // ------------------------------------------------------------ layout ---
 
@@ -492,26 +576,34 @@ describe('SettingsPage', () => {
   it('no longer carries the merchant review queue (§9s)', async () => {
     const { el } = await render();
 
-    // §9t added AI assistance and §9v added Merchant names — which is the sweep,
-    // not the queue. The queue is still absent, which is the point.
+    // §9t added AI assistance, §9v added Merchant names — which is the sweep, not
+    // the queue — and §9ad added Categories, which took the "Not built yet" panel
+    // with it. The queue is still absent, which is the point.
     expect(text(el, '.panel__heading')).toEqual([
       'Analyzers',
       'AI assistance',
       'Merchant names',
+      'Categories',
       'Data',
-      'Not built yet',
     ]);
     expect(el.querySelector('ll-merchant-review')).toBeNull();
     expect(el.textContent).not.toContain('Nothing to review');
   });
 
-  it('states §6.8’s one remaining unbuilt section rather than omitting it', async () => {
+  /**
+   * §9k rendered §6.8's unbuilt sections as stated absences rather than omitting
+   * them, and one by one they were built. Categories was the last (§9ad), so the
+   * panel that held them has nothing left to hold.
+   *
+   * Asserted rather than simply deleted, because an empty "Not built yet" panel is
+   * exactly what would survive a careless edit — and a page that says it is missing
+   * something it now has is worse than one that never said.
+   */
+  it('has no stated absences left (§9ad)', async () => {
     const { el } = await render();
-    // LLM provider and Redaction have left this list because they now exist —
-    // §2.4's seam is built and §6.8's picker writes to it. Categories still needs
-    // write endpoints §2.3 lists and §1 counts as missing.
-    expect(text(el, '.pending dt')).toEqual(['Categories']);
-    expect(text(el, '.pending dd')[0]).toContain('overlap groups');
+
+    expect(el.querySelector('.pending')).toBeNull();
+    expect(el.textContent).not.toContain('Not built yet');
   });
 
   // -------------------------------------------------------- §6.8's LLM ---
@@ -567,6 +659,155 @@ describe('SettingsPage', () => {
     const result = el.querySelector('.test__result')?.textContent;
     expect(result).toContain('The check itself failed');
     expect(result).toContain('spawn claude ENOENT');
+  });
+
+  // ------------------------------------------------- §6.8's Categories (§9ad) ---
+
+  /**
+   * The half of this section with analytical weight is the overlap group, so that is
+   * what most of these are about. §5.4 needs "two or more active series sharing an
+   * `overlap_group`", and a group with one category in it is a label the rule can
+   * never act on — the page has to say which is which, because the difference is
+   * invisible in a text field.
+   */
+  describe('the Categories section (§6.8, §5.4)', () => {
+    it('renders §5.4’s groups and says which one the rule can act on', async () => {
+      api.categories = [
+        ...api.categories,
+        usageOf({ id: 'vpn', name: 'VPN', overlapGroup: 'vpn' }),
+      ];
+      const { el } = await render();
+
+      const groups = text(el, '.group');
+      // Two categories share `video_streaming`; `vpn` has one.
+      expect(groups.some((g) => g?.includes('video_streaming') && g?.includes('Entertainment'))).toBe(
+        true,
+      );
+      expect(groups.find((g) => g?.includes('vpn'))).toContain('only one category');
+    });
+
+    it('says the rule finds nothing when no category carries a group', async () => {
+      api.categories = api.categories.map((row) =>
+        usageOf({ ...row.category, overlapGroup: null }),
+      );
+      const { el } = await render();
+
+      expect(el.querySelector('ll-category-settings .none')?.textContent).toContain(
+        'finds nothing',
+      );
+    });
+
+    it('assigns an overlap group, and says what the claim is for', async () => {
+      const { el, fixture } = await render();
+
+      const input = [...el.querySelectorAll('.row__group')].find(
+        (node) => (node as HTMLInputElement).value === '',
+      ) as HTMLInputElement;
+      input.value = 'meal_kit';
+      input.dispatchEvent(new Event('blur'));
+      await fixture.whenStable();
+
+      expect(api.categoryWrites).toEqual([
+        { update: 'groceries', body: { overlapGroup: 'meal_kit' } },
+      ]);
+      expect(el.querySelector('.notice')?.textContent).toContain('duplicate check');
+    });
+
+    /** §5.8 and §6.6 read `fee`; §5.10 trends only `spend`. The count and the rule
+     *  names are the API's — this page cannot see either. */
+    it('reports what a kind change re-partitions, in the API’s numbers', async () => {
+      api.categoryUpdate = {
+        category: { ...api.categories[0].category, kind: 'fee' },
+        kindChangedFrom: 'spend',
+        transactionsRepartitioned: 42,
+        rulesAffected: ['fees.v1', 'trend.v1'],
+      };
+      const { el, fixture } = await render();
+
+      const select = el.querySelector('.row__kind') as HTMLSelectElement;
+      select.value = 'fee';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+
+      const notice = el.querySelector('.notice')?.textContent;
+      expect(notice).toContain('42 charges');
+      expect(notice).toContain('fees.v1 and trend.v1');
+    });
+
+    /** §6.9's rule, inherited: a direction is armed, and a second explicit click
+     *  performs it. Nothing is written on the first press. */
+    it('arms a delete rather than performing it', async () => {
+      const { el, fixture } = await render();
+
+      const row = rowFor(el, 'stationery');
+      (row.querySelector('.row__delete') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      expect(api.categoryWrites).toEqual([]);
+      expect(row.querySelector('.confirm')).not.toBeNull();
+
+      (row.querySelector('.confirm__go') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      expect(api.categoryWrites).toEqual([{ delete: 'stationery', query: {} }]);
+    });
+
+    /**
+     * §3.2 RESTRICTs a category in use, and the API refuses before the constraint
+     * does. The page's job is not to repeat the refusal — it is to not offer a click
+     * that cannot succeed.
+     */
+    it('will not confirm a delete of a category in use until a target is chosen', async () => {
+      const { el, fixture } = await render();
+
+      const row = rowFor(el, 'groceries');
+      (row.querySelector('.row__delete') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      const go = row.querySelector('.confirm__go') as HTMLButtonElement;
+      expect(row.querySelector('.confirm')?.textContent).toContain('42 charges');
+      expect(go.disabled).toBe(true);
+
+      const target = row.querySelector('.confirm__target') as HTMLSelectElement;
+      target.value = 'stationery';
+      target.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+
+      expect(go.disabled).toBe(false);
+      go.click();
+      await fixture.whenStable();
+
+      expect(api.categoryWrites).toEqual([
+        { delete: 'groceries', query: { reassignTo: 'stationery' } },
+      ]);
+      expect(el.querySelector('.notice')?.textContent).toContain('42 charges');
+    });
+
+    it('adds a category', async () => {
+      const { el, fixture } = await render();
+
+      const name = el.querySelector('.add__name') as HTMLInputElement;
+      name.value = 'Cloud storage';
+      name.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+
+      (el.querySelector('.add__go') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      expect(api.categoryWrites).toEqual([
+        { create: { name: 'Cloud storage', kind: 'spend', parentId: null } },
+      ]);
+      expect(el.querySelector('.notice')?.textContent).toContain('Cloud storage');
+    });
+
+    /** §7.5: shown, never acted on. It is on screen because an edited seed row stops
+     *  moving with the shipped taxonomy, which is worth knowing before you edit one. */
+    it('marks the rows that are the user’s rather than the shipped set', async () => {
+      const { el } = await render();
+
+      expect(rowFor(el, 'music').querySelector('.row__source')?.textContent?.trim()).toBe('yours');
+      expect(rowFor(el, 'stationery').querySelector('.row__source')).toBeNull();
+    });
   });
 
   // --------------------------------------------- §6.8's re-normalize trigger ---

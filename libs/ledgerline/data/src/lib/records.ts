@@ -131,7 +131,14 @@ export interface CategoryRecord {
   readonly parentId: string | null;
   readonly kind: 'spend' | 'fee' | 'transfer' | 'income';
   readonly overlapGroup: string | null;
+  /** Migration 009. `seed` is the shipped taxonomy; `user` is a row §6.8's editor
+   *  created or touched, which the boot re-seed may no longer overwrite. */
+  readonly source: CategorySource;
 }
+
+/** Two, not §4.3's four: only the shipped set and a person write categories
+ *  (§9x forbids the LLM from creating one). */
+export type CategorySource = 'seed' | 'user';
 
 export interface FormatProfileRecord {
   readonly id: string;
