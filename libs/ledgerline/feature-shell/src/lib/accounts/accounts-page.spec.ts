@@ -19,6 +19,7 @@ import type {
   Account,
   AccountCoverage,
   AccountMergeResult,
+  CreateAccountBody,
   MergeAccountBody,
   Transaction,
   TransferLink,
@@ -151,6 +152,8 @@ class ApiStub {
   readonly rejected: string[] = [];
   scans = 0;
 
+  readonly created: CreateAccountBody[] = [];
+
   accounts: Account[] = [account(), CARD];
   links: TransferLink[] = [link()];
   coverages: Record<string, AccountCoverage> = {
@@ -164,6 +167,13 @@ class ApiStub {
 
   getAccountCoverage(id: string): Promise<AccountCoverage> {
     return Promise.resolve(this.coverages[id] ?? coverage({ accountId: id }));
+  }
+
+  createAccount(body: CreateAccountBody): Promise<Account> {
+    this.created.push(body);
+    const made = account({ id: 'a-new', ...body });
+    this.accounts = [...this.accounts, made];
+    return Promise.resolve(made);
   }
 
   updateAccount(id: string, body: UpdateAccountBody): Promise<Account> {
@@ -242,10 +252,76 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
   };
 
+  /** Settles after the keystroke: the submit button's `disabled` is bound to a
+   *  signal, and a disabled button swallows the click that follows. */
+  const type = async (
+    el: HTMLElement,
+    selector: string,
+    value: string,
+    fixture: { whenStable(): Promise<unknown> },
+  ) => {
+    const input = el.querySelector(selector) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  };
+
   const buttonNamed = (el: HTMLElement, text: string): HTMLButtonElement =>
     [...el.querySelectorAll<HTMLButtonElement>('button')].find((button) =>
       button.textContent?.includes(text),
     ) as HTMLButtonElement;
+
+  // ------------------------------------------------- creating an account ---
+
+  /**
+   * §6.2 lists rename, set type, merge and archive, and never says *create* —
+   * because it assumed an account arrives with its first statement. §6.1 will not
+   * commit an import until an account exists, so on a fresh database the two
+   * pages pointed at each other and nothing downstream of a commit was reachable.
+   */
+  describe('creating an account (§6.2)', () => {
+    it('keeps the form behind a button while accounts exist', async () => {
+      const { el } = await render();
+
+      expect(el.querySelector('.new__trigger')).not.toBeNull();
+      expect(el.querySelector('#new-account-name')).toBeNull();
+    });
+
+    it('opens the form unprompted when there are none at all', async () => {
+      api.accounts = [];
+      const { el } = await render();
+
+      expect(el.querySelector('#new-account-name')).not.toBeNull();
+      // And the empty state no longer sends the user to Import, which cannot
+      // finish without the thing they came here to make.
+      expect(el.querySelector('.empty')?.textContent).toContain('Create one above');
+    });
+
+    it('POSTs what was filled in, with the blanks as null rather than empty strings', async () => {
+      api.accounts = [];
+      const { fixture, el } = await render();
+
+      await type(el, '#new-account-name', 'Chase Checking', fixture);
+      await click(el, '.new__submit', fixture);
+
+      expect(api.created).toEqual([
+        { displayName: 'Chase Checking', accountType: 'checking', institution: null, last4: null },
+      ]);
+      expect(el.querySelector('.notice__text')?.textContent).toContain('Import a statement');
+    });
+
+    it('carries the type that was picked', async () => {
+      api.accounts = [];
+      const { fixture, el } = await render();
+
+      await type(el, '#new-account-name', 'Sapphire', fixture);
+      (buttonNamed(el, 'Credit card') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      await click(el, '.new__submit', fixture);
+
+      expect(api.created[0].accountType).toBe('credit_card');
+    });
+  });
 
   // ---------------------------------------------------- the coverage bar ---
 

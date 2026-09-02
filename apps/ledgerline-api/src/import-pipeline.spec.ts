@@ -247,6 +247,37 @@ describe('ledgerline-api import pipeline', () => {
       expect(payment).toBeDefined();
     });
 
+    /**
+     * §9ae. The review used to answer `lineNumber` with `rowIndex`, so a row's
+     * number on screen disagreed with the number in every warning about it —
+     * "Line 51 looks identical to line 50" sitting beside a row labelled 49.
+     *
+     * The Northgate fixture is the case that catches it: three preamble lines, a
+     * blank, then the header, so the first data row is on line 6 and the two
+     * numbers can never coincide. A file with no preamble would pass this while
+     * still being broken.
+     *
+     * The blank line is why this is read back rather than computed. It is dropped
+     * before mapping, so no arithmetic over `skipLines` and the header recovers
+     * the offset — only the number the reader recorded at the time does.
+     */
+    it('numbers review rows by their line in the file, not by their index', async () => {
+      const [staged] = await upload('northgate-checking-2026-01.csv');
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/imports/${staged.import.id}`,
+      });
+      const rows = (response.json() as { rows: { rowIndex: number; row: { lineNumber: number } }[] })
+        .rows;
+
+      expect(rows.slice(0, 3).map((r) => [r.rowIndex, r.row.lineNumber])).toEqual([
+        [0, 6],
+        [1, 7],
+        [2, 8],
+      ]);
+    });
+
     it('refuses a $0 row that nobody explained', async () => {
       const [staged] = await upload('cardinal-card-2026-01.csv');
       await confirmAccount(staged.import.id, cardId);

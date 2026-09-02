@@ -63,6 +63,13 @@
       } @else if (busy()) {
         <span class="toolbar__status">saving…</span>
       }
+
+      <ll-new-account
+        class="toolbar__new"
+        [busy]="busy()"
+        [startOpen]="noAccountsAtAll()"
+        (created)="onAccountCreated($event)"
+      />
     </div>
 
     <div class="cards">
@@ -79,8 +86,9 @@
           @if (loading()) {
             Loading accounts…
           } @else {
-            No accounts yet. <strong>Import</strong> a statement — the account is guessed from the
-            filename and the statement header, and confirmed before anything is committed.
+            No accounts yet. Create one above, then <strong>Import</strong> a statement — once an
+            account exists the import guesses which one a file belongs to, from the filename and the
+            statement header, and has you confirm the guess before anything is committed.
           }
         </p>
       }

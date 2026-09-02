@@ -50,17 +50,23 @@ import {
 import { Panel } from '@metrum/ui';
 import { formatCents } from '@metrum/ledgerline-domain';
 import { LedgerlineApiError } from '@metrum/api-client';
-import type { Account, AccountCoverage, TransferLink } from '@metrum/api-client';
+import type {
+  Account,
+  AccountCoverage,
+  CreateAccountBody,
+  TransferLink,
+} from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { AccountCard } from './account-card.js';
 import type { AccountActionEvent } from './account-card.js';
+import { NewAccount } from './new-account.js';
 import { TransferQueue } from './transfer-queue.js';
 import type { TransferDecisionEvent } from './transfer-queue.js';
 
 @Component({
   selector: 'll-accounts-page',
-  imports: [Panel, AccountCard, TransferQueue],
+  imports: [Panel, AccountCard, NewAccount, TransferQueue],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './accounts-page.html',
   styleUrl: './accounts-page.scss',
@@ -125,6 +131,20 @@ export class AccountsPage {
     () => this.accountList.value().filter((account) => !account.isActive).length,
   );
 
+  /**
+   * A genuinely empty database, archived accounts included — not merely an empty
+   * *filtered* list.
+   *
+   * This is what opens the create form rather than leaving it behind its button.
+   * On a fresh install there is nothing else on this page to do, and §6.1 cannot
+   * commit an import until an account exists, so the form is the only way out of
+   * the loop and should not have to be found first. Someone who archived their
+   * last account is in a different situation and keeps the button.
+   */
+  protected readonly noAccountsAtAll = computed(
+    () => !this.loading() && this.accountList.value().length === 0,
+  );
+
   private readonly coverageById = computed(
     () => new Map(this.coverageList.value().map((entry) => [entry.accountId, entry])),
   );
@@ -170,6 +190,23 @@ export class AccountsPage {
   protected readonly failure = computed(() => this.accountList.error());
 
   // ----------------------------------------------------------- handlers ---
+
+  /**
+   * `POST /api/accounts`.
+   *
+   * The notice points at Import rather than congratulating the user, because
+   * creating an account is never the goal — it is the precondition §6.1 was
+   * waiting on, and the next step is the one that was blocked.
+   */
+  protected async onAccountCreated(body: CreateAccountBody): Promise<void> {
+    await this.write(async () => {
+      const account = await this.api.createAccount(body);
+      this.notice.set(
+        `Created ${account.displayName}. Import a statement into it — nothing is committed ` +
+          'until you confirm the account it files into.',
+      );
+    });
+  }
 
   /** §6.2's four account actions, routed. Rename and set-type are one PATCH;
    *  archive is `isActive: false`, which §6.2 makes the destructive action; merge

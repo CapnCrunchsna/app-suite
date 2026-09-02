@@ -100,9 +100,10 @@
       suggestion.reason }}. A guess that has to be confirmed can afford to be wrong. } @else {
       Nothing in the filename matched an account, so there is no guess to confirm. }
     </span>
+    @if (accounts().length > 0) {
     <select
       class="account__select"
-      [disabled]="busy() || accounts().length === 0"
+      [disabled]="busy()"
       (change)="confirmAccount($any($event.target).value)"
     >
       <option value="">— pick an account —</option>
@@ -112,11 +113,17 @@
       </option>
       }
     </select>
-    @if (accounts().length === 0) {
+    } @else {
+    <!-- §6.1 cannot commit without an account and §6.2 is the only place they are
+         made, so on a fresh database the two pages point at each other and neither
+         can go first. The form is inline here rather than a link away because this
+         is where the need is felt — and the account it creates is confirmed onto
+         this import straight away, which is the step that was blocked. -->
     <span class="account__empty">
-      No accounts exist yet. Create one with <code>POST /api/accounts</code> — §6.2's Accounts page
-      is not built.
+      No accounts exist yet, and an import has to file into one. Create it here — or on the
+      <strong>Accounts</strong> page, which is the same form.
     </span>
+    <ll-new-account [busy]="busy()" [startOpen]="true" (created)="createAccount($event)" />
     } }
   </div>
 
@@ -128,8 +135,13 @@
     <li class="warnings__item" [attr.data-severity]="warning.severity">
       <span class="warnings__headline">{{ warning.headline }}</span>
       <span class="warnings__detail">{{ warning.detail }}</span>
-      @if (warning.rowIndexes.length > 0) {
-      <span class="warnings__rows">rows {{ warning.rowIndexes.join(', ') }}</span>
+      @if (warning.lineNumbers.length > 0) {
+      <!-- File lines, matching both the sentence beside them and the table's own
+           column. `rowIndex` is the API's key and never appears on screen. -->
+      <span class="warnings__rows">
+        {{ warning.lineNumbers.length === 1 ? 'line' : 'lines' }} {{ warning.lineNumbers.join(', ')
+        }}
+      </span>
       }
     </li>
     }
@@ -184,9 +196,9 @@
         (change)="setAllowZeroAmountRows($any($event.target).checked)"
       />
       <span>
-        These $0 rows are trial authorizations @if (zeroAmountRows().length > 0) { (rows {{
-        zeroAmountRows().join(', ') }}) } — store them rather than refusing them as a probable
-        misparse.
+        These $0 rows are trial authorizations @if (zeroAmountLines().length > 0) { ({{
+        zeroAmountLines().length === 1 ? 'line' : 'lines' }} {{ zeroAmountLines().join(', ') }}) } —
+        store them rather than refusing them as a probable misparse.
       </span>
     </label>
     } @if (isCommitted()) {

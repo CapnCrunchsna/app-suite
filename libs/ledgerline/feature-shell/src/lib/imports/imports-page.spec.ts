@@ -22,6 +22,7 @@ import type {
   Account,
   CommitImportBody,
   CommitResult,
+  CreateAccountBody,
   CreateFormatProfileBody,
   DeleteImportResult,
   FormatProfile,
@@ -252,8 +253,31 @@ class ApiStub {
     return Promise.resolve(this.deleteResult);
   }
 
+  /** Mutable, so a test can start from a database with no accounts in it —
+   *  which is the state the create form exists for. */
+  accounts: Account[] = [...ACCOUNTS];
+
   listAccounts(): Promise<Account[]> {
-    return Promise.resolve(ACCOUNTS);
+    return Promise.resolve(this.accounts);
+  }
+
+  readonly accountsCreated: CreateAccountBody[] = [];
+
+  createAccount(body: CreateAccountBody): Promise<Account> {
+    this.accountsCreated.push(body);
+    const account: Account = {
+      id: 'a-new',
+      displayName: body.displayName,
+      institution: body.institution ?? null,
+      accountType: body.accountType,
+      last4: body.last4 ?? null,
+      currency: 'USD',
+      isActive: true,
+      createdAt: '',
+      updatedAt: '',
+    };
+    this.accounts = [...this.accounts, account];
+    return Promise.resolve(account);
   }
 
   /** §4.1 step 7. Empty by default: most commits raise no question, and the
@@ -331,6 +355,20 @@ describe('ImportsPage', () => {
     await fixture.whenStable();
   }
 
+  /** Settling after each field matters: the submit button's `disabled` is bound to
+   *  a signal, and a disabled button swallows the click that follows. */
+  async function type(
+    el: HTMLElement,
+    selector: string,
+    value: string,
+    fixture: { whenStable(): Promise<unknown> },
+  ) {
+    const input = el.querySelector(selector) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+  }
+
   describe('the account confirmation gate (§6.1)', () => {
     it('offers no reachable Commit until the account is confirmed', async () => {
       const { el } = await render();
@@ -359,6 +397,75 @@ describe('ImportsPage', () => {
 
       expect(api.patches).toEqual([{ id: 'imp-1', body: { accountId: 'a1' } }]);
       expect((el.querySelector('.commit__button') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    /**
+     * The fresh-install deadlock.
+     *
+     * §6.1 will not commit without an account and §6.2 is the only page that
+     * makes one — and it used to tell the user to import a statement, which is
+     * the thing they were trying to do. Nothing downstream of a commit exists
+     * until this is broken, so it is worth a test that starts from an empty
+     * database rather than from the fixture's one account.
+     */
+    describe('when the database has no accounts at all', () => {
+      beforeEach(() => {
+        api.accounts = [];
+        api.current = review({ accountSuggestion: null });
+      });
+
+      it('offers the create form instead of a picker with nothing in it', async () => {
+        const { el } = await render();
+
+        expect(el.querySelector('.account__select')).toBeNull();
+        expect(el.querySelector('ll-new-account')).not.toBeNull();
+        // Open, not behind its button: here it is the only way forward.
+        expect(el.querySelector('#new-account-name')).not.toBeNull();
+        expect(el.querySelector('.account__empty')?.textContent).toContain(
+          'an import has to file into one',
+        );
+      });
+
+      it('creates the account and files this import into it in one action', async () => {
+        const { fixture, el } = await render();
+
+        await type(el, '#new-account-name', 'Chase Checking', fixture);
+        await type(el, '#new-account-last4', '7261', fixture);
+
+        (el.querySelector('.new__submit') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        expect(api.accountsCreated).toEqual([
+          {
+            displayName: 'Chase Checking',
+            accountType: 'checking',
+            institution: null,
+            last4: '7261',
+          },
+        ]);
+        // The confirmation is the point: the reason the form was filled in here
+        // is that this import had nowhere to go.
+        expect(api.patches).toEqual([{ id: 'imp-1', body: { accountId: 'a-new' } }]);
+        expect((el.querySelector('.commit__button') as HTMLButtonElement).disabled).toBe(false);
+      });
+
+      it('refuses to submit without a name, which is the one required field', async () => {
+        const { el } = await render();
+
+        expect((el.querySelector('.new__submit') as HTMLButtonElement).disabled).toBe(true);
+      });
+
+      it('keeps a last 4 to four digits, since that is what it is matched against', async () => {
+        const { fixture, el } = await render();
+
+        await type(el, '#new-account-name', 'Chase', fixture);
+        await type(el, '#new-account-last4', 'x72-6155', fixture);
+
+        (el.querySelector('.new__submit') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        expect(api.accountsCreated[0].last4).toBe('7261');
+      });
     });
 
     it('does not commit anything before the account exists', async () => {
@@ -585,7 +692,60 @@ describe('ImportsPage', () => {
       await fixture.whenStable();
 
       expect(el.querySelector('.notice__text')?.textContent).toContain('parsed to $0.00');
-      expect(el.querySelector('.commit__optin')?.textContent).toContain('(rows 5)');
+      // The API names the row by `rowIndex` 5; the screen says line 7, which is
+      // where that row is in the file and what every other message here calls it.
+      expect(el.querySelector('.commit__optin')?.textContent).toContain('(line 7)');
+    });
+  });
+
+  /**
+   * One row, two numbers, and only one of them belongs on screen.
+   *
+   * `rowIndex` is the 0-based position among data records and the API's key;
+   * `lineNumber` is the 1-based line of the file. The table printed the first
+   * while every warning quoted the second, so a duplicate on file line 51 was
+   * reported as "line 51" in its sentence, "row 49" beside it, and "49" in the
+   * table — three readings of one row, none of them wrong, none of them agreeing.
+   * On a bank export with a header the gap is small enough to look like an
+   * off-by-one in the parser.
+   */
+  describe('the row numbers on screen (§6.1)', () => {
+    beforeEach(() => {
+      api.current = review({
+        import: statementImport({ accountId: 'a1' }),
+        accountSuggestion: null,
+        rows: [
+          reviewRow(48, 'insert', { lineNumber: 50 }),
+          reviewRow(49, 'duplicate', { lineNumber: 51 }),
+        ],
+        warnings: [
+          {
+            kind: 'duplicate_in_file',
+            message: 'Line 51 looks identical to line 50 (same date, amount and description).',
+            rowIndex: 49,
+            lineNumber: 51,
+          },
+        ],
+        plan: { willInsert: 1, alreadyPresent: 1, nearDuplicates: [] },
+      });
+    });
+
+    it('numbers the table by file line, not by row index', async () => {
+      const { el } = await render();
+
+      const cells = [...el.querySelectorAll('.rows__row .rows__cell--index')].map((cell) =>
+        cell.textContent?.replace(/[▸▾\s]/g, ''),
+      );
+      expect(cells).toEqual(['50', '51']);
+      expect(el.querySelector('.rows__head .rows__cell--index')?.textContent?.trim()).toBe('Line');
+    });
+
+    it('points the warning strip at the same number its own sentence uses', async () => {
+      const { el } = await render();
+
+      const strip = el.querySelector('.warnings')?.textContent ?? '';
+      expect(strip).toContain('Line 51 looks identical to line 50');
+      expect(el.querySelector('.warnings__rows')?.textContent?.trim()).toBe('line 51');
     });
   });
 

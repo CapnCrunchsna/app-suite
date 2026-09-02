@@ -41,8 +41,54 @@ export interface ReviewWarning {
   readonly severity: 'note' | 'warn' | 'bad';
   readonly headline: string;
   readonly detail: string;
-  /** Row indexes this concerns, for highlighting the rows in the table. */
+  /** Row indexes this concerns, for highlighting the rows in the table. Internal:
+   *  `rowIndex` is the API's row key, not a number to show anyone. */
   readonly rowIndexes: readonly number[];
+  /** The same rows as physical file lines — what the strip prints. See below. */
+  readonly lineNumbers: readonly number[];
+}
+
+/**
+ * ## Two numbers per row, and only one of them goes on screen
+ *
+ * Every row has a `rowIndex` — its 0-based position among the *data* records,
+ * after the preamble, the header and any blank lines — and a `lineNumber`, the
+ * 1-based line of the actual file. `schemas.ts` says why both exist: "1-based
+ * physical line, which is what a human can go and look at."
+ *
+ * The strip used to print `rowIndex` while the messages coming out of
+ * `type:parsing` all say "Line N", so one warning about one row could show 51 in
+ * its sentence and 49 beside it, and the table's `#` column showed a third
+ * reading of the same row. All three were correct; none of them agreed. On a
+ * Chase export the gap is exactly two, which is small enough to look like an
+ * off-by-one bug in the parser rather than two coordinate systems on one screen.
+ *
+ * So `lineNumber` is the only one displayed, here and in the table, because it is
+ * the one you can act on: it is where the row is if you open the file. `rowIndex`
+ * stays as the key it always was — commit payloads, near-duplicate resolutions
+ * and the table's highlighting are all keyed by it — and is never printed.
+ */
+export function lineNumbersFor(review: ImportReview, rowIndexes: readonly number[]): number[] {
+  const byRowIndex = new Map<number, number>();
+
+  for (const entry of review.rows) byRowIndex.set(entry.rowIndex, entry.row.lineNumber);
+
+  // A row that failed to parse is not in `rows`, and `RawRowRecord` cannot supply
+  // the line either: §3.2's `raw_row` stores `row_index` and `raw_text` and has no
+  // column for it. The parser's own warning does carry both, and is emitted for
+  // exactly those rows — so the failures are matched up through it rather than by
+  // adding a migration to display a number.
+  for (const warning of review.warnings) {
+    if (warning.rowIndex !== undefined && warning.lineNumber !== undefined) {
+      byRowIndex.set(warning.rowIndex, warning.lineNumber);
+    }
+  }
+
+  // A row neither source knows has no line to point at. Dropping it beats
+  // printing the `rowIndex` as a fallback, which is the confusion this removes.
+  return rowIndexes
+    .map((rowIndex) => byRowIndex.get(rowIndex))
+    .filter((line): line is number => line !== undefined);
 }
 
 /** Kinds the strip states in its own words because it has the rows to count;
@@ -55,7 +101,7 @@ const RESTATED = new Set([
 ]);
 
 export function reviewWarnings(review: ImportReview): ReviewWarning[] {
-  const warnings: ReviewWarning[] = [];
+  const warnings: Omit<ReviewWarning, 'lineNumbers'>[] = [];
 
   if (review.unparsedRows.length > 0) {
     const lines = review.unparsedRows.map((row) => row.rowIndex);
@@ -114,7 +160,7 @@ export function reviewWarnings(review: ImportReview): ReviewWarning[] {
     });
   }
 
-  const balance = balanceWarning(review);
+  const balance = balanceWarning(review, (rowIndex) => lineNumbersFor(review, [rowIndex])[0]);
   if (balance) warnings.push(balance);
 
   for (const warning of review.warnings) {
@@ -129,7 +175,12 @@ export function reviewWarnings(review: ImportReview): ReviewWarning[] {
     });
   }
 
-  return warnings;
+  // One place the file lines are attached, so no warning can be added later that
+  // forgets to — and `rowIndexes` and `lineNumbers` cannot drift apart.
+  return warnings.map((warning) => ({
+    ...warning,
+    lineNumbers: lineNumbersFor(review, warning.rowIndexes),
+  }));
 }
 
 /**
@@ -141,18 +192,25 @@ export function reviewWarnings(review: ImportReview): ReviewWarning[] {
  * running balance — but it is still said out loud, because "no mismatch" and "not
  * checked" look identical on a screen that shows neither.
  */
-function balanceWarning(review: ImportReview): ReviewWarning | null {
+function balanceWarning(
+  review: ImportReview,
+  lineOf: (rowIndex: number) => number | undefined,
+): Omit<ReviewWarning, 'lineNumbers'> | null {
   const check = review.balanceCheck;
 
   if (check.kind === 'mismatch') {
     const failures = check.failures ?? [];
     const worst = failures[0];
+    // Named by file line like every other message here. `balanceCheck` reports
+    // `rowIndex` only, so the line is resolved rather than read off the failure.
+    const worstLine = worst ? lineOf(worst.rowIndex) : undefined;
     return {
       kind: 'balance',
       severity: 'bad',
       headline: `Running balance does not reconcile on ${check.failureCount ?? failures.length} of ${check.rowsChecked ?? '?'} rows`,
       detail: worst
-        ? `Row ${worst.rowIndex} expected ${formatCents(worst.expectedCents)} and the file says ` +
+        ? `${worstLine === undefined ? 'A row' : `Line ${worstLine}`} expected ` +
+          `${formatCents(worst.expectedCents)} and the file says ` +
           `${formatCents(worst.actualCents)}, out by ${formatCents(worst.deltaCents)}. ` +
           'That usually means the amount column or the sign convention is wrong.'
         : 'The balances and the amounts disagree.',

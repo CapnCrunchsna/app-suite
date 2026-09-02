@@ -44,6 +44,7 @@ import type {
   RuleBackedInsight,
   CommitImportBody,
   CommitResult,
+  CreateAccountBody,
   CreateDismissalRuleBody,
   CreateFormatProfileBody,
   DegradedCallLog,
@@ -156,6 +157,10 @@ export class LedgerlineApiService {
   }
 
   // ------------------------------------------------------------- §6.2 ---
+
+  createAccount(body: CreateAccountBody): Promise<Account> {
+    return this.api.createAccount(body);
+  }
 
   updateAccount(id: string, body: UpdateAccountBody): Promise<Account> {
     return this.api.updateAccount(id, body);

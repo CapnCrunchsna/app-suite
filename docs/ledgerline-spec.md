@@ -96,7 +96,7 @@ records what it proposes — — **every one of §6's nine pages now exists**. �
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac and §9ad list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad and §9ae list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2584,6 +2584,61 @@ survives as the explanation. A category has no such role to play once nothing po
 **§6.8 has no stated absences left.** §9k's "Not built yet" panel — five sections built and
 one explained — is gone with this, and so is §1's count of what §2.3 lists as missing on
 this surface.
+## 9ae. Amendments from implementation — 2026-09-01 (§6.2, §6.1)
+
+A fresh database could not be used. §6.1 refuses to commit an import until its account is
+confirmed, and the picker it offers can only pick from accounts that already exist; §6.2
+listed its actions as "rename, set type, merge two accounts, archive" and never said
+*create*, because it was written assuming an account arrives with its first statement. So
+the Import page asked for an account, the Accounts page told the user to import a
+statement, and neither could go first. Everything behind a commit — findings, review,
+insights, §7.6's labelling pass — was unreachable on a new install.
+
+`POST /api/accounts` had existed since §2.3. Only the UI was missing, and the Import
+page said so in as many words: "Create one with `POST /api/accounts`". A screen that
+tells its user to open a terminal has not shipped the feature.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.2 | **Create is a fifth action on the Accounts page**, and its form opens by itself when no account exists at all. | The four §6.2 lists are all edits to an account that is already there. On an empty database the form is not one option among several — it is the only way forward, and it should not have to be found first. |
+| 6.1 | **The same form is offered inline at the account step**, and the account it makes is confirmed onto that import in the same action. | This is where the need is felt. Someone filling it in on the Import page is doing so because *this statement* has nowhere to go; making them navigate away and come back is a step that exists only because two sections have different owners. |
+| 6.1 | **`GET /api/imports/:id` returns each row's real file line**, and every row number on screen is that. | See below. |
+
+**One row was showing three different numbers.** §3.2 stores both a `rowIndex` — the
+0-based position among data records, after the preamble, the header and any blank lines —
+and a `lineNumber`, the 1-based line of the actual file, and `schemas.ts` already said
+which is which: "1-based physical line, which is what a human can go and look at". The
+review table printed the index, the warning strip printed the index, and every message
+out of `type:parsing` said "Line N". A duplicate on file line 51 therefore read as *Line
+51* in its own sentence, *row 49* immediately beside it, and *49* in the table. All three
+were correct. None of them agreed, and on a bank export with one header row the gap is
+two — small enough to look like an off-by-one in the parser rather than like two
+coordinate systems on one screen.
+
+`lineNumber` is now the only one displayed, because it is the one that can be acted on:
+it is where the row is if you open the file. `rowIndex` stays exactly what it was — the
+key in commit payloads, near-duplicate resolutions and the zero-amount refusal — and is
+never printed. The two are attached in one place so a warning added later cannot forget
+to carry both.
+
+**The review was not returning a line number at all.** `import-service.ts`
+answered `lineNumber: row.rowIndex` — a placeholder that made the field agree with the
+column beside it and disagree with every warning. The value was never lost: `raw_row`
+has no column for it, but `parsed_json` holds the parser's whole `RawRow`, so it has
+been on disk since §2.5 and only needed reading back. No migration.
+
+**And it cannot be recomputed, only read.** The Northgate fixture has three preamble
+lines, then a blank, then its header — and the blank is dropped before mapping, so no
+arithmetic over `skipLines` and the header recovers the offset. Only the number the
+reader recorded while it was walking the file is right, which is why the test asserts
+against a fixture that has one.
+
+**A failed row's line comes from the parser's warning.** An unparsed row has no
+`parsed_json` to read it out of. Its `unparsed_row` warning carries both numbers and
+is emitted for exactly those rows, so the failures are matched up through it.
+
+**Where a line cannot be resolved, none is shown.** Falling back to printing the
+`rowIndex` would reintroduce the ambiguity in the one case nobody could check.
 
 ## 10. Open discrepancies — recorded, not resolved
 

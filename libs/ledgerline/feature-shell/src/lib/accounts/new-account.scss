@@ -1,0 +1,119 @@
+/* §6.2's create form. Laid out as a wrapping row so it sits equally well in the
+   Accounts page toolbar and inline in §6.1's account step, which is narrower. */
+
+.new {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+  background: var(--surface-1);
+}
+
+.new__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.new__field--name {
+  flex: 1 1 14rem;
+}
+
+.new__field--last4 {
+  flex: 0 0 5.5rem;
+}
+
+.new__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
+.new__input {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.new__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.new__types {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.new__type {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.new__type--current {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+/* The hint takes a full row of its own: it explains two fields at once, and
+   squeezing it beside them makes both unreadable at the widths this sits at. */
+.new__hint {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.new__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.new__submit,
+.new__cancel,
+.new__trigger {
+  padding: 0.45rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.new__submit,
+.new__trigger {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.new__submit:disabled,
+.new__trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.new__cancel {
+  background: var(--surface);
+  color: var(--text);
+}

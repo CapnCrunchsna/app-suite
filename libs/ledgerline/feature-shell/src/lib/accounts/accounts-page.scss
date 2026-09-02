@@ -86,11 +86,27 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
   font-size: 0.8rem;
   color: var(--text-dim, #7ea8a1);
+}
+
+/* Closed, the create control is one more button on the toolbar row and sits at
+   the end of it. Open, it is a four-field form that needs a row of its own —
+   squeezed in beside the account count it wraps into an unreadable column.
+   `new-account--open` is set by the component on its own host: emulated
+   encapsulation scopes both halves of a `:has()`, so a selector reaching into
+   that template matches nothing. */
+.toolbar__new {
+  margin-left: auto;
+}
+
+.toolbar__new.new-account--open {
+  flex: 1 0 100%;
+  margin-left: 0;
 }
 
 .toolbar__toggle {

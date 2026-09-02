@@ -439,25 +439,48 @@ export function reviewImport(context: LedgerlineContext, importId: string): Impo
   };
 }
 
+/**
+ * The stored `raw_row` rows, indexed by `row_index`, with the parse pulled out.
+ *
+ * `parsed_json` is the parser's whole `RawRow`, so the file line each row came
+ * from has been on disk since §2.5 — `raw_row` itself has no column for it, and
+ * does not need one. This used to answer `lineNumber` with `rowIndex`, which is
+ * a different number on any file with a header (§9ae).
+ */
+function storedRows(
+  context: LedgerlineContext,
+  importId: string,
+): Map<number, { rawText: string; lineNumber: number }> {
+  return new Map(
+    context.store.imports.listRawRows(importId).map((row) => {
+      // A row that failed to parse has no `parsed_json`; nothing downstream of
+      // here asks it for a line, and its `unparsed_row` warning carries one.
+      const parsed = row.parsedJson === null ? null : (JSON.parse(row.parsedJson) as RawRow);
+      return [
+        row.rowIndex,
+        { rawText: row.rawText, lineNumber: parsed?.lineNumber ?? row.rowIndex },
+      ];
+    }),
+  );
+}
+
 function toReviewRows(
   context: LedgerlineContext,
   importId: string,
   rows: readonly IncomingRow[],
   plan: ImportPlan | null,
 ): ReviewRow[] {
-  const rawText = new Map(
-    context.store.imports.listRawRows(importId).map((row) => [row.rowIndex, row.rawText]),
-  );
+  const stored = storedRows(context, importId);
   const merged = new Set(plan?.merged.map((entry) => entry.rowIndex) ?? []);
   const near = new Set(plan?.nearDuplicates.map((entry) => entry.rowIndex) ?? []);
 
   return rows.map((row) => ({
     rowIndex: row.rowIndex,
-    rawText: rawText.get(row.rowIndex) ?? '',
+    rawText: stored.get(row.rowIndex)?.rawText ?? '',
     row: {
       rowIndex: row.rowIndex,
-      lineNumber: row.rowIndex,
-      rawText: rawText.get(row.rowIndex) ?? '',
+      lineNumber: stored.get(row.rowIndex)?.lineNumber ?? row.rowIndex,
+      rawText: stored.get(row.rowIndex)?.rawText ?? '',
       transactionDate: row.transactionDate,
       postedDate: row.postedDate,
       effectiveDate: row.effectiveDate,

@@ -46,6 +46,7 @@ import { formatCents } from '@metrum/ledgerline-domain';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type {
   Account,
+  CreateAccountBody,
   FormatProfile,
   FormatProfileDraft,
   ImportReview,
@@ -53,6 +54,7 @@ import type {
   StatementImport,
 } from '@metrum/api-client';
 
+import { NewAccount } from '../accounts/new-account.js';
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { ReviewQueue } from '../review/review-queue.service.js';
 import { ColumnMapper } from './column-mapper.js';
@@ -61,11 +63,11 @@ import type { StagedFileRow } from './import-dropzone.js';
 import { ImportHistory } from './import-history.js';
 import { ReviewTable } from './review-table.js';
 import type { Resolution, ResolutionChange } from './review-table.js';
-import { reviewWarnings } from './review-warnings.js';
+import { lineNumbersFor, reviewWarnings } from './review-warnings.js';
 
 @Component({
   selector: 'll-imports-page',
-  imports: [Panel, ImportDropzone, ReviewTable, ColumnMapper, ImportHistory],
+  imports: [Panel, ImportDropzone, ReviewTable, ColumnMapper, ImportHistory, NewAccount],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './imports-page.html',
   styleUrl: './imports-page.scss',
@@ -206,6 +208,14 @@ export class ImportsPage {
       this.warnings().some((warning) => warning.kind === 'zero_amount'),
   );
 
+  /** The refusal names rows by `rowIndex`, because that is the API's key. On
+   *  screen it becomes the file line, like every other number this page prints —
+   *  see `review-warnings.ts`. */
+  protected readonly zeroAmountLines = computed(() => {
+    const current = this.current();
+    return current === null ? [] : lineNumbersFor(current, this.zeroAmountRows());
+  });
+
   protected accountName(accountId: string | null): string {
     if (!accountId) return 'no account';
     return this.accounts().find((account) => account.id === accountId)?.displayName ?? accountId;
@@ -342,6 +352,35 @@ export class ImportsPage {
       this.notice.set(
         `Filing into ${name ?? accountId}. Duplicate counts below are against that account — ` +
           'the merge rule counts rows within one account (§3.3).',
+      );
+    });
+  }
+
+  /**
+   * Create an account and confirm this import into it, in one action.
+   *
+   * §6.2 owns accounts and §6.1 owns imports, and on a fresh database that split
+   * deadlocks: the import cannot commit until an account exists, and the only
+   * page that makes one told the user to import a statement. The form is offered
+   * here as well as there, and confirming straight afterwards is not a
+   * convenience — the reason someone filled it in on this page is that this
+   * import needed somewhere to go.
+   *
+   * `confirmAccount` cannot be reused verbatim: it names the account by looking
+   * it up in `accounts()`, which has not re-read yet. The response has the name.
+   */
+  protected async createAccount(body: CreateAccountBody): Promise<void> {
+    const importId = this.selectedImportId();
+
+    await this.write(async () => {
+      const account = await this.api.createAccount(body);
+      if (importId) await this.api.updateImport(importId, { accountId: account.id });
+      this.notice.set(
+        `Created ${account.displayName}` +
+          (importId
+            ? ` and filed this statement into it. Duplicate counts below are against that ` +
+              'account — the merge rule counts rows within one account (§3.3).'
+            : '.'),
       );
     });
   }

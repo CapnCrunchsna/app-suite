@@ -1,6 +1,12 @@
 <div class="rows" role="table" aria-label="Rows to import">
   <div class="rows__head" role="row">
-    <span class="rows__cell rows__cell--index" role="columnheader">#</span>
+    <span
+      class="rows__cell rows__cell--index"
+      role="columnheader"
+      title="The line this row is on in the file, so it matches every warning and the raw line below."
+    >
+      Line
+    </span>
     <span class="rows__cell rows__cell--date" role="columnheader">Date</span>
     <span class="rows__cell rows__cell--desc" role="columnheader">Descriptor</span>
     <span class="rows__cell rows__cell--amount" role="columnheader">Amount</span>
@@ -25,7 +31,10 @@
       title="Show the verbatim statement line"
     >
       <span class="rows__chevron">{{ expandedRow() === entry.rowIndex ? '▾' : '▸' }}</span>
-      {{ entry.rowIndex }}
+      <!-- The file line, not `rowIndex`. A header row and any preamble put the two
+           two apart on a Chase export, so showing the index here while every
+           warning said "Line N" gave one row two numbers. See `review-warnings.ts`. -->
+      {{ entry.row.lineNumber }}
     </button>
 
     <span class="rows__cell rows__cell--date" role="cell">
@@ -71,7 +80,7 @@
   <pre class="rows__raw">{{ entry.rawText }}</pre>
   } @let candidate = candidateFor(entry.rowIndex); @if (entry.disposition === 'near_duplicate' &&
   candidate) {
-  <div class="near" role="group" [attr.aria-label]="'Near-duplicate of row ' + entry.rowIndex">
+  <div class="near" role="group" [attr.aria-label]="'Near-duplicate on line ' + entry.row.lineNumber">
     <div class="near__compare">
       <div class="near__side">
         <span class="near__label">Incoming</span>

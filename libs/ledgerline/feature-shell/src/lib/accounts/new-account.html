@@ -1,0 +1,85 @@
+@if (!open()) {
+  <button type="button" class="new__trigger" [disabled]="busy()" (click)="openForm()">
+    New account
+  </button>
+} @else {
+  <form class="new" (submit)="$event.preventDefault(); submit()">
+    <div class="new__field new__field--name">
+      <label class="new__label" for="new-account-name">Account name</label>
+      <input
+        class="new__input"
+        id="new-account-name"
+        type="text"
+        autocomplete="off"
+        placeholder="Chase Checking"
+        [value]="displayName()"
+        (input)="onName($event)"
+      />
+    </div>
+
+    <div class="new__field">
+      <span class="new__label">Type</span>
+      <div class="new__types" role="group" aria-label="Account type">
+        @for (type of types; track type) {
+          <button
+            type="button"
+            class="new__type"
+            [class.new__type--current]="type === accountType()"
+            [attr.aria-pressed]="type === accountType()"
+            (click)="onType(type)"
+          >
+            {{ typeLabel[type] }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="new__field">
+      <label class="new__label" for="new-account-institution">Institution</label>
+      <input
+        class="new__input"
+        id="new-account-institution"
+        type="text"
+        autocomplete="off"
+        placeholder="Chase"
+        [value]="institution()"
+        (input)="onInstitution($event)"
+      />
+    </div>
+
+    <div class="new__field new__field--last4">
+      <label class="new__label" for="new-account-last4">Last 4</label>
+      <input
+        class="new__input"
+        id="new-account-last4"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        maxlength="4"
+        placeholder="7261"
+        [value]="last4()"
+        (input)="onLast4($event)"
+      />
+    </div>
+
+    <p class="new__hint">
+      Institution and last 4 are optional, and both earn their keep: transfer matching scores a pair
+      partly on the last 4, and an import guesses which account a file belongs to by looking for it
+      in the filename.
+    </p>
+
+    <div class="new__actions">
+      <!-- `type="button"` with an explicit click, not `type="submit"`: the form
+           element is here so Enter in a field submits, and a submit button would
+           fire both paths in a browser and neither in jsdom. -->
+      <button type="button" class="new__submit" [disabled]="!canSubmit()" (click)="submit()">
+        Create account
+      </button>
+      @if (!startOpen()) {
+        <button type="button" class="new__cancel" [disabled]="busy()" (click)="cancel()">
+          Cancel
+        </button>
+      }
+    </div>
+  </form>
+}
