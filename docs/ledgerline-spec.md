@@ -90,13 +90,13 @@ the move, the badge, and where the count lives.
 Redaction sections, §4.2's merchant-proposal stage, and the degraded-call log in Data — §9t.
 `none` remains the default and the app is complete without a provider (§2.4).
 
-PDF ingest is **not** built, nor are the merchant-alias endpoints of
-§2.3 — §2.3's **review queue is built** as of 2026-08-27, and §9p
-records what it proposes — — **every one of §6's nine pages now exists**. §6.1's Import, §6.2's Accounts,
+PDF ingest is **not** built. §2.3 is complete as of 2026-09-01: its review queue was built on
+2026-08-27 (§9p records what it proposes) and its last two routes — the merchant edit and the
+by-hand alias — on 2026-09-01 (§9af). And **every one of §6's nine pages now exists**. §6.1's Import, §6.2's Accounts,
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad and §9ae list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae and §9af list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2639,6 +2639,64 @@ is emitted for exactly those rows, so the failures are matched up through it.
 
 **Where a line cannot be resolved, none is shown.** Falling back to printing the
 `rowIndex` would reintroduce the ambiguity in the one case nobody could check.
+
+## 9af. Amendments from implementation — 2026-09-01 (§2.3, §6.9)
+
+§2.3's last two unbuilt routes. `routes/merchants.ts` gave the reason they were skipped,
+and it was a good one: an alias write happened "as a consequence of the transaction edit
+(§4.3) rather than as a call the UI makes itself, and half-built endpoints teach the wrong
+model of who owns the alias table."
+
+What changed is that the gap stopped being theoretical. §4.1 step 7 names a provisional
+merchant after the cleaned descriptor, and on the first real statement that is 17 merchants
+of 21. §5.2 and §5.6 read `is_known_subscription` off those rows, §2.6 reads
+`is_transfer_kind`, and §2.5 categorises new charges from `default_category_id` — and
+none of the three could be set by anybody, because only `upsertSeed` wrote them. §6.9 was
+showing a list of merchants the app had named for itself and offering no way to answer it.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.3 | **`PATCH /api/merchants/:id`**, taking the display name and the flags §5 and §2.5 read. | The facts the rules use had no writer. A merchant list that can be read and not corrected is a report, not a review. |
+| 2.3 | **`POST /api/merchants/aliases`**, taking `{ merchantId, aliasKeys }`. | §2.3 has named it since the beginning; the ownership objection is answered below rather than dropped. |
+| 6.9 | **The provisional list is editable**, and no longer truncated at twelve without a way past it. | A cut is fine when it hides things you can only read, and wrong when it hides the only place to rename the merchant at position thirteen. |
+
+**`canonicalName` is not editable, and that is the load-bearing decision.** It is the
+merchant's identity rather than its label: §3.2 makes it UNIQUE and §4.1 step 7 resolves a
+cleaned descriptor *through* it. Renaming it would leave next month's import computing the
+old string, failing to find the row, and quietly making a second merchant out of the same
+shop — the same failure §4.1 stage 4 refuses to risk by over-stripping. `displayName` is
+the one a person reads, and is what the editor changes.
+
+**Editing promotes the row to `source: user`.** `upsertAlias` already argues why a
+`rule` row is overwritable — it is "a cache of the chain's own deterministic output" and
+"overwriting it discards no decision, because nobody made one". The moment a person names
+the merchant or says it is a subscription, somebody has. Left at `rule`, the next re-seed
+or the next model would be entitled to overwrite it.
+
+**Only one of the two enqueues §4.3's sweep, and the difference is the point.** The alias
+write changes *which merchant a spelling resolves to*, so the stored rows have to follow and
+the job is what makes that true — exactly as the merge does it, and coalesced, so four
+spellings book one sweep. The `PATCH` changes what the rules know about a merchant that is
+already the right one: no descriptor is regrouped and no row moves.
+
+**Nor does the `PATCH` re-run the analyzers**, deliberately. A changed
+`is_known_subscription` does make a stored finding stale, and §5.1 already has the
+mechanism for that (`evidence_hash`, `config_hash`) and §2.7 already has the trigger.
+Kicking off an analysis run from a rename would make a cheap edit expensive and surprising,
+and would do it once per merchant while somebody works down a list of twenty. The screen
+says so instead of implying the numbers have already moved.
+
+**Answering the question removes it, so the row stays anyway.** The queue's provisional
+list is `source = 'rule'` and the edit promotes the row to `user`, which is correct and
+briefly hostile: pick the wrong category and the row is gone from the only screen that
+offered it. A merchant edited in this sitting stays on the list, marked, until the page is
+left — the queue is still the source of what is *waiting*, and this is only the tail of what
+was just answered.
+
+**The alias table still has one owner.** The new route does not touch `upsertAlias`. It
+calls `writeUserMerchantAlias`, the same composition-root function §6.3's correction and
+§9q's merge both call, so there is one path that writes a `user` alias and one place its
+rules live. That was the objection, and it is met rather than waived.
 
 ## 10. Open discrepancies — recorded, not resolved
 

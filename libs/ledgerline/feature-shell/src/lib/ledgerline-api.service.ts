@@ -46,6 +46,9 @@ import type {
   CommitResult,
   CreateAccountBody,
   CreateDismissalRuleBody,
+  CreateMerchantAliasesBody,
+  MerchantAliasResult,
+  UpdateMerchantBody,
   CreateFormatProfileBody,
   DegradedCallLog,
   DeleteImportResult,
@@ -196,6 +199,18 @@ export class LedgerlineApiService {
 
   listMerchants(): Promise<Merchant[]> {
     return this.api.listMerchants();
+  }
+
+  /** §2.3's merchant edit. Renames and the flags §5 reads; `canonicalName` is not
+   *  editable, because §4.1 step 7 resolves descriptors through it. */
+  updateMerchant(id: string, body: UpdateMerchantBody): Promise<Merchant> {
+    return this.api.updateMerchant(id, body);
+  }
+
+  /** §2.3's by-hand alias write. Same `user` precedence as a §6.3 correction, and
+   *  it enqueues §4.3's sweep so the stored rows follow. */
+  createMerchantAliases(body: CreateMerchantAliasesBody): Promise<MerchantAliasResult> {
+    return this.api.createMerchantAliases(body);
   }
 
   listCategories(): Promise<Category[]> {

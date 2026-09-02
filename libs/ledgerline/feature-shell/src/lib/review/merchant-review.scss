@@ -152,11 +152,20 @@
   gap: 3px;
 }
 
-.provisional__list li {
+/* A row wraps rather than scrolls: the name is a raw bank descriptor and can be
+ * long, and the chips after it are the facts §5 reads off this merchant. Pushing
+ * either off the edge would hide the thing the row exists to show. */
+.provisional__row {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 4px 0;
   font-size: 0.74rem;
+}
+
+.provisional__row--editing {
+  padding-bottom: 10px;
 }
 
 .provisional__name {
@@ -164,9 +173,120 @@
   overflow-wrap: anywhere;
 }
 
+/* Takes the slack, so the chips and the Edit button line up down the list
+ * however long the names are. */
 .provisional__count {
+  margin-right: auto;
   color: var(--text-dim, #7ea8a1);
   white-space: nowrap;
+}
+
+.provisional__row .tag {
+  padding: 1px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  color: var(--text-dim, #7ea8a1);
+  white-space: nowrap;
+}
+
+.provisional__row .tag--category {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.provisional__row .tag--saved {
+  border-color: var(--accent-2, #34d399);
+  color: var(--accent-2, #34d399);
+}
+
+.provisional__edit,
+.provisional__more {
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  padding: 2px 9px;
+  background: transparent;
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.provisional__edit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.provisional__more {
+  margin-left: 8px;
+}
+
+/* ------------------------------------------------- the merchant editor --- */
+
+/* Full width of the row it opened from, so the fields are readable rather than
+ * squeezed into whatever the name left over. */
+.editor {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: var(--radius, 8px);
+  background: var(--surface-1, #0f1726);
+}
+
+.editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.editor__field--name {
+  flex: 1 1 13rem;
+}
+
+.editor__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.editor__input {
+  padding: 4px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: var(--surface, #121b2c);
+  color: var(--text, #dcefeb);
+  font: inherit;
+  font-size: 0.76rem;
+  min-width: 0;
+}
+
+.editor__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--text, #dcefeb);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor__effect {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.editor__actions {
+  display: flex;
+  gap: 8px;
 }
 
 /* §4.2's proposals. Same rule as the provisional list — a divider rather than a

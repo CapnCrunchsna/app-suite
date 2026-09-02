@@ -39,6 +39,20 @@ export interface SeedMerchantInput {
   readonly overlapGroup?: string | null;
 }
 
+/**
+ * §2.3's `PATCH /api/merchants/:id`. Absent leaves alone, `null` clears.
+ *
+ * `canonicalName` and `source` are absent by design — see `update()`.
+ */
+export interface MerchantPatch {
+  readonly displayName?: string;
+  readonly website?: string | null;
+  readonly defaultCategoryId?: string | null;
+  readonly overlapGroup?: string | null;
+  readonly isKnownSubscription?: boolean;
+  readonly isTransferKind?: boolean;
+}
+
 export interface AliasInput {
   readonly aliasKey: string;
   readonly merchantId: string;
@@ -223,6 +237,67 @@ export class MerchantRepository {
         now,
       );
     return this.get(input.id) as MerchantRecord;
+  }
+
+  /**
+   * §2.3's `PATCH /api/merchants/:id`. Absent keys are left alone and explicit
+   * `null`s clear, the same contract as `CategoryPatch`.
+   *
+   * ## What is deliberately not patchable
+   *
+   * **`canonicalName`** is the merchant's identity, not its label. §3.2 puts a
+   * UNIQUE index on it and §4.1 step 7 resolves a cleaned descriptor *through* it
+   * — `getOrCreateProvisional` looks a merchant up by that string. Renaming it
+   * would leave the aliases pointing at a row the chain can no longer reach by
+   * the name it will compute next month, and the next import would quietly make a
+   * second merchant. `displayName` is the one a person reads, and is what this
+   * changes.
+   *
+   * **`source`** is provenance (§4.3, §7.5), and a row cannot promote itself. What
+   * it does do is move to `'user'` as a *consequence* of this call, below.
+   *
+   * ## Why editing promotes the row to `user`
+   *
+   * A `rule` merchant is a cache of the chain's own output — that is the whole of
+   * `upsertAlias`'s argument for why `llm` may overwrite `rule` and nothing else:
+   * "overwriting it discards no decision, because nobody made one". The moment a
+   * person names it, or says it is a subscription, somebody has. Leaving it at
+   * `rule` would leave that judgement overwritable by the next thing that felt
+   * entitled to a cache entry.
+   */
+  update(id: string, patch: MerchantPatch): MerchantRecord {
+    const assignments: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    const set = (column: string, value: string | number | null | undefined): void => {
+      if (value === undefined) return;
+      assignments.push(`${column} = ?`);
+      values.push(value);
+    };
+
+    set('display_name', patch.displayName);
+    set('website', patch.website);
+    set('default_category_id', patch.defaultCategoryId);
+    set('overlap_group', patch.overlapGroup);
+    set(
+      'is_known_subscription',
+      patch.isKnownSubscription === undefined ? undefined : asInt(patch.isKnownSubscription),
+    );
+    set(
+      'is_transfer_kind',
+      patch.isTransferKind === undefined ? undefined : asInt(patch.isTransferKind),
+    );
+
+    if (assignments.length > 0) {
+      this.db
+        .prepare(
+          `UPDATE merchant_canonical SET ${assignments.join(', ')}, source = 'user', updated_at = ?
+            WHERE id = ?`,
+        )
+        .run(...values, this.clock.now(), id);
+    }
+
+    return this.get(id) as MerchantRecord;
   }
 
   listAliases(): MerchantAliasRecord[] {

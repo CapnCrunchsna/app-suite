@@ -44,7 +44,13 @@
       } @else if (failure() && nothingHeld()) {
         <p class="empty empty--bad">The queue did not load: {{ $any(failure()).message }}</p>
       } @else {
-        <ll-merchant-review [queue]="queue()" [busy]="busy()" (merge)="onMerge($event)" />
+        <ll-merchant-review
+          [queue]="queue()"
+          [categories]="categories()"
+          [busy]="busy()"
+          (merge)="onMerge($event)"
+          (edit)="onMerchantEdit($event)"
+        />
       }
     </ui-panel>
   } @else {

@@ -39,13 +39,13 @@ import {
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
 import { LedgerlineApiError } from '@metrum/api-client';
-import type { Calibration } from '@metrum/api-client';
+import type { Calibration, Category } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 import { CalibrationPass } from './calibration-pass.js';
 import type { AssertionEvent } from './calibration-pass.js';
 import { MerchantReview } from './merchant-review.js';
-import type { MergeRequest } from './merchant-review.js';
+import type { MerchantEditRequest, MergeRequest } from './merchant-review.js';
 import { ReviewQueue } from './review-queue.service.js';
 
 @Component({
@@ -82,6 +82,14 @@ export class ReviewPage {
    * thought to ask. Showing both at once would make the page a wall, and would bury
    * the queue, which is the half with a badge and a reason to be noticed.
    */
+  /** §6.8's taxonomy, for the merchant editor's default-category picker. Read
+   *  once — the editor sets a merchant's category, it does not edit the list. */
+  private readonly categoryList = resource({
+    loader: () => this.api.listCategories(),
+    defaultValue: [] as Category[],
+  });
+  protected readonly categories = computed(() => this.categoryList.value());
+
   protected readonly mode = signal<'queue' | 'calibrate'>('queue');
   private readonly passRevision = signal(0);
 
@@ -214,6 +222,40 @@ export class ReviewPage {
         cause instanceof LedgerlineApiError
           ? cause.message
           : `That did not work: ${(cause as Error).message}`,
+      );
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /**
+   * §2.3's `PATCH /api/merchants/:id` (§9af).
+   *
+   * No job to wait on, unlike the merge above: this changes what the rules know
+   * about a merchant that is already the right one, so no descriptor is
+   * regrouped and no row moves. The queue is still re-read, because the row on
+   * screen now says something different about itself.
+   *
+   * The notice names the analysis run rather than implying the numbers already
+   * moved. `isKnownSubscription` is read by §5.2 and `defaultCategoryId` by
+   * §2.5, and neither is applied to what is already stored until §2.7's run —
+   * saying "done" here would be claiming a recalculation that has not happened.
+   */
+  protected async onMerchantEdit(request: MerchantEditRequest): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      await this.api.updateMerchant(request.merchantId, request.patch);
+      this.notice.set(
+        `Saved ${request.displayName}. No charges moved — this is what the app now knows ` +
+          'about the merchant, and Findings and Subscriptions pick it up at the next analysis run.',
+      );
+      await this.reviewQueue.refresh();
+    } catch (cause) {
+      this.notice.set(
+        cause instanceof LedgerlineApiError
+          ? cause.message
+          : `That did not save: ${(cause as Error).message}`,
       );
     } finally {
       this.busy.set(false);

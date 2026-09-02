@@ -355,4 +355,146 @@ describe('ledgerline-api merchant review queue (§4.1 step 7)', () => {
 
     expect(after).toEqual(before);
   });
+
+  /**
+   * §2.3's last two unbuilt routes (§9af).
+   *
+   * The `PATCH` changes what the rules know about a merchant that is already the
+   * right one; the alias `POST` changes which merchant a spelling resolves to.
+   * That difference is the whole of why only one of them enqueues §4.3's sweep,
+   * and both halves of it are asserted below.
+   */
+  describe('editing a merchant (§2.3, §9af)', () => {
+    async function anyMerchant() {
+      const [merchant] = context.store.merchants.list();
+      return merchant;
+    }
+
+    it('renames the display name and leaves the canonical name alone', async () => {
+      const merchant = await anyMerchant();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/merchants/${merchant.id}`,
+        payload: { displayName: 'Blue Bottle' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      // The canonical name is the identity §4.1 step 7 resolves through. If a
+      // rename moved it, the next import would compute the old string, miss this
+      // row, and make a second merchant out of it.
+      expect(response.json()).toMatchObject({
+        displayName: 'Blue Bottle',
+        canonicalName: merchant.canonicalName,
+      });
+    });
+
+    it('promotes the row to `user`, so a re-seed cannot undo the judgement', async () => {
+      // A provisional row specifically: `rule` is the source §4.1 step 7 writes,
+      // and it is the one whose promotion actually matters. `upsertSeed` reclaims
+      // a `seed` row at every boot and `upsertAlias` lets `llm` overwrite a `rule`
+      // one — both because such a row is a cache of the chain's own output and
+      // "overwriting it discards no decision, because nobody made one". Somebody
+      // just did.
+      const merchant = context.store.merchants.list().find((m) => m.source === 'rule');
+      expect(merchant).toBeDefined();
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/merchants/${merchant?.id}`,
+        payload: { isKnownSubscription: true },
+      });
+
+      expect(context.store.merchants.get(merchant?.id as string)?.source).toBe('user');
+    });
+
+    it('writes no alias and queues no sweep — nothing regrouped', async () => {
+      const merchant = await anyMerchant();
+      const aliasesBefore = context.store.merchants.listAliases().length;
+      const jobsBefore = context.store.jobs.list().length;
+
+      await app.inject({
+        method: 'PATCH',
+        url: `/api/merchants/${merchant.id}`,
+        payload: { displayName: 'Renamed', isTransferKind: true },
+      });
+
+      expect(context.store.merchants.listAliases()).toHaveLength(aliasesBefore);
+      expect(context.store.jobs.list()).toHaveLength(jobsBefore);
+    });
+
+    it('404s on an unknown category rather than surfacing the foreign key', async () => {
+      const merchant = await anyMerchant();
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/api/merchants/${merchant.id}`,
+        payload: { defaultCategoryId: 'no-such-category' },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect((response.json() as { message: string }).message).toContain('category');
+    });
+
+    it('404s on an unknown merchant', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/api/merchants/nope',
+        payload: { displayName: 'Nothing' },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
+  describe('writing an alias by hand (§2.3, §4.3, §9af)', () => {
+    it('writes a `user` alias per key and queues the sweep', async () => {
+      const [merchant] = context.store.merchants.list();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/merchants/aliases',
+        payload: { merchantId: merchant.id, aliasKeys: ['SOME OLD SPELLING', 'ANOTHER ONE'] },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        merchantId: merchant.id,
+        aliasKeysWritten: ['SOME OLD SPELLING', 'ANOTHER ONE'],
+      });
+
+      // `user`, because a person said so — the same precedence a §6.3 correction
+      // and a merge produce, through the same function.
+      const written = context.store.merchants
+        .listAliases()
+        .filter((alias) => alias.aliasKey === 'SOME OLD SPELLING');
+      expect(written).toHaveLength(1);
+      expect(written[0]).toMatchObject({ merchantId: merchant.id, source: 'user' });
+    });
+
+    it('drops blank keys, and refuses when that leaves nothing', async () => {
+      const [merchant] = context.store.merchants.list();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/merchants/aliases',
+        payload: { merchantId: merchant.id, aliasKeys: ['   '] },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('404s on an unknown merchant, rather than writing an alias to nowhere', async () => {
+      const aliasesBefore = context.store.merchants.listAliases().length;
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/merchants/aliases',
+        payload: { merchantId: 'nope', aliasKeys: ['ANYTHING'] },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(context.store.merchants.listAliases()).toHaveLength(aliasesBefore);
+    });
+  });
 });

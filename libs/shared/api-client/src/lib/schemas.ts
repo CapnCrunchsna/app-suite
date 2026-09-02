@@ -159,6 +159,13 @@ export interface MerchantMergeResult {
   readonly coalesced: boolean;
 }
 
+export interface MerchantAliasResult {
+  readonly merchantId: string;
+  readonly aliasKeysWritten: string[];
+  readonly jobId: string;
+  readonly coalesced: boolean;
+}
+
 export interface Category {
   readonly id: string;
   readonly name: string;

@@ -810,6 +810,29 @@ const merchantMergeResult = {
   },
 } as const;
 
+/**
+ * `POST /api/merchants/aliases` (§2.3).
+ *
+ * The same facts the merge result carries, minus `transactionsAffected`: a merge
+ * knows how many rows it is about to move because it counted the losing
+ * merchant's, and an alias written against a spelling that may not be in the
+ * ledger yet does not. A zero there would read as "nothing happened" rather than
+ * "nothing yet".
+ */
+const merchantAliasResult = {
+  $id: 'MerchantAliasResult',
+  type: 'object',
+  properties: {
+    merchantId: { type: 'string' },
+    /** The keys actually written — blank ones are dropped, so this can be shorter
+     *  than what was sent. */
+    aliasKeysWritten: { type: 'array', items: { type: 'string' } },
+    jobId: { type: 'string' },
+    /** §2.7's coalescing: a second write while one is queued merges into it. */
+    coalesced: { type: 'boolean' },
+  },
+} as const;
+
 const category = {
   $id: 'Category',
   type: 'object',
@@ -1924,6 +1947,7 @@ const SHARED = [
   allRequired(mergeCandidate),
   allRequired(merchantReviewQueue),
   allRequired(merchantMergeResult),
+  allRequired(merchantAliasResult),
   allRequired(category),
   // §6.8's editor. `Category` first — the three below all $ref it.
   allRequired(categoryUsage),

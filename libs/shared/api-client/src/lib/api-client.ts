@@ -22,6 +22,7 @@ import type {
   Merchant,
   MerchantReviewQueue,
   MerchantMergeResult,
+  MerchantAliasResult,
   Category,
   CategoryUsage,
   CategoryUpdate,
@@ -224,6 +225,20 @@ export type ListMerchantsResponse = Merchant[];
 
 export type MergeMerchantBody = {
   readonly intoMerchantId: string;
+};
+
+export type UpdateMerchantBody = {
+  readonly displayName?: string;
+  readonly website?: string | null;
+  readonly defaultCategoryId?: string | null;
+  readonly overlapGroup?: string | null;
+  readonly isKnownSubscription?: boolean;
+  readonly isTransferKind?: boolean;
+};
+
+export type CreateMerchantAliasesBody = {
+  readonly merchantId: string;
+  readonly aliasKeys: string[];
 };
 
 export type ListCategoriesResponse = Category[];
@@ -654,6 +669,28 @@ export class LedgerlineApi {
    */
   mergeMerchant(id: string, body: MergeMerchantBody): Promise<MerchantMergeResult> {
     return this.request<MerchantMergeResult>('POST', `/api/merchants/${encodeURIComponent(String(id))}/merge`, {
+      body,
+    });
+  }
+
+  /**
+   * Rename a merchant, or change what the rules know about it
+   *
+   * `canonicalName` is not editable — spec 4.1 step 7 resolves cleaned descriptors through it, so changing it would make the next import create a second merchant. Editing moves the row to `source: user` (spec 4.3), which is what stops a later seed or re-normalize from overwriting the judgement. Does **not** re-run the analyzers: run analysis to pick up a changed `isKnownSubscription` (spec 5.2).
+   */
+  updateMerchant(id: string, body: UpdateMerchantBody): Promise<Merchant> {
+    return this.request<Merchant>('PATCH', `/api/merchants/${encodeURIComponent(String(id))}`, {
+      body,
+    });
+  }
+
+  /**
+   * Point one or more descriptor spellings at a merchant
+   *
+   * Writes a `user` alias per key — permanent and top-precedence (spec 4.3) — then enqueues spec 4.3’s re-normalize job so the stored rows follow. The same write path as a spec 6.3 correction and a merchant merge, so the alias table has one owner. Keys are `description_normalized` values, which is what spec 4.1 matches on.
+   */
+  createMerchantAliases(body: CreateMerchantAliasesBody): Promise<MerchantAliasResult> {
+    return this.request<MerchantAliasResult>('POST', `/api/merchants/aliases`, {
       body,
     });
   }

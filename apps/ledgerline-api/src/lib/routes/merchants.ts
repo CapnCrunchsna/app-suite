@@ -6,11 +6,17 @@
  * `categories.ts` when §6.8's editor gave it four more routes and an argument of its
  * own — see that file's header.
  *
- * §2.3's `PATCH /api/merchants/:id` and `POST /api/merchants/aliases` remain
- * unbuilt: the alias write a merchant *correction* makes still happens as a
- * consequence of the transaction edit (§4.3) rather than as a call the UI makes
- * itself, and half-built endpoints teach the wrong model of who owns the alias
- * table.
+ * §2.3's `PATCH /api/merchants/:id` and `POST /api/merchants/aliases` are at the
+ * bottom of this file. They were the last of §2.3 left unbuilt, and the reason
+ * given here for that was ownership: an alias write happened "as a consequence of
+ * the transaction edit (§4.3) rather than as a call the UI makes itself, and
+ * half-built endpoints teach the wrong model of who owns the alias table."
+ *
+ * That is answered rather than dropped. The alias route does not touch
+ * `upsertAlias`; it calls the same `writeUserMerchantAlias` the §6.3 correction
+ * and the merge below both call, so the table still has one owner. And the
+ * `PATCH` writes no aliases at all — it changes what the rules know about a
+ * merchant that is already the right one.
  *
  * ## Why the queue is a read and the merge is a write
  *
@@ -229,6 +235,166 @@ export function registerMerchantRoutes(app: FastifyInstance, context: Ledgerline
       });
 
       return { merchantId: intoMerchantId, aliasKeysWritten, transactionsAffected, jobId, coalesced };
+    },
+  );
+
+  /**
+   * §2.3's `PATCH /api/merchants/:id`.
+   *
+   * ## What it changes, and what it deliberately does not
+   *
+   * `canonicalName` is not in the body. It is the merchant's identity — §3.2 makes
+   * it UNIQUE and §4.1 step 7 resolves cleaned descriptors *through* it — so
+   * editing it would leave the next import computing the old name, failing to find
+   * the row, and making a second merchant out of it. `displayName` is the one a
+   * person reads, and is what this changes. `source` is not in the body either:
+   * provenance is not self-assigned (§7.5). The store moves the row to `user`
+   * as a consequence, which is the argument in `MerchantRepository.update`.
+   *
+   * ## Why no re-normalize job
+   *
+   * Nothing here changes which merchant a descriptor resolves to. §4.3's sweep
+   * exists to repoint history after a *grouping* changes; these fields are
+   * properties of a merchant that is already the right one, so the rows behind it
+   * are already correct and there is nothing to move.
+   *
+   * The analyzers are a different question, and the answer is deliberately still
+   * no. `isKnownSubscription` and `defaultCategoryId` are read by §5.2 and §2.5,
+   * so a finding computed before this call may now be stale — but §5.1 already
+   * has the mechanism for that (`config_hash`, `evidence_hash`) and §2.7 already
+   * has the trigger (Run analysis). Kicking off an analysis run from a rename
+   * would make a cheap edit expensive and surprising, and would do it once per
+   * keystroke-sized change while somebody works down a list of twenty merchants.
+   */
+  app.patch<{
+    Params: { id: string };
+    Body: {
+      displayName?: string;
+      website?: string | null;
+      defaultCategoryId?: string | null;
+      overlapGroup?: string | null;
+      isKnownSubscription?: boolean;
+      isTransferKind?: boolean;
+    };
+  }>(
+    '/api/merchants/:id',
+    {
+      schema: {
+        summary: 'Rename a merchant, or change what the rules know about it',
+        operationId: 'updateMerchant',
+        description:
+          '`canonicalName` is not editable — spec 4.1 step 7 resolves cleaned descriptors ' +
+          'through it, so changing it would make the next import create a second merchant. ' +
+          'Editing moves the row to `source: user` (spec 4.3), which is what stops a later ' +
+          'seed or re-normalize from overwriting the judgement. Does **not** re-run the ' +
+          'analyzers: run analysis to pick up a changed `isKnownSubscription` (spec 5.2).',
+        tags: ['merchants'],
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          required: ['id'],
+        },
+        body: {
+          type: 'object',
+          properties: {
+            displayName: { type: 'string', minLength: 1 },
+            website: { type: ['string', 'null'] },
+            defaultCategoryId: { type: ['string', 'null'] },
+            overlapGroup: { type: ['string', 'null'] },
+            isKnownSubscription: { type: 'boolean' },
+            isTransferKind: { type: 'boolean' },
+          },
+        },
+        response: { 200: ref('Merchant'), ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      if (!context.store.merchants.get(request.params.id)) {
+        return reply.code(404).send({ error: 'not_found', message: 'no such merchant' });
+      }
+
+      // §3.2 RESTRICTs `merchant_canonical.default_category_id`, so an unknown id
+      // would surface as a constraint violation. Checked here so the answer is
+      // the reason rather than a 500 naming a foreign key.
+      const { defaultCategoryId } = request.body;
+      if (defaultCategoryId != null && !context.store.merchants.getCategory(defaultCategoryId)) {
+        return reply.code(404).send({ error: 'not_found', message: 'no such category' });
+      }
+
+      return context.store.merchants.update(request.params.id, request.body);
+    },
+  );
+
+  /**
+   * §2.3's `POST /api/merchants/aliases`.
+   *
+   * ## One owner for the alias table
+   *
+   * This file's header used to give the reason both these routes were unbuilt:
+   * an alias write "happens as a consequence of the transaction edit (§4.3)
+   * rather than as a call the UI makes itself, and half-built endpoints teach the
+   * wrong model of who owns the alias table". That worry is answered rather than
+   * ignored — this route does not touch `upsertAlias`. It calls
+   * `writeUserMerchantAlias`, the same composition-root function §6.3's
+   * correction and the merge above both go through, so there is still exactly one
+   * path that writes a `user` alias and exactly one place its rules live.
+   *
+   * ## And it enqueues the sweep, because it changes a grouping
+   *
+   * Unlike the `PATCH` above, this one *does* move history: the point of writing
+   * an alias by hand is that rows currently resolving elsewhere should resolve
+   * here. §4.3's job is what makes that true of the rows already stored, so it is
+   * enqueued exactly as the merge enqueues it — and coalesced, so somebody
+   * entering four spellings books one sweep.
+   */
+  app.post<{ Body: { merchantId: string; aliasKeys: string[] } }>(
+    '/api/merchants/aliases',
+    {
+      schema: {
+        summary: 'Point one or more descriptor spellings at a merchant',
+        operationId: 'createMerchantAliases',
+        description:
+          'Writes a `user` alias per key — permanent and top-precedence (spec 4.3) — then ' +
+          'enqueues spec 4.3’s re-normalize job so the stored rows follow. The same write ' +
+          'path as a spec 6.3 correction and a merchant merge, so the alias table has one ' +
+          'owner. Keys are `description_normalized` values, which is what spec 4.1 matches on.',
+        tags: ['merchants'],
+        body: {
+          type: 'object',
+          required: ['merchantId', 'aliasKeys'],
+          properties: {
+            merchantId: { type: 'string', minLength: 1 },
+            aliasKeys: {
+              type: 'array',
+              minItems: 1,
+              items: { type: 'string', minLength: 1 },
+            },
+          },
+        },
+        response: { 200: ref('MerchantAliasResult'), ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const { merchantId, aliasKeys } = request.body;
+
+      if (!context.store.merchants.get(merchantId)) {
+        return reply.code(404).send({ error: 'not_found', message: 'no such merchant' });
+      }
+
+      const aliasKeysWritten = writeUserMerchantAlias(context, aliasKeys, merchantId);
+      if (aliasKeysWritten.length === 0) {
+        return reply.code(400).send({
+          error: 'bad_request',
+          message: 'every alias key was blank once trimmed',
+        });
+      }
+
+      const { id: jobId, coalesced } = enqueueRenormalize(context, {
+        transactionIds: [],
+        aliasKeys: aliasKeysWritten,
+      });
+
+      return { merchantId, aliasKeysWritten, jobId, coalesced };
     },
   );
 }

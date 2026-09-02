@@ -77,10 +77,10 @@
     </ul>
   }
 
-  @if (provisional().length > 0) {
+  @if (provisionalWithEdited().length > 0) {
     <section class="provisional">
       <h4 class="provisional__title">
-        Merchants the app named for itself ({{ provisional().length }})
+        Merchants the app named for itself ({{ provisionalWithEdited().length }})
       </h4>
       <p class="note">
         These matched nothing the app ships with, so it made a merchant out of the cleaned-up
@@ -90,18 +90,141 @@
       </p>
       <ul class="provisional__list">
         @for (entry of provisionalShown(); track entry.merchant.id) {
-          <li>
+          <li class="provisional__row" [class.provisional__row--editing]="editing() === entry.merchant.id">
             <span class="provisional__name">{{ entry.merchant.displayName }}</span>
             <span class="provisional__count"
               >{{ entry.transactionCount }}
               {{ entry.transactionCount === 1 ? 'charge' : 'charges' }}</span
             >
+
+            <!-- Answering the question takes the row out of the queue, so this is
+                 what is left of it: still here, still editable, and saying why it
+                 is no longer one of the questions. -->
+            @if (isSaved(entry)) {
+              <span class="tag tag--saved" title="Saved. No longer a name the app made up.">
+                saved
+              </span>
+            }
+
+            <!-- The facts §5 and §2.5 read off this merchant, shown where they are
+                 set. A subscription flag that only appears while the editor is open
+                 is a setting nobody can audit at a glance. -->
+            @if (entry.merchant.isKnownSubscription) {
+              <span class="tag" title="Spec 5.2 and 5.6 read this.">subscription</span>
+            }
+            @if (entry.merchant.isTransferKind) {
+              <span class="tag" title="Spec 2.6 reads this: money moving, not money spent.">
+                transfer
+              </span>
+            }
+            @if (categoryName(entry.merchant.defaultCategoryId); as name) {
+              <span class="tag tag--category" title="Categorises new charges by rule (spec 2.5).">
+                {{ name }}
+              </span>
+            }
+
+            @if (editing() === entry.merchant.id) {
+              <button type="button" class="provisional__edit" (click)="closeEditor()">Cancel</button>
+            } @else {
+              <button
+                type="button"
+                class="provisional__edit"
+                [disabled]="busy()"
+                (click)="openEditor(entry)"
+              >
+                Edit
+              </button>
+            }
+
+            @if (editing() === entry.merchant.id) {
+              <div class="editor">
+                <div class="editor__field editor__field--name">
+                  <label class="editor__label" [attr.for]="'merchant-name-' + entry.merchant.id">
+                    Name
+                  </label>
+                  <input
+                    class="editor__input"
+                    [id]="'merchant-name-' + entry.merchant.id"
+                    type="text"
+                    autocomplete="off"
+                    [value]="draftName()"
+                    (input)="onDraftName($event)"
+                  />
+                </div>
+
+                <div class="editor__field">
+                  <label
+                    class="editor__label"
+                    [attr.for]="'merchant-category-' + entry.merchant.id"
+                  >
+                    Default category
+                  </label>
+                  <select
+                    class="editor__input"
+                    [id]="'merchant-category-' + entry.merchant.id"
+                    (change)="onDraftCategory($event)"
+                  >
+                    <option value="" [selected]="draftCategoryId() === ''">— none —</option>
+                    @for (category of categories(); track category.id) {
+                      <option [value]="category.id" [selected]="category.id === draftCategoryId()">
+                        {{ category.name }}
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                <label class="editor__check">
+                  <input
+                    type="checkbox"
+                    [checked]="draftSubscription()"
+                    (change)="onDraftSubscription($event)"
+                  />
+                  This is a subscription
+                </label>
+
+                <label class="editor__check">
+                  <input
+                    type="checkbox"
+                    [checked]="draftTransfer()"
+                    (change)="onDraftTransfer($event)"
+                  />
+                  This is money moving, not spending
+                </label>
+
+                <!-- Said plainly, because both halves surprise people. The rename
+                     is permanent in the sense §4.3 means — it outranks anything the
+                     app works out later — and the findings are deliberately *not*
+                     recomputed here, so a subscription flag set now shows up after
+                     the next analysis run rather than immediately. -->
+                <p class="editor__effect">
+                  This is your answer, not the app's, so a later import or a better model will
+                  not overwrite it. It does not move any charges — the grouping is unchanged.
+                  Subscriptions and findings pick up these flags at the next
+                  <strong>Run analysis</strong>.
+                </p>
+
+                <div class="editor__actions">
+                  <button
+                    type="button"
+                    class="button button--primary"
+                    [disabled]="busy() || draftName().trim() === ''"
+                    (click)="saveEdit(entry)"
+                  >
+                    Save
+                  </button>
+                  <button type="button" class="button" (click)="closeEditor()">Cancel</button>
+                </div>
+              </div>
+            }
           </li>
         }
       </ul>
       @if (provisionalHidden() > 0) {
         <p class="note">
           and {{ provisionalHidden() }} more with less history behind them.
+          <button type="button" class="provisional__more" (click)="revealAllProvisional()">
+            Show all {{ provisionalWithEdited().length }}
+          </button>
         </p>
       }
     </section>
