@@ -2563,13 +2563,17 @@ distinction it measures normalization accuracy with.
 root may have children under the cap above, so promotion is always legal where re-parenting
 under an arbitrary target would not be — the target may itself be a child.
 
-**§5.4's primary path still has no editor, and this section is not it.** §9d records that
-the rule "reads the **merchant's** `overlap_group` first and the charges' categories
+**§5.4's primary path is not this section's, and it is emptier than it looks.** §9d records
+that the rule "reads the **merchant's** `overlap_group` first and the charges' categories
 second", because a series has a merchant but no single category. §6.8 files overlap groups
 under **Categories**, so that is what was built, and it is enough to make the rule fire for
-the first time. But the merchant-level column — the one that wins — is still writable only
-by the seed. That is a gap in §6, not in this section: it belongs beside the merchant, and
-§6.3's merchant edit or §6.9's Review is where it would go.
+the first time. The merchant-level column — the one that wins — has never held a value in
+any database: `SEED_MERCHANTS` has no `overlapGroup` field and the composition root never
+passes one to `upsertSeed`, so not even the seed writes it, and §9x forbids the model from
+doing so. §9af's `PATCH /api/merchants/:id` accepts the field, which makes it writable over
+HTTP for the first time, but no screen offers it — the same position `website` is in. So
+§5.4's documented precedence has never once been exercised: the category branch is the only
+one that has ever run.
 
 **Two `source` values, not §4.3's four.** Four things write aliases; two write categories.
 `rule` and `llm` are absent deliberately — §9x settled that "a category name the taxonomy
