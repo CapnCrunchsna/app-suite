@@ -12,6 +12,9 @@
  * would make the masthead look like body copy — so the affordance is the hover
  * and the cursor, which is what every other app's wordmark does too. */
 .header__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent);
@@ -19,8 +22,20 @@
   cursor: pointer;
 }
 
-.header__brand:hover {
+/* The underline goes on the word and never on the mark: a rule drawn under an
+ * icon reads as a border the icon does not have. */
+.header__brand:hover .header__name {
   text-decoration: underline;
+}
+
+/* Sized in px rather than `em`. The mark is drawn for whole pixels — it is the
+ * same file the browser tab renders at 16 — and riding the font size would land
+ * its rules on fractional ones. */
+.header__mark {
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 22px;
 }
 
 /* Already home. Not a disabled link — clicking it is harmless — just not
@@ -29,7 +44,7 @@
   cursor: default;
 }
 
-.header__brand--here:hover {
+.header__brand--here:hover .header__name {
   text-decoration: none;
 }
 

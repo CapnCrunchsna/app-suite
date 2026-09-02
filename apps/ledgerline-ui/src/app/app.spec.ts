@@ -219,6 +219,20 @@ describe('App', () => {
     expect(el.querySelector('a.header__brand')?.getAttribute('href')).toBe('/');
   });
 
+  /**
+   * The mark sits *inside* that link rather than beside it. Two adjacent links to
+   * `/` would be two tab stops and two announcements of one destination, so the
+   * icon and the wordmark are one target — and the icon's `alt` is empty because
+   * the link is already named by the word next to it.
+   */
+  it('puts the app icon in the header, inside the link home', async () => {
+    const el = await render();
+
+    const mark = el.querySelector('a.header__brand img.header__mark');
+    expect(mark?.getAttribute('src')).toBe('icon.svg');
+    expect(mark?.getAttribute('alt')).toBe('');
+  });
+
   // Theming is `@metrum/ui`'s, and the switcher is chrome: it is true on every
   // page, so putting it on one would make it false on the other nine.
   it('carries the theme and mode switcher in the header', async () => {
