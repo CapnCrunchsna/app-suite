@@ -77,6 +77,8 @@ import type {
 } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
+import { CategoryBulkOfferPanel } from './category-bulk-offer.js';
+import type { CategoryBulkOffer } from './category-bulk-offer.js';
 import { MerchantAssign } from './merchant-assign.js';
 import type { MerchantAssignment } from './merchant-assign.js';
 import { TransactionDetailPanel } from './transaction-detail.js';
@@ -117,7 +119,13 @@ interface EditState {
 
 @Component({
   selector: 'll-transactions-page',
-  imports: [Panel, TransactionFilters, TransactionDetailPanel, MerchantAssign],
+  imports: [
+    Panel,
+    TransactionFilters,
+    TransactionDetailPanel,
+    MerchantAssign,
+    CategoryBulkOfferPanel,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './transactions-page.html',
   styleUrl: './transactions-page.scss',
@@ -282,6 +290,21 @@ export class TransactionsPage {
 
   protected readonly editing = signal<EditState | null>(null);
   protected readonly notice = signal<string | null>(null);
+
+  /**
+   * §9ag's bulk category offer, and the filter that would carry it out.
+   *
+   * The filter is held beside the offer rather than rebuilt when the button is
+   * pressed, so the rows that get written are the rows that were counted — the same
+   * argument `MerchantAssign` makes about deriving both calls from one filter
+   * object. Null when nothing is offered.
+   */
+  private readonly categoryBulk = signal<{
+    readonly filter: BulkFilter;
+    readonly offer: CategoryBulkOffer;
+  } | null>(null);
+
+  protected readonly categoryBulkOffer = computed(() => this.categoryBulk()?.offer ?? null);
   protected readonly renormalizeJob = signal<Job | null>(null);
   protected readonly busy = signal(false);
 
@@ -495,14 +518,110 @@ export class TransactionsPage {
     });
   }
 
-  protected async assignCategory(transactionId: string, categoryId: string): Promise<void> {
+  /**
+   * §6.3's category edit, and the bulk offer §9ag added behind it.
+   *
+   * The row is written first and the offer follows, which is the opposite order to
+   * `assignMerchant` above. §4.3 makes a merchant correction permanent and
+   * precedence-topping, so that one arms and waits; a category is one nullable
+   * column undone by picking another, so the single edit stays one click and it is
+   * the *bulk* change that gets armed.
+   *
+   * The count is fetched after the write rather than before, and deliberately
+   * includes the row just written — it is the number of charges that will be in
+   * this category when the button is pressed, which is the thing the sentence on
+   * the button claims.
+   */
+  protected async assignCategory(transaction: Transaction, categoryId: string): Promise<void> {
     if (categoryId === '') return;
     const name = this.categoriesById().get(categoryId)?.name ?? categoryId;
 
+    /**
+     * Resolved **before** the write, and that is not a style choice.
+     *
+     * `write` bumps `revision`, every list resource on this page is keyed on it,
+     * and a reloading `resource` reports its `defaultValue` — the empty array —
+     * until the new value lands. Looking the merchant up afterwards therefore finds
+     * nothing for a tick and silently drops to the descriptor scope, which is the
+     * one failure this offer cannot afford: it would under-apply to a fraction of
+     * the charges and say nothing about it.
+     */
+    const merchant =
+      transaction.merchantId === null ? undefined : this.merchantsById().get(transaction.merchantId);
+
     await this.write(async () => {
-      await this.api.updateTransaction(transactionId, { categoryId });
+      await this.api.updateTransaction(transaction.id, { categoryId });
       this.notice.set(`Categorized as ${name}.`);
     });
+
+    await this.offerCategoryBulk(transaction, merchant, categoryId, name);
+  }
+
+  /**
+   * Scope, count, and the decision not to offer.
+   *
+   * **Merchant first, descriptor only as a fallback** — see `category-bulk-offer.ts`
+   * for why a category is scoped differently from a merchant correction. A row with
+   * no merchant has nothing but its spelling to group by.
+   *
+   * A count of one is not an offer, it is a dialog about nothing, so it is skipped.
+   * A failed count is skipped too: the offer's entire value is the number on it, and
+   * "apply to all ?" is not a question anybody can answer.
+   */
+  private async offerCategoryBulk(
+    transaction: Transaction,
+    merchant: Merchant | undefined,
+    categoryId: string,
+    categoryName: string,
+  ): Promise<void> {
+    const filter: BulkFilter = merchant
+      ? { merchantIds: [merchant.id], includeInternalTransfers: true, includeExcluded: true }
+      : {
+          descriptorsNormalized: [transaction.descriptionNormalized],
+          includeInternalTransfers: true,
+          includeExcluded: true,
+        };
+
+    try {
+      const { matchCount } = await this.api.countMatching(filter);
+      if (matchCount < 2) return;
+
+      this.categoryBulk.set({
+        filter,
+        offer: {
+          categoryId,
+          categoryName,
+          scopeKind: merchant ? 'merchant' : 'descriptor',
+          scopeLabel: merchant ? merchant.displayName : transaction.descriptionNormalized,
+          matchCount,
+        },
+      });
+    } catch {
+      // Silent: the single-row edit succeeded and is already reported. A second
+      // notice about a count the user never asked for would bury it.
+    }
+  }
+
+  /** The armed half. Re-applies to the row already written, which is a no-op the
+   *  API absorbs and the honest thing to count. */
+  protected async applyCategoryToAll(): Promise<void> {
+    const pending = this.categoryBulk();
+    if (!pending) return;
+
+    const { filter, offer } = pending;
+    this.categoryBulk.set(null);
+
+    await this.write(async () => {
+      const result = await this.api.applyBulk(filter, { categoryId: offer.categoryId });
+      this.notice.set(
+        `Filed ${result.updated} ${result.updated === 1 ? 'charge' : 'charges'} under ` +
+          `${offer.categoryName}. Run an analysis to see it applied.`,
+      );
+    });
+  }
+
+  protected dismissCategoryBulk(): void {
+    this.categoryBulk.set(null);
   }
 
   protected async toggleInternalTransfer(row: TransactionSearchRow): Promise<void> {
@@ -537,6 +656,9 @@ export class TransactionsPage {
    * can read instead of a console entry.
    */
   private async write(action: () => Promise<void>): Promise<void> {
+    // Any further edit answers §9ag's offer by moving on from it. `assignCategory`
+    // sets its offer *after* this returns, so clearing here cannot eat its own.
+    this.categoryBulk.set(null);
     this.busy.set(true);
     try {
       await action();

@@ -96,7 +96,7 @@ by-hand alias — on 2026-09-01 (§9af). And **every one of §6's nine pages now
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae and §9af list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae, §9af and §9ag list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -1055,6 +1055,10 @@ Critically, every merchant edit offers **"apply to all 47 matching descriptors"*
 comes from `POST /api/transactions/bulk?dryRun=true`, and that bulk correction path is what
 makes normalization converge in minutes instead of row by row. Corrections enqueue a coalesced
 re-normalize job (§2.7); the UI shows its progress rather than blocking.
+
+A **category** edit offers the same bulk path, scoped to the **merchant** rather than the
+descriptor, and offered after the single row is written rather than before — §9ag says why
+both of those differ from the merchant correction above.
 
 ### 6.4 Findings — the hero page
 
@@ -2701,6 +2705,43 @@ was just answered.
 calls `writeUserMerchantAlias`, the same composition-root function §6.3's correction and
 §9q's merge both call, so there is one path that writes a `user` alias and one place its
 rules live. That was the objection, and it is met rather than waived.
+
+## 9ag. Amendments from implementation — 2026-09-02 (§6.3, §5.4)
+
+§9ad made §5.4's `overlap_group` editable for the first time and left the rule with a
+supply problem. Its category half reads the **modal category of a series' charges**
+(§9d), so a group is only ever as good as the consistency of the categorization
+underneath it — and §6.3 categorizes one row at a time. Over a year of statements that
+is not a task anybody finishes, which would have made §6.8's new editor a control with
+nothing to control.
+
+Nothing else closed the gap either. §9af made a merchant's `default_category_id`
+editable, but the boot backfill that applies it guards on `category_source IS NULL` —
+deliberately, so it cannot overrule a cleared category — so changing a merchant's
+default moves **no existing row**. Between them, §6.3 and §6.9 could set what a
+merchant's charges *will* be filed under and never what they *are*.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.3 | **The category edit offers "apply to all N" too**, over the same `POST /api/transactions/bulk?dryRun=true` count the merchant edit uses. | §6.3 gives the bulk path to merchant edits only, in a sentence that calls it "what makes normalization converge in minutes instead of row by row". Categorization converges the same way or not at all, and after §9ad it is what §5.4's category half is built on. |
+| 6.3 | **A category's bulk scope is the merchant, not the descriptor.** A row with no merchant falls back to its own descriptor. | This is the one place it deliberately departs from the merchant correction beside it. That one scopes to `description_normalized` because a merchant correction is a claim about *identity*, and identity is a property of the spelling — `SPOTIFYUSA` **is** Spotify. A category is a claim about what the spending **is**, which is true of every spelling: `SPOTIFYUSA`, `SPOTIFY USA 4029357733` and `PAYPAL *SPOTIFYUSA` are all music streaming. Scoping a category to one spelling would catch a fraction of the charges, say nothing about it, and leave §5.4's modal rule looking at exactly the inconsistency §9d warns about. |
+| 6.3 | **The row is written first and the rest offered after**, rather than armed before. | §4.3 makes a merchant correction permanent and precedence-topping, which is why that one arms and waits for a second click. A category is one nullable column undone by picking another, so the single edit stays one click and the **bulk** change is what gets armed. The house rule is to arm what is consequential, not to arm everything. |
+
+**The count includes the row already written**, and the button says so. It is the number
+of charges that will be in that category when it is pressed, which is the claim the
+sentence on the button makes; a count that excluded the row just filed would be a
+different, less useful number wearing the same words.
+
+**A count of one is not offered.** A dialog asking whether to apply a change to the one
+row it has already been applied to is a dialog about nothing.
+
+**A failed count is silent.** The single-row edit succeeded and has already said so, and
+the offer's entire value is the number on it — "apply to all ?" is not a question anybody
+can answer. A second notice about a count the user never asked for would bury the one
+that matters.
+
+**Moving on answers the offer.** Any further edit clears it, because an offer left
+standing over unrelated work is one somebody eventually presses by accident.
 
 ## 10. Open discrepancies — recorded, not resolved
 

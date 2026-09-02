@@ -1,0 +1,82 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface-2, #143034);
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: var(--radius, 10px);
+}
+
+.offer__what {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text, #dcefeb);
+
+  code {
+    font-family: var(--mono, ui-monospace, Menlo, monospace);
+    font-size: 0.78rem;
+  }
+}
+
+.offer__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* The bulk action is the offer's whole point, so it is the primary button — the
+ * same weighting `merchant-assign` gives its own. */
+.offer__apply {
+  padding: 6px 12px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 6px;
+  background: var(--accent, #2dd4bf);
+  color: var(--on-accent, #06201c);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.offer__no {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text, #dcefeb);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.offer__note {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-dim, #7ea8a1);
+}

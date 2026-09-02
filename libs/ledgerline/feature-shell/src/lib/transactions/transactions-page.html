@@ -23,6 +23,17 @@
 </div>
 }
 
+<!-- §9ag. Below the notice that reports the single row, because it is the follow-up
+     question to it: the row is already filed, and this asks about the rest. -->
+@if (categoryBulkOffer(); as bulk) {
+<ll-category-bulk-offer
+  [offer]="bulk"
+  [busy]="busy()"
+  (apply)="applyCategoryToAll()"
+  (dismiss)="dismissCategoryBulk()"
+/>
+}
+
 <ui-panel>
   <div class="toolbar">
     <span class="toolbar__range">{{ rangeLabel() }}</span>
@@ -162,7 +173,7 @@
         <span class="table__cell table__cell--category" role="cell">
           <select
             class="table__select"
-            (change)="assignCategory(t.id, $any($event.target).value)"
+            (change)="assignCategory(t, $any($event.target).value)"
             (blur)="cancelEdit()"
           >
             <option value="">— pick —</option>

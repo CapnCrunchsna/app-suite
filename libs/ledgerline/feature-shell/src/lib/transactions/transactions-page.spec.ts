@@ -718,4 +718,138 @@ describe('TransactionsPage', () => {
     expect(el.querySelector('.failure__text')?.textContent).toContain('127.0.0.1:4310');
     expect(el.querySelector('.failure__detail')?.textContent).toContain('fetch failed');
   });
+
+  // ------------------------------------ §6.3's bulk category offer (§9ag) ---
+
+  /**
+   * §6.3 gives "apply to all 47 matching" to merchant edits only. §9ag extends it to
+   * categories, and the property worth pinning is the one where it deliberately
+   * differs: **the scope is the merchant, not the descriptor.** A category is a
+   * statement about what the spending is, which is true of every spelling the bank
+   * ever printed for that merchant — scoping it to one would silently catch a
+   * fraction of the charges and leave §5.4's modal rule looking at exactly the
+   * inconsistency §9d warns about.
+   */
+  describe('the bulk category offer', () => {
+    async function categorize(fixture: { whenStable(): Promise<unknown> }, el: HTMLElement) {
+      // `button`, because the column header is a `span` carrying the same class and
+      // `querySelector` would hand back the header.
+      (el.querySelector('button.table__cell--category') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      const select = el.querySelector('.table__select') as HTMLSelectElement;
+      select.value = 'dining';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+    }
+
+    it('writes the row first, then offers the rest — scoped to the merchant', async () => {
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+
+      // The single row landed on its own, before any question was asked.
+      expect(api.patches).toEqual([{ id: 't1', change: { categoryId: 'dining' } }]);
+
+      // And the count is over the merchant, with the rows both default filters hide.
+      expect(api.bulkCounts.at(-1)).toEqual({
+        merchantIds: ['prov-1'],
+        includeInternalTransfers: true,
+        includeExcluded: true,
+      });
+
+      const offer = el.querySelector('ll-category-bulk-offer');
+      expect(offer?.textContent).toContain('BLUE BOTTLE COFFE');
+      expect(offer?.textContent).toContain('3 charges');
+      expect(offer?.querySelector('.offer__apply')?.textContent).toContain('Apply to all 3');
+    });
+
+    it('applies to every charge on the second, explicit click', async () => {
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+
+      (el.querySelector('.offer__apply') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      // The filter written is the filter counted — not one rebuilt at press time.
+      expect(api.bulkApplies).toEqual([
+        {
+          filter: {
+            merchantIds: ['prov-1'],
+            includeInternalTransfers: true,
+            includeExcluded: true,
+          },
+          change: { categoryId: 'dining' },
+        },
+      ]);
+      expect(el.querySelector('.notice__text')?.textContent).toContain('Filed 3 charges');
+      expect(el.querySelector('ll-category-bulk-offer')).toBeNull();
+    });
+
+    it('writes nothing more when the offer is declined', async () => {
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+
+      (el.querySelector('.offer__no') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      expect(api.bulkApplies).toEqual([]);
+      expect(el.querySelector('ll-category-bulk-offer')).toBeNull();
+      // The row itself stays categorized — declining the rest is not an undo.
+      expect(api.patches).toHaveLength(1);
+    });
+
+    /** A count of one is a dialog about nothing. */
+    it('does not offer when the merchant has only this charge', async () => {
+      api.matchCount = 1;
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+
+      expect(api.patches).toHaveLength(1);
+      expect(el.querySelector('ll-category-bulk-offer')).toBeNull();
+    });
+
+    /** A provisional row that resolved to no merchant has nothing but its spelling
+     *  to group by, which is the one case where the merchant path cannot apply. */
+    it('falls back to the descriptor for a row with no merchant', async () => {
+      api.rows = [transaction({ merchantId: null })];
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+
+      expect(api.bulkCounts.at(-1)).toEqual({
+        descriptorsNormalized: ['BLUE BOTTLE COFFE'],
+        includeInternalTransfers: true,
+        includeExcluded: true,
+      });
+      expect(el.querySelector('ll-category-bulk-offer')?.textContent).toContain(
+        'BLUE BOTTLE COFFE',
+      );
+    });
+
+    /** The single edit already succeeded and said so. A second complaint about a
+     *  count nobody asked for would bury it. */
+    it('stays quiet when the count itself fails', async () => {
+      vi.spyOn(api, 'countMatching').mockRejectedValue(new Error('fetch failed'));
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+
+      expect(el.querySelector('ll-category-bulk-offer')).toBeNull();
+      expect(el.querySelector('.notice__text')?.textContent).toContain('Categorized as');
+    });
+
+    /** Moving on answers the question. An offer left hanging over an unrelated edit
+     *  is one somebody eventually presses by accident. */
+    it('drops the offer when the next edit happens', async () => {
+      const { el, fixture } = await render();
+      await categorize(fixture, el);
+      expect(el.querySelector('ll-category-bulk-offer')).not.toBeNull();
+
+      const excluded = [...el.querySelectorAll('.chip--toggle')].find(
+        (node) => node.textContent?.trim() === 'excluded',
+      ) as HTMLButtonElement;
+      excluded.click();
+      await fixture.whenStable();
+
+      expect(el.querySelector('ll-category-bulk-offer')).toBeNull();
+    });
+  });
 });
