@@ -1,0 +1,38 @@
+# Edgeline dev datastore — single-node Elasticsearch + Kibana (spec §4.1).
+#
+# Both ports bind to 127.0.0.1, which is the only reason `xpack.security.enabled=false`
+# is acceptable here. If this ever moves off the laptop (the home server is the plan),
+# turn security and TLS on FIRST and move credentials into .env.
+#
+# Started from the monorepo with: nx run edgeline-api:es-up
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
+    container_name: edgeline-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.0.3
+    container_name: edgeline-kibana
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "127.0.0.1:5601:5601"
+
+volumes:
+  esdata:

@@ -35,6 +35,10 @@ export default [
               onlyDependOnLibsWithTags: ['scope:ll', 'scope:shared'],
             },
             {
+              sourceTag: 'scope:el',
+              onlyDependOnLibsWithTags: ['scope:el', 'scope:shared'],
+            },
+            {
               sourceTag: 'scope:shared',
               onlyDependOnLibsWithTags: ['scope:shared'],
             },

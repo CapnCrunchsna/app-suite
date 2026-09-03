@@ -17,8 +17,14 @@ inside it.
   (the ES exception for local-first mobile; keep the data model sync-friendly).
 - **Photo-to-Calendar** — Ionic + Capacitor (Android); Claude vision API (Haiku); Android
   CalendarProvider.
-- **Edgeline** — Angular UI + Python API/jobs; server datastore **Elasticsearch** (revisit the
-  existing Postgres implementation spec before build).
+- **Edgeline** — sports betting intelligence: +EV/arbitrage detection with Discord alerts and
+  sportsbook deep links. Python engine at `apps/edgeline-api` (FastAPI API + APScheduler worker);
+  Angular `edgeline-ui` not scaffolded yet (Phase 3 — see that app's README for why the generator
+  refuses today). Datastore is **Elasticsearch**, single-node via `apps/edgeline-api/docker-compose.yml`.
+  Spec: `../artifacts/plans/sports-betting-implementation-spec.md` — normative, and its §16
+  prohibitions are hard rules, first among them that the system recommends bets and **never
+  places them**. It should live at `docs/edgeline-spec.md` per `docs/README.md`; see that app's
+  README for why the move is blocked on a registry-removal path.
 
 ## Cross-project conventions
 - A shared `ui` library and a generated `api-client` library.

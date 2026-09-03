@@ -27,6 +27,17 @@ coverage/
 # lib did not exist as far as the project graph was concerned.
 /data/
 
+# Python — the Edgeline engine (apps/edgeline-api) is uv-managed
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets. `.env.example` IS versioned and documents the keys; `.env` holds the
+# Odds API key and the Discord bot token and must never be committed.
+.env
+
 # Machine-local Claude Code settings (launch.json and skills/ ARE versioned)
 .claude/settings.local.json
 

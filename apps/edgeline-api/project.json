@@ -1,0 +1,47 @@
+{
+  "name": "edgeline-api",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/edgeline-api/src",
+  "projectType": "application",
+  "tags": ["scope:el", "type:app"],
+  "//targets": "Python targets are deliberately NOT named build/lint/typecheck/test. `npm run check` is `nx run-many -t lint typecheck test build`, and every command here needs `uv`, which is not installed on this machine yet (see README.md). Standard names would make the workspace-wide green bar report a missing toolchain as a code failure. Rename to `test`/`lint` once uv is installed and `nx run edgeline-api:test-py` passes.",
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "uv run uvicorn edgeline.api.main:app --reload --port 8000"
+      }
+    },
+    "worker": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "uv run python -m edgeline.scheduler"
+      }
+    },
+    "test-py": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "uv run pytest"
+      }
+    },
+    "es-up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "docker compose up -d"
+      }
+    },
+    "es-down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "docker compose down"
+      }
+    }
+  }
+}

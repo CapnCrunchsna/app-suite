@@ -1,0 +1,38 @@
+[project]
+name = "edgeline-engine"
+version = "0.1.0"
+description = "Edgeline — sports betting intelligence engine: odds ingest, +EV/arbitrage detection, staking, Discord alerting."
+requires-python = ">=3.14"
+
+# Deliberately unpinned here. The first `uv sync` resolves and pins them in
+# uv.lock, which is the committed lockfile the spec asks for — writing guessed
+# version numbers into this file before a resolver has ever run would pin the
+# build to versions nobody verified.
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "elasticsearch",
+    "httpx",
+    "pydantic",
+    "pydantic-settings",
+    "discord.py",
+    "apscheduler",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-asyncio", "respx"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/edgeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "es: needs a reachable Elasticsearch; auto-skipped when ES_URL does not answer",
+]
