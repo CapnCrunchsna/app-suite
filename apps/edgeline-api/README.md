@@ -21,18 +21,24 @@ non-negotiable one: **this system recommends bets and never places them.**
 
 | Need | Why | State on this machine (2026-09-03) |
 | --- | --- | --- |
-| Python 3.14 | Fixed decision, spec §1 | ❌ newest present is 3.9.6 (`py -3`) |
-| [uv](https://docs.astral.sh/uv/) | Dependency + interpreter management; every Nx target shells through it | ❌ not installed |
+| Python 3.14 | Fixed decision, spec §1 | ✅ 3.14.7 via `winget install Python.Python.3.14` |
+| [uv](https://docs.astral.sh/uv/) | Dependency + interpreter management; every Nx target shells through it | ✅ 0.12.9 via `winget install astral-sh.uv` |
 | Docker (working daemon) | Runs the single-node Elasticsearch in `docker-compose.yml` | ❌ client is 20.10.0 (2020) and `docker info` panics |
 | Elasticsearch 9.x | The datastore (spec §4) | ❌ nothing answers on `localhost:9200` |
 
-Nothing here blocks writing or unit-testing engine code — the math is pure functions and the
-Odds API adapter is tested against recorded fixtures. It blocks only the steps that need a live
-datastore, which is exactly why `tests/conftest.py` skips `@pytest.mark.es` tests instead of
-failing them.
+The Python half is done: `uv sync` resolves 50 packages against 3.14.7 and `uv.lock` is
+committed. The datastore half is not, and that is a decision still to make — upgrade Docker
+Desktop (needs WSL2), run Elasticsearch from its native Windows zip (it bundles a JDK, no
+Docker required), or stand it up on the home server the workspace has been planning.
 
-`uv` is the one that unblocks the most: it installs and pins CPython 3.14 itself
-(`uv python install 3.14`), so it removes two rows from that table at once.
+Nothing about that blocks engine work. The math is pure functions, the Odds API adapter is
+tested against recorded fixtures, and `tests/conftest.py` skips `@pytest.mark.es` tests rather
+than failing them — so the suite stays honest with no datastore up.
+
+**Do not use uv's managed Python here.** `uv python install 3.14` downloads the interpreter and
+then fails with "Missing expected target directory for Python minor version link", reproducibly,
+`--reinstall` included. `pyproject.toml` pins `python-preference = "only-system"` so a plain
+`uv sync` uses the winget interpreter and never re-enters that path.
 
 ## Bring-up
 
@@ -56,10 +62,11 @@ other admin UI, by design.
 | `es-up` / `es-down` | `docker compose up -d` / `down` |
 
 **Why `test-py` and not `test`:** `npm run check` runs `nx run-many -t lint typecheck test build`
-across the whole monorepo. Until `uv` exists on this machine, a target named `test` here would
-turn the workspace-wide green bar red for a missing toolchain rather than for a real defect.
-Rename it to `test` once `uv` is installed and the suite passes — that is a deliberate one-line
-follow-up, not an oversight.
+across the whole monorepo, and this target shells through `uv`. The original reason — uv was not
+installed — **no longer applies**: uv is installed and `uv run pytest` passes (1 passed,
+1 skipped). The rename is deliberately left to the first session that adds real tests, so it
+lands with coverage behind it rather than against a smoke test, and so `uv` being on `PATH`
+becomes a hard requirement of `npm run check` at a moment someone is watching.
 
 ## Layout
 

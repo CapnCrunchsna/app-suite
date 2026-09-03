@@ -23,6 +23,14 @@ dependencies = [
 [dependency-groups]
 dev = ["pytest", "pytest-asyncio", "respx"]
 
+[tool.uv]
+# uv's own managed-CPython install is broken on this machine: `uv python install 3.14`
+# downloads 21.7MiB and then fails with "Missing expected target directory for Python
+# minor version link", reproducibly, including with --reinstall. The interpreter from
+# `winget install Python.Python.3.14` works fine and uv discovers it, so pin uv to system
+# interpreters instead of walking back into that path on every sync.
+python-preference = "only-system"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

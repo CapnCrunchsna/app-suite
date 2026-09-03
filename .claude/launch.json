@@ -12,6 +12,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "serve", "ledgerline-ui"],
       "port": 4200
+    },
+    {
+      "name": "edgeline-ui",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "serve", "edgeline-ui", "--port=4201"],
+      "port": 4201
     }
   ]
 }

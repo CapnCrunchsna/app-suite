@@ -4,7 +4,10 @@
   "sourceRoot": "apps/edgeline-api/src",
   "projectType": "application",
   "tags": ["scope:el", "type:app"],
-  "//targets": "Python targets are deliberately NOT named build/lint/typecheck/test. `npm run check` is `nx run-many -t lint typecheck test build`, and every command here needs `uv`, which is not installed on this machine yet (see README.md). Standard names would make the workspace-wide green bar report a missing toolchain as a code failure. Rename to `test`/`lint` once uv is installed and `nx run edgeline-api:test-py` passes.",
+  "metadata": {
+    "description": "Edgeline engine (Python/uv). Targets are named *-py on purpose: `npm run check` runs lint/typecheck/test/build across the workspace, and these shell through uv — see README.md for when to rename test-py to test.",
+    "technologies": ["python"]
+  },
   "targets": {
     "serve": {
       "executor": "nx:run-commands",

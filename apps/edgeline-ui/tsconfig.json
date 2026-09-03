@@ -1,0 +1,41 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noPropertyAccessFromIndexSignature": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "module": "preserve",
+    // The three overrides below are not generator output — the Angular generator
+    // does not know about this workspace's TS solution setup (it refuses to run
+    // against it at all without NX_IGNORE_UNSUPPORTED_TS_SETUP). They mirror
+    // `apps/ledgerline-ui/tsconfig.json`, which is the proven shape here.
+    //
+    // The workspace base targets Node libs and declaration-only emit. Angular's
+    // compiler rejects `emitDeclarationOnly` outright (NG4006) and the browser
+    // needs `dom`. `nx typecheck` re-adds --emitDeclarationOnly on the command line.
+    "emitDeclarationOnly": false,
+    "lib": ["es2022", "dom"],
+    // Resolve workspace deps through their published entry points rather than the
+    // base config's `@metrum/source` condition, which points at `src/index.ts`.
+    // Set now rather than when the first `@metrum/*` import lands: ledgerline-ui
+    // needed it the moment it consumed a shared lib, and this app will consume the
+    // same `@metrum/ui` and `@metrum/api-client` in Phase 3.
+    "customConditions": []
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

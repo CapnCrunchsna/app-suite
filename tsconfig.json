@@ -35,6 +35,9 @@
     },
     {
       "path": "./libs/ledgerline/llm"
+    },
+    {
+      "path": "./apps/edgeline-ui"
     }
   ],
   "compilerOptions": {}
