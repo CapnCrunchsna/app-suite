@@ -83,16 +83,24 @@
       <select
         class="account__select"
         [disabled]="busy()"
-        (change)="confirmAccount($any($event.target).value)"
+        (change)="pickAccount($any($event.target).value)"
       >
         <option value="">— pick an account —</option>
         @for (account of accounts(); track account.id) {
-        <option [value]="account.id" [selected]="account.id === rec.accountId">
+        <option [value]="account.id" [selected]="account.id === chosenAccountId()">
           {{ account.displayName }}
         </option>
         }
       </select>
     </label>
+    <button
+      type="button"
+      class="account__confirm"
+      [disabled]="!canConfirmAccount()"
+      (click)="confirmPickedAccount()"
+    >
+      Move it
+    </button>
     } } @else {
     <span class="account__prompt">
       <strong>Confirm the account before committing.</strong>
@@ -101,18 +109,30 @@
       Nothing in the filename matched an account, so there is no guess to confirm. }
     </span>
     @if (accounts().length > 0) {
+    <!-- Picking and confirming are two steps. The guess arrives pre-selected, so a
+         picker that confirmed on `change` did nothing at all when you chose the
+         account it had already guessed — and §6.1 calls this a confirmation, which
+         is a thing you do, not a side effect of a selection. -->
     <select
       class="account__select"
       [disabled]="busy()"
-      (change)="confirmAccount($any($event.target).value)"
+      (change)="pickAccount($any($event.target).value)"
     >
       <option value="">— pick an account —</option>
       @for (account of accounts(); track account.id) {
-      <option [value]="account.id" [selected]="account.id === suggestedAccountId()">
+      <option [value]="account.id" [selected]="account.id === chosenAccountId()">
         {{ account.displayName }}
       </option>
       }
     </select>
+    <button
+      type="button"
+      class="account__confirm"
+      [disabled]="!canConfirmAccount()"
+      (click)="confirmPickedAccount()"
+    >
+      Confirm account
+    </button>
     } @else {
     <!-- §6.1 cannot commit without an account and §6.2 is the only place they are
          made, so on a fresh database the two pages point at each other and neither
@@ -153,7 +173,12 @@
   @let plannedRows = cur.plan;
   <div class="plan">
     @if (plannedRows) {
-    <span class="plan__figure"> <strong>{{ plannedRows.willInsert }}</strong> to insert </span>
+    <span class="plan__figure"> <strong>{{ rowsToCommit() }}</strong> to insert </span>
+    @if (droppedRows().size > 0) {
+    <span class="plan__figure plan__figure--decide" title="You marked these as not real.">
+      <strong>{{ droppedRows().size }}</strong> dropped
+    </span>
+    }
     <span class="plan__figure" title="§3.3's multiset merge rule absorbed these.">
       <strong>{{ plannedRows.alreadyPresent }}</strong> of {{ cur.rows.length }} already present
     </span>
@@ -180,9 +205,12 @@
     [nearDuplicates]="nearDuplicates()"
     [resolutions]="resolutions()"
     [flaggedRows]="flaggedRows()"
+    [duplicateRows]="duplicateInFileRows()"
+    [droppedRows]="droppedRows()"
     [expandedRow]="expandedRow()"
     (resolutionChanged)="onResolutionChange($event)"
     (rowToggled)="toggleRow($event)"
+    (dropToggled)="toggleDropped($event)"
   />
 
   <!-- ------------------------------------------------------- commit --- -->
@@ -218,7 +246,10 @@
                 : 'Commit needs a confirmed account — §6.1.'
             "
     >
-      Commit {{ plannedRows ? plannedRows.willInsert : cur.rows.length }} rows
+      <!-- The number the button promises has to be the number that lands, so the
+           dropped rows come off it. `plan.willInsert` is the API's figure and does
+           not know about a decision made since the last read. -->
+      Commit {{ rowsToCommit() }} {{ rowsToCommit() === 1 ? 'row' : 'rows' }}
     </button>
     @if (!accountConfirmed()) {
     <span class="commit__blocked">

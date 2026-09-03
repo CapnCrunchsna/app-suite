@@ -278,6 +278,45 @@ describe('ledgerline-api import pipeline', () => {
       ]);
     });
 
+    /**
+     * §9ah's `dropRowIndexes`.
+     *
+     * §3.3's merge rule compares against what is already stored, so a duplicate
+     * *within one file* is invisible to it and both rows land — deliberately,
+     * because "two coffees on the same day at the same price is a real pair of
+     * transactions". This is the other answer, for the bank that posted one
+     * charge twice, and it is only ever given by a person.
+     */
+    it('drops the rows the reviewer named, and only those', async () => {
+      const [staged] = await upload('northgate-checking-2026-01.csv');
+      await confirmAccount(staged.import.id, checkingId);
+
+      const result = await commit(staged.import.id, { dropRowIndexes: [0, 2] });
+
+      expect(result.body).toMatchObject({ rowsInserted: 10, rowsDropped: 2 });
+      // Not folded into `rowsDuplicate`: that figure is spec 3.3's "already
+      // present", and a row nobody wanted is not a row the account held.
+      expect(result.body['rowsDuplicate']).toBe(0);
+
+      const page = await app.inject({
+        method: 'GET',
+        url: `/api/transactions?accountIds=${checkingId}&sort=date_asc&includeInternalTransfers=true`,
+      });
+      const rows = (page.json() as { rows: { transaction: Record<string, unknown> }[] }).rows;
+      expect(rows).toHaveLength(10);
+      // Row 0 was the 01/03 coffee; dropping it means it is simply not there.
+      expect(rows.some((r) => r.transaction['effectiveDate'] === '2026-01-03')).toBe(false);
+    });
+
+    it('keeps everything when nothing is named, which is the default', async () => {
+      const [staged] = await upload('northgate-checking-2026-01.csv');
+      await confirmAccount(staged.import.id, checkingId);
+
+      const result = await commit(staged.import.id, { dropRowIndexes: [] });
+
+      expect(result.body).toMatchObject({ rowsInserted: 12, rowsDropped: 0 });
+    });
+
     it('refuses a $0 row that nobody explained', async () => {
       const [staged] = await upload('cardinal-card-2026-01.csv');
       await confirmAccount(staged.import.id, cardId);

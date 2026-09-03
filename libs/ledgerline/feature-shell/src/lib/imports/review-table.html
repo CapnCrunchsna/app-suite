@@ -15,12 +15,25 @@
   </div>
 
   @for (entry of rows(); track entry.rowIndex) {
+  <!-- The whole row toggles, not only the number. The verbatim line is the thing
+       you reach for when a row looks wrong, and hunting for the one cell that
+       opens it is a worse version of not offering it.
+
+       The keyboard path is the `rows__expand` <button> below, which is a real
+       focusable control with the same action and the `aria-expanded` state on it.
+       This handler is a pointer affordance over that, so the two accessibility
+       rules are disabled deliberately: giving the row its own `tabindex` and key
+       handler would put a second tab stop and a second announcement on one
+       action, which is worse for a keyboard user than not having it. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <div
     class="rows__row"
     role="row"
     [class.rows__row--duplicate]="entry.disposition === 'duplicate'"
     [class.rows__row--near]="entry.disposition === 'near_duplicate'"
     [class.rows__row--flagged]="flaggedRows().has(entry.rowIndex)"
+    [class.rows__row--dropped]="droppedRows().has(entry.rowIndex)"
+    (click)="onRowClick($event, entry.rowIndex)"
   >
     <button
       type="button"
@@ -60,7 +73,9 @@
     </span>
 
     <span class="rows__cell rows__cell--disposition" role="cell">
-      @switch (entry.disposition) { @case ('duplicate') {
+      @if (droppedRows().has(entry.rowIndex)) {
+      <span class="tag tag--dropped" title="Will not be inserted.">dropping</span>
+      } @else { @switch (entry.disposition) { @case ('duplicate') {
       <span class="tag tag--dupe" title="§3.3's merge rule: the account already holds this row.">
         already imported
       </span>
@@ -68,7 +83,29 @@
       <span class="tag tag--near">needs a decision</span>
       } @default {
       <span class="tag tag--insert">insert</span>
-      } }
+      } } }
+
+      <!-- Offered only where the parser flagged a duplicate *within this file*.
+           §3.3's merge rule compares against what is stored, so it cannot see two
+           identical lines in one statement and keeps both — right for two coffees
+           at the same price, wrong for a bank that posted one charge twice. The
+           default stays "keep"; this is the other answer, and it is never
+           inferred. -->
+      @if (duplicateRows().has(entry.rowIndex)) {
+      <button
+        type="button"
+        class="rows__drop"
+        [attr.aria-pressed]="droppedRows().has(entry.rowIndex)"
+        [title]="
+          droppedRows().has(entry.rowIndex)
+            ? 'Keep this row after all.'
+            : 'Do not insert this row — it is the same charge twice, not two charges.'
+        "
+        (click)="dropToggled.emit(entry.rowIndex)"
+      >
+        {{ droppedRows().has(entry.rowIndex) ? 'Keep' : 'Not real' }}
+      </button>
+      }
     </span>
   </div>
 

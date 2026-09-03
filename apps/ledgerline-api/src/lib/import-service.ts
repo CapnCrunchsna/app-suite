@@ -554,6 +554,7 @@ export class ImportNotReadyError extends Error {
 
 export interface CommitRequest {
   readonly resolutions?: readonly CommitResolution[];
+  readonly dropRowIndexes?: readonly number[];
   readonly allowZeroAmountRows?: boolean;
 }
 
@@ -583,6 +584,7 @@ export function commitStagedImport(
     accountId: record.accountId,
     rows,
     resolutions: request.resolutions,
+    dropRowIndexes: request.dropRowIndexes,
     allowZeroAmountRows: request.allowZeroAmountRows,
   });
 

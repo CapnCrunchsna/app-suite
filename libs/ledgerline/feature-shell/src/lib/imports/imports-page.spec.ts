@@ -241,6 +241,7 @@ class ApiStub {
       rowsDuplicate: 4,
       rowsMerged: 4,
       rowsSkippedAsNearDuplicate: 0,
+      rowsDropped: 0,
       rowsReplaced: 0,
       refundPairsLinked: 0,
       insertedTransactionIds: [],
@@ -390,13 +391,41 @@ describe('ImportsPage', () => {
       expect(prompt).toContain('filename contains last4 4821');
     });
 
-    it('confirms with a PATCH, and only then unlocks Commit', async () => {
+    /**
+     * Picking and confirming are two steps (§9ah).
+     *
+     * The picker used to `PATCH` from its own `change` event while the guessed
+     * account was pre-`selected` in the DOM — so choosing the guess produced no
+     * `change` and appeared to do nothing, and the way through was to select the
+     * placeholder and then re-select the account.
+     */
+    it('does not file the import merely because the picker moved', async () => {
       const { fixture, el } = await render();
 
       await pick(el, '.account__select', 'a1', fixture);
 
+      expect(api.patches).toEqual([]);
+      expect((el.querySelector('.commit__button') as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('confirms on the button, and only then unlocks Commit', async () => {
+      const { fixture, el } = await render();
+
+      (el.querySelector('.account__confirm') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
       expect(api.patches).toEqual([{ id: 'imp-1', body: { accountId: 'a1' } }]);
       expect((el.querySelector('.commit__button') as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    /** The guess arrives selected, so Confirm has to work without the picker being
+     *  touched at all — which is exactly what the old code could not do. */
+    it('arms Confirm with the guess, and disables it without one', async () => {
+      const { fixture, el } = await render();
+      expect((el.querySelector('.account__confirm') as HTMLButtonElement).disabled).toBe(false);
+
+      await pick(el, '.account__select', '', fixture);
+      expect((el.querySelector('.account__confirm') as HTMLButtonElement).disabled).toBe(true);
     });
 
     /**
@@ -746,6 +775,95 @@ describe('ImportsPage', () => {
       const strip = el.querySelector('.warnings')?.textContent ?? '';
       expect(strip).toContain('Line 51 looks identical to line 50');
       expect(el.querySelector('.warnings__rows')?.textContent?.trim()).toBe('line 51');
+    });
+
+    /**
+     * §9ah. §3.3's merge rule compares an incoming row against what is *stored*,
+     * so it cannot see two identical lines in one file and keeps both — right for
+     * two coffees at the same price, wrong for a bank that posted one charge
+     * twice. The screen flagged it and offered no way to say which it was.
+     */
+    describe('dropping an in-file duplicate', () => {
+      it('offers the choice only on the row the parser flagged', async () => {
+        const { el } = await render();
+
+        const drops = [...el.querySelectorAll('.rows__row')].map(
+          (row) => row.querySelector('.rows__drop') !== null,
+        );
+        // Lines 50 and 51 are the pair; only the second is the flagged one, since
+        // the first is the row it looks identical *to*.
+        expect(drops).toEqual([false, true]);
+      });
+
+      it('keeps the row by default and sends nothing', async () => {
+        const { fixture, el } = await render();
+
+        (el.querySelector('.commit__button') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        expect(api.commits[0].body.dropRowIndexes).toEqual([]);
+      });
+
+      it('marks the row and carries it on the commit once chosen', async () => {
+        const { fixture, el } = await render();
+
+        (el.querySelector('.rows__drop') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        const row = el.querySelectorAll('.rows__row')[1];
+        expect(row.classList.contains('rows__row--dropped')).toBe(true);
+        expect(row.querySelector('.tag--dropped')).not.toBeNull();
+
+        (el.querySelector('.commit__button') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        expect(api.commits[0].body.dropRowIndexes).toEqual([49]);
+      });
+
+      /** The figure on the button is what somebody authorises, so it has to be the
+       *  number that lands — the plan's `willInsert` predates the drop. */
+      it('takes the dropped row off the number Commit promises', async () => {
+        const { fixture, el } = await render();
+        const label = () => el.querySelector('.commit__button')?.textContent?.trim();
+        expect(label()).toBe('Commit 1 row');
+
+        (el.querySelector('.rows__drop') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        expect(label()).toBe('Commit 0 rows');
+        expect(el.querySelector('.plan__figure--decide')?.textContent).toContain('1');
+      });
+
+      it('is reversible before the commit', async () => {
+        const { fixture, el } = await render();
+
+        (el.querySelector('.rows__drop') as HTMLButtonElement).click();
+        await fixture.whenStable();
+        (el.querySelector('.rows__drop') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        (el.querySelector('.commit__button') as HTMLButtonElement).click();
+        await fixture.whenStable();
+
+        expect(api.commits[0].body.dropRowIndexes).toEqual([]);
+      });
+    });
+
+    /** The verbatim line is what you reach for when a row looks wrong, and
+     *  hunting for the one cell that opens it is a worse version of not offering
+     *  it at all. */
+    it('expands from anywhere on the row, but not from a control on it', async () => {
+      const { fixture, el } = await render();
+
+      const rows = () => [...el.querySelectorAll('.rows__row')];
+      (rows()[1].querySelector('.rows__cell--desc') as HTMLElement).click();
+      await fixture.whenStable();
+      expect(el.querySelector('.rows__raw')).not.toBeNull();
+
+      // The drop button means something else; it must not also toggle the panel.
+      (rows()[1].querySelector('.rows__drop') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      expect(el.querySelector('.rows__raw')).not.toBeNull();
     });
   });
 

@@ -2162,6 +2162,9 @@
           "rowsSkippedAsNearDuplicate": {
             "type": "integer"
           },
+          "rowsDropped": {
+            "type": "integer"
+          },
           "rowsReplaced": {
             "type": "integer"
           },
@@ -2185,6 +2188,7 @@
           "rowsDuplicate",
           "rowsMerged",
           "rowsSkippedAsNearDuplicate",
+          "rowsDropped",
           "rowsReplaced",
           "refundPairsLinked",
           "insertedTransactionIds",
@@ -4369,7 +4373,7 @@
         "tags": [
           "imports"
         ],
-        "description": "Idempotent. Applies the multiset merge rule, then the near-duplicate resolutions, then refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).",
+        "description": "Idempotent. Drops any row named in `dropRowIndexes`, then applies the multiset merge rule, the near-duplicate resolutions and refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).",
         "requestBody": {
           "required": true,
           "content": {
@@ -4403,6 +4407,13 @@
                         }
                       }
                     }
+                  },
+                  "dropRowIndexes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "Rows not to insert at all. For a duplicate *within one file*, which spec 3.3’s merge rule cannot resolve because it compares against what is already stored. Never inferred: spec 3.3 keeps both by default, because over-counting is visible and a lost transaction is not."
                   },
                   "allowZeroAmountRows": {
                     "type": "boolean",

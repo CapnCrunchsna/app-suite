@@ -250,3 +250,40 @@
   border-color: var(--caution, #b08b4f);
   color: var(--caution-soft, #d9b878);
 }
+
+/* ------------------------------------------------ the drop control --- */
+
+/* Clicking the row opens its raw line, so the row has to look pressable. */
+.rows__row {
+  cursor: pointer;
+}
+
+/* Struck through rather than hidden: a row you decided against is still part of
+   the file, and a review screen that removes what you rejected cannot be checked. */
+.rows__row--dropped .rows__cell--desc,
+.rows__row--dropped .rows__cell--amount {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.rows__drop {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.rows__drop[aria-pressed="true"] {
+  border-color: var(--accent, #2dd4bf);
+  color: var(--accent, #2dd4bf);
+}
+
+.tag--dropped {
+  border-color: var(--caution, #b08b4f);
+  color: var(--caution, #b08b4f);
+}

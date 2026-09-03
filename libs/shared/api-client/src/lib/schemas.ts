@@ -522,6 +522,7 @@ export interface CommitResult {
   readonly rowsDuplicate: number;
   readonly rowsMerged: number;
   readonly rowsSkippedAsNearDuplicate: number;
+  readonly rowsDropped: number;
   readonly rowsReplaced: number;
   readonly refundPairsLinked: number;
   readonly insertedTransactionIds: string[];

@@ -68,10 +68,16 @@ export class ReviewTable {
   readonly resolutions = input<ReadonlyMap<number, Resolution>>(new Map());
   /** Row indexes the warning strip is pointing at, so the two agree on screen. */
   readonly flaggedRows = input<ReadonlySet<number>>(new Set<number>());
+  /** Rows the parser called duplicates *within this file* (§9ah). Only these are
+   *  offered the drop control — everywhere else §3.3's merge rule has the answer. */
+  readonly duplicateRows = input<ReadonlySet<number>>(new Set<number>());
+  /** Rows the reviewer has said are not real. */
+  readonly droppedRows = input<ReadonlySet<number>>(new Set<number>());
   readonly expandedRow = input<number | null>(null);
 
   readonly resolutionChanged = output<ResolutionChange>();
   readonly rowToggled = output<number>();
+  readonly dropToggled = output<number>();
 
   protected readonly formatCents = formatCents;
   protected readonly RESOLUTIONS = RESOLUTIONS;
@@ -86,6 +92,21 @@ export class ReviewTable {
 
   protected resolutionFor(rowIndex: number): Resolution {
     return this.resolutions().get(rowIndex) ?? 'keep_both';
+  }
+
+  /**
+   * Expand from anywhere on the row, except from a control that means something
+   * else.
+   *
+   * The near-duplicate radios, the drop button and the row's own expander all sit
+   * inside the row, and a click that both answered a question and opened a panel
+   * would be two outcomes from one press. `closest` rather than a target check,
+   * because the press usually lands on a label or the text inside a button.
+   */
+  protected onRowClick(event: MouseEvent, rowIndex: number): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, input, label, select, a')) return;
+    this.rowToggled.emit(rowIndex);
   }
 
   /** §3.3's own reason for the default, said where the choice is made. */

@@ -83,6 +83,20 @@ export interface CommitImportInput {
   /** Per-row near-duplicate decisions from the review screen (§2.3). Anything
    *  unresolved takes the plan's default. */
   readonly resolutions?: readonly CommitResolution[];
+  /**
+   * Rows the reviewer chose not to insert at all (§9ah).
+   *
+   * Separate from `resolutions` rather than folded into it, because a
+   * `CommitResolution` names an `existingTransactionId` and these rows have no
+   * existing counterpart — they are duplicates *within the file*, which the merge
+   * rule cannot see. Overloading `skip` to mean two different things would have
+   * made the near-duplicate path accept a resolution pointing at nothing.
+   *
+   * Empty by default and it stays that way unless a person ticks a box: §3.3's
+   * standing rule is that over-counting is visible and a lost transaction is not,
+   * so nothing here is ever inferred.
+   */
+  readonly dropRowIndexes?: readonly number[];
   readonly allowZeroAmountRows?: boolean;
   readonly refundWindowDays?: number;
 }
@@ -96,6 +110,10 @@ export interface CommitImportResult {
   readonly rowsDuplicate: number;
   readonly rowsMerged: number;
   readonly rowsSkippedAsNearDuplicate: number;
+  /** Rows the reviewer dropped outright (§9ah). Counted apart from the
+   *  near-duplicate skips because it is a different decision about a different
+   *  kind of row, and a commit report that merged them could not say which. */
+  readonly rowsDropped: number;
   readonly rowsReplaced: number;
   readonly refundPairsLinked: number;
   readonly insertedTransactionIds: readonly string[];
@@ -122,6 +140,7 @@ export function commitImport(deps: CommitDeps, input: CommitImportInput): Commit
       rowsDuplicate: record.rowsDuplicate,
       rowsMerged: record.rowsDuplicate,
       rowsSkippedAsNearDuplicate: 0,
+      rowsDropped: 0,
       rowsReplaced: 0,
       refundPairsLinked: 0,
       insertedTransactionIds: [],
@@ -147,14 +166,24 @@ export function commitImport(deps: CommitDeps, input: CommitImportInput): Commit
     const rowsByIndex = new Map(input.rows.map((row) => [row.rowIndex, row]));
 
     const resolutions = resolveNearDuplicates(plan, input.resolutions ?? []);
+    const dropped = new Set(input.dropRowIndexes ?? []);
     const insertedTransactionIds: string[] = [];
     const supersededIds = new Set<string>();
     let rowsSkippedAsNearDuplicate = 0;
+    let rowsDropped = 0;
     let rowsReplaced = 0;
 
     for (const planned of plan.inserts) {
       const row = rowsByIndex.get(planned.rowIndex);
       if (!row) continue;
+
+      // Before the near-duplicate decision, because it is a decision about
+      // whether the row exists at all — a row nobody wants inserted has no
+      // meaningful answer to "replace what, and with what".
+      if (dropped.has(planned.rowIndex)) {
+        rowsDropped += 1;
+        continue;
+      }
 
       const decision = resolutions.get(planned.rowIndex);
 
@@ -214,6 +243,11 @@ export function commitImport(deps: CommitDeps, input: CommitImportInput): Commit
     );
 
     const rowsInserted = insertedTransactionIds.length;
+    // Dropped rows are deliberately *not* folded in here. `rows_duplicate` is
+    // §3.3's "already present" figure — rows the ledger turned out to hold
+    // already — and a row the reviewer decided was never real is a different
+    // statement about the file. Counting it here would make the stored total
+    // claim the account contained something it never did.
     const rowsDuplicate = plan.merged.length + rowsSkippedAsNearDuplicate;
 
     deps.imports.update(input.importId, {
@@ -232,6 +266,7 @@ export function commitImport(deps: CommitDeps, input: CommitImportInput): Commit
       rowsDuplicate,
       rowsMerged: plan.merged.length,
       rowsSkippedAsNearDuplicate,
+      rowsDropped,
       rowsReplaced,
       refundPairsLinked,
       insertedTransactionIds,

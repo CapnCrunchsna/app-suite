@@ -96,7 +96,7 @@ by-hand alias — on 2026-09-01 (§9af). And **every one of §6's nine pages now
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae, §9af and §9ag list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae, §9af, §9ag and §9ah list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -2742,6 +2742,48 @@ that matters.
 
 **Moving on answers the offer.** Any further edit clears it, because an offer left
 standing over unrelated work is one somebody eventually presses by accident.
+## 9ah. Amendments from implementation — 2026-09-02 (§6.1, §3.3)
+
+Three things found by running a real statement through §6.1 rather than a fixture.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.1 | **The account is confirmed with a button, not by selecting one.** | The picker wrote a `PATCH` from its own `change` event while the guessed account arrived pre-selected — so choosing the guess fired no event and did nothing at all. The way through was to select the placeholder and then re-select the account, which is not a workflow anybody should have to find. |
+| 3.3, 6.1 | **A duplicate *within one file* can be dropped**, through `dropRowIndexes` on the commit. | The screen flagged the pair and offered no answer to it. See below. |
+| 6.1 | **A row expands from anywhere on it**, not only from its number. | The verbatim line is what you reach for when a row looks wrong; making it hide behind one cell is a worse version of not offering it. |
+
+**The account gate was right and its control was wrong.** §6.1 calls this a confirmation,
+and a confirmation is a thing a person does — not a side effect of a selection. §3.3's
+near-duplicate picker already had the rule ("nothing applies on hover, focus or selection")
+and this is the same rule applied one screen earlier. The button is disabled on the
+placeholder, and disabled on the account the import is already filed into, because neither
+is something to confirm.
+
+**In-file duplicates: the default was defensible, the silence was not.** §3.3's merge rule
+compares an incoming row against what is *stored*, so two identical lines in one statement
+are invisible to it and both land. That is deliberate — "two coffees on the same day at the
+same price is a real pair of transactions", and §3.3 would rather over-count visibly than
+lose a charge silently. What was missing is that a bank which posts one charge twice
+produces exactly the same two lines, and only the person holding the statement knows which
+it is. The parser already flagged the pair; there was simply nothing to do about it.
+
+So the flag now carries a choice, and the choice keeps §3.3's bias intact: **keep is the
+default, drop is never inferred, and only a flagged row is offered it.** A dropped row is
+struck through rather than removed from the review, because a screen that hides what you
+rejected cannot be checked before you commit it.
+
+**`rowsDropped` is counted apart from `rowsDuplicate`.** That figure is §3.3's "already
+present" — rows the ledger turned out to hold — and a row the reviewer decided was never
+real is a different statement about the file. Folding them together would make
+`statement_import.rows_duplicate` claim the account contained something it never did. For
+the same reason the commit report names dropped rows only when there were some: a "0
+dropped" on every commit would make a deliberate, irreversible choice read as routine
+bookkeeping.
+
+**`dropRowIndexes` is its own field rather than a fourth `resolution`.** A
+`CommitResolution` names an `existingTransactionId`, and these rows have no existing
+counterpart — that is the whole reason the merge rule cannot see them. Overloading `skip`
+would have meant a near-duplicate resolution pointing at nothing.
 
 ## 10. Open discrepancies — recorded, not resolved
 

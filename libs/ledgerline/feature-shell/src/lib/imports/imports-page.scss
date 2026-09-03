@@ -330,3 +330,23 @@
   font-size: 0.78rem;
   color: var(--text-dim, #7ea8a1);
 }
+
+/* §6.1 calls the account a confirmation, so it is a button and not a side
+   effect of a selection. Disabled on the placeholder, and on the account the
+   import is already filed into — there is nothing to confirm in either. */
+.account__confirm {
+  padding: 4px 12px;
+  border: 1px solid var(--accent, #2dd4bf);
+  border-radius: 6px;
+  background: var(--accent, #2dd4bf);
+  color: var(--on-accent, #06201c);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account__confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

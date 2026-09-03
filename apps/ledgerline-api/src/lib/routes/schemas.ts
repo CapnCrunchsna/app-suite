@@ -528,6 +528,10 @@ const commitResult = {
     rowsDuplicate: { type: 'integer' },
     rowsMerged: { type: 'integer' },
     rowsSkippedAsNearDuplicate: { type: 'integer' },
+    /** Rows the reviewer dropped outright (§9ah) — an in-file duplicate they said
+     *  was not real. Counted apart from `rowsDuplicate`, which is §3.3's "already
+     *  present" and would otherwise claim the account held a row it never did. */
+    rowsDropped: { type: 'integer' },
     rowsReplaced: { type: 'integer' },
     refundPairsLinked: { type: 'integer' },
     insertedTransactionIds: { type: 'array', items: { type: 'string' } },

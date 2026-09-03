@@ -199,6 +199,50 @@ export class ImportsPage {
     () => this.current()?.accountSuggestion?.accountId ?? '',
   );
 
+  /**
+   * What the account picker is showing, before anybody presses Confirm.
+   *
+   * `null` means untouched, in which case the picker shows the guess (or the
+   * account already confirmed). It cannot default to those directly, because
+   * "the user has not chosen" and "the user chose the same thing" have to stay
+   * distinguishable.
+   *
+   * ## Why this exists at all
+   *
+   * The picker used to `PATCH` straight from its `change` event, and the guess
+   * was pre-`selected` in the DOM — so choosing the guessed account produced no
+   * `change` at all and appeared to do nothing. The way through was to select the
+   * placeholder and then re-select the account, which is not a workflow anybody
+   * should have to discover.
+   *
+   * Confirming with a button rather than on selection also puts this in line with
+   * every other write on this page: §6.1 calls the account a confirmation, and
+   * §3.3's near-duplicate picker already holds that "nothing applies on hover,
+   * focus or selection."
+   */
+  private readonly pickedAccountId = signal<string | null>(null);
+
+  protected readonly chosenAccountId = computed(
+    () => this.pickedAccountId() ?? this.record()?.accountId ?? this.suggestedAccountId(),
+  );
+
+  /** Nothing to confirm when the picker is on the placeholder, or when it names
+   *  the account this import is already filed into. */
+  protected readonly canConfirmAccount = computed(() => {
+    const chosen = this.chosenAccountId();
+    return chosen !== '' && chosen !== this.record()?.accountId && !this.busy();
+  });
+
+  protected pickAccount(accountId: string): void {
+    this.pickedAccountId.set(accountId);
+  }
+
+  protected async confirmPickedAccount(): Promise<void> {
+    if (!this.canConfirmAccount()) return;
+    await this.confirmAccount(this.chosenAccountId());
+    this.pickedAccountId.set(null);
+  }
+
   /** The opt-in is offered when the parse found $0 rows, not only after commit has
    *  already refused them — being told about it twice is better than a 422 the
    *  reviewer had no way to see coming. */
@@ -321,10 +365,66 @@ export class ImportsPage {
     this.commitReport.set(null);
     this.zeroAmountRows.set([]);
     this.allowZeroAmountRows.set(false);
+    // Both are per-import decisions: carrying either into the next file would
+    // apply one statement's answers to another's rows.
+    this.pickedAccountId.set(null);
+    this.droppedRows.set(new Set());
   }
 
   protected toggleRow(rowIndex: number): void {
     this.expandedRow.update((current) => (current === rowIndex ? null : rowIndex));
+  }
+
+  /**
+   * §9ah: rows the reviewer says are not real, dropped at commit.
+   *
+   * Only offered on a row the parser flagged as an in-file duplicate. §3.3's
+   * merge rule compares against what is *stored*, so it cannot see two identical
+   * lines in one file and — rightly — keeps both: "two coffees on the same day at
+   * the same price is a real pair of transactions." That default stands. What was
+   * missing was the other answer, for the bank that posted one charge twice.
+   *
+   * Empty unless ticked. Nothing infers a drop, because §3.3's standing trade is
+   * that over-counting is visible and a lost transaction is not.
+   */
+  protected readonly droppedRows = signal<ReadonlySet<number>>(new Set());
+
+  protected readonly duplicateInFileRows = computed(
+    () =>
+      new Set(
+        (this.current()?.warnings ?? [])
+          .filter((warning) => warning.kind === 'duplicate_in_file')
+          .map((warning) => warning.rowIndex)
+          .filter((rowIndex): rowIndex is number => rowIndex !== undefined),
+      ),
+  );
+
+  /**
+   * What Commit will actually insert.
+   *
+   * The plan's `willInsert` is the API's figure and predates any drop made since
+   * the last read, so the button would promise a number larger than the one that
+   * lands. §6.3 makes the same argument about its bulk count: the figure on the
+   * control is the basis on which somebody authorises the write.
+   */
+  protected readonly rowsToCommit = computed(() => {
+    const current = this.current();
+    if (!current) return 0;
+    const planned = current.plan?.willInsert ?? current.rows.length;
+    // Only rows that were going to be inserted can be un-inserted; a drop on a
+    // row the merge rule already absorbed would double-count.
+    const droppable = new Set(current.rows.map((row) => row.rowIndex));
+    const dropped = [...this.droppedRows()].filter((rowIndex) => droppable.has(rowIndex)).length;
+    return Math.max(0, planned - dropped);
+  });
+
+  protected toggleDropped(rowIndex: number): void {
+    this.droppedRows.update((current) => {
+      const next = new Set(current);
+      if (next.has(rowIndex)) next.delete(rowIndex);
+      else next.add(rowIndex);
+      return next;
+    });
   }
 
   protected onResolutionChange(change: ResolutionChange): void {
@@ -408,6 +508,7 @@ export class ImportsPage {
     try {
       const result = await this.api.commitImport(id, {
         resolutions,
+        dropRowIndexes: [...this.droppedRows()],
         allowZeroAmountRows: this.allowZeroAmountRows(),
       });
 
@@ -418,6 +519,9 @@ export class ImportsPage {
           : `Committed. ${result.rowsInserted} inserted · ${result.rowsMerged} absorbed as ` +
               `already present · ${result.rowsReplaced} replaced · ` +
               `${result.rowsSkippedAsNearDuplicate} skipped · ` +
+              // Only when it happened: a "0 dropped" on every commit would make a
+              // deliberate, irreversible choice look like routine bookkeeping.
+              (result.rowsDropped > 0 ? `${result.rowsDropped} dropped · ` : '') +
               `${result.refundPairsLinked} refund ${result.refundPairsLinked === 1 ? 'pair' : 'pairs'} linked.`,
       );
       this.notice.set(null);

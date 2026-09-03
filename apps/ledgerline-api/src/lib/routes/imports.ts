@@ -213,6 +213,7 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
     Params: { id: string };
     Body: {
       resolutions?: CommitResolution[];
+      dropRowIndexes?: number[];
       allowZeroAmountRows?: boolean;
     };
   }>(
@@ -222,8 +223,9 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
         summary: 'Commit a staged import',
         operationId: 'commitImport',
         description:
-          'Idempotent. Applies the multiset merge rule, then the near-duplicate resolutions, then ' +
-          'refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).',
+          'Idempotent. Drops any row named in `dropRowIndexes`, then applies the multiset merge ' +
+          'rule, the near-duplicate resolutions and refund pairing — all inside one transaction, ' +
+          'so a partial import never lands (spec 3.3, 2.5).',
         tags: ['imports'],
         params: {
           type: 'object',
@@ -244,6 +246,15 @@ export function registerImportRoutes(app: FastifyInstance, context: LedgerlineCo
                   resolution: { type: 'string', enum: RESOLUTIONS },
                 },
               },
+            },
+            dropRowIndexes: {
+              type: 'array',
+              items: { type: 'integer' },
+              description:
+                'Rows not to insert at all. For a duplicate *within one file*, which spec 3.3’s ' +
+                'merge rule cannot resolve because it compares against what is already stored. ' +
+                'Never inferred: spec 3.3 keeps both by default, because over-counting is visible ' +
+                'and a lost transaction is not.',
             },
             allowZeroAmountRows: {
               type: 'boolean',

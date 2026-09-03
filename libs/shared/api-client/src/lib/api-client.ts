@@ -147,6 +147,10 @@ export type CommitImportBody = {
     readonly resolution: 'replace' | 'keep_both' | 'skip';
   })[];
   /**
+   * Rows not to insert at all. For a duplicate *within one file*, which spec 3.3’s merge rule cannot resolve because it compares against what is already stored. Never inferred: spec 3.3 keeps both by default, because over-counting is visible and a lost transaction is not.
+   */
+  readonly dropRowIndexes?: number[];
+  /**
    * Store $0 rows as trial authorizations. Without it a non-pending $0 row is refused as a probable misparse (spec 3.2).
    */
   readonly allowZeroAmountRows?: boolean;
@@ -466,7 +470,7 @@ export class LedgerlineApi {
   /**
    * Commit a staged import
    *
-   * Idempotent. Applies the multiset merge rule, then the near-duplicate resolutions, then refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).
+   * Idempotent. Drops any row named in `dropRowIndexes`, then applies the multiset merge rule, the near-duplicate resolutions and refund pairing — all inside one transaction, so a partial import never lands (spec 3.3, 2.5).
    */
   commitImport(id: string, body: CommitImportBody): Promise<CommitResult> {
     return this.request<CommitResult>('POST', `/api/imports/${encodeURIComponent(String(id))}/commit`, {
