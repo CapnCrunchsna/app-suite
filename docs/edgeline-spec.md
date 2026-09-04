@@ -71,14 +71,14 @@ packages are scoped `@metrum/*`; project tags are `scope:el` + `type:app`, and `
 registered in the root `eslint.config.mjs` `depConstraints` (may depend on `scope:el` and
 `scope:shared`).
 
-**Toolchain — Python done 2026-09-03, datastore still open:**
+**Toolchain — complete as of 2026-09-04. All of this is done; none of it needs redoing:**
 
 ```bash
 cd app-suite/apps/edgeline-api
 uv sync                       # DONE — 50 packages against CPython 3.14.7; uv.lock committed
-uv run pytest                 # DONE — 1 passed, 1 skipped (the ES-marked test)
-cp .env.example .env          # then fill ODDS_API_KEY (§17)
-nx run edgeline-api:es-up     # BLOCKED — no working Docker daemon on this machine
+uv run pytest                 # DONE — 2 passed against a live datastore
+nx run edgeline-api:es-up     # DONE — Elasticsearch 9.0.3 green, Kibana available
+cp .env.example .env          # STILL NEEDED — fill ODDS_API_KEY (§17)
 ```
 
 Both `uv` (0.12.9) and CPython 3.14.7 were installed with `winget`. **Do not use uv's managed
@@ -88,23 +88,34 @@ expected target directory for Python minor version link", reproducibly, `--reins
 interpreter. Versions are pinned in `uv.lock`, as intended — `pyproject.toml` deliberately
 carries unpinned ranges.
 
-Elasticsearch is the one thing still missing, and it is a decision rather than a command:
-upgrade Docker Desktop (needs WSL2), run Elasticsearch from its native Windows zip (it bundles
-a JDK, so no Docker at all), or stand it up on the planned home server. Engine work does not
-wait on it — `tests/conftest.py` skips `@pytest.mark.es` tests when nothing answers on `ES_URL`.
+**The datastore works, and getting there was the expensive part of 2026-09-04.** Docker Desktop
+was stuck at 3.0.0 (Dec 2020), whose engine 20.10.0 denies the `clone3` syscall with `EPERM`
+instead of `ENOSYS` — the ES 9 image's JVM calls it from `pthread_create`, so the container died
+with `Error occurred during initialization of VM`. The engine is now 29.7.2 and the whole class
+of problem is gone. Two things are worth keeping, because both cost real time:
 
-**`edgeline-ui` is not scaffolded** and is not needed before Phase 3. `nx g
-@nx/angular:application` refuses in this workspace — the Angular generator does not support
-its TypeScript project-references setup. Two ways through, neither attempted:
-`NX_IGNORE_UNSUPPORTED_TS_SETUP=true` and then reconcile the tsconfigs, or mirror
-`apps/ledgerline-ui/` by hand (a working Angular 22 app in this same workspace).
+- **An in-place upgrade from 3.0.0 hangs.** Every run logged `Existing installation found:
+  build=50684, version=3.0.0`, showed an "Installing Docker Desktop" window, then sat at zero
+  CPU indefinitely — through elevation, through a reboot, through a WSL update. **Uninstalling
+  first and installing clean worked on the first try.** If a machine here is on an ancient
+  Docker, uninstall before upgrading.
+- **Don't trust a small container as a proxy for the real image.** `docker run --rm ubuntu:24.04
+  bash -c "…"` succeeded on the broken engine, because `bash` forks via plain `clone` and never
+  touches `clone3`. Only Elasticsearch itself reproduced the failure.
+
+`edgeline-ui` **is scaffolded** (an app shell; its pages are Phase 3). `nx g
+@nx/angular:application` refuses in this workspace — the Angular generator asserts against the
+TypeScript project-references setup the monorepo uses — so it was generated with
+`NX_IGNORE_UNSUPPORTED_TS_SETUP=true` and reconciled against `apps/ledgerline-ui/`. That
+reconciliation is four specific fixes, listed in `apps/edgeline-api/README.md`; any regeneration
+needs the same four.
 
 ### 2.2 Directory layout (final state)
 
 ```
 app-suite/                        # the existing Nx monorepo (its own git repo)
   apps/
-    edgeline-ui/                  # Angular app — NOT scaffolded yet (Phase 3, §2.1)
+    edgeline-ui/                  # Angular app shell — SCAFFOLDED; pages are Phase 3
       src/app/pages/...           # pages per §11
     edgeline-api/
       pyproject.toml  uv.lock
@@ -150,10 +161,11 @@ app-suite/                        # the existing Nx monorepo (its own git repo)
 `docker compose up -d` / `down`.
 
 **Why `test-py` and not `test`:** the monorepo's green bar is `npm run check`
-(`nx run-many -t lint typecheck test build`). Until `uv` is installed on this machine, a
-target named `test` here would report a missing toolchain as a workspace-wide failure. Rename
-it to `test` once `uv` is installed and `nx run edgeline-api:test-py` passes — a deliberate
-one-line follow-up, recorded in the project's `"//targets"` note.
+(`nx run-many -t lint typecheck test build`), and this target shells through `uv`. The original
+reason — uv not installed — no longer applies. The rename is left to the first session that adds
+real coverage, so it lands behind actual tests and makes `uv` on `PATH` a hard requirement of
+`npm run check` at a moment someone is watching. The reasoning is recorded in the project's
+`metadata.description`.
 
 ---
 

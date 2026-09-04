@@ -18,37 +18,26 @@ informs the code without versioning against it.
 | --- | --- | --- |
 | Python 3.14 | Fixed decision, spec §1 | ✅ 3.14.7 via `winget install Python.Python.3.14` |
 | [uv](https://docs.astral.sh/uv/) | Dependency + interpreter management; every Nx target shells through it | ✅ 0.12.9 via `winget install astral-sh.uv` |
-| Docker (working daemon) | Runs the single-node Elasticsearch in `docker-compose.yml` | ⚠️ Docker Desktop **3.0.0** (Dec 2020), engine 20.10.0 — runs, but too old for the ES 9 image |
-| Elasticsearch 9.x | The datastore (spec §4) | ⚠️ image pulls and starts only with seccomp disabled; upgrade pending |
+| Docker (working daemon) | Runs the single-node Elasticsearch in `docker-compose.yml` | ✅ Docker Desktop 4.89.0, engine 29.7.2 |
+| Elasticsearch 9.x | The datastore (spec §4) | ✅ 9.0.3, cluster green; Kibana available on :5601 |
 
-The Python half is done: `uv sync` resolves 50 packages against 3.14.7 and `uv.lock` is committed.
+The toolchain is complete. `uv sync` resolves 50 packages against 3.14.7 with `uv.lock`
+committed, and `nx run edgeline-api:es-up` brings up a green Elasticsearch with Kibana.
 
-**The datastore blocker, diagnosed 2026-09-03 so nobody re-derives it.** Docker Desktop is
-installed and works — it simply was not running; launching it brings the daemon up in ~50s. The
-real problem is its age. Engine 20.10.0's default seccomp profile denies the `clone3` syscall
-with `EPERM` instead of `ENOSYS`, and the ES 9 image's JVM is built against a modern glibc whose
-`pthread_create` calls it:
+**Two hard-won notes from getting Docker working on 2026-09-04**, kept because each cost real
+time and either could recur on another machine here:
 
-```
-Failed to start thread "ArchiveWorkerThread" - pthread_create failed (EPERM)
-Error occurred during initialization of VM
-```
-
-Docker fixed this in **20.10.10** (Oct 2021). Confirmed by running the same image with
-`--security-opt seccomp=unconfined`, which starts and answers on `:9200` in 15 seconds.
-
-Beware a misleading probe: `docker run --rm ubuntu:24.04 bash -c "…"` **succeeds** here, because
-`bash` forks via plain `clone`. Only `pthread_create` trips the filter, so the real image is the
-only conclusive test.
-
-Everything else on the path is fine: `docker-compose` 1.27.4 validates this compose file
-including `depends_on.condition`, the image pulls, WSL2 works, disk is not tight.
-
-**The fix in progress** is upgrading Docker Desktop 3.0.0 → 4.89.0 (`winget upgrade --id
-Docker.DockerDesktop -e`). It must run where its **UAC prompt can be accepted** — an unattended
-run aborts with installer exit code `4294967291` (-5) having changed nothing. Docker's
-Subscription Service Agreement is also accepted on first launch of the new version. Once that
-lands, delete this paragraph and set both rows above to ✅.
+- **Never upgrade Docker Desktop in place from a very old build.** This machine sat at 3.0.0
+  (Dec 2020). Every attempt to upgrade logged `Existing installation found: build=50684,
+  version=3.0.0`, opened an "Installing Docker Desktop" window, and then sat at *zero CPU*
+  indefinitely — surviving elevation, a reboot, and a WSL update. Uninstalling 3.0.0 first and
+  installing 4.89.0 clean worked on the first attempt. Every `4294967291` (-5) exit code seen
+  along the way was just the cancel from closing that hung window.
+- **A small container is not a proxy for the real image.** Engine 20.10.0 denied the `clone3`
+  syscall with `EPERM` instead of `ENOSYS`, which killed the ES 9 JVM in `pthread_create`
+  (`Error occurred during initialization of VM`) — but `docker run --rm ubuntu:24.04 bash -c "…"`
+  ran fine on that same engine, because `bash` forks via plain `clone`. Only Elasticsearch
+  itself reproduced it. Docker fixed this in 20.10.10; engine 29.7.2 is far past it.
 
 Nothing about that blocks engine work. The math is pure functions, the Odds API adapter is
 tested against recorded fixtures, and `tests/conftest.py` skips `@pytest.mark.es` tests rather
