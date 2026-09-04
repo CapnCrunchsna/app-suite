@@ -18,13 +18,37 @@ informs the code without versioning against it.
 | --- | --- | --- |
 | Python 3.14 | Fixed decision, spec §1 | ✅ 3.14.7 via `winget install Python.Python.3.14` |
 | [uv](https://docs.astral.sh/uv/) | Dependency + interpreter management; every Nx target shells through it | ✅ 0.12.9 via `winget install astral-sh.uv` |
-| Docker (working daemon) | Runs the single-node Elasticsearch in `docker-compose.yml` | ❌ client is 20.10.0 (2020) and `docker info` panics |
-| Elasticsearch 9.x | The datastore (spec §4) | ❌ nothing answers on `localhost:9200` |
+| Docker (working daemon) | Runs the single-node Elasticsearch in `docker-compose.yml` | ⚠️ Docker Desktop **3.0.0** (Dec 2020), engine 20.10.0 — runs, but too old for the ES 9 image |
+| Elasticsearch 9.x | The datastore (spec §4) | ⚠️ image pulls and starts only with seccomp disabled; upgrade pending |
 
-The Python half is done: `uv sync` resolves 50 packages against 3.14.7 and `uv.lock` is
-committed. The datastore half is not, and that is a decision still to make — upgrade Docker
-Desktop (needs WSL2), run Elasticsearch from its native Windows zip (it bundles a JDK, no
-Docker required), or stand it up on the home server the workspace has been planning.
+The Python half is done: `uv sync` resolves 50 packages against 3.14.7 and `uv.lock` is committed.
+
+**The datastore blocker, diagnosed 2026-09-03 so nobody re-derives it.** Docker Desktop is
+installed and works — it simply was not running; launching it brings the daemon up in ~50s. The
+real problem is its age. Engine 20.10.0's default seccomp profile denies the `clone3` syscall
+with `EPERM` instead of `ENOSYS`, and the ES 9 image's JVM is built against a modern glibc whose
+`pthread_create` calls it:
+
+```
+Failed to start thread "ArchiveWorkerThread" - pthread_create failed (EPERM)
+Error occurred during initialization of VM
+```
+
+Docker fixed this in **20.10.10** (Oct 2021). Confirmed by running the same image with
+`--security-opt seccomp=unconfined`, which starts and answers on `:9200` in 15 seconds.
+
+Beware a misleading probe: `docker run --rm ubuntu:24.04 bash -c "…"` **succeeds** here, because
+`bash` forks via plain `clone`. Only `pthread_create` trips the filter, so the real image is the
+only conclusive test.
+
+Everything else on the path is fine: `docker-compose` 1.27.4 validates this compose file
+including `depends_on.condition`, the image pulls, WSL2 works, disk is not tight.
+
+**The fix in progress** is upgrading Docker Desktop 3.0.0 → 4.89.0 (`winget upgrade --id
+Docker.DockerDesktop -e`). It must run where its **UAC prompt can be accepted** — an unattended
+run aborts with installer exit code `4294967291` (-5) having changed nothing. Docker's
+Subscription Service Agreement is also accepted on first launch of the new version. Once that
+lands, delete this paragraph and set both rows above to ✅.
 
 Nothing about that blocks engine work. The math is pure functions, the Odds API adapter is
 tested against recorded fixtures, and `tests/conftest.py` skips `@pytest.mark.es` tests rather
@@ -90,13 +114,23 @@ Modules appear as their phase lands; the tree above is the destination, not the 
 
 ## The UI
 
-`edgeline-ui` (Angular, spec §11) is **not scaffolded yet** and is not needed before Phase 3.
-`nx g @nx/angular:application` refuses in this workspace: the Angular generator does not support
-the TypeScript project-references setup the monorepo uses ("The Angular framework doesn't support
-a TypeScript setup with project references"). Two ways through when Phase 3 starts, neither
-attempted yet:
+`edgeline-ui` (Angular, spec §11) **is scaffolded** as of commit bbd1125 — an app shell that
+lints, typechecks, tests and builds. Its pages are Phase 3 work.
 
-1. Re-run the generator with `NX_IGNORE_UNSUPPORTED_TS_SETUP=true`, then reconcile the generated
-   tsconfigs with the workspace's project-references layout.
-2. Mirror `apps/ledgerline-ui/` by hand — it is a working Angular 22 app in this exact workspace,
-   so its `project.json` and tsconfigs are proof of a shape that builds here.
+Getting it in took a bypass worth knowing about. `nx g @nx/angular:application` refuses in this
+workspace: the generator asserts against Nx's TS solution setup, which is exactly what this
+monorepo uses (a root `tsconfig.json` of project references over `tsconfig.base.json`, plus npm
+workspaces). `ledgerline-ui` only exists because it predates that assertion. So the app was
+generated with `NX_IGNORE_UNSUPPORTED_TS_SETUP=true` and then reconciled against `ledgerline-ui`,
+which is the proven shape here. Four things the generator got wrong for this workspace, all
+fixed in that commit:
+
+1. Its `tsconfig.json` inherited the base config's `emitDeclarationOnly` (Angular rejects it,
+   NG4006), a Node-only `lib` with no `dom`, and the `@metrum/source` condition that resolves
+   workspace deps to `src/index.ts`.
+2. It emitted a `lint` target on the deprecated `@nx/eslint:lint` executor instead of relying on
+   the inferred `@nx/eslint/plugin`.
+3. It never added the project to the root `tsconfig.json` references.
+4. It never wrote the `package.json` that npm workspaces expects.
+
+Do the same reconciliation if you ever regenerate it.

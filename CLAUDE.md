@@ -19,8 +19,9 @@ inside it.
   CalendarProvider.
 - **Edgeline** — sports betting intelligence: +EV/arbitrage detection with Discord alerts and
   sportsbook deep links. Python engine at `apps/edgeline-api` (FastAPI API + APScheduler worker);
-  Angular `edgeline-ui` not scaffolded yet (Phase 3 — see that app's README for why the generator
-  refuses today). Datastore is **Elasticsearch**, single-node via `apps/edgeline-api/docker-compose.yml`.
+  Angular `edgeline-ui` is scaffolded as a shell, its pages are Phase 3 (that app's README records
+  the generator bypass its creation needed, which any regeneration will need too).
+  Datastore is **Elasticsearch**, single-node via `apps/edgeline-api/docker-compose.yml`.
   Spec: `docs/edgeline-spec.md` — normative, and its §16 prohibitions are hard rules, first
   among them that the system recommends bets and **never places them**. The architecture plan
   (`../artifacts/plans/sports-betting-intel-system-plan.md`) stays a workspace artifact.
