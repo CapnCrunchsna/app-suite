@@ -24,6 +24,13 @@ Then verify with `node ../../scripts/check-artifacts.mjs`.
 
 ## Current contents
 
+- **`edgeline-spec.md`** — the Edgeline build specification: the Elasticsearch index catalog,
+  the odds-math, staking and detection algorithms with their golden-test numbers, module
+  contracts, the HTTP API and Discord/UI specs, the phase checklists, and the §16 prohibitions —
+  first among them that the system recommends bets and never places them. Registered on the
+  dashboard; its companion plan artifact is
+  `../../artifacts/plans/sports-betting-intel-system-plan.md`. Moved here from `artifacts/plans/`
+  on 2026-09-03, once `new-artifact.mjs --moved-from` could retire the old registration.
 - **`ledgerline-spec.md`** — the Ledgerline build specification: Nx layout and
   module-boundary tags, HTTP API, LLM provider seam, parse-to-analyze pipeline, SQLite schema,
   merchant normalization chain, the nine analyzer rules with their thresholds, and the

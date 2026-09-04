@@ -4,18 +4,13 @@ The Edgeline engine: odds ingest, +EV/arbitrage detection, staking, and Discord 
 FastAPI serves the JSON API; a second process (`worker`) runs the polling, closing-line and
 grading jobs.
 
-**The governing document is the Edgeline implementation spec**, today at
-`../../../artifacts/plans/sports-betting-implementation-spec.md` in the workspace repo. It is
-normative — the golden test numbers in §14 and the prohibitions in §16 are not suggestions. The
-non-negotiable one: **this system recommends bets and never places them.**
-
-> **Placement follow-up.** By `../../docs/README.md`'s own rule that is the wrong home: an
-> implementation spec must version atomically with the code it governs, so it belongs at
-> `app-suite/docs/edgeline-spec.md`. It has not been moved because it is a **registered**
-> dashboard artifact and `scripts/new-artifact.mjs` registers by HTML path with no way to
-> unregister the old one — a move would leave a duplicate card pointing at a deleted file.
-> Doing it properly means teaching that script to retire an entry first. The architecture plan
-> (`artifacts/plans/sports-betting-intel-system-plan.md`) stays an artifact either way.
+**The governing document is the Edgeline implementation spec**, at
+[`../../docs/edgeline-spec.md`](../../docs/edgeline-spec.md) — in this repo, so it versions with
+the code it governs and lands in the same commit. It is normative — the golden test numbers in
+§14 and the prohibitions in §16 are not suggestions. The non-negotiable one: **this system
+recommends bets and never places them.** The architecture plan
+(`../../../artifacts/plans/sports-betting-intel-system-plan.md`) stays a workspace artifact: it
+informs the code without versioning against it.
 
 ## Toolchain
 

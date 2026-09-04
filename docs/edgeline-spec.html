@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edgeline — Detailed Implementation Specification (v1.1) — MetrumDigital</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%20role='img'%20aria-label='MetrumDigital'%3E%20%3Cdefs%3E%20%3ClinearGradient%20id='mdg'%20x1='0'%20y1='0'%20x2='32'%20y2='32'%20gradientUnits='userSpaceOnUse'%3E%20%3Cstop%20offset='0'%20stop-color='%230ea5e9'/%3E%20%3Cstop%20offset='.55'%20stop-color='%2314b8a6'/%3E%20%3Cstop%20offset='1'%20stop-color='%2322c55e'/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20x='1'%20y='1'%20width='30'%20height='30'%20rx='8'%20fill='%230d9488'/%3E%20%3Cg%20fill='%235eead4'%3E%20%3Crect%20x='1'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3C/g%3E%20%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='3'%20fill='url(%23mdg)'/%3E%20%3Cpath%20d='M9%2022V10.5l7%206.5%207-6.5V22'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%20%3C/svg%3E">
+
+<!-- Restore saved theme before paint to avoid flash. Default is dark. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('md-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0a1517; --surface:#0f2124; --surface-2:#143034; --border:#1f4a47;
+    --text:#dcefeb; --text-dim:#7ea8a1; --accent:#2dd4bf; --accent-2:#34d399;
+    --code-bg:#0f2124; --shadow:0 1px 3px rgba(0,0,0,.5);
+    --radius:10px; --maxw:880px;
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff; --surface:#f0faf8; --surface-2:#e0f3ef; --border:#bfe3dc;
+    --text:#0b2a27; --text-dim:#48706a; --accent:#0d9488; --accent-2:#059669;
+    --code-bg:#f0faf8; --shadow:0 1px 3px rgba(140,149,159,.3);
+  }
+  html[data-theme="dark"]{color-scheme:dark}
+  html[data-theme="light"]{color-scheme:light}
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    transition:background .2s ease,color .2s ease;
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
+  }
+  .topbar a{color:var(--accent); text-decoration:none; font-weight:600}
+  .topbar a:hover{text-decoration:underline}
+  .home{white-space:nowrap; display:inline-flex; align-items:center; gap:8px}
+  .brand-mark{width:22px; height:22px; flex:none}
+  .related{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+  .related .label{color:var(--text-dim); font-weight:400}
+  .related a{font-weight:500; padding:3px 10px; border:1px solid var(--border);
+    border-radius:999px; background:var(--surface-2)}
+  .spacer{flex:1}
+  .toggle{
+    cursor:pointer; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:600;
+  }
+  .toggle:hover{border-color:var(--accent)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:40px 24px 80px}
+  h1{font-size:2rem; line-height:1.2; margin:0 0 6px}
+  h2{margin-top:2em; padding-bottom:.3em; border-bottom:1px solid var(--border)}
+  .meta{color:var(--text-dim); font-size:14px; margin:0 0 32px}
+  .meta .tag{display:inline-block; padding:2px 10px; border-radius:999px;
+    background:var(--surface-2); border:1px solid var(--border); margin-right:8px; font-weight:600}
+  a{color:var(--accent)}
+  code{background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:.15em .4em; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.9em}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; overflow:auto}
+  pre code{background:none; border:none; padding:0}
+  blockquote{margin:1em 0; padding:.5em 1em; border-left:4px solid var(--accent);
+    background:var(--surface); border-radius:0 var(--radius) var(--radius) 0; color:var(--text-dim)}
+  table{border-collapse:collapse; width:100%; margin:1em 0}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left}
+  th{background:var(--surface-2)}
+  hr{border:none; border-top:1px solid var(--border); margin:2em 0}
+  footer{max-width:var(--maxw); margin:0 auto; padding:24px; color:var(--text-dim);
+    font-size:14px; border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../../dashboard.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="mdLogoT" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0ea5e9"/><stop offset=".55" stop-color="#14b8a6"/><stop offset="1" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0d9488"/>
+      <g fill="#5eead4"><rect x="1" y="8.5" width="4" height="2.6"/><rect x="1" y="14.7" width="4" height="2.6"/><rect x="1" y="20.9" width="4" height="2.6"/><rect x="27" y="8.5" width="4" height="2.6"/><rect x="27" y="14.7" width="4" height="2.6"/><rect x="27" y="20.9" width="4" height="2.6"/></g>
+      <rect x="5" y="5" width="22" height="22" rx="3" fill="url(#mdLogoT)"/>
+      <path d="M9 22V10.5l7 6.5 7-6.5V22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>← Dashboard</span>
+  </a>
+  <nav class="related">
+    <span class="label">Related:</span>
+    <a href="../../artifacts/plans/sports-betting-intel-system-plan.html">Sports Betting Intelligence & Execution System — Architecture Plan</a>
+  </nav>
+  <span class="spacer"></span>
+  <button id="themeToggle" class="toggle" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+<h1>Edgeline — Detailed Implementation Specification (v1.1)</h1>
+<p class="meta"><span class="tag">plans</span> 2026-07-06</p>
+<p><strong>Type:</strong> Plan · <strong>Date:</strong> 2026-07-06 · rev 2026-07-08 (Elasticsearch replaces SQLite, <a href="#s4">§4</a>) ·<br>
+Companion to the <a href="../../artifacts/plans/sports-betting-intel-system-plan.md">Architecture Plan</a> (2026-07-02)</p>
+<h2 id="s0">0. How to Use This Document</h2>
+<p>This spec is written for an implementer (human or model) who should <strong>follow it literally</strong> rather than make design decisions. Rules:</p>
+<ol><li>Execute phases <strong>in order</strong> (<a href="#s15">§15</a>). Do not start a phase before the previous phase's checklist is fully checked.</li><li>Do not substitute technologies, rename tables/fields, or "improve" the algorithms. If something is impossible as written, stop and report the exact blocker to the user.</li><li>Every algorithm in <a href="#s6">§6</a> has a <strong>golden test</strong> in <a href="#s14">§14</a> with exact expected numbers. If your implementation doesn't reproduce those numbers, the implementation is wrong — not the test.</li><li>Anything in the <strong>Prohibitions list (<a href="#s16">§16</a>) is non-negotiable.</strong></li><li>Items marked <code>ASK USER</code> require user input before proceeding (collected list in <a href="#s17">§17</a>).</li></ol>
+<h2 id="s1">1. Fixed Decisions (do not revisit)</h2>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Decision</th><th>Value</th></tr>
+<tr><td>Engine language</td><td>Python, latest stable (3.14 as of writing), pinned with <code>uv</code></td></tr>
+<tr><td>Web framework</td><td>FastAPI (pure JSON API — no server-side HTML rendering)</td></tr>
+<tr><td>Database</td><td>Elasticsearch 9.x, single-node via Docker Compose, localhost-only, official async Python client (decision 2026-07-08; replaced SQLite)</td></tr>
+<tr><td>UI</td><td>Angular + TypeScript app <code>config-ui</code> inside an Nx monorepo</td></tr>
+<tr><td>Monorepo</td><td>The <strong>existing</strong> <code>app-suite/</code> Nx workspace (<code>@metrum/source</code>), not a new one; Python engine wired in via run-commands targets</td></tr>
+<tr><td>Notifications</td><td>Discord bot (discord.py 2.x). Native Android app: NOT in scope for v1</td></tr>
+<tr><td>Odds provider v1</td><td>The Odds API (<code>the-odds-api.com</code>), free tier for dev, ≤ $100/mo paid tier for production</td></tr>
+<tr><td>First sport</td><td>MLB (<code>baseball_mlb</code>); NFL/NBA added later by config only</td></tr>
+<tr><td>Bet placement</td><td>NEVER automated. The system only notifies; a human places every bet</td></tr>
+<tr><td>Money representation</td><td>Integer <strong>cents</strong> everywhere (<code>stake_cents</code>, <code>pnl_cents</code>)</td></tr>
+<tr><td>Odds representation</td><td>Decimal odds as REAL, ≥ 6 significant digits; American odds only at display edges</td></tr>
+<tr><td>Time representation</td><td>UTC ISO-8601 strings everywhere; convert only in the UI</td></tr>
+<tr><td>Mode</td><td><code>paper_mode = true</code> until the user explicitly flips it (<a href="#s7">§7</a> gate)</td></tr>
+</table></div>
+<h2 id="s2">2. Repository Scaffold</h2>
+<h3 id="s2-1">2.1 Where this lives — DONE, do not re-scaffold</h3>
+<p><strong>Revised 2026-09-03 against the real workspace.</strong> Edgeline does <strong>not</strong> get its own Nx workspace. <code>app-suite/</code> is already the Nx monorepo for every Angular/TypeScript UI and polyglot backend here (it is its own git repo, gitignored by the workspace), and its <code>CLAUDE.md</code> already named Edgeline as a resident project. A second workspace would have split the shared <code>ui</code> and <code>api-client</code> libraries away from the app that needs them.</p>
+<p>The scaffold landed on 2026-09-03. <strong>It exists — do not run <code>create-nx-workspace</code>.</strong></p>
+<pre><code>app-suite/                              the Nx monorepo (own git repo)
+  apps/edgeline-api/                    Python engine — SCAFFOLDED
+    pyproject.toml  .python-version     uv-managed, requires-python &gt;=3.14
+    project.json                        Nx targets: serve, worker, test-py, es-up, es-down
+    docker-compose.yml                  single-node Elasticsearch + Kibana (§4.1)
+    .env.example                        the §3.1 keys; .env is gitignored
+    src/edgeline/__init__.py            package root
+    tests/conftest.py                   ES-reachability skip for @pytest.mark.es
+    tests/fixtures/                     recorded Odds API responses</code></pre>
+<p>Conventions this workspace already enforces, and that Edgeline follows: apps are <code>&lt;project&gt;-ui</code> / <code>&lt;project&gt;-api</code>; libs are <code>libs/&lt;project&gt;/&lt;lib&gt;</code> plus <code>libs/shared/*</code>; packages are scoped <code>@metrum/*</code>; project tags are <code>scope:el</code> + <code>type:app</code>, and <code>scope:el</code> is registered in the root <code>eslint.config.mjs</code> <code>depConstraints</code> (may depend on <code>scope:el</code> and <code>scope:shared</code>).</p>
+<p><strong>Toolchain — Python done 2026-09-03, datastore still open:</strong></p>
+<pre><code>cd app-suite/apps/edgeline-api
+uv sync                       # DONE — 50 packages against CPython 3.14.7; uv.lock committed
+uv run pytest                 # DONE — 1 passed, 1 skipped (the ES-marked test)
+cp .env.example .env          # then fill ODDS_API_KEY (§17)
+nx run edgeline-api:es-up     # BLOCKED — no working Docker daemon on this machine</code></pre>
+<p>Both <code>uv</code> (0.12.9) and CPython 3.14.7 were installed with <code>winget</code>. <strong>Do not use uv's managed Python here:</strong> <code>uv python install 3.14</code> downloads the interpreter then fails with "Missing expected target directory for Python minor version link", reproducibly, <code>--reinstall</code> included. <code>pyproject.toml</code> pins <code>python-preference = "only-system"</code> so <code>uv sync</code> uses the winget interpreter. Versions are pinned in <code>uv.lock</code>, as intended — <code>pyproject.toml</code> deliberately carries unpinned ranges.</p>
+<p>Elasticsearch is the one thing still missing, and it is a decision rather than a command: upgrade Docker Desktop (needs WSL2), run Elasticsearch from its native Windows zip (it bundles a JDK, so no Docker at all), or stand it up on the planned home server. Engine work does not wait on it — <code>tests/conftest.py</code> skips <code>@pytest.mark.es</code> tests when nothing answers on <code>ES_URL</code>.</p>
+<p><strong><code>edgeline-ui</code> is not scaffolded</strong> and is not needed before Phase 3. <code>nx g @nx/angular:application</code> refuses in this workspace — the Angular generator does not support its TypeScript project-references setup. Two ways through, neither attempted: <code>NX_IGNORE_UNSUPPORTED_TS_SETUP=true</code> and then reconcile the tsconfigs, or mirror <code>apps/ledgerline-ui/</code> by hand (a working Angular 22 app in this same workspace).</p>
+<h3 id="s2-2">2.2 Directory layout (final state)</h3>
+<pre><code>app-suite/                        # the existing Nx monorepo (its own git repo)
+  apps/
+    edgeline-ui/                  # Angular app — NOT scaffolded yet (Phase 3, §2.1)
+      src/app/pages/...           # pages per §11
+    edgeline-api/
+      pyproject.toml  uv.lock
+      project.json                # Nx targets: serve, worker, test-py, es-up, es-down
+      docker-compose.yml          # single-node Elasticsearch + Kibana (§4.1)
+      .env                        # secrets (gitignored) (§3.1); .env.example is committed
+      src/edgeline/
+        __init__.py
+        config.py                 # pydantic-settings; reads .env + settings document
+        es.py                     # AsyncElasticsearch client factory + ensure_indices()
+        indices.py                # index names, mappings, seeds (§4)
+        schemas.py                # pydantic I/O models (§5)
+        oddsmath.py               # conversions, devig, consensus, EV, arb, staleness (§6)
+        staking.py                # Kelly + caps + guardrails (§6.7)
+        providers/
+          base.py                 # OddsProvider protocol + registry
+          the_odds_api.py         # v1 adapter (§8)
+        normalizer.py             # provider schema -&gt; canonical rows (§7)
+        engine.py                 # opportunity detection pipeline (§7)
+        dedup.py                  # opportunity hashing/lifecycle (§7.4)
+        deeplink.py               # link ladder assembly (§9.4)
+        notify/
+          discord_bot.py          # bot, embeds, buttons, handlers (§9)
+        grading.py                # results + CLV job (§12)
+        scheduler.py              # polling loops + closing-line capture (§13)
+        api/
+          main.py                 # FastAPI app; mounts routers; serves config-ui bundle
+          routers/                # settings, providers, sportsbooks, opportunities,
+                                  # recommendations, results, bankroll, matching, system
+      tests/
+        fixtures/                 # recorded The Odds API JSON responses
+        test_oddsmath.py          # golden tests G1–G8 (§14)
+        test_engine.py  test_staking.py  test_dedup.py  test_normalizer.py
+  libs/
+    shared/api-client/            # EXISTS — generated TS client (§11.3), today Ledgerline's
+    shared/ui/                    # EXISTS — shared Angular components/theme
+    edgeline/                     # Edgeline-only libs, when any are needed</code></pre>
+<p><code>apps/edgeline-api/project.json</code> targets (all <code>nx:run-commands</code>, <code>cwd</code> = the project root): <code>serve</code> → <code>uv run uvicorn edgeline.api.main:app --reload --port 8000</code>; <code>worker</code> → <code>uv run python -m edgeline.scheduler</code>; <code>test-py</code> → <code>uv run pytest</code>; <code>es-up</code> / <code>es-down</code> → <code>docker compose up -d</code> / <code>down</code>.</p>
+<p><strong>Why <code>test-py</code> and not <code>test</code>:</strong> the monorepo's green bar is <code>npm run check</code> (<code>nx run-many -t lint typecheck test build</code>). Until <code>uv</code> is installed on this machine, a target named <code>test</code> here would report a missing toolchain as a workspace-wide failure. Rename it to <code>test</code> once <code>uv</code> is installed and <code>nx run edgeline-api:test-py</code> passes — a deliberate one-line follow-up, recorded in the project's <code>"//targets"</code> note.</p>
+<h2 id="s3">3. Configuration</h2>
+<h3 id="s3-1">3.1 <code>.env</code> (secrets only — never in git, never in the DB)</h3>
+<pre><code>ODDS_API_KEY=            # ASK USER
+DISCORD_BOT_TOKEN=       # ASK USER
+DISCORD_CHANNEL_ID=      # ASK USER (numeric channel id for alerts)
+ES_URL=http://localhost:9200</code></pre>
+<h3 id="s3-2">3.2 Settings — complete default set</h3>
+<p>All runtime-tunable values live in the single <code>"global"</code> document of <code>edgeline-settings</code> (<a href="#s4">§4.3</a>) and are editable from the UI. Seed exactly these defaults at bootstrap:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>key</th><th>default</th><th>meaning</th></tr>
+<tr><td><code>paper_mode</code></td><td><code>true</code></td><td>recommendations recorded, alerts sent, but flagged PAPER</td></tr>
+<tr><td><code>kill_switch</code></td><td><code>false</code></td><td>when true: polling continues, all alerting stops</td></tr>
+<tr><td><code>kelly_fraction</code></td><td><code>0.25</code></td><td>fraction of full Kelly</td></tr>
+<tr><td><code>bankroll_start_cents</code></td><td><code>100000</code></td><td>$1,000 default — ASK USER for real value</td></tr>
+<tr><td><code>ev_threshold_pct</code></td><td><code>2.0</code></td><td>min EV% to alert</td></tr>
+<tr><td><code>min_edge_to_bet_pct</code></td><td><code>1.5</code></td><td>below this: log opportunity, do not alert</td></tr>
+<tr><td><code>min_books_for_consensus</code></td><td><code>4</code></td><td>markets quoted by fewer books never alert</td></tr>
+<tr><td><code>arb_min_profit_pct</code></td><td><code>0.5</code></td><td>min arb profit after rounding</td></tr>
+<tr><td><code>max_stake_cents</code></td><td><code>25000</code></td><td>hard cap $250/bet</td></tr>
+<tr><td><code>max_stake_pct</code></td><td><code>2.0</code></td><td>hard cap % of current bankroll</td></tr>
+<tr><td><code>daily_exposure_cap_cents</code></td><td><code>100000</code></td><td>sum of recommended stakes/day</td></tr>
+<tr><td><code>daily_loss_stop_cents</code></td><td><code>50000</code></td><td>graded losses today ≥ this → auto kill_switch</td></tr>
+<tr><td><code>stake_rounding_cents</code></td><td><code>100</code></td><td>round stakes to $1</td></tr>
+<tr><td><code>devig_method</code></td><td><code>"multiplicative"</code></td><td>one of multiplicative/additive/power/shin</td></tr>
+<tr><td><code>consensus_weights</code></td><td><code>{"default":1}</code></td><td>per-book integer weights, e.g. <code>{"pinnacle":3}</code></td></tr>
+<tr><td><code>staleness_sigma_floor</code></td><td><code>0.002</code></td><td>σ floor to avoid divide-by-near-zero</td></tr>
+<tr><td><code>edge_improve_delta_pct</code></td><td><code>0.5</code></td><td>re-alert same opportunity only if edge grew ≥ this</td></tr>
+<tr><td><code>alert_cooldown_s</code></td><td><code>300</code></td><td>per market key</td></tr>
+<tr><td><code>sports_enabled</code></td><td><code>["baseball_mlb"]</code></td><td>The Odds API sport keys</td></tr>
+<tr><td><code>markets_featured</code></td><td><code>["h2h","spreads","totals"]</code></td><td>polled every cycle</td></tr>
+<tr><td><code>markets_props</code></td><td><code>["batter_home_runs","pitcher_strikeouts"]</code></td><td>polled per <a href="#s8">§8.4</a></td></tr>
+<tr><td><code>poll_interval_s</code></td><td><code>120</code></td><td>featured-markets cycle (production)</td></tr>
+<tr><td><code>poll_interval_dev_s</code></td><td><code>21600</code></td><td>dev/free tier: 4 polls/day</td></tr>
+<tr><td><code>props_poll_interval_s</code></td><td><code>600</code></td><td>props, only for events starting within 6 h</td></tr>
+<tr><td><code>closing_capture_offset_s</code></td><td><code>300</code></td><td>force snapshot at start_time − 5 min (CLV)</td></tr>
+<tr><td><code>quota_monthly_budget</code></td><td><code>500</code></td><td>credits; raise when paid tier starts</td></tr>
+</table></div>
+<h2 id="s4">4. Elasticsearch Setup, Indices &amp; Mappings</h2>
+<h3 id="s4-1">4.1 Running ES locally (dev)</h3>
+<p><code>docker-compose.yml</code> at the monorepo root — copy exactly, pin the current 9.x tag at setup:</p>
+<pre><code>services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false   # acceptable ONLY with the localhost-only binding below
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "127.0.0.1:9200:9200"          # localhost only — never 0.0.0.0
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.0.3
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "127.0.0.1:5601:5601"
+volumes:
+  esdata:</code></pre>
+<p>Security is disabled only because both ports bind to <code>127.0.0.1</code>. If ES ever moves off this machine (e.g. to the home server), enable auth + TLS <strong>first</strong> and move credentials to <code>.env</code>. Kibana at <code>http://localhost:5601</code> is the ops window into every index — no extra tooling needed.</p>
+<h3 id="s4-2">4.2 Bootstrap rules (<code>es.py</code> + <code>indices.py</code>)</h3>
+<ul><li><code>es.py</code> exposes <code>get_client()</code> (an <code>AsyncElasticsearch</code> from the official <code>elasticsearch</code> package, pointed at <code>ES_URL</code>) and <code>ensure_indices()</code>, called at both engine and worker startup.</li><li><code>ensure_indices()</code> creates each missing index with the exact mapping derived from <a href="#s4">§4.3</a> and <code>"dynamic": "strict"</code> — unknown fields must fail loudly, never be silently indexed. Exception: <code>edgeline-settings</code> uses <code>"dynamic": false</code> (docs are read/written whole by <code>_id</code>; nothing needs indexing).</li><li>Field-type conventions (apply mechanically to <a href="#s4">§4.3</a>): ids/keys/enums → <code>keyword</code>; timestamps → <code>date</code>; money → <code>long</code> (cents); probabilities &amp; decimal odds → <code>double</code>; flags → <code>boolean</code>; opaque JSON blobs → <code>object</code> with <code>"enabled": false</code> (stored in <code>_source</code>, not indexed).</li><li>Every index name is prefixed <code>edgeline-</code>. Tests use the prefix <code>edgeline-test-</code> (<a href="#s14">§14</a>).</li></ul>
+<h3 id="s4-3">4.3 Index catalog</h3>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Index</th><th><code>_id</code></th><th>Fields</th></tr>
+<tr><td><code>edgeline-settings</code></td><td><code>"global"</code>, <code>"runtime"</code></td><td><code>global</code>: every <a href="#s3">§3.2</a> key (dynamic:false; partial-doc updates). <code>runtime</code>: worker heartbeat/last-run stamps, written only by the scheduler</td></tr>
+<tr><td><code>edgeline-providers</code></td><td>provider key</td><td>display_name kw · enabled bool · config obj(enabled:false) · quota_used long · quota_budget long · quota_reset_at date</td></tr>
+<tr><td><code>edgeline-sportsbooks</code></td><td>book key</td><td>display_name kw · md_licensed bool · enabled bool · priority integer · link_templates obj(enabled:false)</td></tr>
+<tr><td><code>edgeline-events</code></td><td><code>{sport_key}:{provider_event_id}</code></td><td>sport_key kw · commence_time date · home_team kw · away_team kw · completed bool · home_score integer · away_score integer</td></tr>
+<tr><td><code>edgeline-odds-snapshots</code></td><td>auto</td><td>event_id kw · book_key kw · market_key kw · selection kw · line double · price_decimal double · is_closing bool · @timestamp date</td></tr>
+<tr><td><code>edgeline-opportunities</code></td><td><strong><code>opp_hash</code></strong> (<a href="#s7">§7.4</a>)</td><td>type kw(arb|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · status kw(open|alerted|closed|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double</td></tr>
+<tr><td><code>edgeline-recommendations</code></td><td>auto</td><td>opportunity_id kw (= opp_hash) · stakes obj(enabled:false, the <a href="#s5">§5</a> StakePlan) · paper bool · channel kw · sent_at date · message_ref kw</td></tr>
+<tr><td><code>edgeline-bets</code></td><td>auto</td><td>recommendation_id kw · confirmed_via kw(button|reaction|ui) · stake_actual_cents long · odds_actual_decimal double · placed_at date</td></tr>
+<tr><td><code>edgeline-results</code></td><td><strong>recommendation id</strong></td><td>bet_id kw · outcome kw(win|loss|push|void) · pnl_cents long · clv_pct double · needs_manual bool · graded_at date</td></tr>
+<tr><td><code>edgeline-bankroll-ledger</code></td><td>auto</td><td>book_key kw · delta_cents long · reason kw(deposit|withdrawal|bet_won|bet_lost|manual_adjust) · ref_result_id kw · @timestamp date — <strong>no stored balance field</strong></td></tr>
+<tr><td><code>edgeline-unmatched</code></td><td>auto</td><td>provider_key kw · raw obj(enabled:false) · reason kw · resolved bool · created_at date</td></tr>
+</table></div>
+<p><code>legs</code> is a plain <code>object</code> array, NOT <code>nested</code> — no query correlates fields across two legs of the same document, so nested overhead is unjustified.</p>
+<h3 id="s4-4">4.4 Consistency &amp; write rules (memorize these)</h3>
+<ol><li><strong>Idempotency by <code>_id</code>.</strong> Opportunities are keyed by <code>opp_hash</code>; results are keyed by recommendation id. Re-processing overwrites — it can never duplicate. There are no unique constraints to rely on; the <code>_id</code> IS the constraint.</li><li><strong><code>refresh="wait_for"</code></strong> on every write that a same-cycle or same-request read depends on: opportunity upserts, recommendation inserts, bet confirmations, settings updates. Bulk snapshot ingestion uses default refresh — the detection cycle works from the in-memory batch it just fetched, never from an ES read-back (<a href="#s7">§7.1</a>).</li><li><strong>Balances are aggregations, never fields.</strong> Per-book bankroll = <code>sum(delta_cents) where book_key = X</code>; total bankroll = <code>sum(delta_cents)</code> over the whole ledger. Do not store a running balance anywhere.</li><li><strong>Optimistic concurrency</strong> on opportunity status transitions: read <code>_seq_no</code> / <code>_primary_term</code>, write with <code>if_seq_no</code>/<code>if_primary_term</code>, retry once on conflict — the API process and the worker must not clobber each other.</li><li><strong>Deletes are rare and explicit:</strong> only <code>edgeline-unmatched</code> resolution may delete; everything else is append/update only.</li></ol>
+<p>Seed <code>edgeline-sportsbooks</code> with (verify Maryland licensure before enabling — <code>ASK USER</code> to confirm the final list): <code>draftkings, fanduel, betmgm, williamhill_us (Caesars), betrivers, espnbet, fanatics, bet365</code>. All start <code>enabled: false</code>; the user enables from the UI.</p>
+<h2 id="s5">5. Canonical Pydantic Schemas (engine-internal I/O)</h2>
+<pre><code>class BookOddsSnapshot(BaseModel):          # normalizer output, one price
+    provider_event_id: str; sport_key: str; commence_time: str
+    home_team: str; away_team: str
+    book_key: str; market_key: str
+    selection: str                          # canonical form, §7.2
+    line: float | None
+    price_decimal: float
+    fetched_at: str
+
+class OpportunityLeg(BaseModel):
+    book_key: str; selection: str; line: float | None
+    price_decimal: float; price_american: int
+    devig_prob: float
+    staleness: float | None = None
+    bet_first: bool = False
+
+class StakeLeg(BaseModel):
+    book_key: str; selection: str; stake_cents: int
+    to_win_cents: int; deep_link: str; link_level: str   # 'betslip'|'event'|'book_home'
+
+class StakePlan(BaseModel):
+    total_cents: int
+    legs: list[StakeLeg]
+    method: str                              # 'kelly' | 'arb_split'
+    guardrails_applied: list[str]            # e.g. ['max_stake_pct']</code></pre>
+<h2 id="s6">6. Odds Math — Exact Algorithms</h2>
+<p>Implement all functions in <code>oddsmath.py</code> as pure functions (no I/O). Round only at display time; keep full float precision internally.</p>
+<h3 id="s6-1">6.1 Conversions</h3>
+<pre><code>american_to_decimal(a):  a &gt; 0 → 1 + a/100 ;  a &lt; 0 → 1 + 100/abs(a)
+decimal_to_american(d):  d ≥ 2 → round((d−1)*100) ; 1 &lt; d &lt; 2 → round(−100/(d−1))
+implied_prob(d) = 1/d</code></pre>
+<p>Reference values (golden test G1): −110 → 1.909091 → 0.523810 · +105 → 2.05 → 0.487805 · +100 → 2.0 → 0.5 · −200 → 1.5 → 0.666667 · +250 → 3.5 → 0.285714.</p>
+<h3 id="s6-2">6.2 De-vig (<code>devig(probs: list[float], method) -&gt; list[float]</code>)</h3>
+<p>Input: raw implied probabilities of <strong>all outcomes of one market at one book</strong>.</p>
+<ul><li><code>multiplicative</code> (default): <code>p_fair[i] = p[i] / sum(p)</code>.</li><li><code>additive</code>: <code>p_fair[i] = p[i] − (sum(p) − 1)/n</code>.</li><li><code>power</code> and <code>shin</code>: implement later behind the same signature; v1 may raise <code>NotImplementedError</code> — the setting exists but defaults to multiplicative.</li></ul>
+<p>Golden test G2: Over −120 / Under +100 → raw (0.545455, 0.500000), sum 1.045455 → fair <strong>(0.521739, 0.478261)</strong>.</p>
+<h3 id="s6-3">6.3 Consensus fair probability (<code>consensus(book_probs: dict[str,float], weights) -&gt; float</code>)</h3>
+<ol><li>For each quoting book, take its de-vigged probability for the selection.</li><li>Repeat each value <code>weights.get(book_key, weights["default"])</code> times (integer weights).</li><li>Return the <strong>median</strong> of the expanded list.</li></ol>
+<p>Golden test G3: A(w=2)=0.520, B=0.510, C=0.515, D=0.505 → expanded sorted [0.505, 0.510, 0.515, 0.520, 0.520] → consensus <strong>0.515</strong>.</p>
+<h3 id="s6-4">6.4 +EV detection</h3>
+<p>For each book/selection with consensus available from ≥ <code>min_books_for_consensus</code> <strong>other</strong> books: <code>ev_pct = (consensus_prob × price_decimal − 1) × 100</code>. Alert if <code>ev_pct ≥ ev_threshold_pct</code>.</p>
+<p>Golden test G4: consensus 0.545, price −110 (1.909091) → EV = 0.545 × 1.909091 − 1 = <strong>+4.05%</strong> → alerts at the 2.0 default threshold.</p>
+<h3 id="s6-5">6.5 Arbitrage detection &amp; stake split</h3>
+<p>Across <strong>different</strong> enabled books, take the best price per outcome of a market (2-way or 3-way). Let <code>inv = Σ 1/dᵢ</code>.</p>
+<pre><code>arb exists  ⟺ inv &lt; 1
+profit_pct  = (1/inv − 1) × 100
+stake_i     = B × (1/dᵢ) / inv          (B = total allocation from staking engine)</code></pre>
+<p>Then round each stake to <code>stake_rounding_cents</code> and <strong>re-verify</strong>: worst-case profit = <code>min_i(stake_i × dᵢ) − Σ stakes</code> must stay ≥ <code>arb_min_profit_pct</code> of Σ stakes, else discard.</p>
+<p>Golden test G5: Ravens +110 (2.10) at book X, Chiefs −102 (1.980392) at book Y. inv = 0.476190 + 0.504950 = 0.981140 → profit <strong>1.92%</strong>. B = $100 → stakes <strong>$48.53 / $51.47</strong>. After $1 rounding → $49/$51; payouts $102.90/$101.00; worst-case profit $1.00 (1.0%) ≥ 0.5% → accept.</p>
+<h3 id="s6-6">6.6 Staleness — "which leg is more likely wrong"</h3>
+<p>For each arb leg (book b, selection s):</p>
+<pre><code>others   = de-vigged probs for s from all enabled books EXCEPT b
+mu       = median(others);  sigma = max(stdev(others), staleness_sigma_floor)
+staleness(b) = abs(p_b_devig − mu) / sigma</code></pre>
+<p>The leg with the <strong>higher</strong> score gets <code>bet_first = true</code>. Tie (Δ &lt; 0.5): mark the leg whose price most recently changed (compare the two latest snapshots per book).</p>
+<p>Golden test G6: BetMGM p=0.476 vs others μ=0.511 σ=0.005 → staleness <strong>7.0</strong>; FanDuel p=0.505 vs μ=0.512 σ=0.005 → <strong>1.4</strong> → BetMGM leg is <code>bet_first</code>.</p>
+<h3 id="s6-7">6.7 Staking (<code>staking.py</code>)</h3>
+<p><strong>+EV (fractional Kelly):</strong></p>
+<pre><code>b       = price_decimal − 1
+f_full  = (consensus_prob × price_decimal − 1) / b
+f       = f_full × kelly_fraction
+stake   = f × current_bankroll_cents</code></pre>
+<p><strong>Arb:</strong> <code>B = min(max_stake_cents, max_stake_pct × bankroll)</code> fed into the <a href="#s6">§6.5</a> split.</p>
+<p><strong>Guardrail order (apply after computing raw stake; record each applied rule in <code>guardrails_applied</code>):</strong></p>
+<ol><li><code>stake &gt; max_stake_cents</code> → clamp.</li><li><code>stake &gt; max_stake_pct × bankroll</code> → clamp.</li><li>Today's Σ recommended stakes + stake &gt; <code>daily_exposure_cap_cents</code> → clamp to remainder; if remainder &lt; one rounding unit → suppress alert entirely.</li><li>Round to <code>stake_rounding_cents</code>.</li><li>Edge &lt; <code>min_edge_to_bet_pct</code> → store opportunity, send nothing.</li><li><code>kill_switch</code> or daily loss stop tripped → store opportunity, send nothing.</li></ol>
+<p>Golden test G7: p=0.545, price −110, bankroll $1,000, quarter-Kelly: f_full = 0.040455/0.909091 = 0.044500 → f = 0.011125 → $11.13 → rounds to <strong>$11</strong>; no caps triggered.</p>
+<h3 id="s6-8">6.8 CLV (grading-time)</h3>
+<p><code>clv_pct = (closing_consensus_prob × price_decimal_at_alert − 1) × 100</code> — the EV of the bet re-evaluated at the closing consensus. Golden test G8: alerted at −110 (1.909091), closing consensus 0.552 → CLV = <strong>+5.38%</strong>.</p>
+<h2 id="s7">7. Pipeline Behavior</h2>
+<h3 id="s7-1">7.1 Poll cycle (per enabled sport)</h3>
+<pre><code>if kill_switch → skip alerting but still poll (data continuity)
+if provider quota_used ≥ quota_budget → skip cycle, log warning, surface in UI
+snapshots = provider.fetch_odds(sport, markets)         (§8)
+normalize → bulk-index edgeline-odds-snapshots + upsert events   (§7.2)
+group the IN-MEMORY batch per (event, market, selection, book)   -- never read back from ES
+run §6.4 and §6.5 over each market group
+for each detection: dedup (§7.4) → staking (§6.7) → deep links (§9.4)
+                    → Discord alert (§9) → index recommendation (refresh=wait_for)</code></pre>
+<h3 id="s7-2">7.2 Normalizer (v1 = thin, by design)</h3>
+<p>The Odds API already returns <strong>consistent event and team names across bookmakers within one response</strong> — cross-book fuzzy matching is NOT needed while it is the only provider. v1 duties:</p>
+<ul><li>Map provider JSON → <code>BookOddsSnapshot</code> rows.</li><li>Canonical selection strings: h2h → team name exactly as provider gives it; totals → <code>"Over {point}"</code> / <code>"Under {point}"</code>; spreads → <code>"{team} {+/-point}"</code>; props → <code>"{player} Over {point}"</code> (player from the outcome's <code>description</code> field).</li><li><strong>Line-match rule:</strong> +EV compares only identical <code>(market_key, line)</code>. Arbs may pair opposite sides with different lines ONLY on spreads/totals when the pairing is strictly favorable to both sides (e.g. Over 8.0 vs Under 8.5, a middle) — v1: skip these, same-line only. Log skipped middles.</li><li>Anything unparseable → insert into <code>unmatched_selections</code> with the raw JSON, never guess.</li></ul>
+<p>Keep the interface multi-provider-shaped (<code>normalize(provider_key, raw) -&gt; list[BookOddsSnapshot]</code>) so a premium feed can be added without touching the engine.</p>
+<h3 id="s7-3">7.3 Quarantine</h3>
+<p>A row lands in <code>unmatched_selections</code> when: unknown market key, missing point where required, unknown outcome name shape, or duplicate conflicting prices in one response. The UI (<a href="#s11">§11</a>) lists them; resolution is manual.</p>
+<h3 id="s7-4">7.4 Dedup &amp; lifecycle</h3>
+<pre><code>opp_hash = sha256(f"{event_id}|{market_key}|{sorted(leg selections)}|{sorted(leg books)}")</code></pre>
+<p>The hash is the document <code>_id</code> in <code>edgeline-opportunities</code>: the existence check is a GET by id, and every state change goes through the update API under optimistic concurrency (<a href="#s4">§4.4</a> rule 4).</p>
+<ul><li>Hash exists with status open/alerted: update <code>edge_pct</code>; re-alert ONLY if edge improved by ≥ <code>edge_improve_delta_pct</code> AND cooldown expired.</li><li>Detection disappears next cycle → status <code>closed</code>, record <code>closing_edge_pct</code>.</li><li><code>commence_time</code> passes → status <code>expired</code>.</li><li>Cooldown: at most one alert per <code>(sport, market_key)</code> per <code>alert_cooldown_s</code>, whichever detection has the highest edge wins the slot.</li></ul>
+<h2 id="s8">8. The Odds API Integration (<code>providers/the_odds_api.py</code>)</h2>
+<p>Base URL <code>https://api.the-odds-api.com/v4</code>. Auth: <code>apiKey</code> query param.</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Purpose</th><th>Endpoint</th><th>Cost</th></tr>
+<tr><td>List sports</td><td><code>GET /sports</code></td><td>free</td></tr>
+<tr><td>Featured odds</td><td><code>GET /sports/{sport}/odds?regions=us&amp;markets=h2h,spreads,totals&amp;oddsFormat=decimal</code></td><td>≈ markets × regions credits</td></tr>
+<tr><td>Event list</td><td><code>GET /sports/{sport}/events</code></td><td>free</td></tr>
+<tr><td>Player props</td><td><code>GET /sports/{sport}/events/{eventId}/odds?regions=us&amp;markets={props}&amp;oddsFormat=decimal</code></td><td>≈ markets × regions credits <strong>per event</strong></td></tr>
+<tr><td>Scores</td><td><code>GET /sports/{sport}/scores?daysFrom=2</code></td><td>1–2 credits</td></tr>
+</table></div>
+<ul><li><strong>Always</strong> read response headers <code>x-requests-used</code> / <code>x-requests-remaining</code> and write them to <code>providers.quota_used</code>. Treat the header as truth, not your own math.</li><li>Request <code>oddsFormat=decimal</code> so no conversion ambiguity exists at ingest.</li><li>HTTP handling: timeout 15 s; on 429 back off ×2 up to 4 tries; on 401 → kill cycle and surface "API key invalid" in UI; on 5xx → skip cycle, log.</li><li><strong>Fixture recorder:</strong> a debug flag writes every raw response to <code>tests/fixtures/{sport}_{endpoint}_{timestamp}.json</code>. Golden/integration tests replay these with <code>respx</code> — no live API in tests, ever.</li></ul>
+<h3 id="s8-4">8.4 Polling policy vs. budget</h3>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Mode</th><th>Featured markets</th><th>Props</th><th>Approx credits</th></tr>
+<tr><td>Dev (free, 500/mo)</td><td>every 6 h (4×/day → ~360/mo)</td><td>manual trigger only</td><td>≤ 500/mo</td></tr>
+<tr><td>Production (~$59–100 tier)</td><td>every 120 s</td><td>every 600 s, only events starting &lt; 6 h</td><td>compute before enabling: <code>(86400/interval) × markets × regions × 30</code> and per-event prop cost; must fit <code>quota_monthly_budget</code></td></tr>
+</table></div>
+<p>The scheduler must refuse to start a cadence whose computed monthly cost exceeds <code>quota_monthly_budget</code>, and must log the computed figure at startup.</p>
+<h2 id="s9">9. Discord Notifications</h2>
+<h3 id="s9-1">9.1 Setup (one-time, <code>ASK USER</code> for outputs)</h3>
+<p>Discord Developer Portal → New Application → Bot → copy token; enable <strong>Message Content intent</strong> OFF (not needed), <strong>Server Members</strong> OFF. OAuth2 URL with scopes <code>bot applications.commands</code>, permissions: Send Messages, Embed Links, Add Reactions. User invites bot to their server and supplies the alert channel id.</p>
+<h3 id="s9-2">9.2 Message formats (exact)</h3>
+<p>Use <code>discord.Embed</code> + <code>discord.ui.View</code> with <strong>persistent views</strong> (<code>timeout=None</code>, stable <code>custom_id</code>s, views re-registered in <code>setup_hook</code> on every bot start — without this, buttons die on restart).</p>
+<p><strong>+EV embed:</strong> title <code>⚡ +EV {ev_pct}% — {book} {market_key}</code> · color <code>0x2dd4bf</code> · description line 1: <code>{selection} @ {american} · fair {fair_american}</code> · line 2: <code>Stake:</code> + stake in a single inline code span (mobile long-press copies it) · line 3: <code>[Open {book} ➜]({deep_link})</code> · footer: <code>PAPER</code> when paper_mode, else book + event start (user's local time, <code>ASK USER</code> for tz, default America/New_York). Buttons: <code>rec:{rec_id}:bet</code> (✅ Bet placed), <code>rec:{rec_id}:skip</code> (❌ Skip), <code>snooze:{sport}:{market_key}</code> (😴 1 h).</p>
+<p><strong>Arb:</strong> ONE embed when both legs fit, else two messages, <strong>stale leg always first</strong>: title <code>🔀 ARB {profit_pct}% — bet leg 1 first</code>; leg lines <code>1️⃣ 🔥 STALE — {book}: {selection} @ {american} → stake \</code>{$}\<code> · [Open ➜](link)</code> then <code>2️⃣ {book}: ...</code>; final line: <code>Leg 1 deviates {staleness}σ from consensus; leg 2 matches {n} books.</code> Each leg gets its own <code>rec:{id}:bet_leg1|bet_leg2</code> button.</p>
+<h3 id="s9-3">9.3 Interaction handlers</h3>
+<p><code>rec:{id}:bet</code> → insert <code>bets</code> row (<code>confirmed_via='button'</code>, <code>placed_at=now</code>, stake/odds copied from the recommendation; user can edit them later in the UI) → edit embed footer to <code>✅ bet logged</code>. <code>skip</code> → footer <code>❌ skipped</code>. <code>snooze</code> → suppress that <code>(sport, market_key)</code> for 3600 s. Also treat a ✅ <strong>reaction</strong> on the message identically to the bet button (<code>confirmed_via='reaction'</code>).</p>
+<h3 id="s9-4">9.4 Deep-link ladder (<code>deeplink.py</code>)</h3>
+<p><code>sportsbooks.link_templates_json</code> structure:</p>
+<pre><code>{ "betslip": null,
+  "event":   "https://sportsbook.draftkings.com/event/{provider_event_id}",
+  "book_home": "https://sportsbook.draftkings.com/" }</code></pre>
+<p>Assembly: use the highest non-null level whose placeholders can all be filled; record the chosen level in <code>StakeLeg.link_level</code>. <strong>v1 reality:</strong> The Odds API gives no book-native ids, so <code>betslip</code> stays null for every book; templates for <code>event</code>/<code>book_home</code> must be verified manually per book (open the book's site, copy a real event URL, generalize it). Do not invent URL schemas — an unverified template stays null and the ladder falls through to <code>book_home</code>.</p>
+<h2 id="s10">10. FastAPI JSON API (consumed by the Angular UI)</h2>
+<p>All routes under <code>/api</code>. Auto-generated OpenAPI at <code>/api/openapi.json</code> (feeds <a href="#s11">§11.3</a>).</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Method &amp; path</th><th>Purpose</th></tr>
+<tr><td><code>GET /api/settings</code> / <code>PUT /api/settings</code></td><td>read/patch settings map (validate against <a href="#s3">§3.2</a> keys)</td></tr>
+<tr><td><code>GET /api/providers</code> / <code>PATCH /api/providers/{key}</code></td><td>enable/disable, budget, quota status</td></tr>
+<tr><td><code>GET /api/sportsbooks</code> / <code>PATCH /api/sportsbooks/{key}</code></td><td>enable, priority, link templates</td></tr>
+<tr><td><code>GET /api/opportunities?status=&amp;type=&amp;limit=</code></td><td>opportunity table</td></tr>
+<tr><td><code>GET /api/recommendations?paper=&amp;from=&amp;to=</code></td><td>history w/ joined opportunity + result</td></tr>
+<tr><td><code>POST /api/recommendations/{id}/confirm</code></td><td>body <code>{stake_actual_cents, odds_actual_decimal}</code> → bets row (<code>confirmed_via='ui'</code>)</td></tr>
+<tr><td><code>GET /api/results/summary?group=day|week</code></td><td>pnl, hit rate, avg CLV, rec vs executed split</td></tr>
+<tr><td><code>GET /api/bankroll</code> / <code>POST /api/bankroll/adjust</code></td><td>ledger view / manual deposit-withdraw rows</td></tr>
+<tr><td><code>GET /api/matching</code> / <code>POST /api/matching/{id}/resolve</code></td><td>quarantine queue</td></tr>
+<tr><td><code>GET /api/system/health</code></td><td>scheduler last-run, quota, kill_switch, paper_mode</td></tr>
+<tr><td><code>POST /api/system/kill</code> / <code>POST /api/system/resume</code></td><td>flip kill_switch</td></tr>
+</table></div>
+<p>FastAPI serves the built Angular bundle as static files at <code>/</code> in production mode. Summary and bankroll endpoints are thin wrappers over ES aggregations (<code>date_histogram</code> + <code>sum</code> on <code>pnl_cents</code> / <code>delta_cents</code>) — do not recompute those in Python.</p>
+<h2 id="s11">11. Angular <code>config-ui</code></h2>
+<h3 id="s11-1">11.1 Routes/pages</h3>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Route</th><th>Contents</th></tr>
+<tr><td><code>/dashboard</code></td><td>health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button</td></tr>
+<tr><td><code>/opportunities</code></td><td>live table (poll <code>GET /api/opportunities</code> every 15 s), filters status/type</td></tr>
+<tr><td><code>/recommendations</code></td><td>history table; row action "confirm bet" dialog → confirm endpoint</td></tr>
+<tr><td><code>/results</code></td><td>summary tiles (P&amp;L, hit rate, avg CLV) + per-day table; rec-vs-executed toggle</td></tr>
+<tr><td><code>/settings</code></td><td>reactive form over <a href="#s3">§3.2</a> (grouped: Staking, Thresholds, Polling, Safety)</td></tr>
+<tr><td><code>/sportsbooks</code></td><td>table with enable toggles, priority, link-template editor + "test link" button</td></tr>
+<tr><td><code>/providers</code></td><td>enable toggles, quota bar (used vs budget)</td></tr>
+<tr><td><code>/matching</code></td><td>quarantine queue with raw JSON viewer and resolve action</td></tr>
+</table></div>
+<h3 id="s11-2">11.2 Conventions</h3>
+<p>Standalone components, Angular signals for state, no NgRx (overkill). Blue-green theme consistent with the MetrumDigital palette (accent teal <code>#2dd4bf</code>, emerald <code>#34d399</code>) in <code>libs/ui-kit</code>. All money rendered from cents; all times rendered in the user's tz.</p>
+<h3 id="s11-3">11.3 Generated client</h3>
+<p><code>libs/api-client</code> is generated from the running engine's <code>/api/openapi.json</code> (use <code>openapi-ts</code> or <code>ng-openapi-gen</code>; commit the generated code plus an <code>nx run api-client:generate</code> target). UI code imports ONLY from <code>libs/api-client</code> — no hand-written <code>HttpClient</code> calls.</p>
+<h2 id="s12">12. Grading &amp; CLV Job (<code>grading.py</code>, daily 06:00 UTC + on-demand endpoint)</h2>
+<ol><li>Fetch scores (<code>daysFrom=2</code>) → update <code>events</code> scores/completed.</li><li>For each ungraded recommendation on a completed event (ungraded = no <code>edgeline-results</code> doc with its id — check with <code>mget</code>), settle each leg from the final score: h2h by winner; totals by <code>home+away</code> vs line (<code>push</code> on exact); spreads by adjusted margin (<code>push</code> on exact); props gradable from scores API are limited — anything not derivable → <code>outcome='void'</code>, <code>pnl_cents=0</code>, flag <code>needs_manual</code> for the UI. Write the result with the recommendation id as <code>_id</code> so re-running the job is idempotent.</li><li><code>pnl_cents</code>: win → <code>stake × (price_decimal − 1)</code>; loss → <code>−stake</code>; push/void → 0. Arb recs: sum leg P&amp;L.</li><li>CLV per <a href="#s6">§6.8</a>, using <code>is_closing=1</code> snapshots (captured by the scheduler's closing-line task at <code>commence_time − closing_capture_offset_s</code>).</li><li>Executed recs (those with an <code>edgeline-bets</code> doc) also append <code>edgeline-bankroll-ledger</code> deltas; paper recs never touch the ledger.</li><li>If today's graded executed losses ≥ <code>daily_loss_stop_cents</code> (a filtered <code>sum</code> aggregation over today's executed <code>pnl_cents</code>) → set <code>kill_switch=true</code>, send a Discord notice <code>🛑 Daily loss stop hit — alerting paused</code>.</li></ol>
+<h2 id="s13">13. Scheduler (<code>scheduler.py</code>, separate process: <code>nx run engine:worker</code>)</h2>
+<p>APScheduler with asyncio. Jobs:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Job</th><th>Cadence</th></tr>
+<tr><td><code>poll_featured(sport)</code></td><td><code>poll_interval_s</code> (or <code>poll_interval_dev_s</code> while quota_budget ≤ 500)</td></tr>
+<tr><td><code>poll_props(sport)</code></td><td><code>props_poll_interval_s</code>, only events with <code>commence_time − now &lt; 6 h</code></td></tr>
+<tr><td><code>closing_capture</code></td><td>one-shot per event at <code>commence_time − closing_capture_offset_s</code></td></tr>
+<tr><td><code>grade</code></td><td>daily 06:00 UTC</td></tr>
+<tr><td><code>quota_reset</code></td><td>monthly, day 1: zero <code>quota_used</code></td></tr>
+<tr><td><code>heartbeat</code></td><td>60 s: update the <code>runtime</code> doc in <code>edgeline-settings</code> (read by <code>/api/system/health</code>)</td></tr>
+</table></div>
+<p>Startup sequence: compute projected monthly credit cost (<a href="#s8">§8.4</a>) → refuse to schedule if over budget → log the number → register jobs → start Discord bot in the same loop.</p>
+<h2 id="s14">14. Golden Tests (must pass byte-for-byte on the numbers)</h2>
+<p>In <code>test_oddsmath.py</code>, tolerance <code>1e-4</code> unless stated:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>ID</th><th>Function</th><th>Input</th><th>Expected</th></tr>
+<tr><td>G1</td><td>conversions</td><td>−110, +105, +100, −200, +250</td><td>decimals 1.909091, 2.05, 2.0, 1.5, 3.5; probs 0.523810, 0.487805, 0.5, 0.666667, 0.285714</td></tr>
+<tr><td>G2</td><td>devig multiplicative</td><td>(−120, +100)</td><td>(0.521739, 0.478261)</td></tr>
+<tr><td>G3</td><td>consensus</td><td>A(w2)=0.520 B=0.510 C=0.515 D=0.505</td><td>0.515</td></tr>
+<tr><td>G4</td><td>ev_pct</td><td>p=0.545, d=1.909091</td><td>+4.0455</td></tr>
+<tr><td>G5</td><td>arb</td><td>2.10 / 1.980392, B=$100, $1 rounding</td><td>profit 1.9223%; raw 48.53/51.47; rounded 49/51; worst-case 1.00% → accepted</td></tr>
+<tr><td>G6</td><td>staleness</td><td>0.476 vs μ 0.511 σ 0.005; 0.505 vs μ 0.512 σ 0.005</td><td>7.0 and 1.4; leg 1 bet_first</td></tr>
+<tr><td>G7</td><td>kelly stake</td><td>p 0.545, d 1.909091, bankroll 100000¢, frac 0.25</td><td>1100¢ ($11) after rounding</td></tr>
+<tr><td>G8</td><td>clv_pct</td><td>closing p 0.552, alert d 1.909091</td><td>+5.3818</td></tr>
+</table></div>
+<p>Plus: <code>test_staking.py</code> — each guardrail individually (cap hit, exposure remainder, suppression below min edge, kill switch); <code>test_dedup.py</code> — same-hash update, edge-improvement re-alert, expiry; <code>test_engine.py</code> — replay a recorded fixture set doctored to contain exactly one arb and one +EV; assert both detected with expected edges; <code>test_normalizer.py</code> — prop <code>description</code> parsing and one malformed payload → quarantined, not raised.</p>
+<p><strong>ES in tests:</strong> the math tests (G1–G8) are pure functions and must not touch ES. Tests that need the datastore (<code>test_engine.py</code>, <code>test_dedup.py</code>, grading tests) run against the local dev ES using the index prefix <code>edgeline-test-</code> — fixtures create the test indices fresh and delete them on teardown. Mark them <code>@pytest.mark.es</code> and auto-skip when <code>ES_URL</code> is unreachable, so the suite still passes on a machine without Docker running.</p>
+<h2 id="s15">15. Phase Checklists (execute strictly in order)</h2>
+<p><strong>Phase 0 — Foundations</strong></p>
+<ul><li>[x] <strong>T0.1 Scaffold — DONE 2026-09-03.</strong> <code>apps/edgeline-api</code> in the existing <code>app-suite</code> Nx monorepo per <a href="#s2">§2.1</a>; <code>nx show project edgeline-api</code> lists all five targets; <code>scope:el</code> added to <code>eslint.config.mjs</code>; <code>.gitignore</code> covers <code>.env</code>, <code>__pycache__</code>, <code>.venv</code></li><li>[ ] T0.2 <code>.env</code> + <code>config.py</code>; <code>ASK USER</code> for Odds API key</li><li>[ ] T0.3 <code>docker compose up -d</code> Elasticsearch + <code>ensure_indices()</code> bootstrap (<a href="#s4">§4</a>) + settings/sportsbook seeds</li><li>[ ] T0.4 The Odds API adapter + fixture recorder (<a href="#s8">§8</a>); record ≥ 3 MLB fixture sets</li><li>[ ] T0.5 Normalizer v1 (<a href="#s7">§7.2</a>) incl. quarantine</li><li>[ ] <strong>Exit:</strong> live MLB featured odds land in <code>edgeline-odds-snapshots</code> (visible in Kibana); <code>pytest</code> green incl. normalizer tests</li></ul>
+<p><strong>Phase 1 — Math engine</strong></p>
+<ul><li>[ ] T1.1 <code>oddsmath.py</code> — G1–G4, G6, G8 pass</li><li>[ ] T1.2 Arb + rounding re-check — G5 passes</li><li>[ ] T1.3 <code>staking.py</code> with guardrail order — G7 + guardrail tests pass</li><li>[ ] T1.4 <code>engine.py</code> pipeline + <code>dedup.py</code>; fixture-replay integration test passes</li><li>[ ] T1.5 CLI paper mode: <code>uv run python -m edgeline.engine --once</code> prints detections</li><li>[ ] <strong>Exit:</strong> all <a href="#s14">§14</a> tests green; 7 consecutive days of dev-cadence paper recommendations stored</li></ul>
+<p><strong>Phase 2 — Discord</strong></p>
+<ul><li>[ ] T2.1 Bot setup (<a href="#s9">§9.1</a>); <code>ASK USER</code> for token/channel</li><li>[ ] T2.2 Embeds + persistent views (<a href="#s9">§9.2</a>); restart-survival verified manually</li><li>[ ] T2.3 Handlers → <code>bets</code> rows (<a href="#s9">§9.3</a>); ✅ reaction path included</li><li>[ ] T2.4 Cooldowns + edge-improvement re-alerts wired into dispatch</li><li>[ ] T2.5 Line-death instrumentation: on each cycle, record whether previously alerted opportunities still exist (feeds the Android go/no-go)</li><li>[ ] <strong>Exit:</strong> live detection → Discord alert → tap opens book page; button press logs a bet row</li></ul>
+<p><strong>Phase 3 — UI &amp; grading</strong></p>
+<ul><li>[ ] T3.1 FastAPI routers per <a href="#s10">§10</a>, OpenAPI complete</li><li>[ ] T3.2 <code>api-client</code> generation target; committed</li><li>[ ] T3.3 Pages per <a href="#s11">§11.1</a> (dashboard, settings, sportsbooks, opportunities, recommendations first; rest after)</li><li>[ ] T3.4 Grading job + CLV (<a href="#s12">§12</a>) incl. closing-capture scheduler task</li><li>[ ] T3.5 Bankroll ledger + daily loss stop → kill switch</li><li>[ ] <strong>Exit:</strong> every <a href="#s3">§3.2</a> setting editable in UI; nightly grading produces results + CLV; kill switch works from dashboard</li></ul>
+<p><strong>Phase 4 — Production hardening</strong></p>
+<ul><li>[ ] T4.1 <code>ASK USER</code>: approve paid The Odds API tier within $100/mo; set <code>quota_monthly_budget</code></li><li>[ ] T4.2 Production cadences (<a href="#s8">§8.4</a>) with startup budget check</li><li>[ ] T4.3 Manually verify <code>event</code> link templates for every enabled book (<a href="#s9">§9.4</a>)</li><li>[ ] T4.4 Run ≥ 200 paper recommendations; compute CLV distribution; report to user</li><li>[ ] <strong>Exit / go-live gate:</strong> user reviews CLV report and explicitly sets <code>paper_mode=false</code>. The implementer must NEVER flip this flag.</li></ul>
+<h2 id="s16">16. Prohibitions (hard rules)</h2>
+<ol><li><strong>Never</strong> place, schedule, or simulate placing a real bet against a sportsbook — no sportsbook logins, no browser automation against books, no betslip submission.</li><li><strong>Never</strong> flip <code>paper_mode</code> to false, raise stake caps, or disable guardrails without an explicit user instruction in that session.</li><li><strong>Never</strong> guess a cross-book selection match or a deep-link URL schema — quarantine/null instead.</li><li><strong>Never</strong> call the live The Odds API from tests, and never commit <code>.env</code>, tokens, or the Elasticsearch data volume. Never bind ES to anything other than <code>127.0.0.1</code> while security is disabled (<a href="#s4">§4.1</a>).</li><li><strong>No scraping</strong> of sportsbooks, X/Twitter, or Rotowire in v1 (future-work only, and only via licensed APIs when it happens).</li><li><strong>No features whose purpose is to disguise betting patterns</strong> from sportsbooks.</li><li>Do not add providers, sports, or notification channels not listed here without user approval.</li></ol>
+<h2 id="s17">17. Inputs Required from the User (collect once, early)</h2>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Item</th><th>Used in</th></tr>
+<tr><td>The Odds API key</td><td>T0.2</td></tr>
+<tr><td>Docker Desktop available (or an existing local ES 9.x to point <code>ES_URL</code> at)</td><td><a href="#s4">§4.1</a>, T0.3</td></tr>
+<tr><td>Discord bot token + alert channel id</td><td>T2.1</td></tr>
+<tr><td>Real starting bankroll (per book if known)</td><td><a href="#s3">§3.2</a> seed</td></tr>
+<tr><td>Confirmed Maryland book list to enable</td><td><a href="#s4">§4</a> seed</td></tr>
+<tr><td>Display timezone (default America/New_York)</td><td><a href="#s9">§9.2</a>, UI</td></tr>
+<tr><td>Paid-tier approval (≤ $100/mo) when leaving dev cadence</td><td>T4.1</td></tr>
+</table></div>
+<p><em>Spec v1.1 · 2026-07-06, rev 2026-07-08 (Elasticsearch replaces SQLite) · Companion to the Architecture Plan (2026-07-02). If this spec and the Architecture Plan conflict, this spec wins for implementation detail; the plan wins for intent and scope.</em></p>
+</main>
+
+<footer>
+  Generated by Claude Code · <a href="../../dashboard.html">Back to dashboard</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('md-theme', next); } catch (e) {}
+    syncToggleLabel();
+  }
+  function syncToggleLabel(){
+    var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+  }
+  syncToggleLabel();
+</script>
+</body>
+</html>
