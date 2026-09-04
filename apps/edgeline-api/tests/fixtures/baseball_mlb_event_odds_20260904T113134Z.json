@@ -1,0 +1,382 @@
+{
+  "id": "062e69d482e7d6bf3c2d654eca93bd44",
+  "sport_key": "baseball_mlb",
+  "sport_title": "MLB",
+  "commence_time": "2026-09-04T18:11:00Z",
+  "home_team": "Cleveland Guardians",
+  "away_team": "Detroit Tigers",
+  "bookmakers": [
+    {
+      "key": "draftkings",
+      "title": "DraftKings",
+      "markets": [
+        {
+          "key": "pitcher_strikeouts",
+          "last_update": "2026-09-04T11:30:31Z",
+          "outcomes": [
+            {
+              "name": "Over",
+              "description": "Logan Allen",
+              "price": 2.21,
+              "point": 3.5
+            },
+            {
+              "name": "Under",
+              "description": "Logan Allen",
+              "price": 1.65,
+              "point": 3.5
+            },
+            {
+              "name": "Over",
+              "description": "Keider Montero",
+              "price": 1.64,
+              "point": 2.5
+            },
+            {
+              "name": "Under",
+              "description": "Keider Montero",
+              "price": 2.23,
+              "point": 2.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fanduel",
+      "title": "FanDuel",
+      "markets": [
+        {
+          "key": "pitcher_strikeouts",
+          "last_update": "2026-09-04T11:30:48Z",
+          "outcomes": [
+            {
+              "name": "Over",
+              "description": "Keider Montero",
+              "price": 1.62,
+              "point": 2.5
+            },
+            {
+              "name": "Under",
+              "description": "Keider Montero",
+              "price": 2.26,
+              "point": 2.5
+            },
+            {
+              "name": "Over",
+              "description": "Logan Allen",
+              "price": 2.2,
+              "point": 3.5
+            },
+            {
+              "name": "Under",
+              "description": "Logan Allen",
+              "price": 1.65,
+              "point": 3.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "bovada",
+      "title": "Bovada",
+      "markets": [
+        {
+          "key": "pitcher_strikeouts",
+          "last_update": "2026-09-04T11:30:47Z",
+          "outcomes": [
+            {
+              "name": "Over",
+              "description": "Keider Montero",
+              "price": 1.61,
+              "point": 2.5
+            },
+            {
+              "name": "Under",
+              "description": "Keider Montero",
+              "price": 2.25,
+              "point": 2.5
+            },
+            {
+              "name": "Over",
+              "description": "Logan Allen",
+              "price": 2.2,
+              "point": 3.5
+            },
+            {
+              "name": "Under",
+              "description": "Logan Allen",
+              "price": 1.62,
+              "point": 3.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "betmgm",
+      "title": "BetMGM",
+      "markets": [
+        {
+          "key": "pitcher_strikeouts",
+          "last_update": "2026-09-04T11:30:08Z",
+          "outcomes": [
+            {
+              "name": "Over",
+              "description": "Keider Montero",
+              "price": 1.65,
+              "point": 2.5
+            },
+            {
+              "name": "Under",
+              "description": "Keider Montero",
+              "price": 2.15,
+              "point": 2.5
+            },
+            {
+              "name": "Over",
+              "description": "Logan Allen",
+              "price": 2.1,
+              "point": 3.5
+            },
+            {
+              "name": "Under",
+              "description": "Logan Allen",
+              "price": 1.67,
+              "point": 3.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "betrivers",
+      "title": "BetRivers",
+      "markets": [
+        {
+          "key": "batter_home_runs",
+          "last_update": "2026-09-04T11:31:21Z",
+          "outcomes": [
+            {
+              "name": "Over",
+              "description": "Kevin McGonigle",
+              "price": 121.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Riley Greene",
+              "price": 71.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Patrick Bailey",
+              "price": 161.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Eduardo Valencia",
+              "price": 81.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Gleyber Torres",
+              "price": 131.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Nathaniel Lowe",
+              "price": 56.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Travis Bazzana",
+              "price": 131.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Max Clark",
+              "price": 276.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Brayan Rocchio",
+              "price": 251.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Spencer Torkelson",
+              "price": 81.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Steven Kwan",
+              "price": 351.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Ben Malgeri",
+              "price": 181.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Chase DeLauter",
+              "price": 51.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Jose Ramirez",
+              "price": 61.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Dillon Dingler",
+              "price": 81.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "John Peck",
+              "price": 151.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Angel Genao",
+              "price": 181.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Jo Adell",
+              "price": 51.0,
+              "point": 1.5
+            },
+            {
+              "name": "Over",
+              "description": "Patrick Bailey",
+              "price": 9.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Eduardo Valencia",
+              "price": 7.5,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Ben Malgeri",
+              "price": 10.5,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Gleyber Torres",
+              "price": 8.5,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Jose Ramirez",
+              "price": 6.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "John Peck",
+              "price": 9.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Travis Bazzana",
+              "price": 8.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Angel Genao",
+              "price": 9.5,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Brayan Rocchio",
+              "price": 11.5,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Dillon Dingler",
+              "price": 7.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Steven Kwan",
+              "price": 14.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Kevin McGonigle",
+              "price": 8.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Max Clark",
+              "price": 12.5,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Spencer Torkelson",
+              "price": 7.0,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Nathaniel Lowe",
+              "price": 5.8,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Jo Adell",
+              "price": 5.4,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Chase DeLauter",
+              "price": 5.8,
+              "point": 0.5
+            },
+            {
+              "name": "Over",
+              "description": "Riley Greene",
+              "price": 6.4,
+              "point": 0.5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -14,7 +14,7 @@ informs the code without versioning against it.
 
 ## Toolchain
 
-| Need | Why | State on this machine (2026-09-03) |
+| Need | Why | State on this machine (2026-09-04) |
 | --- | --- | --- |
 | Python 3.14 | Fixed decision, spec §1 | ✅ 3.14.7 via `winget install Python.Python.3.14` |
 | [uv](https://docs.astral.sh/uv/) | Dependency + interpreter management; every Nx target shells through it | ✅ 0.12.9 via `winget install astral-sh.uv` |
@@ -39,9 +39,11 @@ time and either could recur on another machine here:
   ran fine on that same engine, because `bash` forks via plain `clone`. Only Elasticsearch
   itself reproduced it. Docker fixed this in 20.10.10; engine 29.7.2 is far past it.
 
-Nothing about that blocks engine work. The math is pure functions, the Odds API adapter is
-tested against recorded fixtures, and `tests/conftest.py` skips `@pytest.mark.es` tests rather
-than failing them — so the suite stays honest with no datastore up.
+Nothing about that blocks engine work, and the suite stays honest with no datastore up: the math
+is pure functions, the Odds API adapter is tested against recorded fixtures, and
+`tests/conftest.py` skips `@pytest.mark.es` tests rather than failing them. Verified both ways on
+2026-09-04 — **151 passed** with ES up, **149 passed / 2 skipped** with `ES_URL` pointed at a dead
+port.
 
 **Do not use uv's managed Python here.** `uv python install 3.14` downloads the interpreter and
 then fails with "Missing expected target directory for Python minor version link", reproducibly,
@@ -54,8 +56,11 @@ then fails with "Missing expected target directory for Python minor version link
 uv sync                        # creates .venv, resolves and writes uv.lock
 cp .env.example .env           # then fill in ODDS_API_KEY (spec §17)
 nx run edgeline-api:es-up      # single-node Elasticsearch + Kibana on 127.0.0.1
-nx run edgeline-api:test-py    # ES-backed tests skip themselves if ES is down
+nx run edgeline-api:test       # ES-backed tests skip themselves if ES is down
 ```
+
+`.env` is gitignored, so a **git worktree does not inherit it** — copy it in from the main
+checkout before running anything that needs the Odds API key.
 
 Kibana lands on <http://localhost:5601> and is the intended window into every index — there is no
 other admin UI, by design.
@@ -66,28 +71,29 @@ other admin UI, by design.
 | --- | --- |
 | `serve` | `uv run uvicorn edgeline.api.main:app --reload --port 8000` |
 | `worker` | `uv run python -m edgeline.scheduler` |
-| `test-py` | `uv run pytest` |
+| `test` | `uv run pytest` |
 | `es-up` / `es-down` | `docker compose up -d` / `down` |
 
-**Why `test-py` and not `test`:** `npm run check` runs `nx run-many -t lint typecheck test build`
-across the whole monorepo, and this target shells through `uv`. The original reason — uv was not
-installed — **no longer applies**: uv is installed and `uv run pytest` passes (1 passed,
-1 skipped). The rename is deliberately left to the first session that adds real tests, so it
-lands with coverage behind it rather than against a smoke test, and so `uv` being on `PATH`
-becomes a hard requirement of `npm run check` at a moment someone is watching.
+**`test-py` was renamed to `test` in Phase 0 T0.5**, which is the moment the previous note in
+this file reserved for it: the target now has 151 tests behind it rather than a smoke test.
+The consequence is deliberate and worth stating plainly — `npm run check` runs
+`nx run-many -t lint typecheck test build`, so **`uv` on `PATH` is now a hard requirement of the
+workspace green bar**. A shell without it fails `check` for all 13 projects, not just this one.
+If that ever bites, the cause is almost always a shell inherited from before uv was installed;
+a fresh one has it.
 
 ## Layout
 
 ```
 src/edgeline/
-  config.py      pydantic-settings; .env + the settings document
-  es.py          AsyncElasticsearch factory + ensure_indices()
-  indices.py     index names, mappings, seeds (spec §4.3)
-  schemas.py     pydantic models (spec §5)
+  config.py      ✅ pydantic-settings; .env + the settings document
+  es.py          ✅ AsyncElasticsearch factory + ensure_indices()
+  indices.py     ✅ index names, mappings, seeds (spec §4.3)
+  schemas.py     ✅ pydantic models (spec §5)
+  normalizer.py  ✅ provider payloads -> canonical rows (spec §7.2)
+  providers/     ✅ odds provider adapters; the_odds_api.py first (spec §8)
   oddsmath.py    conversions, de-vig, consensus, EV, arb, staleness (spec §6)
   staking.py     fractional Kelly + guardrails (spec §6.7)
-  providers/     odds provider adapters; the_odds_api.py first (spec §8)
-  normalizer.py  provider payloads -> canonical rows (spec §7.2)
   engine.py      detection pipeline (spec §7.1)
   dedup.py       opportunity hashing + lifecycle (spec §7.4)
   deeplink.py    per-book link ladder (spec §9.4)
@@ -96,10 +102,30 @@ src/edgeline/
   scheduler.py   polling and job cadences (spec §13)
   api/           FastAPI app and routers (spec §10)
 tests/
-  fixtures/      recorded Odds API responses; tests never call the live API
+  fixtures/      ✅ recorded Odds API responses; tests never call the live API
 ```
 
-Modules appear as their phase lands; the tree above is the destination, not the current state.
+✅ marks what has landed (Phase 0). The rest appears as its phase does; the tree is the
+destination, not the current state.
+
+## Fixtures
+
+`tests/fixtures/` holds **real** The Odds API v4 responses for `baseball_mlb`, recorded
+2026-09-04: featured odds (16 events × 9 books × h2h/spreads/totals), the event list, one event's
+player props, and scores. Tests match them by glob and take the newest, so re-recording refreshes
+what the suite replays without editing a test.
+
+To re-record, set the debug flag and drive the adapter — it writes
+`{sport}_{endpoint}_{timestamp}.json` (spec §8):
+
+```bash
+EDGELINE_RECORD_FIXTURES=1 uv run python -c "import asyncio; from edgeline.providers.the_odds_api import TheOddsApiProvider as P; asyncio.run(P().fetch_odds('baseball_mlb', ['h2h','spreads','totals']))"
+```
+
+That spends real credits (the featured call is ~3 of the free tier's 500/month) and is the **only**
+thing here that may touch the live API. Tests never do — spec §16 rule 4. The recorder writes
+response bodies only; the API key travels as a query parameter and must never reach a committed
+file.
 
 ## The UI
 

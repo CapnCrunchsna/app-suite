@@ -5,7 +5,7 @@
   "projectType": "application",
   "tags": ["scope:el", "type:app"],
   "metadata": {
-    "description": "Edgeline engine (Python/uv). Targets are named *-py on purpose: `npm run check` runs lint/typecheck/test/build across the workspace, and these shell through uv — see README.md for when to rename test-py to test.",
+    "description": "Edgeline engine (Python/uv). `test` shells through uv, so `npm run check` requires uv on PATH — deliberate as of Phase 0 T0.5, when real coverage landed behind it.",
     "technologies": ["python"]
   },
   "targets": {
@@ -25,7 +25,7 @@
         "command": "uv run python -m edgeline.scheduler"
       }
     },
-    "test-py": {
+    "test": {
       "executor": "nx:run-commands",
       "options": {
         "cwd": "{projectRoot}",

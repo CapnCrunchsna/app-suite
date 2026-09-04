@@ -57,7 +57,7 @@ The scaffold landed on 2026-09-03. **It exists — do not run `create-nx-workspa
 app-suite/                              the Nx monorepo (own git repo)
   apps/edgeline-api/                    Python engine — SCAFFOLDED
     pyproject.toml  .python-version     uv-managed, requires-python >=3.14
-    project.json                        Nx targets: serve, worker, test-py, es-up, es-down
+    project.json                        Nx targets: serve, worker, test, es-up, es-down
     docker-compose.yml                  single-node Elasticsearch + Kibana (§4.1)
     .env.example                        the §3.1 keys; .env is gitignored
     src/edgeline/__init__.py            package root
@@ -76,9 +76,9 @@ registered in the root `eslint.config.mjs` `depConstraints` (may depend on `scop
 ```bash
 cd app-suite/apps/edgeline-api
 uv sync                       # DONE — 50 packages against CPython 3.14.7; uv.lock committed
-uv run pytest                 # DONE — 2 passed against a live datastore
+uv run pytest                 # DONE — 151 passed against a live datastore
 nx run edgeline-api:es-up     # DONE — Elasticsearch 9.0.3 green, Kibana available
-cp .env.example .env          # STILL NEEDED — fill ODDS_API_KEY (§17)
+cp .env.example .env          # DONE — ODDS_API_KEY supplied by the user (§17)
 ```
 
 Both `uv` (0.12.9) and CPython 3.14.7 were installed with `winget`. **Do not use uv's managed
@@ -119,7 +119,7 @@ app-suite/                        # the existing Nx monorepo (its own git repo)
       src/app/pages/...           # pages per §11
     edgeline-api/
       pyproject.toml  uv.lock
-      project.json                # Nx targets: serve, worker, test-py, es-up, es-down
+      project.json                # Nx targets: serve, worker, test, es-up, es-down
       docker-compose.yml          # single-node Elasticsearch + Kibana (§4.1)
       .env                        # secrets (gitignored) (§3.1); .env.example is committed
       src/edgeline/
@@ -157,15 +157,15 @@ app-suite/                        # the existing Nx monorepo (its own git repo)
 
 `apps/edgeline-api/project.json` targets (all `nx:run-commands`, `cwd` = the project root):
 `serve` → `uv run uvicorn edgeline.api.main:app --reload --port 8000`; `worker` →
-`uv run python -m edgeline.scheduler`; `test-py` → `uv run pytest`; `es-up` / `es-down` →
+`uv run python -m edgeline.scheduler`; `test` → `uv run pytest`; `es-up` / `es-down` →
 `docker compose up -d` / `down`.
 
-**Why `test-py` and not `test`:** the monorepo's green bar is `npm run check`
-(`nx run-many -t lint typecheck test build`), and this target shells through `uv`. The original
-reason — uv not installed — no longer applies. The rename is left to the first session that adds
-real coverage, so it lands behind actual tests and makes `uv` on `PATH` a hard requirement of
-`npm run check` at a moment someone is watching. The reasoning is recorded in the project's
-`metadata.description`.
+**`test-py` was renamed to `test` in T0.5** (2026-09-04), which is the follow-up this section
+reserved. The original reason for the suffix — a target named `test` would have reported a
+missing `uv` as a workspace-wide `npm run check` failure — is spent: `uv` is installed, and the
+target now has 151 tests behind it rather than a smoke test. The consequence is deliberate and
+load-bearing: **`uv` on `PATH` is a hard requirement of `npm run check`**, for all 13 projects,
+not just this one. The reasoning is recorded in the project's `metadata.description`.
 
 ---
 
@@ -723,11 +723,11 @@ unreachable, so the suite still passes on a machine without Docker running.
 
 **Phase 0 — Foundations**
 - [x] **T0.1 Scaffold — DONE 2026-09-03.** `apps/edgeline-api` in the existing `app-suite` Nx monorepo per §2.1; `nx show project edgeline-api` lists all five targets; `scope:el` added to `eslint.config.mjs`; `.gitignore` covers `.env`, `__pycache__`, `.venv`
-- [ ] T0.2 `.env` + `config.py`; `ASK USER` for Odds API key
-- [ ] T0.3 `docker compose up -d` Elasticsearch + `ensure_indices()` bootstrap (§4) + settings/sportsbook seeds
-- [ ] T0.4 The Odds API adapter + fixture recorder (§8); record ≥ 3 MLB fixture sets
-- [ ] T0.5 Normalizer v1 (§7.2) incl. quarantine
-- [ ] **Exit:** live MLB featured odds land in `edgeline-odds-snapshots` (visible in Kibana); `pytest` green incl. normalizer tests
+- [x] **T0.2 — DONE 2026-09-04.** `.env` + `config.py`; Odds API key supplied by the user
+- [x] **T0.3 — DONE 2026-09-04.** ES 9.0.3 + Kibana up (upgrading the Docker engine 20.10.0 → 29.7.2 unblocked the image); `ensure_indices()` bootstrap (§4) + settings/sportsbook seeds, verified against the live cluster
+- [x] **T0.4 — DONE 2026-09-04.** The Odds API adapter + fixture recorder (§8); 4 real `baseball_mlb` fixture sets recorded — odds, events, event props, scores
+- [x] **T0.5 — DONE 2026-09-04.** Normalizer v1 (§7.2) incl. quarantine
+- [ ] **Exit:** live MLB featured odds land in `edgeline-odds-snapshots` (visible in Kibana); `pytest` green incl. normalizer tests — *tests are green (151 with ES up, 149 + 2 skipped without); the bulk-index write itself is §7.1 pipeline work and lands with T1.4*
 
 **Phase 1 — Math engine**
 - [ ] T1.1 `oddsmath.py` — G1–G4, G6, G8 pass
