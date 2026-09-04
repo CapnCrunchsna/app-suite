@@ -97,7 +97,8 @@ src/edgeline/
   engine.py      ✅ detection pipeline + the --once CLI (spec §7.1)
   dedup.py       ✅ opportunity hashing + lifecycle (spec §7.4)
   deeplink.py    ✅ per-book link ladder (spec §9.4) — returns no link until T4.3
-  notify/        Discord bot, embeds, interaction handlers (spec §9)
+  notify/        ✅ message.py + sink.py (spec §9.2, channel-agnostic)
+                 …a channel adapter is still to come (spec §9.1/§9.3)
   grading.py     results + CLV (spec §12)
   scheduler.py   polling and job cadences (spec §13)
   api/           FastAPI app and routers (spec §10)
@@ -105,8 +106,22 @@ tests/
   fixtures/      ✅ recorded Odds API responses; tests never call the live API
 ```
 
-✅ marks what has landed (Phases 0 and 1). The rest appears as its phase does; the tree is the
-destination, not the current state.
+✅ marks what has landed (Phases 0 and 1, plus §7.4's lifecycle and T2.4/T2.5). The rest appears
+as its phase does; the tree is the destination, not the current state.
+
+## Alerting: the channel is not decided yet
+
+Spec §1 names Discord, and §9.1 needs a bot token that does not exist. Rather than block, the
+dispatch layer is **channel-agnostic**: `notify/message.py` renders §9.2's exact formats into an
+`AlertMessage` (title, lines, footer, colour, buttons carrying §9.3's `custom_id`s), and
+`notify/sink.py` defines `AlertSink` — a one-method protocol that is the only seam a channel
+plugs into. `run_once(..., sink=...)` takes it.
+
+`LogSink` is the default and writes fully rendered alerts to the log, so the seven days of paper
+recommendations Phase 1's exit wants accumulate now rather than waiting on a token. Whichever
+channel eventually lands — Discord per the spec, or Telegram, whose token takes about a minute
+from @BotFather and which needs no gateway websocket — it is one adapter over `AlertMessage`,
+not a rewrite. Changing the spec's channel needs the user's approval (§16.7).
 
 ## Running a cycle
 

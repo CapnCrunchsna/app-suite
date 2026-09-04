@@ -379,11 +379,9 @@ async def test_run_once_stores_snapshots_opportunities_and_paper_recommendations
     from elasticsearch import AsyncElasticsearch
 
     from edgeline.engine import run_once
-    from edgeline.es import ensure_indices
     from edgeline.indices import (
         ODDS_SNAPSHOTS_INDEX,
         RECOMMENDATIONS_INDEX,
-        SPORTSBOOKS_INDEX,
         all_index_names,
         with_prefix,
     )
@@ -391,20 +389,9 @@ async def test_run_once_stores_snapshots_opportunities_and_paper_recommendations
     client = AsyncElasticsearch(hosts=[es_url])
     prefix = test_index_prefix
     try:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
-        await ensure_indices(client, prefix=prefix)
-
-        # Enable the books the doctored payload quotes; the shipped seeds are all
-        # disabled on purpose, and an empty enabled set means no detections.
-        for book in [*FAIR_BOOKS, "juicy"]:
-            await client.index(
-                index=with_prefix(SPORTSBOOKS_INDEX, prefix),
-                id=book,
-                document={"display_name": book, "enabled": True, "priority": 1,
-                          "link_templates": {}},
-                refresh="wait_for",
-            )
+        # The shipped sportsbook seeds are all disabled on purpose, so the
+        # payload's books have to be enabled for anything to be detected.
+        await _fresh_cluster(client, prefix)
 
         provider = _FixtureProvider(doctored_payload())
         report = await run_once(
@@ -456,11 +443,9 @@ async def test_kill_switch_stores_opportunities_but_writes_no_recommendation(
 
     from edgeline.config import DEFAULT_SETTINGS
     from edgeline.engine import run_once
-    from edgeline.es import ensure_indices
     from edgeline.indices import (
         RECOMMENDATIONS_INDEX,
         SETTINGS_INDEX,
-        SPORTSBOOKS_INDEX,
         all_index_names,
         with_prefix,
     )
@@ -468,24 +453,13 @@ async def test_kill_switch_stores_opportunities_but_writes_no_recommendation(
     client = AsyncElasticsearch(hosts=[es_url])
     prefix = test_index_prefix
     try:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
-        await ensure_indices(client, prefix=prefix)
-
+        await _fresh_cluster(client, prefix)
         await client.index(
             index=with_prefix(SETTINGS_INDEX, prefix),
             id="global",
             document={**DEFAULT_SETTINGS, "kill_switch": True},
             refresh="wait_for",
         )
-        for book in [*FAIR_BOOKS, "juicy"]:
-            await client.index(
-                index=with_prefix(SPORTSBOOKS_INDEX, prefix),
-                id=book,
-                document={"display_name": book, "enabled": True, "priority": 1,
-                          "link_templates": {}},
-                refresh="wait_for",
-            )
 
         report = await run_once(
             _FixtureProvider(doctored_payload()),
@@ -504,6 +478,310 @@ async def test_kill_switch_stores_opportunities_but_writes_no_recommendation(
             index=with_prefix(RECOMMENDATIONS_INDEX, prefix)
         )
         assert recommendations["count"] == 0
+    finally:
+        for name in all_index_names(prefix):
+            await client.indices.delete(index=name, ignore_unavailable=True)
+        await client.close()
+
+
+def fair_only_payload(commence_time: str = EVENT_HEADER["commence_time"]) -> list[dict]:
+    """Every book on the same fair line: no +EV, and inv > 1 so no arb either."""
+    header = {**EVENT_HEADER, "commence_time": commence_time}
+    return [{**header, "bookmakers": [h2h(b, 1.90, 2.00) for b in [*FAIR_BOOKS, "juicy"]]}]
+
+
+async def _fresh_cluster(client, prefix, *, books=True):
+    """Empty test indices, refreshing fast, with the payload's books enabled.
+
+    `refresh_interval` is dropped to 50ms because §4.4 rule 2 makes the pipeline
+    write with `refresh="wait_for"`, and against Elasticsearch's default 1s that
+    turns each opportunity write into a second of waiting. Production keeps the
+    default; only these indices are impatient.
+    """
+    from edgeline.es import ensure_indices
+    from edgeline.indices import SPORTSBOOKS_INDEX, all_index_names, with_prefix
+
+    for name in all_index_names(prefix):
+        await client.indices.delete(index=name, ignore_unavailable=True)
+    await ensure_indices(client, prefix=prefix)
+    await client.indices.put_settings(
+        index=f"{prefix}*", settings={"refresh_interval": "50ms"}
+    )
+    if not books:
+        return
+    for book in [*FAIR_BOOKS, "juicy"]:
+        await client.index(
+            index=with_prefix(SPORTSBOOKS_INDEX, prefix),
+            id=book,
+            document={"display_name": book, "enabled": True, "priority": 1,
+                      "link_templates": {}},
+            refresh="wait_for",
+        )
+
+
+@pytest.mark.es
+async def test_vanished_opportunities_are_closed_with_their_final_edge(
+    es_url, test_index_prefix
+):
+    """§7.4: "Detection disappears next cycle -> status closed, record closing_edge_pct"."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.dedup import STATUS_CLOSED
+    from edgeline.engine import run_once
+    from edgeline.indices import all_index_names, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(doctored_payload())
+
+        first = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        assert len(first.detections) == 2
+
+        # The edge evaporates: every book converges on the fair line.
+        provider.payload = fair_only_payload()
+        second = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+
+        assert second.detections == []
+        assert len(second.closed) == 2
+        assert second.expired == []
+
+        stored = await client.search(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix), size=10
+        )
+        for hit in stored["hits"]["hits"]:
+            assert hit["_source"]["status"] == STATUS_CLOSED
+            assert hit["_source"]["closing_edge_pct"] > 0
+            assert hit["_source"]["closed_at"]
+    finally:
+        for name in all_index_names(prefix):
+            await client.indices.delete(index=name, ignore_unavailable=True)
+        await client.close()
+
+
+@pytest.mark.es
+async def test_an_opportunity_whose_event_has_started_expires_rather_than_closes(
+    es_url, test_index_prefix
+):
+    """§7.4 distinguishes the two: a closed edge died, an expired one ran out of time."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.dedup import STATUS_EXPIRED
+    from edgeline.engine import run_once
+    from edgeline.indices import all_index_names, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    past = "2020-01-01T00:00:00Z"
+    try:
+        await _fresh_cluster(client, prefix)
+        payload = doctored_payload()
+        payload[0]["commence_time"] = past
+        provider = _FixtureProvider(payload)
+
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+
+        provider.payload = fair_only_payload(past)
+        second = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+
+        assert len(second.expired) == 2
+        assert second.closed == []
+        assert second.line_deaths == []  # an expiry is not a line death
+
+        stored = await client.search(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix), size=10
+        )
+        assert all(
+            hit["_source"]["status"] == STATUS_EXPIRED for hit in stored["hits"]["hits"]
+        )
+    finally:
+        for name in all_index_names(prefix):
+            await client.indices.delete(index=name, ignore_unavailable=True)
+        await client.close()
+
+
+@pytest.mark.es
+async def test_line_death_is_recorded_for_an_alerted_opportunity(
+    es_url, test_index_prefix
+):
+    """T2.5 — how long an edge survives after we announced it. No channel needed."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.indices import all_index_names
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(doctored_payload())
+
+        first = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+        # Both detections are h2h, so §7.4's cooldown gives the slot to one.
+        assert len(first.alerted) == 1
+        assert len(sink.sent) == 1
+
+        provider.payload = fair_only_payload()
+        second = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+
+        assert len(second.closed) == 2
+        assert len(second.line_deaths) == 1  # only the alerted one counts
+        death = second.line_deaths[0]
+        assert death.opportunity_hash == first.alerted[0].hash
+        assert death.market_key == "h2h"
+        assert death.lifetime_s >= 0
+        assert death.edge_pct > 0
+    finally:
+        for name in all_index_names(prefix):
+            await client.indices.delete(index=name, ignore_unavailable=True)
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_surviving_alert_is_recorded_and_not_re_alerted(
+    es_url, test_index_prefix
+):
+    """§7.4: an unchanged edge updates in place and stays quiet."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.indices import RECOMMENDATIONS_INDEX, all_index_names, with_prefix
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(doctored_payload())
+
+        first = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+        second = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+
+        assert second.surviving_alerts == [first.alerted[0].hash]
+        assert second.closed == []
+        assert second.alerted == []  # the edge did not improve
+        assert len(sink.sent) == 1  # and nothing was dispatched a second time
+
+        await client.indices.refresh(index=with_prefix(RECOMMENDATIONS_INDEX, prefix))
+        recommendations = await client.count(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix)
+        )
+        assert recommendations["count"] == 1
+    finally:
+        for name in all_index_names(prefix):
+            await client.indices.delete(index=name, ignore_unavailable=True)
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_materially_better_edge_re_alerts_once_the_cooldown_clears(
+    es_url, test_index_prefix
+):
+    """§7.4's two gates together: edge improvement AND an expired cooldown."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.indices import all_index_names
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(doctored_payload())
+        await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+
+        # The same opportunity, now materially better, with the cooldown clear.
+        provider.payload = [
+            {**EVENT_HEADER, "bookmakers": [h2h(b, 1.90, 2.00) for b in FAIR_BOOKS]
+             + [h2h("juicy", 2.40, 1.80)]}
+        ]
+        opened = await run_once(
+            provider,
+            client,
+            sport_key="baseball_mlb",
+            prefix=prefix,
+            sink=sink,
+            settings=settings(alert_cooldown_s=0),
+        )
+
+        assert len(opened.alerted) == 1
+        assert len(sink.sent) == 2
+    finally:
+        for name in all_index_names(prefix):
+            await client.indices.delete(index=name, ignore_unavailable=True)
+        await client.close()
+
+
+@pytest.mark.es
+async def test_an_improvement_absorbed_during_a_cooldown_does_not_re_alert_later(
+    es_url, test_index_prefix
+):
+    """Pins a real consequence of §7.4's wording, so it is a known behaviour.
+
+    §7.4 says "update `edge_pct`; re-alert ONLY if edge improved by >=
+    edge_improve_delta_pct AND cooldown expired". The baseline for "improved" is
+    therefore the stored value, which every cycle overwrites. So a jump that
+    happens while the cooldown is still running is absorbed into `edge_pct`, and
+    once the cooldown clears there is no longer an improvement to detect — the
+    better edge is never announced.
+
+    That is the literal reading and it is what ships. Changing it would mean
+    storing the edge as at the last alert, which §4.3 has no field for, so it is
+    a spec decision rather than an implementation one.
+    """
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.indices import all_index_names
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(doctored_payload())
+        await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+
+        # A much better edge arrives, but the cooldown is still running.
+        provider.payload = [
+            {**EVENT_HEADER, "bookmakers": [h2h(b, 1.90, 2.00) for b in FAIR_BOOKS]
+             + [h2h("juicy", 2.40, 1.80)]}
+        ]
+        blocked = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink
+        )
+        assert blocked.alerted == []
+
+        # Cooldown now clear, edge unchanged since last cycle -> still silent.
+        settled = await run_once(
+            provider,
+            client,
+            sport_key="baseball_mlb",
+            prefix=prefix,
+            sink=sink,
+            settings=settings(alert_cooldown_s=0),
+        )
+        assert settled.alerted == []
+        assert len(sink.sent) == 1
     finally:
         for name in all_index_names(prefix):
             await client.indices.delete(index=name, ignore_unavailable=True)

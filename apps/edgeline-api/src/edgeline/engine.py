@@ -19,16 +19,23 @@ import argparse
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .config import Settings, settings_from_document
 from .dedup import (
+    STATUS_ALERTED,
     STATUS_OPEN,
+    closing_transition,
     cooldown_key,
+    edge_improved,
+    expiry_transition,
+    is_expired,
     opp_hash,
+    parse_iso,
     select_cooldown_winners,
 )
+from .notify import AlertSink, LogSink, render_alert
 from .deeplink import build_deep_link
 from .indices import (
     BANKROLL_LEDGER_INDEX,
@@ -77,6 +84,9 @@ class Detection:
     edge_pct: float
     detected_at: str
     consensus_prob: float | None = None
+    #: Per leg, how many other books backed its staleness figure. §9.2's arb
+    #: message quotes this ("leg 2 matches {n} books").
+    leg_consensus_books: list[int] = field(default_factory=list)
     hash: str = ""
 
     def __post_init__(self) -> None:
@@ -308,6 +318,7 @@ def _detect_arb(
 
     legs: list[OpportunityLeg] = []
     scores: list[float] = []
+    backing_books: list[int] = []
     for selection, (book_key, price) in best.items():
         others = [
             other.fair[selection]
@@ -321,6 +332,7 @@ def _detect_arb(
                 own_fair, others, sigma_floor=settings.staleness_sigma_floor
             )
         scores.append(score if score is not None else 0.0)
+        backing_books.append(len(others))
         legs.append(
             OpportunityLeg(
                 book_key=book_key,
@@ -347,6 +359,7 @@ def _detect_arb(
         legs=legs,
         edge_pct=profit,
         detected_at=detected_at,
+        leg_consensus_books=backing_books,
     )
 
 
@@ -493,6 +506,24 @@ def event_documents(snapshots: list[BookOddsSnapshot]) -> dict[str, dict[str, An
 # ---- the cycle (§7.1) ------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class LineDeath:
+    """One previously-alerted opportunity that has now vanished from the feed.
+
+    T2.5's instrumentation: how long an edge survives after we told someone about
+    it is the number that decides whether a push channel is fast enough to be
+    worth building. It is recorded whether or not any channel is wired up.
+    """
+
+    opportunity_hash: str
+    market_key: str
+    type: str
+    edge_pct: float
+    detected_at: str
+    closed_at: str
+    lifetime_s: float
+
+
 @dataclass
 class CycleReport:
     """What one poll cycle did — printed by `--once`, logged by the worker."""
@@ -507,6 +538,11 @@ class CycleReport:
     skipped_reason: str | None = None
     quota_used: int | None = None
     quota_remaining: int | None = None
+    # §7.4 lifecycle, and T2.5's line-death instrumentation.
+    closed: list[str] = field(default_factory=list)
+    expired: list[str] = field(default_factory=list)
+    line_deaths: list[LineDeath] = field(default_factory=list)
+    surviving_alerts: list[str] = field(default_factory=list)
 
 
 async def load_settings(client, *, prefix: str) -> Settings:
@@ -556,11 +592,18 @@ async def run_once(
     sport_key: str,
     prefix: str = "edgeline-",
     settings: Settings | None = None,
+    sink: AlertSink | None = None,
 ) -> CycleReport:
-    """One §7.1 poll cycle. Fetches, stores, detects, and stops before alerting."""
+    """One §7.1 poll cycle: fetch, store, detect, reconcile lifecycle, dispatch.
+
+    `sink` is where alerts go. It defaults to `LogSink` because §9's Discord
+    channel has no token yet; swapping in a real channel later changes this
+    argument and nothing else.
+    """
     from elasticsearch.helpers import async_bulk
 
     settings = settings or await load_settings(client, prefix=prefix)
+    sink = sink or LogSink()
     report = CycleReport(sport_key=sport_key)
 
     books = await load_enabled_books(client, prefix=prefix)
@@ -606,27 +649,58 @@ async def run_once(
     )
 
     now = datetime.now(timezone.utc)
-    candidates = [
-        (cooldown_key(d.sport_key, d.market_key), d, d.edge_pct)
-        for d in report.detections
-    ]
+    now_iso = utc_now_iso()
+    opportunities = with_prefix(OPPORTUNITIES_INDEX, prefix)
+
+    # §7.4 lifecycle. Everything still open or alerted from an earlier cycle is
+    # reconciled against what this cycle found, before anything new is written.
+    stored = await load_live_opportunities(client, sport_key, prefix=prefix)
+    detected = {d.hash: d for d in report.detections}
+    await _retire_vanished(client, opportunities, stored, detected, now, now_iso, report)
+
+    eligible: list[tuple[tuple[str, str], Detection, float]] = []
+    for detection in report.detections:
+        prior = stored.get(detection.hash)
+        if prior is None:
+            await client.index(
+                index=opportunities,
+                id=detection.hash,
+                document=detection.to_document(),
+                refresh="wait_for",  # §4.4 rule 2
+            )
+        else:
+            # Hash exists: update the edge and keep whatever status it carries.
+            await _update_opportunity(
+                client, opportunities, detection.hash, {"edge_pct": detection.edge_pct}, prior
+            )
+            # §7.4: an existing opportunity re-alerts only on a materially
+            # better edge. Without this one long-lived mispricing shouts every
+            # cycle for as long as it lives.
+            if not edge_improved(
+                prior["_source"].get("edge_pct", 0.0),
+                detection.edge_pct,
+                settings.edge_improve_delta_pct,
+            ):
+                continue
+        eligible.append(
+            (cooldown_key(detection.sport_key, detection.market_key), detection, detection.edge_pct)
+        )
+
+    if settings.kill_switch:
+        return report
+
+    last_alerts = await load_last_alert_times(
+        client, prefix=prefix, now=now, cooldown_s=settings.alert_cooldown_s
+    )
     winners = select_cooldown_winners(
-        candidates,
-        last_alert_at_by_key={},
+        eligible,
+        last_alert_at_by_key=last_alerts,
         now=now,
         cooldown_s=settings.alert_cooldown_s,
     )
 
     bankroll = await current_bankroll_cents(client, settings, prefix=prefix)
-    for detection in report.detections:
-        await client.index(
-            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
-            id=detection.hash,
-            document=detection.to_document(),
-            refresh="wait_for",  # §4.4 rule 2
-        )
-        if settings.kill_switch or detection not in winners:
-            continue
+    for detection in winners:
         plan, _guardrails, alert = build_stake_plan(
             detection,
             settings,
@@ -636,20 +710,194 @@ async def run_once(
         )
         if plan is None or not alert:
             continue
+
+        recommendation_id = f"{detection.hash[:16]}-{int(now.timestamp())}"
+        message = render_alert(
+            detection,
+            plan,
+            recommendation_id=recommendation_id,
+            paper_mode=settings.paper_mode,
+        )
+        message_ref = await sink.send(message, recommendation_id=recommendation_id)
+
         await client.index(
             index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
             document={
                 "opportunity_id": detection.hash,
                 "stakes": plan.model_dump(),
                 "paper": settings.paper_mode,
-                "channel": "cli",
+                "channel": sink.name,
                 "sent_at": utc_now_iso(),
+                "message_ref": message_ref or "",
             },
+            refresh="wait_for",
+        )
+        # Only now does the opportunity count as alerted — which is what the
+        # cooldown, the re-alert gate and T2.5's instrumentation all read.
+        await client.update(
+            index=opportunities,
+            id=detection.hash,
+            doc={"status": STATUS_ALERTED},
             refresh="wait_for",
         )
         report.alerted.append(detection)
 
     return report
+
+
+async def load_live_opportunities(
+    client, sport_key: str, *, prefix: str
+) -> dict[str, dict[str, Any]]:
+    """Every open or alerted opportunity for this sport, with concurrency tokens.
+
+    `event_id` is `{sport_key}:{provider_event_id}` (§4.3), so a prefix query on
+    that keyword is enough to scope by sport without a separate field.
+    """
+    try:
+        found = await client.search(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            query={
+                "bool": {
+                    "filter": [
+                        {"prefix": {"event_id": f"{sport_key}:"}},
+                        {"terms": {"status": [STATUS_OPEN, STATUS_ALERTED]}},
+                    ]
+                }
+            },
+            size=1000,
+            seq_no_primary_term=True,  # §4.4 rule 4
+        )
+    except Exception:
+        return {}
+    return {hit["_id"]: hit for hit in found["hits"]["hits"]}
+
+
+async def load_last_alert_times(
+    client, *, prefix: str, now: datetime, cooldown_s: int
+) -> dict[tuple[str, str], str]:
+    """When each `(sport, market_key)` was last alerted, for §7.4's cooldown.
+
+    Derived rather than stored: `edgeline-recommendations` knows *when* an alert
+    went out (`sent_at`) and `edgeline-opportunities` knows *what* it was about
+    (`market_key`, `event_id`). Joining the two here avoids adding a field to
+    §4.3 for something the schema can already answer. Only the cooldown window is
+    queried, so this reads a handful of documents at most.
+    """
+    cutoff = (now - timedelta(seconds=cooldown_s)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        recent = await client.search(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+            query={"range": {"sent_at": {"gte": cutoff}}},
+            sort=[{"sent_at": {"order": "desc"}}],
+            size=200,
+        )
+        hits = recent["hits"]["hits"]
+        if not hits:
+            return {}
+        ids = list({hit["_source"]["opportunity_id"] for hit in hits})
+        fetched = await client.mget(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix), ids=ids
+        )
+    except Exception:
+        return {}
+
+    by_id = {
+        doc["_id"]: doc["_source"]
+        for doc in fetched["docs"]
+        if doc.get("found")
+    }
+    last: dict[tuple[str, str], str] = {}
+    for hit in hits:  # newest first, so the first write per key wins
+        source = by_id.get(hit["_source"]["opportunity_id"])
+        if source is None:
+            continue
+        key = cooldown_key(
+            source["event_id"].split(":", 1)[0], source.get("market_key", "")
+        )
+        last.setdefault(key, hit["_source"]["sent_at"])
+    return last
+
+
+async def _retire_vanished(
+    client,
+    index: str,
+    stored: dict[str, dict[str, Any]],
+    detected: dict[str, Detection],
+    now: datetime,
+    now_iso: str,
+    report: CycleReport,
+) -> None:
+    """Close or expire opportunities the feed no longer shows (§7.4), and record
+    the line deaths among them (T2.5)."""
+    for doc_id, hit in stored.items():
+        source = hit["_source"]
+        was_alerted = source.get("status") == STATUS_ALERTED
+
+        if doc_id in detected:
+            if was_alerted:
+                report.surviving_alerts.append(doc_id)
+            continue
+
+        expires_at = source.get("expires_at")
+        if expires_at and is_expired(expires_at, now):
+            await _update_opportunity(
+                client, index, doc_id, expiry_transition(now_iso=now_iso), hit
+            )
+            report.expired.append(doc_id)
+            continue
+
+        edge = source.get("edge_pct", 0.0)
+        await _update_opportunity(
+            client, index, doc_id, closing_transition(edge, now_iso=now_iso), hit
+        )
+        report.closed.append(doc_id)
+
+        if was_alerted:
+            detected_at = source.get("detected_at", now_iso)
+            report.line_deaths.append(
+                LineDeath(
+                    opportunity_hash=doc_id,
+                    market_key=source.get("market_key", ""),
+                    type=source.get("type", ""),
+                    edge_pct=edge,
+                    detected_at=detected_at,
+                    closed_at=now_iso,
+                    lifetime_s=(now - parse_iso(detected_at)).total_seconds(),
+                )
+            )
+            log.info(
+                "line death: %s %s lived %.0fs at %.2f%%",
+                source.get("type", ""),
+                source.get("market_key", ""),
+                report.line_deaths[-1].lifetime_s,
+                edge,
+            )
+
+
+async def _update_opportunity(
+    client, index: str, doc_id: str, patch: dict[str, Any], hit: dict[str, Any]
+) -> None:
+    """Partial update under optimistic concurrency, retried once (§4.4 rule 4).
+
+    The API process and the worker both write opportunity status, so a blind
+    update would let one clobber the other's transition. On a conflict the
+    document has moved underneath us; re-read it and apply the patch to whatever
+    is there now.
+    """
+    from elasticsearch import ConflictError
+
+    try:
+        await client.update(
+            index=index,
+            id=doc_id,
+            doc=patch,
+            if_seq_no=hit.get("_seq_no"),
+            if_primary_term=hit.get("_primary_term"),
+            refresh="wait_for",
+        )
+    except ConflictError:
+        log.info("conflict updating %s; retrying once", doc_id)
+        await client.update(index=index, id=doc_id, doc=patch, refresh="wait_for")
 
 
 def _format(report: CycleReport) -> str:
@@ -662,7 +910,14 @@ def _format(report: CycleReport) -> str:
         f"quota            {report.quota_used} used / {report.quota_remaining} left",
         f"detections       {len(report.detections)}",
         f"recommendations  {len(report.alerted)}",
+        f"closed/expired   {len(report.closed)} / {len(report.expired)}",
+        f"alerts surviving {len(report.surviving_alerts)}",
     ]
+    for death in report.line_deaths:
+        lines.append(
+            f"line death       {death.type} {death.market_key} "
+            f"lived {death.lifetime_s:.0f}s at {death.edge_pct:+.2f}%"
+        )
     if report.skipped_reason:
         lines.append(f"NOT ALERTING     {report.skipped_reason}")
     if report.enabled_books == 0:

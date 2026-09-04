@@ -509,6 +509,20 @@ id, and every state change goes through the update API under optimistic concurre
 - Cooldown: at most one alert per `(sport, market_key)` per `alert_cooldown_s`, whichever
   detection has the highest edge wins the slot.
 
+**Known consequence of the re-alert wording (recorded 2026-09-04, T2.4).** The baseline for
+"edge improved" is the stored `edge_pct`, which the same rule overwrites every cycle. So an
+improvement that arrives *while the cooldown is still running* is absorbed into `edge_pct`, and
+once the cooldown clears there is no longer an improvement to detect — the better edge is never
+announced. This is the literal reading and it is what ships; a test pins it so it cannot change
+silently. Comparing instead against the edge *as at the last alert* would need a field §4.3 does
+not have, which is a spec decision rather than an implementation one. Revisit if paper trading
+shows meaningful edges going unannounced.
+
+The last-alert time the cooldown reads is **derived, not stored**: `edgeline-recommendations`
+knows when an alert went out (`sent_at`) and `edgeline-opportunities` knows what it was about
+(`market_key`, `event_id`), so the two are joined over the cooldown window rather than adding a
+field.
+
 ---
 
 ## 8. The Odds API Integration (`providers/the_odds_api.py`)
@@ -748,11 +762,18 @@ unreachable, so the suite still passes on a machine without Docker running.
 - [ ] **Exit:** all §14 tests green — **done**; 7 consecutive days of dev-cadence paper recommendations stored — *elapsed time, not work. Deliberately not blocking later phases: the code that stores them is in place and the box closes on its own once the scheduler (§13) has run for a week.*
 
 **Phase 2 — Discord**
-- [ ] T2.1 Bot setup (§9.1); `ASK USER` for token/channel
-- [ ] T2.2 Embeds + persistent views (§9.2); restart-survival verified manually
-- [ ] T2.3 Handlers → `bets` rows (§9.3); ✅ reaction path included
-- [ ] T2.4 Cooldowns + edge-improvement re-alerts wired into dispatch
-- [ ] T2.5 Line-death instrumentation: on each cycle, record whether previously alerted opportunities still exist (feeds the Android go/no-go)
+
+*Channel choice is open as of 2026-09-04. The bot token §9.1 needs does not exist and is not
+expected soon, so the dispatch layer was built channel-agnostic: §9.2's formats render into an
+`AlertMessage`, and an `AlertSink` protocol is the single seam a channel plugs into. Discord
+(§9), Telegram or anything else becomes one adapter over that rather than a rewrite. `LogSink`
+stands in meanwhile, so paper recommendations accumulate with fully rendered messages.*
+
+- [ ] T2.1 Bot setup (§9.1); `ASK USER` for token/channel — **blocked on the token**
+- [~] T2.2 Embeds + persistent views (§9.2); restart-survival verified manually — *content done and tested against §9.2's exact formats (`notify/message.py`); the Discord embed/view binding and restart survival are what remain*
+- [ ] T2.3 Handlers → `bets` rows (§9.3); ✅ reaction path included — **blocked on the token**
+- [x] **T2.4 — DONE 2026-09-04.** Cooldowns + edge-improvement re-alerts wired into dispatch, with the §7.4 lifecycle (close, expire, optimistic-concurrency updates) reconciled each cycle
+- [x] **T2.5 — DONE 2026-09-04.** Line-death instrumentation: each cycle records whether previously alerted opportunities still exist, and how long the dead ones lived (feeds the Android go/no-go). Needs no channel
 - [ ] **Exit:** live detection → Discord alert → tap opens book page; button press logs a bet row
 
 **Phase 3 — UI & grading**
