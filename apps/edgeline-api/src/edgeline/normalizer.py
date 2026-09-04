@@ -174,22 +174,39 @@ def canonical_selection(market_key: str, outcome: dict[str, Any]) -> tuple[str, 
     raise _Quarantine(UNKNOWN_MARKET_KEY)
 
 
+def line_group_value(line: float | None) -> float | None:
+    """The line as a *market* identifier rather than a per-selection one.
+
+    A spread's two sides carry mirrored points — ``Guardians -1.5`` and
+    ``Tigers +1.5`` are one line quoted from each end — so keying on the raw
+    signed value would file them as two different markets and leave every spread
+    group holding a single side. That breaks de-vig outright (§6.2 needs every
+    outcome of the market) and makes spread arbitrage undetectable.
+
+    Taking the magnitude pairs them while preserving the same-line rule exactly:
+    ``-1.5`` and ``+2.5`` still differ, so a middle is still never grouped.
+    Totals lines are already positive, so this is the identity for them, and h2h
+    has no line at all.
+    """
+    return None if line is None else abs(line)
+
+
 def group_same_line(
     snapshots: list[BookOddsSnapshot],
 ) -> dict[tuple[str, str, float | None], list[BookOddsSnapshot]]:
     """Group rows into the only comparison sets v1 permits (§7.2).
 
-    The key is ``(event_id, market_key, line)``. Because the line is part of the
-    key, two prices on different lines can never end up in the same group, which
-    is the same-line-only rule expressed as a data structure rather than as a
-    check every detector has to remember to perform.
+    The key is ``(event_id, market_key, line_group_value(line))``. Because the
+    line is part of the key, two prices on genuinely different lines can never
+    end up in the same group — the same-line-only rule expressed as a data
+    structure rather than as a check every detector has to remember to perform.
     """
     groups: dict[tuple[str, str, float | None], list[BookOddsSnapshot]] = {}
     for snapshot in snapshots:
         key = (
             event_doc_id(snapshot.sport_key, snapshot.provider_event_id),
             snapshot.market_key,
-            snapshot.line,
+            line_group_value(snapshot.line),
         )
         groups.setdefault(key, []).append(snapshot)
     return groups

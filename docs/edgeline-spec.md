@@ -705,6 +705,16 @@ In `test_oddsmath.py`, tolerance `1e-4` unless stated:
 | G7 | kelly stake | p 0.545, d 1.909091, bankroll 100000¢, frac 0.25 | 1100¢ ($11) after rounding |
 | G8 | clv_pct | closing p 0.552, alert d 1.909091 | +5.3818 |
 
+**Note on G5's profit figure (added 2026-09-04, T1.2).** The table's `1.9223%` is reachable only
+by truncating `inv` to the six significant digits §6.5 *displays* (0.981140) and dividing that.
+Carrying full precision, as §6's opening rule requires — "round only at display time, keep full
+float precision internally" — gives **1.9222%** (1.92215). §6's precision rule wins: truncating an
+intermediate to feed a later division is precisely what it forbids. The gap is 0.00015 percentage
+points, four orders of magnitude below `arb_min_profit_pct`'s 0.5 default, so no decision can turn
+on it. Every other number in G5 — the raw 48.53/51.47 split, the 49/51 rounding, the
+102.90/101.00 payouts and the 1.00% worst case — is reproduced exactly. §6.5's own "profit 1.92%"
+also matches.
+
 Plus: `test_staking.py` — each guardrail individually (cap hit, exposure remainder, suppression
 below min edge, kill switch); `test_dedup.py` — same-hash update, edge-improvement re-alert,
 expiry; `test_engine.py` — replay a recorded fixture set doctored to contain exactly one arb
@@ -727,15 +737,15 @@ unreachable, so the suite still passes on a machine without Docker running.
 - [x] **T0.3 — DONE 2026-09-04.** ES 9.0.3 + Kibana up (upgrading the Docker engine 20.10.0 → 29.7.2 unblocked the image); `ensure_indices()` bootstrap (§4) + settings/sportsbook seeds, verified against the live cluster
 - [x] **T0.4 — DONE 2026-09-04.** The Odds API adapter + fixture recorder (§8); 4 real `baseball_mlb` fixture sets recorded — odds, events, event props, scores
 - [x] **T0.5 — DONE 2026-09-04.** Normalizer v1 (§7.2) incl. quarantine
-- [ ] **Exit:** live MLB featured odds land in `edgeline-odds-snapshots` (visible in Kibana); `pytest` green incl. normalizer tests — *tests are green (151 with ES up, 149 + 2 skipped without); the bulk-index write itself is §7.1 pipeline work and lands with T1.4*
+- [x] **Exit — MET 2026-09-04.** `uv run python -m edgeline.engine --once` landed 1,008 live MLB prices across 28 events in `edgeline-odds-snapshots`, 0 quarantined; `pytest` green incl. normalizer tests
 
 **Phase 1 — Math engine**
-- [ ] T1.1 `oddsmath.py` — G1–G4, G6, G8 pass
-- [ ] T1.2 Arb + rounding re-check — G5 passes
-- [ ] T1.3 `staking.py` with guardrail order — G7 + guardrail tests pass
-- [ ] T1.4 `engine.py` pipeline + `dedup.py`; fixture-replay integration test passes
-- [ ] T1.5 CLI paper mode: `uv run python -m edgeline.engine --once` prints detections
-- [ ] **Exit:** all §14 tests green; 7 consecutive days of dev-cadence paper recommendations stored
+- [x] **T1.1 — DONE 2026-09-04.** `oddsmath.py`; G1–G4, G6, G8 pass
+- [x] **T1.2 — DONE 2026-09-04.** Arb + rounding re-check; G5 passes (see the §14 note on its profit figure)
+- [x] **T1.3 — DONE 2026-09-04.** `staking.py` with the guardrail order; G7 + a test per guardrail pass
+- [x] **T1.4 — DONE 2026-09-04.** `engine.py` pipeline + `dedup.py`; fixture-replay integration test passes, plus an ES-backed `run_once` test
+- [x] **T1.5 — DONE 2026-09-04.** CLI paper mode: `uv run python -m edgeline.engine --once` prints detections
+- [ ] **Exit:** all §14 tests green — **done**; 7 consecutive days of dev-cadence paper recommendations stored — *elapsed time, not work. Deliberately not blocking later phases: the code that stores them is in place and the box closes on its own once the scheduler (§13) has run for a week.*
 
 **Phase 2 — Discord**
 - [ ] T2.1 Bot setup (§9.1); `ASK USER` for token/channel

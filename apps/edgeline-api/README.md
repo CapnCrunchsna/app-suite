@@ -92,11 +92,11 @@ src/edgeline/
   schemas.py     ✅ pydantic models (spec §5)
   normalizer.py  ✅ provider payloads -> canonical rows (spec §7.2)
   providers/     ✅ odds provider adapters; the_odds_api.py first (spec §8)
-  oddsmath.py    conversions, de-vig, consensus, EV, arb, staleness (spec §6)
-  staking.py     fractional Kelly + guardrails (spec §6.7)
-  engine.py      detection pipeline (spec §7.1)
-  dedup.py       opportunity hashing + lifecycle (spec §7.4)
-  deeplink.py    per-book link ladder (spec §9.4)
+  oddsmath.py    ✅ conversions, de-vig, consensus, EV, arb, staleness (spec §6)
+  staking.py     ✅ fractional Kelly + guardrails (spec §6.7)
+  engine.py      ✅ detection pipeline + the --once CLI (spec §7.1)
+  dedup.py       ✅ opportunity hashing + lifecycle (spec §7.4)
+  deeplink.py    ✅ per-book link ladder (spec §9.4) — returns no link until T4.3
   notify/        Discord bot, embeds, interaction handlers (spec §9)
   grading.py     results + CLV (spec §12)
   scheduler.py   polling and job cadences (spec §13)
@@ -105,8 +105,23 @@ tests/
   fixtures/      ✅ recorded Odds API responses; tests never call the live API
 ```
 
-✅ marks what has landed (Phase 0). The rest appears as its phase does; the tree is the
+✅ marks what has landed (Phases 0 and 1). The rest appears as its phase does; the tree is the
 destination, not the current state.
+
+## Running a cycle
+
+```bash
+uv run python -m edgeline.engine --once
+```
+
+Fetches one poll cycle, normalizes it, stores snapshots and events, runs +EV and arbitrage
+detection, and prints what it found. It spends ~3 API credits and **never places a bet** (§16.1).
+
+**Expect zero detections on a fresh install, and that is correct.** Every seeded sportsbook is
+`enabled: false` — §4.3 says to verify Maryland licensure before enabling any of them, and §17
+asks you to confirm the list. §6.4/§6.5 only consider enabled books, so detection is inert until
+you enable some. `min_books_for_consensus` also defaults to 4, so a market quoted by fewer books
+never produces a +EV alert. Neither is a bug to route around by lowering a threshold (§16.2).
 
 ## Fixtures
 
