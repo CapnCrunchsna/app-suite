@@ -54,6 +54,12 @@
       }
     </ui-panel>
   } @else {
+    <!-- Above the work rather than beside it: the sequence is what was missing, and
+         two of its six steps are gated on an analysis having run. Somebody who meets
+         the scorecard's refusal before the guide concludes the feature is broken
+         rather than out of order (§9ai). -->
+    <ll-calibration-guide [report]="calibration()" />
+
     <ui-panel heading="What each charge really is">
       <ll-calibration-pass
         [rows]="passRows()"

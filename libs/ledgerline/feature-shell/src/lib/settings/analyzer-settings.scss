@@ -13,6 +13,17 @@
   color: var(--text-dim, #7ea8a1);
 }
 
+/* Where the evidence for a change comes from. Links rather than prose alone,
+ * because the point of the sentence is that both halves are somewhere else. */
+.lede--where a {
+  color: var(--accent, #2dd4bf);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .hash {
   display: flex;
   align-items: center;

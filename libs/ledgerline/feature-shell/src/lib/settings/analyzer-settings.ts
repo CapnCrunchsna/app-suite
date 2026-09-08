@@ -26,6 +26,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import type { SettingRule, Settings, SettingThreshold } from '@metrum/api-client';
 import { thresholdBlurb } from '../rule-copy.js';
 
@@ -54,7 +55,7 @@ const NON_RULE_SECTIONS: Record<string, { label: string; specRef: string }> = {
 
 @Component({
   selector: 'll-analyzer-settings',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './analyzer-settings.html',
   styleUrl: './analyzer-settings.scss',

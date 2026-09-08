@@ -42,6 +42,7 @@ import { LedgerlineApiError } from '@metrum/api-client';
 import type { Calibration, Category } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
+import { CalibrationGuide } from './calibration-guide.js';
 import { CalibrationPass } from './calibration-pass.js';
 import type { AssertionEvent } from './calibration-pass.js';
 import { MerchantReview } from './merchant-review.js';
@@ -50,7 +51,7 @@ import { ReviewQueue } from './review-queue.service.js';
 
 @Component({
   selector: 'll-review-page',
-  imports: [Panel, MerchantReview, CalibrationPass],
+  imports: [Panel, MerchantReview, CalibrationPass, CalibrationGuide],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './review-page.html',
   styleUrl: './review-page.scss',

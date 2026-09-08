@@ -1,0 +1,174 @@
+/* Dark-first, per §6, on the host app's custom properties. This lib ships no
+ * palette — same rule as @metrum/ui. */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.guide {
+  padding: 12px 14px;
+  border: 1px solid var(--border, #1f4a47);
+  border-radius: var(--radius, 10px);
+  background: var(--surface-1, #0e2427);
+}
+
+.guide__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guide__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text, #dcefeb);
+}
+
+.guide__toggle {
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim, #7ea8a1);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text, #dcefeb);
+    border-color: var(--border, #1f4a47);
+  }
+}
+
+.guide__lede {
+  margin: 6px 0 0;
+  max-width: 72ch;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.steps {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) max-content max-content;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+}
+
+/* The step this page is. Marked rather than merely highlighted, because "you are
+ * here" is the one thing the sequence could not say before. */
+.step--here {
+  background: var(--surface-2, #143034);
+  box-shadow: inset 2px 0 0 var(--accent, #2dd4bf);
+}
+
+/* Not disabled — every step stays readable and reachable. Dimming says "not yet",
+ * and the status column says what it is waiting for. */
+.step--blocked {
+  opacity: 0.55;
+}
+
+.step__n {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.step__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.step__title {
+  color: var(--text, #dcefeb);
+}
+
+.step__here {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent, #2dd4bf);
+  color: var(--on-accent, #06201c);
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.step__why {
+  font-size: 0.71rem;
+  line-height: 1.45;
+  color: var(--text-dim, #7ea8a1);
+}
+
+.step__status {
+  color: var(--text-dim, #7ea8a1);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.step__go {
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.step__link {
+  color: var(--accent, #2dd4bf);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.guide__enough {
+  margin: 12px 0 0;
+  max-width: 72ch;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--text-dim, #7ea8a1);
+
+  strong {
+    color: var(--text, #dcefeb);
+  }
+
+  kbd {
+    padding: 0 4px;
+    border: 1px solid var(--border, #1f4a47);
+    border-radius: 4px;
+    background: var(--surface-2, #143034);
+    font-family: var(--mono, ui-monospace, Menlo, monospace);
+    font-size: 0.7rem;
+    color: var(--text, #dcefeb);
+  }
+}
+
+@media (max-width: 640px) {
+  /* The status and link columns wrap under the title rather than squeezing it —
+   * the step titles are the part that has to stay readable. */
+  .step {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+
+  .step__status,
+  .step__go {
+    grid-column: 2;
+    text-align: left;
+  }
+}

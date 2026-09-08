@@ -11,7 +11,9 @@
  */
 
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type {
+  Calibration,
   Category,
   Job,
   Merchant,
@@ -19,6 +21,7 @@ import type {
   MerchantReviewQueue,
   MergeMerchantBody,
   ReviewMerchant,
+  TransactionPage,
   UpdateMerchantBody,
 } from '@metrum/api-client';
 
@@ -41,6 +44,49 @@ function reviewMerchant(id: string, name: string, transactionCount: number): Rev
     },
     transactionCount,
     sampleDescriptors: [name],
+  };
+}
+
+/**
+ * §7.6's scorecard, defaulted to a ledger part-way through calibration: statements
+ * imported, an analysis run, some findings judged, some rows labelled.
+ *
+ * `unavailableReason: null` is the one field with a gate behind it — the API sets it
+ * exactly when no analysis has finished, and three of §9ai's six steps read it.
+ */
+function calibrationOf(overrides: Partial<Calibration> = {}): Calibration {
+  return {
+    progress: { labelled: 42, fromReview: 40, fromCorrection: 2, total: 326 },
+    normalization: {
+      compared: 8,
+      agreed: 6,
+      disagreed: 2,
+      fromReview: { compared: 6, agreed: 5 },
+      fromCorrection: { compared: 2, agreed: 1 },
+    },
+    rules: [
+      {
+        ruleId: 'recurrence.v1',
+        judgedCorrect: 3,
+        judgedIncorrect: 1,
+        expected: 5,
+        found: 4,
+        missed: 1,
+        falsePositives: 1,
+      },
+      {
+        ruleId: 'fees.v1',
+        judgedCorrect: 2,
+        judgedIncorrect: 0,
+        expected: 3,
+        found: 3,
+        missed: 0,
+        falsePositives: 0,
+      },
+    ],
+    labels: [],
+    unavailableReason: null,
+    ...overrides,
   };
 }
 
@@ -70,6 +116,17 @@ class ApiStub {
   getMerchantReviewQueue(): Promise<MerchantReviewQueue> {
     this.reads += 1;
     return Promise.resolve(this.reviewQueue);
+  }
+
+  // §7.6's pass and the guide above it (§9ab, §9ai).
+  calibration: Calibration = calibrationOf();
+
+  getCalibration(): Promise<Calibration> {
+    return Promise.resolve(this.calibration);
+  }
+
+  listTransactions(): Promise<TransactionPage> {
+    return Promise.resolve({ rows: [], total: 0, limit: 500, offset: 0 });
   }
 
   jobState: Job['state'] = 'succeeded';
@@ -146,7 +203,8 @@ describe('ReviewPage', () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [ReviewPage],
-      providers: [{ provide: LedgerlineApiService, useValue: api }],
+      // §9ai's guide links to the pages its other five steps live on.
+      providers: [provideRouter([]), { provide: LedgerlineApiService, useValue: api }],
     }).compileComponents();
   });
 
@@ -395,6 +453,121 @@ describe('ReviewPage', () => {
       // different facts, and only one of them belongs in an empty badge.
       expect(queue.outstanding()).toBe(1);
       expect(queue.error()?.message).toBe('API is down');
+    });
+  });
+
+  // ------------------------------------- §7.6's loop, on screen (§9ai) ---
+
+  /**
+   * Every part of calibrating existed before this and the **sequence** did not. The
+   * cases worth pinning are the two that make the guide worth having: that it says
+   * which step you are on, and that it says which steps cannot happen yet — because
+   * meeting the scorecard's refusal without that explanation reads as a broken
+   * feature rather than an out-of-order one.
+   */
+  describe('the calibration guide', () => {
+    async function calibrateTab() {
+      const rendered = await render();
+      const tab = [...rendered.el.querySelectorAll('.mode')].find((node) =>
+        node.textContent?.includes('Go through the charges'),
+      ) as HTMLButtonElement;
+      tab.click();
+      await rendered.fixture.whenStable();
+      return rendered;
+    }
+
+    /** The default fixture is part-way through, so the guide arrives folded. These
+     *  cases are about what it says; the fold itself has its own case below. */
+    async function expanded() {
+      const rendered = await calibrateTab();
+      if (rendered.el.querySelectorAll('.step').length === 0) {
+        (rendered.el.querySelector('.guide__toggle') as HTMLButtonElement).click();
+        await rendered.fixture.whenStable();
+      }
+      return rendered;
+    }
+
+    const stepFor = (el: HTMLElement, title: string) =>
+      [...el.querySelectorAll('.step')].find((node) =>
+        node.querySelector('.step__title')?.textContent?.includes(title),
+      ) as HTMLElement;
+
+    it('names all six steps and marks the one this page is', async () => {
+      const { el } = await expanded();
+
+      expect(el.querySelectorAll('.step')).toHaveLength(6);
+      const here = el.querySelectorAll('.step--here');
+      expect(here).toHaveLength(1);
+      expect(here[0].textContent).toContain('Say what each charge really is');
+    });
+
+    it('reports each step in the counts the API gave it', async () => {
+      const { el } = await expanded();
+
+      expect(stepFor(el, 'Import your statements').textContent).toContain('326 charges imported');
+      // 3 + 1 + 2 + 0 across the two rules in the fixture.
+      expect(stepFor(el, 'each finding was right').textContent).toContain('6 findings judged');
+      expect(stepFor(el, 'what each charge really is').textContent).toContain('42 of 326');
+    });
+
+    /**
+     * The gate. Recall compares a label against what the rules concluded, so three of
+     * the six steps genuinely cannot happen before a run — and the guide has to say
+     * that rather than let someone label two hundred rows into a scorecard that will
+     * refuse to answer.
+     */
+    it('says which steps an analysis has to come before', async () => {
+      api.calibration = calibrationOf({
+        rules: [],
+        unavailableReason: 'No analysis has finished, so there is nothing to compare against.',
+      });
+      const { el } = await expanded();
+
+      expect(stepFor(el, 'Run an analysis').textContent).toContain('no analysis has finished');
+      for (const title of [
+        'each finding was right',
+        'what that says about the rules',
+        'Move the thresholds',
+      ]) {
+        expect(stepFor(el, title).className).toContain('step--blocked');
+        expect(stepFor(el, title).textContent).toContain('needs an analysis first');
+      }
+
+      // Labelling is not gated — it is the one step you can do before a run, and
+      // the guide must not talk somebody out of it.
+      expect(stepFor(el, 'what each charge really is').className).not.toContain('step--blocked');
+    });
+
+    /** Open until the work starts, collapsed after: a permanent instruction panel
+     *  above the work becomes furniture. */
+    it('opens itself on an untouched ledger and folds away once labelling starts', async () => {
+      api.calibration = calibrationOf({
+        progress: { labelled: 0, fromReview: 0, fromCorrection: 0, total: 326 },
+      });
+      const fresh = await calibrateTab();
+      expect(fresh.el.querySelectorAll('.step').length).toBeGreaterThan(0);
+
+      TestBed.resetTestingModule();
+      api = new ApiStub();
+      api.calibration = calibrationOf({
+        progress: { labelled: 40, fromReview: 40, fromCorrection: 0, total: 326 },
+      });
+      await TestBed.configureTestingModule({
+        imports: [ReviewPage],
+        providers: [provideRouter([]), { provide: LedgerlineApiService, useValue: api }],
+      }).compileComponents();
+
+      const underway = await calibrateTab();
+      expect(underway.el.querySelectorAll('.step')).toHaveLength(0);
+
+      (underway.el.querySelector('.guide__toggle') as HTMLButtonElement).click();
+      await underway.fixture.whenStable();
+      expect(underway.el.querySelectorAll('.step')).toHaveLength(6);
+    });
+
+    it('is not on the queue tab, which is a different errand', async () => {
+      const { el } = await render();
+      expect(el.querySelector('ll-calibration-guide')).toBeNull();
     });
   });
 });

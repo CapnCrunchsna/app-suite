@@ -1,0 +1,55 @@
+<div class="guide">
+  <div class="guide__head">
+    <h3 class="guide__title">What calibrating is</h3>
+    <button
+      type="button"
+      class="guide__toggle"
+      [attr.aria-expanded]="open()"
+      aria-controls="calibration-guide-body"
+      (click)="toggle()"
+    >
+      {{ open() ? 'Hide' : 'Show the six steps' }}
+    </button>
+  </div>
+
+  <p class="guide__lede">
+    Every threshold behind a finding is a designed number, not a measured one. This is the loop
+    that turns them into measured ones — and you are on step 4 of it.
+  </p>
+
+  @if (open()) {
+    <ol class="steps" id="calibration-guide-body">
+      @for (step of steps(); track step.n) {
+        <li class="step" [class.step--here]="step.here" [class.step--blocked]="step.blocked">
+          <span class="step__n" aria-hidden="true">{{ step.n }}</span>
+          <span class="step__body">
+            <span class="step__title">
+              {{ step.title }}
+              @if (step.here) {
+                <span class="step__here">you are here</span>
+              }
+            </span>
+            @if (step.why) {
+              <span class="step__why">{{ step.why }}</span>
+            }
+          </span>
+          <span class="step__status">{{ step.status }}</span>
+          <span class="step__go">
+            @if (step.route) {
+              <a class="step__link" [routerLink]="step.route">{{ step.routeLabel }}</a>
+            }
+          </span>
+        </li>
+      }
+    </ol>
+
+    <!-- The question the counts cannot answer, and the mistake that makes a corpus
+         useless: a set of nothing but subscriptions and fees scores every rule
+         perfectly, because the misses are only visible against ordinary rows. -->
+    <p class="guide__enough">
+      <strong>What “enough” looks like:</strong> a year of statements, gone through end to end —
+      including the ordinary charges. Marking the dull ones is what makes the interesting ones
+      mean anything, so expect <kbd>n</kbd> to be the key you press most.
+    </p>
+  }
+</div>

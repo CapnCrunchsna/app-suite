@@ -12,6 +12,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type {
   Category,
   CategoryDeleteResult,
@@ -341,7 +342,10 @@ describe('SettingsPage', () => {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [SettingsPage],
-      providers: [{ provide: LedgerlineApiService, useValue: api }],
+      // §9ai put `routerLink`s in the Analyzers lede — the tallies beside each rule
+      // come from another page, and saying so without linking there would be the
+      // same orientation gap one level down.
+      providers: [provideRouter([]), { provide: LedgerlineApiService, useValue: api }],
     }).compileComponents();
   });
 

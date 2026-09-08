@@ -96,7 +96,7 @@ by-hand alias — on 2026-09-01 (§9af). And **every one of §6's nine pages now
 §6.3's Transactions, §6.4's Findings, §6.5's Subscriptions, §6.6's Insights,
 §6.7's Ask, §6.8's Settings and §6.9's Review exist and are all reachable from the
 rail. `docs/statement-parsing.md` records what has and has not been validated.
-§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae, §9af, §9ag and §9ah list the amendments
+§9, §9a, §9b, §9c, §9d, §9e, §9f, §9g, §9h, §9i, §9j, §9k, §9l, §9m, §9n, §9o, §9p, §9q, §9r, §9s, §9t, §9u, §9v, §9w, §9x, §9y, §9z, §9aa, §9ab, §9ac, §9ad, §9ae, §9af, §9ag, §9ah and §9ai list the amendments
 implementation made to this document.
 
 Every number in this document is still a *designed* threshold, not a measured one; the
@@ -1147,6 +1147,10 @@ has the evidence.
 
 **Not Settings**, which is where the app is configured. This is where the data is corrected,
 and the two are different errands — §9s.
+
+§7.6's labelling pass is the page's second mode (§9ab), and above it sits **the loop itself**:
+the six steps of calibrating, which one this page is, and which of them an analysis has to come
+before. §9ai says why the sequence needed saying when every step of it already worked.
 
 ## 7. Cross-cutting rules
 
@@ -2784,6 +2788,41 @@ bookkeeping.
 `CommitResolution` names an `existingTransactionId`, and these rows have no existing
 counterpart — that is the whole reason the merge rule cannot see them. Overloading `skip`
 would have meant a near-duplicate resolution pointing at nothing.
+
+## 9ai. Amendments from implementation — 2026-09-08 (§6.9, §6.8, §7.6)
+
+By §9ah every part of §7.6's calibration existed: §9z's finding verdicts on §6.4's cards,
+§9ab's row labels and the pass that collects them, the scorecard under it, and §6.8's
+thresholds with the tallies beside them. Sitting down to actually calibrate found that the
+missing piece was not a control. It was the **sequence**. Every screen explained its own job
+and none of them said it was one step of six, or which step had to come first.
+
+That is not a cosmetic gap, because two of the six are gated. Every recall figure compares a
+label against what the rules concluded, so labelling before an analysis has run produces a
+scorecard that refuses to answer — correctly, and §9ab argues why. Someone who met that
+refusal without knowing the order would reasonably conclude the feature was broken rather
+than out of order, and would have labelled a great many rows before finding out.
+
+| § | Amendment | Why |
+|---|---|---|
+| 6.9 | **The calibrate mode carries the loop above the pass**: six steps, the counts each one stands at, which step this page is, and which are waiting on an analysis. | §7.6 describes an afternoon's work and names no order. The order is real and partly enforced, so the page that hosts most of the work is where it belongs — not in a document beside the app, which is a document nobody has open at the moment they need it. |
+| 6.9 | **It derives from `GET /api/calibration` and asks for nothing.** | Rows imported and labelled are in `progress`, whether an analysis finished is `unavailableReason`, and findings judged is the sum of the per-rule `judgedCorrect` and `judgedIncorrect`. A second request could disagree with the scorecard directly beneath it. |
+| 6.9 | **Open until the first row is labelled, folded after** — derived from the work rather than remembered. | A permanent instruction panel above the work becomes furniture, and somebody forty rows in knows the loop. There is nowhere in this app to remember a preference, and one that resets on reload is worse than one that follows what you have done. |
+| 6.8 | **Analyzers says where its tallies came from and names the half that is not there.** | The tally beside each rule is evidence for moving a threshold, and it is only ever half the evidence: what a rule got *wrong* is on §6.4, what it *missed* is on §6.9, and the section that hosts the decision showed neither of those provenances. |
+
+**Blocked steps are dimmed, never disabled.** Every step stays readable and its status says
+what it is waiting for. A control that vanishes until its turn teaches nothing about the
+order; one that says "needs an analysis first" teaches the whole thing at a glance.
+
+**Labelling is deliberately not gated.** It is the one step that can be done before a run —
+the labels are ground truth about the statement, not about any rule — and a guide that greyed
+it out would talk somebody out of the only work available on a fresh import.
+
+**The guide answers "how much is enough" in words, not a number.** §7.6 asks for "a
+hand-labelled year", and the honest report of progress is a count of rows against the total
+plus the reason the ordinary ones matter — §9ab's point that a corpus of nothing but positives
+scores every rule perfectly. A completion percentage would be inventing a bar §7.6 does not
+set.
 
 ## 10. Open discrepancies — recorded, not resolved
 
