@@ -677,7 +677,11 @@ target). UI code imports ONLY from `libs/api-client` — no hand-written `HttpCl
 3. `pnl_cents`: win → `stake × (price_decimal − 1)`; loss → `−stake`; push/void → 0.
    Arb recs: sum leg P&L.
 4. CLV per §6.8, using `is_closing=1` snapshots (captured by the scheduler's closing-line
-   task at `commence_time − closing_capture_offset_s`).
+   task at `commence_time − closing_capture_offset_s`). *§6.8 defines CLV for one bet; a
+   multi-leg recommendation reports the **stake-weighted mean** of its legs, which reduces to
+   §6.8 exactly when there is one leg. Where no closing snapshot exists, `clv_pct` is **null**
+   rather than a substituted figure — an unknown CLV is honest, an invented one corrupts the
+   record the go-live decision rests on.*
 5. Executed recs (those with an `edgeline-bets` doc) also append `edgeline-bankroll-ledger`
    deltas; paper recs never touch the ledger.
 6. If today's graded executed losses ≥ `daily_loss_stop_cents` (a filtered `sum` aggregation
@@ -701,6 +705,16 @@ APScheduler with asyncio. Jobs:
 
 Startup sequence: compute projected monthly credit cost (§8.4) → refuse to schedule if over
 budget → log the number → register jobs → start Discord bot in the same loop.
+
+**`closing_capture` is a 60-second sweep, not a per-event one-shot (2026-09-07, T3.4).** The
+observable behaviour is identical — a closing snapshot is taken once per event inside the
+`closing_capture_offset_s` window, and an event that already has one is skipped — but an
+in-process one-shot is lost on restart, and losing it loses that event's CLV permanently. The
+closing price is the one number in this system that cannot be re-fetched after the fact, so the
+restart-safe form wins.
+
+The Discord bot is not started here yet (§9.1 has no token). `build_scheduler` takes the
+`AlertSink` the rest of the pipeline uses, so a channel drops in without touching the jobs.
 
 ---
 
@@ -777,11 +791,18 @@ stands in meanwhile, so paper recommendations accumulate with fully rendered mes
 - [ ] **Exit:** live detection → Discord alert → tap opens book page; button press logs a bet row
 
 **Phase 3 — UI & grading**
+
+*T3.4 and T3.5 were taken out of order on 2026-09-07, against §0 rule 1, deliberately. Phase 2's
+remaining tasks are blocked on a Discord token that does not exist, and while `paper_mode` is on
+nothing is placed — so P&L is hypothetical and **CLV is the only number carrying information**
+about whether the detector works. Measurement therefore outranks both the UI that displays it and
+the channel that announces it. T3.1–T3.3 remain untouched and in order.*
+
 - [ ] T3.1 FastAPI routers per §10, OpenAPI complete
 - [ ] T3.2 `api-client` generation target; committed
 - [ ] T3.3 Pages per §11.1 (dashboard, settings, sportsbooks, opportunities, recommendations first; rest after)
-- [ ] T3.4 Grading job + CLV (§12) incl. closing-capture scheduler task
-- [ ] T3.5 Bankroll ledger + daily loss stop → kill switch
+- [x] **T3.4 — DONE 2026-09-07.** Grading job + CLV (§12) in `grading.py`, plus the closing-capture task and the rest of §13's scheduler, so `nx run edgeline-api:worker` is a real process
+- [x] **T3.5 — DONE 2026-09-07.** Bankroll ledger deltas on executed results only, and the daily loss stop tripping `kill_switch`
 - [ ] **Exit:** every §3.2 setting editable in UI; nightly grading produces results + CLV; kill switch works from dashboard
 
 **Phase 4 — Production hardening**

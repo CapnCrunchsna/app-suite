@@ -99,8 +99,8 @@ src/edgeline/
   deeplink.py    ✅ per-book link ladder (spec §9.4) — returns no link until T4.3
   notify/        ✅ message.py + sink.py (spec §9.2, channel-agnostic)
                  …a channel adapter is still to come (spec §9.1/§9.3)
-  grading.py     results + CLV (spec §12)
-  scheduler.py   polling and job cadences (spec §13)
+  grading.py     ✅ settlement, P&L, CLV, ledger, daily loss stop (spec §12)
+  scheduler.py   ✅ polling, closing capture, grading, budget guard (spec §13)
   api/           FastAPI app and routers (spec §10)
 tests/
   fixtures/      ✅ recorded Odds API responses; tests never call the live API
@@ -108,6 +108,24 @@ tests/
 
 ✅ marks what has landed (Phases 0 and 1, plus §7.4's lifecycle and T2.4/T2.5). The rest appears
 as its phase does; the tree is the destination, not the current state.
+
+## The worker
+
+```bash
+nx run edgeline-api:worker                        # the long-running process (§13)
+uv run python -m edgeline.scheduler --check-budget # what it would cost, without starting
+```
+
+Runs §13's jobs: featured polling per sport, a closing-line sweep, nightly grading at 06:00 UTC,
+a monthly quota reset, and a heartbeat onto the `runtime` settings document.
+
+**It refuses to start if the cadence would blow the credit budget**, and that refusal is the
+point rather than a nicety. §8.4's production cadence costs ~64,800 credits a month against a
+free tier of 500 — a worker started on the wrong interval exhausts the month in about four hours
+and takes the system dark silently. `--check-budget` prints the §8.4 arithmetic and exits, so the
+number can be seen before anything runs. The dev cadence (every 6 h, ~360/month) is selected
+automatically while `quota_monthly_budget` is still the free tier's 500; raising it is T4.1 and
+needs the paid tier approved.
 
 ## Alerting: the channel is not decided yet
 

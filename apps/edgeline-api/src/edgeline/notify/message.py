@@ -32,6 +32,7 @@ from ..schemas import StakePlan
 DEFAULT_TIMEZONE = "America/New_York"
 EV_COLOR = 0x2DD4BF
 ARB_COLOR = 0xF59E0B
+SYSTEM_COLOR = 0xEF4444
 
 LEG_NUMERALS = ("1️⃣", "2️⃣", "3️⃣")
 
@@ -206,6 +207,17 @@ def render_arb(
         footer=footer,
         color=ARB_COLOR,
         buttons=buttons,
+    )
+
+
+def render_system_notice(title: str, *lines: str) -> AlertMessage:
+    """An operational notice rather than a bet — §12 step 6's loss-stop message.
+
+    No buttons: there is nothing for the reader to confirm, and a control that
+    does nothing is worse than none.
+    """
+    return AlertMessage(
+        kind="system", title=title, lines=list(lines), footer="", color=SYSTEM_COLOR
     )
 
 

@@ -85,3 +85,9 @@ def mlb_event_odds_payload() -> Any:
 def mlb_events_payload() -> Any:
     """Recorded event-list response."""
     return load_fixture("baseball_mlb_events_*.json")
+
+
+@pytest.fixture(scope="session")
+def mlb_scores_payload() -> Any:
+    """Recorded scores response — 40 rows, 24 of them completed."""
+    return load_fixture("baseball_mlb_scores_*.json")

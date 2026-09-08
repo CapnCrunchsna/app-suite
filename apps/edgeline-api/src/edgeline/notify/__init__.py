@@ -13,7 +13,14 @@ The point of the split: whichever channel eventually lands, it is an adapter ove
 
 from __future__ import annotations
 
-from .message import AlertButton, AlertMessage, render_alert, render_arb, render_ev
+from .message import (
+    AlertButton,
+    AlertMessage,
+    render_alert,
+    render_arb,
+    render_ev,
+    render_system_notice,
+)
 from .sink import AlertSink, LogSink, NullSink, RecordingSink
 
 __all__ = [
@@ -26,4 +33,5 @@ __all__ = [
     "render_alert",
     "render_arb",
     "render_ev",
+    "render_system_notice",
 ]

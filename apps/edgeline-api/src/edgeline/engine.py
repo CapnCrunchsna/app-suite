@@ -722,6 +722,10 @@ async def run_once(
 
         await client.index(
             index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+            # The id §9.3 routes a button tap on and the id §12 grades against
+            # have to be this document's id. Letting Elasticsearch autogenerate
+            # one left `rec:{id}:bet` pointing at a document that did not exist.
+            id=recommendation_id,
             document={
                 "opportunity_id": detection.hash,
                 "stakes": plan.model_dump(),
@@ -743,6 +747,88 @@ async def run_once(
         report.alerted.append(detection)
 
     return report
+
+
+async def capture_closing_lines(
+    provider,
+    client,
+    *,
+    sport_key: str,
+    settings: Settings,
+    prefix: str = "edgeline-",
+    now: datetime | None = None,
+) -> list[str]:
+    """Snapshot the closing line for events about to start (§12 step 4, §13).
+
+    These `is_closing` rows are the only thing CLV can be computed against, and
+    the window they are taken in is unrepeatable — once the event starts, the
+    closing price is gone. So this is deliberately cheap to call often and safe
+    to call repeatedly: an event that already has a closing snapshot is skipped,
+    which is what lets §13's one-shot-per-event job be a periodic sweep instead.
+
+    A sweep rather than a per-event timer is a deliberate substitution: an
+    in-process one-shot is lost on restart, and losing it means losing that
+    event's CLV forever. The observable behaviour is the same.
+    """
+    now = now or datetime.now(timezone.utc)
+    window_end = now + timedelta(seconds=settings.closing_capture_offset_s)
+
+    response = await provider.fetch_odds(sport_key, settings.markets_featured)
+    snapshots = normalize(provider.key, response.payload)
+
+    due = [
+        s for s in snapshots if now < parse_iso(s.commence_time) <= window_end
+    ]
+    if not due:
+        return []
+
+    event_ids = {event_doc_id(s.sport_key, s.provider_event_id) for s in due}
+    already = await _events_with_closing_lines(client, event_ids, prefix=prefix)
+    pending = [
+        s
+        for s in due
+        if event_doc_id(s.sport_key, s.provider_event_id) not in already
+    ]
+    if not pending:
+        return []
+
+    from elasticsearch.helpers import async_bulk
+
+    await async_bulk(
+        client,
+        [
+            {"_index": with_prefix(ODDS_SNAPSHOTS_INDEX, prefix), "_source": doc}
+            for doc in snapshot_documents(pending, is_closing=True)
+        ],
+    )
+    captured = sorted(event_ids - already)
+    log.info("captured closing lines for %d event(s)", len(captured))
+    return captured
+
+
+async def _events_with_closing_lines(
+    client, event_ids: set[str], *, prefix: str
+) -> set[str]:
+    if not event_ids:
+        return set()
+    try:
+        found = await client.search(
+            index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix),
+            size=0,
+            query={
+                "bool": {
+                    "filter": [
+                        {"terms": {"event_id": sorted(event_ids)}},
+                        {"term": {"is_closing": True}},
+                    ]
+                }
+            },
+            aggs={"events": {"terms": {"field": "event_id", "size": 1000}}},
+        )
+    except Exception:
+        return set()
+    buckets = found.get("aggregations", {}).get("events", {}).get("buckets", [])
+    return {bucket["key"] for bucket in buckets}
 
 
 async def load_live_opportunities(

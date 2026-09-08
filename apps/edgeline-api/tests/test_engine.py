@@ -12,6 +12,8 @@ holds for a tidy two-book example.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from edgeline.config import Settings
@@ -30,10 +32,20 @@ from edgeline.normalizer import group_same_line, normalize
 PROVIDER = "the_odds_api"
 TOL = 1e-4
 
+# Relative to now, not a fixed date. §7.4 expires an opportunity once its event
+# starts, so a hard-coded commence_time silently converts every "closed" assertion
+# below into an "expired" one the moment that date passes — which is exactly what
+# happened three days after these tests were written.
+def _hours_from_now(hours: int) -> str:
+    return (datetime.now(timezone.utc) + timedelta(hours=hours)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+
 EVENT_HEADER = {
     "id": "evt1",
     "sport_key": "baseball_mlb",
-    "commence_time": "2026-09-05T23:10:00Z",
+    "commence_time": _hours_from_now(24),
     "home_team": "Cleveland Guardians",
     "away_team": "Detroit Tigers",
 }
