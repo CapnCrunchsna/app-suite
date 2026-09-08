@@ -101,13 +101,35 @@ src/edgeline/
                  …a channel adapter is still to come (spec §9.1/§9.3)
   grading.py     ✅ settlement, P&L, CLV, ledger, daily loss stop (spec §12)
   scheduler.py   ✅ polling, closing capture, grading, budget guard (spec §13)
-  api/           FastAPI app and routers (spec §10)
+  api/           ✅ FastAPI app + one router per §10 resource group
 tests/
   fixtures/      ✅ recorded Odds API responses; tests never call the live API
 ```
 
 ✅ marks what has landed (Phases 0 and 1, plus §7.4's lifecycle and T2.4/T2.5). The rest appears
 as its phase does; the tree is the destination, not the current state.
+
+## The API
+
+```bash
+nx run edgeline-api:serve      # uvicorn on :8000
+```
+
+Every route is under `/api`, and OpenAPI is at `/api/openapi.json` — that document is what §11.3's
+generated TypeScript client is built from, so it is the contract, not a by-product. Interactive
+docs at `/api/docs`.
+
+Two things worth knowing before using it:
+
+- **`POST /api/recommendations/{id}/confirm` records that a human placed a bet.** It does not
+  place one and cannot (§16.1). The stake and odds in the body are the *actual* ones you got,
+  which will differ from what was recommended — that difference is why §10 asks for them.
+  Recording a bet is what promotes a recommendation from paper to executed, which is what lets
+  grading move the bankroll ledger.
+- **`PUT /api/settings` rejects unknown keys** rather than storing them. The settings index is
+  `dynamic: false`, so a typo would be saved, ignored by every reader, and look like it worked.
+
+When a UI bundle has been built, it is served at `/`; set `EDGELINE_UI_DIST` to point elsewhere.
 
 ## The worker
 
@@ -137,9 +159,27 @@ plugs into. `run_once(..., sink=...)` takes it.
 
 `LogSink` is the default and writes fully rendered alerts to the log, so the seven days of paper
 recommendations Phase 1's exit wants accumulate now rather than waiting on a token. Whichever
-channel eventually lands — Discord per the spec, or Telegram, whose token takes about a minute
-from @BotFather and which needs no gateway websocket — it is one adapter over `AlertMessage`,
-not a rewrite. Changing the spec's channel needs the user's approval (§16.7).
+channel lands is one adapter over `AlertMessage`, not a rewrite. Changing the spec's named
+channel needs the user's approval (§16.7).
+
+**Where the options stand (2026-09-08):**
+
+| Option | Setup | Confirm tap | Notes |
+| --- | --- | --- | --- |
+| **Discord** (spec's choice) | Developer portal → app → bot → invite → token, ~10 min | Buttons, official | Holds a gateway websocket |
+| ~~Telegram~~ | — | — | **Ruled out by the user, 2026-09-08** |
+| **ntfy** | Pick a topic, no account | Weak — the button calls a URL, so it only works where the phone can reach this machine | Plainest formatting |
+| **Signal** | Phone number + possible CAPTCHA, or link as a second device | Unconfirmed; would be the ✅ reaction path §9.3 already allows | See below |
+| **Leave it** | Nothing | None | `LogSink`; alerts land in the log |
+
+**On Signal specifically.** There is no official bot API — it would go through
+[`signal-cli`](https://github.com/AsamK/signal-cli), which is community-maintained, unofficial,
+and has a JSON-RPC daemon mode that would suit a worker. The disqualifying detail for unattended
+use is in its own README: it *"needs to be kept up-to-date"* because **official Signal clients
+expire after three months**. An alerting system that silently stops every quarter unless someone
+updates it is a poor fit for the one job it has. Its real argument is privacy — Discord bot
+messages are not end-to-end encrypted, and these alerts say what is being bet and how the
+bankroll is doing.
 
 ## Running a cycle
 

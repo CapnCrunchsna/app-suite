@@ -798,7 +798,7 @@ nothing is placed — so P&L is hypothetical and **CLV is the only number carryi
 about whether the detector works. Measurement therefore outranks both the UI that displays it and
 the channel that announces it. T3.1–T3.3 remain untouched and in order.*
 
-- [ ] T3.1 FastAPI routers per §10, OpenAPI complete
+- [x] **T3.1 — DONE 2026-09-08.** FastAPI routers per §10 under `api/routers/`, OpenAPI published at `/api/openapi.json` for §11.3
 - [ ] T3.2 `api-client` generation target; committed
 - [ ] T3.3 Pages per §11.1 (dashboard, settings, sportsbooks, opportunities, recommendations first; rest after)
 - [x] **T3.4 — DONE 2026-09-07.** Grading job + CLV (§12) in `grading.py`, plus the closing-capture task and the rest of §13's scheduler, so `nx run edgeline-api:worker` is a real process
