@@ -259,12 +259,16 @@ async def _seed(client, prefix, *, paper=True, with_closing=True):
         with_prefix,
     )
 
-    for name in all_index_names(prefix):
-        await client.indices.delete(index=name, ignore_unavailable=True)
+    # Wipe documents rather than delete indices — see test_engine._fresh_cluster
+    # for why the create/delete storm had to go.
     await ensure_indices(client, prefix=prefix)
     await client.indices.put_settings(
         index=f"{prefix}*", settings={"refresh_interval": "50ms"}
     )
+    await client.delete_by_query(
+        index=f"{prefix}*", query={"match_all": {}}, refresh=True, conflicts="proceed"
+    )
+    await ensure_indices(client, prefix=prefix)
 
     await client.index(
         index=with_prefix(EVENTS_INDEX, prefix),
@@ -379,8 +383,6 @@ async def test_grading_settles_a_recommendation_and_computes_clv(es_url, test_in
         # (0.512821 x 2.10 - 1) x 100 = 7.6923%
         assert source["clv_pct"] == pytest.approx(7.6923, abs=1e-3)
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -408,8 +410,6 @@ async def test_clv_is_null_when_no_closing_line_was_captured(es_url, test_index_
         assert result["_source"]["clv_pct"] is None
         assert result["_source"]["outcome"] == WIN  # settlement is unaffected
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -464,8 +464,6 @@ async def test_re_running_grading_changes_nothing(es_url, test_index_prefix):
         assert results["count"] == 1
         assert ledger["count"] == 1
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -495,8 +493,6 @@ async def test_a_paper_recommendation_never_touches_the_bankroll(es_url, test_in
         ledger = await client.count(index=with_prefix(BANKROLL_LEDGER_INDEX, prefix))
         assert ledger["count"] == 0
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -549,8 +545,6 @@ async def test_the_daily_loss_stop_trips_the_kill_switch(es_url, test_index_pref
         assert len(sink.sent) == 1
         assert "Daily loss stop" in sink.sent[0][1].title
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -583,6 +577,4 @@ async def test_losses_below_the_stop_leave_the_kill_switch_alone(es_url, test_in
         stored = await client.get(index=with_prefix(SETTINGS_INDEX, prefix), id="global")
         assert stored["_source"]["kill_switch"] is False
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()

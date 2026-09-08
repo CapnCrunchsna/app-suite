@@ -21,7 +21,7 @@ import asyncio
 import logging
 import signal
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .config import Settings
 from .indices import SETTINGS_INDEX, with_prefix
@@ -37,6 +37,8 @@ DAYS_PER_MONTH = 30
 FREE_TIER_BUDGET = 500
 HEARTBEAT_INTERVAL_S = 60
 CLOSING_SWEEP_INTERVAL_S = 60
+#: Long enough for the first poll to settle, short enough to matter in a brief run.
+STARTUP_GRADE_DELAY_S = 15
 
 
 class BudgetExceeded(RuntimeError):
@@ -207,6 +209,16 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         coalesce=True,
     )
     scheduler.add_job(_grade, "cron", hour=6, minute=0, id="grade")
+    # A catch-up grade shortly after startup. §13's cron alone assumes a worker
+    # that is up at 06:00 UTC; this one is expected to run in short bursts, so
+    # without this a run that never spans 06:00 would never settle anything and
+    # the ledger would sit empty however long the system had been used.
+    scheduler.add_job(
+        _grade,
+        "date",
+        run_date=datetime.now(timezone.utc) + timedelta(seconds=STARTUP_GRADE_DELAY_S),
+        id="grade_startup",
+    )
     scheduler.add_job(
         reset_quota, "cron", day=1, hour=0, minute=5, id="quota_reset",
         kwargs={"client": client, "prefix": prefix},

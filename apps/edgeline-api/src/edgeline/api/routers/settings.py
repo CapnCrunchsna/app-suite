@@ -26,16 +26,16 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
-@router.get("")
-async def read_settings(context: Context = Depends(get_context)) -> dict[str, Any]:
+@router.get("", operation_id="getSettings")
+async def read_settings(context: Context = Depends(get_context)) -> Settings:
     """The full §3.2 map, defaults filled in for anything unseeded."""
     return (await load_settings_doc(context)).model_dump()
 
 
-@router.put("")
+@router.put("", operation_id="updateSettings")
 async def update_settings(
     patch: dict[str, Any], context: Context = Depends(get_context)
-) -> dict[str, Any]:
+) -> Settings:
     unknown = sorted(set(patch) - set(Settings.model_fields))
     if unknown:
         raise HTTPException(

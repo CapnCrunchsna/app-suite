@@ -441,8 +441,6 @@ async def test_run_once_stores_snapshots_opportunities_and_paper_recommendations
         assert first["paper"] is True  # §1: paper_mode defaults true
         assert first["opportunity_id"] in {d.hash for d in report.detections}
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -491,8 +489,6 @@ async def test_kill_switch_stores_opportunities_but_writes_no_recommendation(
         )
         assert recommendations["count"] == 0
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -505,20 +501,31 @@ def fair_only_payload(commence_time: str = EVENT_HEADER["commence_time"]) -> lis
 async def _fresh_cluster(client, prefix, *, books=True):
     """Empty test indices, refreshing fast, with the payload's books enabled.
 
+    **Documents are wiped; indices are not deleted.** Deleting and recreating
+    eleven indices per test put a create/delete storm through a single-node
+    cluster on a 1 GB heap, and the suite started failing in ways that only
+    appeared under that load — "index already exists" on a create that had just
+    checked, "no such index" mid-test, and once the cluster stopped answering
+    altogether. Every one of those tests passed run individually. Wiping
+    documents leaves the cluster alone and is faster besides.
+
     `refresh_interval` is dropped to 50ms because §4.4 rule 2 makes the pipeline
     write with `refresh="wait_for"`, and against Elasticsearch's default 1s that
     turns each opportunity write into a second of waiting. Production keeps the
     default; only these indices are impatient.
     """
     from edgeline.es import ensure_indices
-    from edgeline.indices import SPORTSBOOKS_INDEX, all_index_names, with_prefix
+    from edgeline.indices import SPORTSBOOKS_INDEX, with_prefix
 
-    for name in all_index_names(prefix):
-        await client.indices.delete(index=name, ignore_unavailable=True)
     await ensure_indices(client, prefix=prefix)
     await client.indices.put_settings(
         index=f"{prefix}*", settings={"refresh_interval": "50ms"}
     )
+    await client.delete_by_query(
+        index=f"{prefix}*", query={"match_all": {}}, refresh=True, conflicts="proceed"
+    )
+    # Re-create the seed documents the wipe just removed.
+    await ensure_indices(client, prefix=prefix)
     if not books:
         return
     for book in [*FAIR_BOOKS, "juicy"]:
@@ -567,8 +574,6 @@ async def test_vanished_opportunities_are_closed_with_their_final_edge(
             assert hit["_source"]["closing_edge_pct"] > 0
             assert hit["_source"]["closed_at"]
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -608,8 +613,6 @@ async def test_an_opportunity_whose_event_has_started_expires_rather_than_closes
             hit["_source"]["status"] == STATUS_EXPIRED for hit in stored["hits"]["hits"]
         )
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -651,8 +654,6 @@ async def test_line_death_is_recorded_for_an_alerted_opportunity(
         assert death.lifetime_s >= 0
         assert death.edge_pct > 0
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -692,8 +693,6 @@ async def test_a_surviving_alert_is_recorded_and_not_re_alerted(
         )
         assert recommendations["count"] == 1
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -735,8 +734,6 @@ async def test_a_materially_better_edge_re_alerts_once_the_cooldown_clears(
         assert len(opened.alerted) == 1
         assert len(sink.sent) == 2
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 
@@ -795,8 +792,6 @@ async def test_an_improvement_absorbed_during_a_cooldown_does_not_re_alert_later
         assert settled.alerted == []
         assert len(sink.sent) == 1
     finally:
-        for name in all_index_names(prefix):
-            await client.indices.delete(index=name, ignore_unavailable=True)
         await client.close()
 
 

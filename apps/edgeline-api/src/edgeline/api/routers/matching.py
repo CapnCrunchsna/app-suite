@@ -19,16 +19,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...indices import UNMATCHED_INDEX
 from ..deps import Context, get_context, hits, search
+from ..models import UnmatchedRowResponse
 
 router = APIRouter(prefix="/matching", tags=["matching"])
 
 
-@router.get("")
+@router.get("", operation_id="listUnmatched")
 async def list_unmatched(
     resolved: bool = False,
     limit: int = Query(default=200, ge=1, le=1000),
     context: Context = Depends(get_context),
-) -> list[dict[str, Any]]:
+) -> list[UnmatchedRowResponse]:
     response = await search(
         context,
         UNMATCHED_INDEX,
@@ -39,10 +40,10 @@ async def list_unmatched(
     return hits(response)
 
 
-@router.post("/{unmatched_id}/resolve")
+@router.post("/{unmatched_id}/resolve", operation_id="resolveUnmatched")
 async def resolve(
     unmatched_id: str, context: Context = Depends(get_context)
-) -> dict[str, Any]:
+) -> UnmatchedRowResponse:
     try:
         await context.client.update(
             index=context.index(UNMATCHED_INDEX),

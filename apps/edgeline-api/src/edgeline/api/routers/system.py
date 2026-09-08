@@ -18,13 +18,14 @@ from fastapi import APIRouter, Depends
 
 from ...indices import PROVIDERS_INDEX, SETTINGS_INDEX
 from ..deps import Context, get_context, hits, load_settings_doc, search
+from ..models import HealthResponse, KillSwitchResponse
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/system", tags=["system"])
 
 
-@router.get("/health")
-async def health(context: Context = Depends(get_context)) -> dict[str, Any]:
+@router.get("/health", operation_id="getHealth")
+async def health(context: Context = Depends(get_context)) -> HealthResponse:
     settings = await load_settings_doc(context)
 
     runtime: dict[str, Any] = {}
@@ -55,16 +56,16 @@ async def health(context: Context = Depends(get_context)) -> dict[str, Any]:
     }
 
 
-@router.post("/kill")
-async def kill(context: Context = Depends(get_context)) -> dict[str, Any]:
+@router.post("/kill", operation_id="engageKillSwitch")
+async def kill(context: Context = Depends(get_context)) -> KillSwitchResponse:
     """Stop alerting. Polling continues, for data continuity (§7.1)."""
     await _set_kill_switch(context, True)
     log.warning("kill switch ENGAGED via the API; alerting paused")
     return {"kill_switch": True}
 
 
-@router.post("/resume")
-async def resume(context: Context = Depends(get_context)) -> dict[str, Any]:
+@router.post("/resume", operation_id="releaseKillSwitch")
+async def resume(context: Context = Depends(get_context)) -> KillSwitchResponse:
     await _set_kill_switch(context, False)
     log.warning(
         "kill switch RELEASED via the API; alerting resumed. If §12's daily loss "

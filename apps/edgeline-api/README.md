@@ -131,6 +131,25 @@ Two things worth knowing before using it:
 
 When a UI bundle has been built, it is served at `/`; set `EDGELINE_UI_DIST` to point elsewhere.
 
+### The generated client
+
+`libs/edgeline/api-client` (`@metrum/edgeline-api-client`) is emitted from `openapi.json`, and
+§11.3 is strict about the consequence: **UI code imports only from it — no hand-written
+`HttpClient` calls.** After changing a route:
+
+```bash
+cd apps/edgeline-api && uv run python -m edgeline.api.openapi
+npx nx run edgeline-api-client:generate-client
+```
+
+Both artefacts are committed and both are checked by `npm run check` — a pytest compares
+`openapi.json` against the live app, and the lib's `test` target compares the emitted client
+against `openapi.json`. A stale client cannot reach a commit.
+
+Every route carries an explicit `operation_id` because the emitter refuses to invent names: the
+`operationId` *is* the client's method name, so `getSettings` is chosen rather than derived from
+a function name and a path.
+
 ## The worker
 
 ```bash
@@ -161,6 +180,13 @@ plugs into. `run_once(..., sink=...)` takes it.
 recommendations Phase 1's exit wants accumulate now rather than waiting on a token. Whichever
 channel lands is one adapter over `AlertMessage`, not a rewrite. Changing the spec's named
 channel needs the user's approval (§16.7).
+
+**Decided 2026-09-08: stay on `LogSink` for now; Discord is the intended channel when logs stop
+being enough.** While the system runs in short attended bursts, reading the log *is* the alert —
+a push channel earns its keep only once nobody is watching the terminal. Discord is the fallback
+of choice because it is what §1 and §9 already name, it has an official API with real buttons,
+and it carries no maintenance treadmill. No spec change is needed to act on that; it is what §9
+already says.
 
 **Where the options stand (2026-09-08):**
 

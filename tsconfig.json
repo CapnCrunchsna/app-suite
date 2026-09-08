@@ -38,6 +38,9 @@
     },
     {
       "path": "./apps/edgeline-ui"
+    },
+    {
+      "path": "./libs/edgeline/api-client"
     }
   ],
   "compilerOptions": {}

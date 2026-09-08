@@ -799,7 +799,7 @@ about whether the detector works. Measurement therefore outranks both the UI tha
 the channel that announces it. T3.1–T3.3 remain untouched and in order.*
 
 - [x] **T3.1 — DONE 2026-09-08.** FastAPI routers per §10 under `api/routers/`, OpenAPI published at `/api/openapi.json` for §11.3
-- [ ] T3.2 `api-client` generation target; committed
+- [x] **T3.2 — DONE 2026-09-08.** Generated client committed at `libs/edgeline/api-client` with an `nx run edgeline-api-client:generate-client` target. *Placed at `libs/edgeline/api-client` rather than §11.3's `libs/api-client`: §2.1's workspace convention is `libs/<project>/<lib>`, and §2.2 already reserves `libs/edgeline/` for Edgeline-only libs. A local deterministic emitter is used rather than `openapi-ts` — the workspace already has that exact pattern for Ledgerline, and a worktree cannot `npm install` a new dependency.*
 - [ ] T3.3 Pages per §11.1 (dashboard, settings, sportsbooks, opportunities, recommendations first; rest after)
 - [x] **T3.4 — DONE 2026-09-07.** Grading job + CLV (§12) in `grading.py`, plus the closing-capture task and the rest of §13's scheduler, so `nx run edgeline-api:worker` is a real process
 - [x] **T3.5 — DONE 2026-09-07.** Bankroll ledger deltas on executed results only, and the daily loss stop tripping `kill_switch`

@@ -19,17 +19,18 @@ from fastapi import APIRouter, Depends
 
 from ...indices import RESULTS_INDEX
 from ..deps import Context, get_context, search
+from ..models import SummaryResponse
 
 router = APIRouter(prefix="/results", tags=["results"])
 
 INTERVALS = {"day": "1d", "week": "1w"}
 
 
-@router.get("/summary")
+@router.get("/summary", operation_id="getResultsSummary")
 async def summary(
     group: Literal["day", "week"] = "day",
     context: Context = Depends(get_context),
-) -> dict[str, Any]:
+) -> SummaryResponse:
     """P&L, hit rate, average CLV, and the paper-versus-executed split per bucket."""
     response = await search(
         context,

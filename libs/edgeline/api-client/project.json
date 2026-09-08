@@ -1,0 +1,29 @@
+{
+  "name": "edgeline-api-client",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/edgeline/api-client/src",
+  "projectType": "library",
+  "tags": ["scope:el", "type:api-client"],
+  "metadata": {
+    "description": "Generated TypeScript client for edgeline-api (spec §11.3). src/ is emitted, never hand-edited — see tools/generate-edgeline-api-client.mjs."
+  },
+  "targets": {
+    "generate-client": {
+      "//": "Regenerate src/ from apps/edgeline-api/openapi.json. Named generate-client rather than generate because `nx generate` is the CLI's own command. Dump openapi.json first: cd apps/edgeline-api && uv run python -m edgeline.api.openapi",
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/src"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "node tools/generate-edgeline-api-client.mjs"
+      }
+    },
+    "test": {
+      "//": "Named `test` so it runs inside `npm run check`: it fails when the committed client disagrees with openapi.json, which is what stops a stale client reaching a commit.",
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "node tools/generate-edgeline-api-client.mjs --check"
+      }
+    }
+  }
+}

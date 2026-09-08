@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from ...indices import SPORTSBOOKS_INDEX
 from ..deps import Context, get_context, hits, search
+from ..models import SportsbookRow
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/sportsbooks", tags=["sportsbooks"])
@@ -31,18 +32,18 @@ class SportsbookPatch(BaseModel):
     link_templates: dict[str, Any] | None = None
 
 
-@router.get("")
-async def list_sportsbooks(context: Context = Depends(get_context)) -> list[dict[str, Any]]:
+@router.get("", operation_id="listSportsbooks")
+async def list_sportsbooks(context: Context = Depends(get_context)) -> list[SportsbookRow]:
     response = await search(
         context, SPORTSBOOKS_INDEX, size=100, sort=[{"priority": {"order": "asc"}}]
     )
     return hits(response)
 
 
-@router.patch("/{key}")
+@router.patch("/{key}", operation_id="patchSportsbook")
 async def patch_sportsbook(
     key: str, patch: SportsbookPatch, context: Context = Depends(get_context)
-) -> dict[str, Any]:
+) -> SportsbookRow:
     doc = patch.model_dump(exclude_none=True)
     if not doc:
         raise HTTPException(status_code=400, detail="empty patch")

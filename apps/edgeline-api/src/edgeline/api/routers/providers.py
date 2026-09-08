@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from ...indices import PROVIDERS_INDEX
 from ..deps import Context, get_context, hits, search
+from ..models import ProviderRow
 
 router = APIRouter(prefix="/providers", tags=["providers"])
 
@@ -20,15 +21,15 @@ class ProviderPatch(BaseModel):
     config: dict[str, Any] | None = None
 
 
-@router.get("")
-async def list_providers(context: Context = Depends(get_context)) -> list[dict[str, Any]]:
+@router.get("", operation_id="listProviders")
+async def list_providers(context: Context = Depends(get_context)) -> list[ProviderRow]:
     return hits(await search(context, PROVIDERS_INDEX, size=50, query={"match_all": {}}))
 
 
-@router.patch("/{key}")
+@router.patch("/{key}", operation_id="patchProvider")
 async def patch_provider(
     key: str, patch: ProviderPatch, context: Context = Depends(get_context)
-) -> dict[str, Any]:
+) -> ProviderRow:
     doc = patch.model_dump(exclude_none=True)
     if not doc:
         raise HTTPException(status_code=400, detail="empty patch")

@@ -54,6 +54,7 @@
   "workspaces": [
     "apps/*",
     "libs/ledgerline/*",
+    "libs/edgeline/*",
     "libs/shared/*"
   ],
   "dependencies": {

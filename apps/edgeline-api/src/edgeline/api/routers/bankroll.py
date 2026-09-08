@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from ...indices import BANKROLL_LEDGER_INDEX
 from ...schemas import utc_now_iso
 from ..deps import Context, get_context, hits, search
+from ..models import BankrollResponse, LedgerEntry
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/bankroll", tags=["bankroll"])
@@ -34,11 +35,11 @@ class AdjustBody(BaseModel):
     reason: Literal["deposit", "withdrawal", "manual_adjust"] = "manual_adjust"
 
 
-@router.get("")
+@router.get("", operation_id="getBankroll")
 async def read_bankroll(
     limit: int = Query(default=200, ge=1, le=1000),
     context: Context = Depends(get_context),
-) -> dict[str, Any]:
+) -> BankrollResponse:
     """Total and per-book balances as sum aggregations, plus recent ledger rows."""
     response = await search(
         context,
@@ -66,10 +67,10 @@ async def read_bankroll(
     }
 
 
-@router.post("/adjust", status_code=201)
+@router.post("/adjust", status_code=201, operation_id="adjustBankroll")
 async def adjust(
     body: AdjustBody, context: Context = Depends(get_context)
-) -> dict[str, Any]:
+) -> LedgerEntry:
     """Append a manual ledger row. Deltas only — there is no balance to set."""
     document = {
         "book_key": body.book_key,

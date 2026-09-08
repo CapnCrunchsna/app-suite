@@ -1,0 +1,1941 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Edgeline API",
+    "summary": "Sports betting intelligence. Recommends bets; never places them.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Read Settings",
+        "description": "The full §3.2 map, defaults filled in for anything unseeded.",
+        "operationId": "getSettings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Update Settings",
+        "operationId": "updateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Patch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/providers": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "List Providers",
+        "operationId": "listProviders",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderRow"
+                  },
+                  "type": "array",
+                  "title": "Response Listproviders"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/providers/{key}": {
+      "patch": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Patch Provider",
+        "operationId": "patchProvider",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sportsbooks": {
+      "get": {
+        "tags": [
+          "sportsbooks"
+        ],
+        "summary": "List Sportsbooks",
+        "operationId": "listSportsbooks",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SportsbookRow"
+                  },
+                  "type": "array",
+                  "title": "Response Listsportsbooks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sportsbooks/{key}": {
+      "patch": {
+        "tags": [
+          "sportsbooks"
+        ],
+        "summary": "Patch Sportsbook",
+        "operationId": "patchSportsbook",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SportsbookPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportsbookRow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/opportunities": {
+      "get": {
+        "tags": [
+          "opportunities"
+        ],
+        "summary": "List Opportunities",
+        "description": "Newest first. `status` and `type` are the §4.3 enums, validated by name so\na typo is a 422 rather than a silently empty table.",
+        "operationId": "listOpportunities",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "alerted",
+                    "closed",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ev",
+                    "arb"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpportunityRow"
+                  },
+                  "title": "Response Listopportunities"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recommendations": {
+      "get": {
+        "tags": [
+          "recommendations"
+        ],
+        "summary": "List Recommendations",
+        "description": "History, with each row's opportunity and result joined in.\n\nElasticsearch has no joins, so this is two `mget`s over the ids the first\nquery returned — bounded by `limit` and therefore cheap, and far better than\nmaking the UI issue N+1 requests to assemble a table.",
+        "operationId": "listRecommendations",
+        "parameters": [
+          {
+            "name": "paper",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Paper"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecommendationRow"
+                  },
+                  "title": "Response Listrecommendations"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recommendations/{recommendation_id}/confirm": {
+      "post": {
+        "tags": [
+          "recommendations"
+        ],
+        "summary": "Confirm",
+        "operationId": "confirmRecommendation",
+        "parameters": [
+          {
+            "name": "recommendation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Recommendation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetRow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/summary": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Summary",
+        "description": "P&L, hit rate, average CLV, and the paper-versus-executed split per bucket.",
+        "operationId": "getResultsSummary",
+        "parameters": [
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "week"
+              ],
+              "type": "string",
+              "default": "day",
+              "title": "Group"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bankroll": {
+      "get": {
+        "tags": [
+          "bankroll"
+        ],
+        "summary": "Read Bankroll",
+        "description": "Total and per-book balances as sum aggregations, plus recent ledger rows.",
+        "operationId": "getBankroll",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankrollResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bankroll/adjust": {
+      "post": {
+        "tags": [
+          "bankroll"
+        ],
+        "summary": "Adjust",
+        "description": "Append a manual ledger row. Deltas only — there is no balance to set.",
+        "operationId": "adjustBankroll",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/matching": {
+      "get": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "List Unmatched",
+        "operationId": "listUnmatched",
+        "parameters": [
+          {
+            "name": "resolved",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Resolved"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UnmatchedRowResponse"
+                  },
+                  "title": "Response Listunmatched"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/matching/{unmatched_id}/resolve": {
+      "post": {
+        "tags": [
+          "matching"
+        ],
+        "summary": "Resolve",
+        "operationId": "resolveUnmatched",
+        "parameters": [
+          {
+            "name": "unmatched_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Unmatched Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnmatchedRowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/kill": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Kill",
+        "description": "Stop alerting. Polling continues, for data continuity (§7.1).",
+        "operationId": "engageKillSwitch",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KillSwitchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/resume": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Resume",
+        "operationId": "releaseKillSwitch",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KillSwitchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdjustBody": {
+        "properties": {
+          "book_key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Book Key"
+          },
+          "delta_cents": {
+            "type": "integer",
+            "title": "Delta Cents"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "deposit",
+              "withdrawal",
+              "manual_adjust"
+            ],
+            "title": "Reason",
+            "default": "manual_adjust"
+          }
+        },
+        "type": "object",
+        "required": [
+          "book_key",
+          "delta_cents"
+        ],
+        "title": "AdjustBody"
+      },
+      "BankrollResponse": {
+        "properties": {
+          "total_cents": {
+            "type": "integer",
+            "title": "Total Cents"
+          },
+          "by_book": {
+            "items": {
+              "$ref": "#/components/schemas/BookBalance"
+            },
+            "type": "array",
+            "title": "By Book"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cents"
+        ],
+        "title": "BankrollResponse"
+      },
+      "BetRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "recommendation_id": {
+            "type": "string",
+            "title": "Recommendation Id"
+          },
+          "confirmed_via": {
+            "type": "string",
+            "title": "Confirmed Via"
+          },
+          "stake_actual_cents": {
+            "type": "integer",
+            "title": "Stake Actual Cents"
+          },
+          "odds_actual_decimal": {
+            "type": "number",
+            "title": "Odds Actual Decimal"
+          },
+          "placed_at": {
+            "type": "string",
+            "title": "Placed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "recommendation_id",
+          "confirmed_via",
+          "stake_actual_cents",
+          "odds_actual_decimal",
+          "placed_at"
+        ],
+        "title": "BetRow"
+      },
+      "BookBalance": {
+        "properties": {
+          "book_key": {
+            "type": "string",
+            "title": "Book Key"
+          },
+          "balance_cents": {
+            "type": "integer",
+            "title": "Balance Cents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "book_key",
+          "balance_cents"
+        ],
+        "title": "BookBalance"
+      },
+      "ConfirmBody": {
+        "properties": {
+          "stake_actual_cents": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Stake Actual Cents"
+          },
+          "odds_actual_decimal": {
+            "type": "number",
+            "exclusiveMinimum": 1.0,
+            "title": "Odds Actual Decimal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stake_actual_cents",
+          "odds_actual_decimal"
+        ],
+        "title": "ConfirmBody",
+        "description": "What the human actually got on the book."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "paper_mode": {
+            "type": "boolean",
+            "title": "Paper Mode"
+          },
+          "kill_switch": {
+            "type": "boolean",
+            "title": "Kill Switch"
+          },
+          "runtime": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Runtime"
+          },
+          "quota": {
+            "items": {
+              "$ref": "#/components/schemas/QuotaRow"
+            },
+            "type": "array",
+            "title": "Quota"
+          },
+          "sports_enabled": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sports Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paper_mode",
+          "kill_switch"
+        ],
+        "title": "HealthResponse"
+      },
+      "KillSwitchResponse": {
+        "properties": {
+          "kill_switch": {
+            "type": "boolean",
+            "title": "Kill Switch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kill_switch"
+        ],
+        "title": "KillSwitchResponse"
+      },
+      "LedgerEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "book_key": {
+            "type": "string",
+            "title": "Book Key"
+          },
+          "delta_cents": {
+            "type": "integer",
+            "title": "Delta Cents"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "ref_result_id": {
+            "type": "string",
+            "title": "Ref Result Id",
+            "default": ""
+          },
+          "@timestamp": {
+            "type": "string",
+            "title": "@Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "book_key",
+          "delta_cents",
+          "reason",
+          "@timestamp"
+        ],
+        "title": "LedgerEntry"
+      },
+      "OpportunityLegRow": {
+        "properties": {
+          "book_key": {
+            "type": "string",
+            "title": "Book Key"
+          },
+          "selection": {
+            "type": "string",
+            "title": "Selection"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "price_decimal": {
+            "type": "number",
+            "title": "Price Decimal"
+          },
+          "devig_prob": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Devig Prob"
+          },
+          "staleness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staleness"
+          },
+          "bet_first": {
+            "type": "boolean",
+            "title": "Bet First",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "book_key",
+          "selection",
+          "price_decimal"
+        ],
+        "title": "OpportunityLegRow"
+      },
+      "OpportunityRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "market_key": {
+            "type": "string",
+            "title": "Market Key"
+          },
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityLegRow"
+            },
+            "type": "array",
+            "title": "Legs"
+          },
+          "edge_pct": {
+            "type": "number",
+            "title": "Edge Pct"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "detected_at": {
+            "type": "string",
+            "title": "Detected At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "closing_edge_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Edge Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "event_id",
+          "market_key",
+          "edge_pct",
+          "status",
+          "detected_at"
+        ],
+        "title": "OpportunityRow"
+      },
+      "ProviderPatch": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "quota_budget": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Budget"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          }
+        },
+        "type": "object",
+        "title": "ProviderPatch"
+      },
+      "ProviderRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "quota_used": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Used"
+          },
+          "quota_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Budget"
+          },
+          "quota_reset_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Reset At"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "ProviderRow"
+      },
+      "QuotaRow": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "quota_used": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Used"
+          },
+          "quota_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Budget"
+          },
+          "quota_reset_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Reset At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider"
+        ],
+        "title": "QuotaRow"
+      },
+      "RecommendationRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "title": "Opportunity Id"
+          },
+          "stakes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Stakes"
+          },
+          "paper": {
+            "type": "boolean",
+            "title": "Paper"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "sent_at": {
+            "type": "string",
+            "title": "Sent At"
+          },
+          "message_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Ref"
+          },
+          "opportunity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpportunityRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "opportunity_id",
+          "paper",
+          "channel",
+          "sent_at"
+        ],
+        "title": "RecommendationRow"
+      },
+      "ResultRow": {
+        "properties": {
+          "bet_id": {
+            "type": "string",
+            "title": "Bet Id",
+            "default": ""
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "pnl_cents": {
+            "type": "integer",
+            "title": "Pnl Cents"
+          },
+          "clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clv Pct"
+          },
+          "needs_manual": {
+            "type": "boolean",
+            "title": "Needs Manual",
+            "default": false
+          },
+          "graded_at": {
+            "type": "string",
+            "title": "Graded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "pnl_cents",
+          "graded_at"
+        ],
+        "title": "ResultRow"
+      },
+      "Settings": {
+        "properties": {
+          "paper_mode": {
+            "type": "boolean",
+            "title": "Paper Mode",
+            "default": true
+          },
+          "kill_switch": {
+            "type": "boolean",
+            "title": "Kill Switch",
+            "default": false
+          },
+          "kelly_fraction": {
+            "type": "number",
+            "title": "Kelly Fraction",
+            "default": 0.25
+          },
+          "bankroll_start_cents": {
+            "type": "integer",
+            "title": "Bankroll Start Cents",
+            "default": 100000
+          },
+          "ev_threshold_pct": {
+            "type": "number",
+            "title": "Ev Threshold Pct",
+            "default": 2.0
+          },
+          "min_edge_to_bet_pct": {
+            "type": "number",
+            "title": "Min Edge To Bet Pct",
+            "default": 1.5
+          },
+          "min_books_for_consensus": {
+            "type": "integer",
+            "title": "Min Books For Consensus",
+            "default": 4
+          },
+          "arb_min_profit_pct": {
+            "type": "number",
+            "title": "Arb Min Profit Pct",
+            "default": 0.5
+          },
+          "max_stake_cents": {
+            "type": "integer",
+            "title": "Max Stake Cents",
+            "default": 25000
+          },
+          "max_stake_pct": {
+            "type": "number",
+            "title": "Max Stake Pct",
+            "default": 2.0
+          },
+          "daily_exposure_cap_cents": {
+            "type": "integer",
+            "title": "Daily Exposure Cap Cents",
+            "default": 100000
+          },
+          "daily_loss_stop_cents": {
+            "type": "integer",
+            "title": "Daily Loss Stop Cents",
+            "default": 50000
+          },
+          "stake_rounding_cents": {
+            "type": "integer",
+            "title": "Stake Rounding Cents",
+            "default": 100
+          },
+          "devig_method": {
+            "type": "string",
+            "enum": [
+              "multiplicative",
+              "additive",
+              "power",
+              "shin"
+            ],
+            "title": "Devig Method",
+            "default": "multiplicative"
+          },
+          "consensus_weights": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Consensus Weights"
+          },
+          "staleness_sigma_floor": {
+            "type": "number",
+            "title": "Staleness Sigma Floor",
+            "default": 0.002
+          },
+          "edge_improve_delta_pct": {
+            "type": "number",
+            "title": "Edge Improve Delta Pct",
+            "default": 0.5
+          },
+          "alert_cooldown_s": {
+            "type": "integer",
+            "title": "Alert Cooldown S",
+            "default": 300
+          },
+          "sports_enabled": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sports Enabled"
+          },
+          "markets_featured": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Markets Featured"
+          },
+          "markets_props": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Markets Props"
+          },
+          "poll_interval_s": {
+            "type": "integer",
+            "title": "Poll Interval S",
+            "default": 120
+          },
+          "poll_interval_dev_s": {
+            "type": "integer",
+            "title": "Poll Interval Dev S",
+            "default": 21600
+          },
+          "props_poll_interval_s": {
+            "type": "integer",
+            "title": "Props Poll Interval S",
+            "default": 600
+          },
+          "closing_capture_offset_s": {
+            "type": "integer",
+            "title": "Closing Capture Offset S",
+            "default": 300
+          },
+          "quota_monthly_budget": {
+            "type": "integer",
+            "title": "Quota Monthly Budget",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "title": "Settings",
+        "description": "The complete §3.2 default set, typed, with the spec's defaults verbatim.\n\n``extra=\"ignore\"``: the settings document is stored ``dynamic: false`` (§4.2),\nso a key added by a newer build and read back by an older one must degrade to\n\"unknown key, ignored\" rather than crash the worker."
+      },
+      "SportsbookPatch": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "md_licensed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Md Licensed"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "link_templates": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Templates"
+          }
+        },
+        "type": "object",
+        "title": "SportsbookPatch",
+        "description": "Every field optional — this is a patch, not a replacement."
+      },
+      "SportsbookRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "md_licensed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Md Licensed"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "link_templates": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Link Templates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "SportsbookRow"
+      },
+      "SummaryBucket": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "graded": {
+            "type": "integer",
+            "title": "Graded"
+          },
+          "pnl_cents": {
+            "type": "integer",
+            "title": "Pnl Cents"
+          },
+          "avg_clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Clv Pct"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins"
+          },
+          "settled": {
+            "type": "integer",
+            "title": "Settled"
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate"
+          },
+          "executed": {
+            "type": "integer",
+            "title": "Executed"
+          },
+          "executed_pnl_cents": {
+            "type": "integer",
+            "title": "Executed Pnl Cents"
+          },
+          "paper": {
+            "type": "integer",
+            "title": "Paper"
+          },
+          "needs_manual": {
+            "type": "integer",
+            "title": "Needs Manual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "graded",
+          "pnl_cents",
+          "wins",
+          "settled",
+          "executed",
+          "executed_pnl_cents",
+          "paper",
+          "needs_manual"
+        ],
+        "title": "SummaryBucket"
+      },
+      "SummaryResponse": {
+        "properties": {
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryBucket"
+            },
+            "type": "array",
+            "title": "Buckets"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/SummaryTotals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "totals"
+        ],
+        "title": "SummaryResponse"
+      },
+      "SummaryTotals": {
+        "properties": {
+          "graded": {
+            "type": "integer",
+            "title": "Graded"
+          },
+          "pnl_cents": {
+            "type": "integer",
+            "title": "Pnl Cents"
+          },
+          "avg_clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Clv Pct"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins",
+            "default": 0
+          },
+          "settled": {
+            "type": "integer",
+            "title": "Settled",
+            "default": 0
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "graded",
+          "pnl_cents"
+        ],
+        "title": "SummaryTotals"
+      },
+      "UnmatchedRowResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "provider_key": {
+            "type": "string",
+            "title": "Provider Key"
+          },
+          "raw": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "resolved": {
+            "type": "boolean",
+            "title": "Resolved"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider_key",
+          "reason",
+          "resolved",
+          "created_at"
+        ],
+        "title": "UnmatchedRowResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

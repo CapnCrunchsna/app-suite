@@ -1,6 +1,6 @@
 """FastAPI surface — spec §10.
 
-Every route runs against a real cluster under the `edgeline-test-` prefix, wired
+Every route runs against a real cluster under this file's own index prefix, wired
 in with a single dependency override. The app's own lifespan (which bootstraps
 the *production* prefix) never runs here: httpx's ASGI transport does not send
 lifespan events, which is what keeps these tests off the real indices.
@@ -16,13 +16,23 @@ from edgeline.schemas import utc_now_iso
 
 pytestmark = pytest.mark.es
 
+#: This file's own prefix, deliberately not the shared `edgeline-test-` one.
+#:
+#: The fixture below keeps its indices between tests instead of deleting and
+#: recreating them, which is what makes this file fast. Every other ES test file
+#: does the opposite — delete all eleven, recreate, run — and the two strategies
+#: interfere on a shared prefix: leftover documents made grading tests see work
+#: as already done, and one index reliably survived a delete. Separate namespaces
+#: remove the whole class of problem rather than sequencing around it.
+API_TEST_PREFIX = "edgeline-apitest-"
+
 OPP_HASH = "b" * 64
 REC_ID = "rec-api-test"
 EVENT_ID = "baseball_mlb:evtA"
 
 
 @pytest.fixture
-async def api(es_url, test_index_prefix):
+async def api(es_url):
     """An HTTP client for the app, pointed at the test indices.
 
     Documents are wiped between tests but the **indices are kept**. Deleting and
@@ -39,7 +49,7 @@ async def api(es_url, test_index_prefix):
     client = AsyncElasticsearch(hosts=[es_url])
     try:
         await client.delete_by_query(
-            index=f"{test_index_prefix}*",
+            index=f"{API_TEST_PREFIX}*",
             query={"match_all": {}},
             refresh=True,
             conflicts="proceed",
@@ -48,19 +58,19 @@ async def api(es_url, test_index_prefix):
         pass  # first run of the session: nothing to wipe yet
     # Recreates anything missing, and re-seeds the settings/sportsbook documents
     # the wipe just removed.
-    await ensure_indices(client, prefix=test_index_prefix)
+    await ensure_indices(client, prefix=API_TEST_PREFIX)
     await client.indices.put_settings(
-        index=f"{test_index_prefix}*", settings={"refresh_interval": "50ms"}
+        index=f"{API_TEST_PREFIX}*", settings={"refresh_interval": "50ms"}
     )
 
     app = create_app()
     app.dependency_overrides[get_context] = lambda: Context(
-        client=client, prefix=test_index_prefix
+        client=client, prefix=API_TEST_PREFIX
     )
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as http:
-        yield http, client, test_index_prefix
+        yield http, client, API_TEST_PREFIX
 
     await client.close()
 

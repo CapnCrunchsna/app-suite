@@ -26,6 +26,7 @@ from ...indices import (
 )
 from ...schemas import utc_now_iso
 from ..deps import Context, get_context, hits, search
+from ..models import BetRow, RecommendationRow
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -38,14 +39,14 @@ class ConfirmBody(BaseModel):
     odds_actual_decimal: float = Field(gt=1.0)
 
 
-@router.get("")
+@router.get("", operation_id="listRecommendations")
 async def list_recommendations(
     paper: bool | None = None,
     from_: str | None = Query(default=None, alias="from"),
     to: str | None = None,
     limit: int = Query(default=100, ge=1, le=1000),
     context: Context = Depends(get_context),
-) -> list[dict[str, Any]]:
+) -> list[RecommendationRow]:
     """History, with each row's opportunity and result joined in.
 
     Elasticsearch has no joins, so this is two `mget`s over the ids the first
@@ -85,12 +86,12 @@ async def list_recommendations(
     return rows
 
 
-@router.post("/{recommendation_id}/confirm", status_code=201)
+@router.post("/{recommendation_id}/confirm", status_code=201, operation_id="confirmRecommendation")
 async def confirm(
     recommendation_id: str,
     body: ConfirmBody,
     context: Context = Depends(get_context),
-) -> dict[str, Any]:
+) -> BetRow:
     try:
         await context.client.get(
             index=context.index(RECOMMENDATIONS_INDEX), id=recommendation_id
@@ -129,6 +130,10 @@ async def _mget(
         found = await context.client.mget(index=context.index(index), ids=wanted)
     except Exception:
         return {}
+    # Fold `_id` in, exactly as `hits()` does for a search: the joined
+    # opportunity is a row the UI addresses by id like any other.
     return {
-        doc["_id"]: doc["_source"] for doc in found["docs"] if doc.get("found")
+        doc["_id"]: {"id": doc["_id"], **doc["_source"]}
+        for doc in found["docs"]
+        if doc.get("found")
     }
