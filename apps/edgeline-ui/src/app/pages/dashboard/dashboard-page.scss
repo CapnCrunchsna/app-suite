@@ -1,0 +1,161 @@
+.tile__of {
+  color: var(--text-dim);
+  font-size: 1rem;
+}
+
+.tile__value--small {
+  font-size: 1.15rem;
+}
+
+.reason {
+  margin: 0 0 10px;
+  font-size: 0.93rem;
+}
+
+.reason--dim {
+  margin-bottom: 0;
+  color: var(--text-dim);
+  font-size: 0.86rem;
+}
+
+.health {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.health__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.health__key {
+  flex: none;
+  width: 90px;
+  color: var(--text-dim);
+}
+
+.health__value {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  padding: 1px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.chip--caution {
+  border-color: var(--caution);
+  color: var(--caution-soft);
+}
+
+.chip--danger {
+  border-color: var(--danger);
+  color: var(--danger-soft);
+}
+
+.quota {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.quota__name {
+  color: var(--text-dim);
+}
+
+.quota__bar {
+  display: block;
+  width: 140px;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+}
+
+.quota__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.quota__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.kill {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.kill__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* §11.1 asks for a big button, and it means it: this is the control someone
+ * reaches for when something is going wrong, and it should be findable without
+ * reading. */
+.kill__button {
+  padding: 14px 26px;
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--danger-soft);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.kill__button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.kill__button--kill:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+/* Resuming loosens a guardrail, so it does not get the reassuring accent —
+ * it stays in the caution register until the second press. */
+.kill__button--resume {
+  border-color: var(--caution);
+  color: var(--caution-soft);
+}
+
+.kill__button--resume:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--caution) 16%, transparent);
+}
+
+.kill__confirm {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--caution);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--caution) 12%, var(--surface));
+  font-size: 0.9rem;
+}
+
+.kill__note {
+  margin: 12px 0 0;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+}

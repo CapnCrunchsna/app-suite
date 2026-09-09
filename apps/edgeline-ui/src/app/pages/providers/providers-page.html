@@ -1,0 +1,99 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Providers</h1>
+    <p class="page__lede">
+      Where the odds come from, and what asking for them costs. §8.4 checks the projected
+      monthly credit spend against the budget below before the scheduler starts a cadence — so
+      a budget set too low stops polling rather than overspending.
+    </p>
+  </header>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  @if (failure()) {
+    <p class="notice notice--bad" role="alert">{{ failure() }}</p>
+  }
+
+  <ui-panel heading="Odds providers">
+    @if (loadError()) {
+      <p class="failure">
+        Could not read providers. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    } @else {
+      @for (provider of providers(); track provider.id) {
+        <div class="provider">
+          <div class="provider__head">
+            <label class="provider__toggle">
+              <input
+                type="checkbox"
+                [checked]="provider.enabled === true"
+                [disabled]="busy() === provider.id"
+                (change)="setEnabled(provider, $any($event.target).checked)"
+              />
+              <span class="provider__name">{{ provider.display_name ?? provider.id }}</span>
+            </label>
+            <span class="dim">{{ provider.id }}</span>
+          </div>
+
+          <div class="quota">
+            <span class="quota__bar" aria-hidden="true">
+              @if (usedPercent(provider) !== null) {
+                <span
+                  class="quota__fill"
+                  [class.quota__fill--tight]="tight(provider)"
+                  [style.width.%]="usedPercent(provider)"
+                ></span>
+              }
+            </span>
+            <span class="quota__label" [class.neg]="tight(provider)">
+              {{ usedLabel(provider) }}
+            </span>
+          </div>
+
+          @if (provider.quota_used === null || provider.quota_used === undefined) {
+            <!-- Not zero used. Nothing has been asked of this provider yet, and a
+                 bar at 0% would read as "plenty left" rather than "unknown". -->
+            <p class="provider__note">
+              No credit usage reported yet — the provider has not answered a request in this
+              window, so this is unknown rather than zero.
+            </p>
+          }
+
+          <div class="provider__row">
+            <label class="field__label" [attr.for]="'budget-' + provider.id">
+              Monthly budget
+            </label>
+            <input
+              [id]="'budget-' + provider.id"
+              type="number"
+              min="0"
+              step="1"
+              class="budget"
+              [value]="provider.quota_budget ?? 0"
+              [disabled]="busy() === provider.id"
+              (change)="setBudget(provider, $any($event.target).value)"
+            />
+            <span class="dim">credits</span>
+            <span class="provider__reset">
+              resets {{ provider.quota_reset_at ? time(provider.quota_reset_at) : noData }}
+            </span>
+          </div>
+        </div>
+      } @empty {
+        <p class="empty">
+          @if (loading()) {
+            Reading…
+          } @else {
+            <strong>No provider has reported yet.</strong> Unlike the sportsbook list, this one
+            is not seeded at bootstrap — a row appears the first time an adapter answers and
+            records its credit usage, because §8 makes the provider's own response header the
+            only source of truth for <code>quota_used</code>. So an empty list means no live
+            call has been made from this cluster, not that anything is misconfigured.
+          }
+        </p>
+      }
+    }
+  </ui-panel>
+</div>

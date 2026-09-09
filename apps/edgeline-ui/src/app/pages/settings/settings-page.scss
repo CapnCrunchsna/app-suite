@@ -1,0 +1,146 @@
+.group {
+  display: block;
+  margin-bottom: 20px;
+}
+
+.group__blurb {
+  margin: 0 0 16px;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 4px 16px;
+  align-items: baseline;
+}
+
+.row .field__label {
+  grid-column: 1;
+}
+
+.row__input {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The hint sits under the input rather than under the label: it is about the
+ * value, and a reader scanning the right-hand column should not have to travel
+ * back across the row to find out what they are changing. */
+.row .field__hint,
+.row .field__error {
+  grid-column: 2;
+  margin: 0;
+}
+
+.row--bool {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.row--bool .field__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1;
+}
+
+.row--bool .field__hint {
+  grid-column: 1;
+}
+
+.money-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.money-input__mark {
+  color: var(--text-dim);
+}
+
+input.wide {
+  width: 100%;
+  max-width: 420px;
+}
+
+input[type='number'] {
+  width: 130px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.row__unit {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+
+.save__count {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.notice--bad {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger-soft);
+}
+
+.safety {
+  display: block;
+  border-color: var(--caution);
+}
+
+.safety__pending {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--caution);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--caution) 10%, var(--surface));
+}
+
+.safety__pending--loosening {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+}
+
+.safety__lede {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+}
+
+.safety__list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 0.88rem;
+}
+
+.safety__list li + li {
+  margin-top: 6px;
+}
+
+.safety__confirm {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.safety__actions {
+  display: flex;
+  gap: 10px;
+}

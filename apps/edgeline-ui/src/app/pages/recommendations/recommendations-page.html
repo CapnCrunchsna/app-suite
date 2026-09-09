@@ -1,0 +1,221 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Recommendations</h1>
+    <p class="page__lede">
+      Everything the engine has told you to look at, with the opportunity and the graded result
+      joined on. Confirming a bet records what <em>you</em> placed — Edgeline never places one.
+    </p>
+  </header>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  @if (failure()) {
+    <p class="notice notice--bad" role="alert">{{ failure() }}</p>
+  }
+
+  <ui-panel heading="History">
+    <div class="toolbar">
+      <label class="toolbar__field">
+        <span>Mode</span>
+        <select [value]="paperFilter()" (change)="setPaperFilter($any($event.target).value)">
+          <option value="all">all</option>
+          <option value="paper">paper only</option>
+          <option value="executed">live only</option>
+        </select>
+      </label>
+
+      <label class="toolbar__field">
+        <span>From</span>
+        <input type="date" [value]="from()" (change)="setFrom($any($event.target).value)" />
+      </label>
+
+      <label class="toolbar__field">
+        <span>To</span>
+        <input type="date" [value]="to()" (change)="setTo($any($event.target).value)" />
+      </label>
+
+      @if (filtered()) {
+        <button type="button" class="button" (click)="clearFilters()">Clear filters</button>
+      }
+    </div>
+
+    @if (loadError()) {
+      <p class="failure">
+        Could not read recommendations. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Sent</th>
+              <th>Market</th>
+              <th class="num">Edge</th>
+              <th>Stake plan</th>
+              <th>Mode</th>
+              <th>Result</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              @let stakePlan = plan(row);
+              <tr>
+                <td>{{ time(row.sent_at) }}</td>
+                <td>
+                  {{ row.opportunity?.market_key ?? '—' }}
+                  <span class="dim block">{{ row.opportunity?.event_id ?? '' }}</span>
+                </td>
+                <td class="num">{{ percent(row.opportunity?.edge_pct) }}</td>
+                <td>
+                  <span class="plan__total">{{ money(stakePlan.totalCents) }}</span>
+                  <span class="dim">· {{ stakePlan.method }}</span>
+                  @if (stakePlan.guardrails.length) {
+                    <span class="dim block">capped by {{ stakePlan.guardrails.join(', ') }}</span>
+                  }
+                  @for (leg of stakePlan.legs; track leg.bookKey + leg.selection) {
+                    <span class="leg">
+                      <span class="leg__book">{{ leg.bookKey }}</span>
+                      <span class="leg__pick">{{ leg.selection }}</span>
+                      <span class="leg__stake">{{ money(leg.stakeCents) }}</span>
+                      @if (hasLink(leg)) {
+                        <a
+                          class="leg__link"
+                          [href]="leg.deepLink"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          open ({{ leg.linkLevel }})
+                        </a>
+                      } @else {
+                        <!-- §16.3: no verified template for this book yet
+                             (T4.3). Absent in words, never a dead anchor. -->
+                        <span class="no-link" title="No verified link template for this book yet">
+                          no link — open the book yourself
+                        </span>
+                      }
+                    </span>
+                  }
+                </td>
+                <td>
+                  <span class="chip" [class.chip--paper]="row.paper">
+                    {{ row.paper ? 'PAPER' : 'LIVE' }}
+                  </span>
+                </td>
+                <td>
+                  @if (row.result) {
+                    <span [class.pos]="row.result.pnl_cents > 0" [class.neg]="row.result.pnl_cents < 0">
+                      {{ row.result.outcome }} {{ signedMoney(row.result.pnl_cents) }}
+                    </span>
+                    <span class="dim block">
+                      CLV
+                      @if (row.result.clv_pct === null || row.result.clv_pct === undefined) {
+                        <!-- Not zero. No closing line was captured for this one. -->
+                        not captured
+                      } @else {
+                        {{ signedPercent(row.result.clv_pct) }}
+                      }
+                    </span>
+                  } @else {
+                    <span class="dim">ungraded</span>
+                  }
+                </td>
+                <td>
+                  @if (isExecuted(row)) {
+                    <span class="dim">confirmed</span>
+                  } @else {
+                    <button type="button" class="button" (click)="openConfirm(row)">
+                      Confirm bet
+                    </button>
+                  }
+                </td>
+              </tr>
+
+              @if (confirming() === row.id) {
+                <tr class="dialog-row">
+                  <td colspan="7">
+                    <div class="dialog" role="dialog" aria-label="Confirm a bet you placed">
+                      <p class="dialog__lede">
+                        <strong>This records a bet you have already placed.</strong> Edgeline
+                        does not place bets and cannot — enter what the book actually gave you,
+                        which will usually differ from what was recommended. That difference is
+                        the point: it is what makes the P&amp;L and the CLV on this row real
+                        rather than hypothetical.
+                      </p>
+
+                      <div class="dialog__fields">
+                        <label class="field">
+                          <span class="field__label">Stake you placed</span>
+                          <span class="money-input">
+                            <span class="money-input__mark">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              [value]="stakeDollars()"
+                              (input)="stakeDollars.set($any($event.target).value)"
+                            />
+                          </span>
+                          <span class="field__hint">
+                            Recommended {{ money(stakePlan.totalCents) }}.
+                          </span>
+                        </label>
+
+                        <label class="field">
+                          <span class="field__label">Decimal odds you got</span>
+                          <input
+                            type="number"
+                            step="0.0001"
+                            min="1.0001"
+                            [value]="oddsDecimal()"
+                            (input)="oddsDecimal.set($any($event.target).value)"
+                          />
+                          <span class="field__hint">
+                            {{ oddsAmerican() }} in American odds. Must be above 1.
+                          </span>
+                        </label>
+                      </div>
+
+                      <div class="dialog__actions">
+                        <button
+                          type="button"
+                          class="button button--primary"
+                          [disabled]="!confirmValid() || saving()"
+                          (click)="confirm(row)"
+                        >
+                          {{ saving() ? 'Recording…' : 'Record this bet' }}
+                        </button>
+                        <button type="button" class="button" (click)="closeConfirm()">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  <p class="empty">
+                    @if (loading()) {
+                      Reading…
+                    } @else if (filtered()) {
+                      <strong>Nothing matches these filters.</strong>
+                    } @else {
+                      <strong>Nothing has been recommended yet.</strong> A recommendation needs
+                      a detected opportunity that clears <code>ev_threshold_pct</code> at a
+                      book you have enabled, and that has not happened. The dashboard says
+                      which half is missing — enabled books, or detections.
+                    }
+                  </p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ui-panel>
+</div>

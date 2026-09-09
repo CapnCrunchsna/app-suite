@@ -1,4 +1,81 @@
-<h1>Edgeline</h1>
-<p>Configuration and monitoring UI. The pages land in Phase 3 — dashboard, opportunities,
-recommendations, results, settings, sportsbooks, providers and the matching queue.</p>
-<router-outlet></router-outlet>
+<header class="header">
+  <a
+    class="header__brand"
+    routerLink="/dashboard"
+    routerLinkActive="header__brand--here"
+    [routerLinkActiveOptions]="{ exact: true }"
+  >
+    <span class="header__name">Edgeline</span>
+  </a>
+  <!-- §16.1 in the masthead, not only in the code. A configuration screen for a
+       betting engine is exactly the thing someone assumes places bets. -->
+  <span class="header__tagline">finds bets · never places them</span>
+  <span class="header__spacer"></span>
+
+  <!-- §16.2's flag, on every page because every page here is betting advice. -->
+  <span
+    class="header__badge"
+    [class.header__badge--paper]="paperMode()"
+    [class.header__badge--live]="!paperMode()"
+    [title]="
+      paperMode()
+        ? 'paper_mode is on: recommendations are recorded and alerted, flagged PAPER. No money is at stake unless you place one yourself.'
+        : 'paper_mode is OFF. Recommendations are live-money advice.'
+    "
+  >
+    {{ paperMode() ? 'PAPER' : 'LIVE' }}
+  </span>
+
+  <span
+    class="header__badge"
+    [class.header__badge--killed]="killSwitch()"
+    [title]="
+      killSwitch()
+        ? 'kill_switch is on: polling continues so data stays continuous, but nothing is being alerted.'
+        : 'Alerting is on.'
+    "
+  >
+    {{ killSwitch() ? 'ALERTS OFF' : 'ALERTS ON' }}
+  </span>
+
+  <ui-theme-switcher />
+</header>
+
+@if (killSwitch()) {
+  <!-- The one state that reads as "working fine" from every table in the app:
+       opportunities keep arriving and nothing goes out. §3.2 spells the
+       asymmetry out, so the banner does too. -->
+  <p class="banner banner--killed" role="status">
+    <strong>Alerting is stopped.</strong> Polling continues and opportunities keep being
+    recorded, so the tables below stay live — but nothing is being sent anywhere. Resume from
+    the dashboard.
+  </p>
+}
+
+@if (failure()) {
+  <p class="banner banner--down" role="alert">
+    <strong>The engine is not answering.</strong> Every figure in this app comes from
+    <code>edgeline-api</code>, which has to be running: <code>nx run edgeline-api:serve</code>.
+    Nothing below is current until it is.
+  </p>
+}
+
+<div class="shell">
+  <nav class="rail" aria-label="Sections">
+    @for (section of sections; track section.path) {
+      <a
+        class="rail__item"
+        [routerLink]="section.path"
+        routerLinkActive="rail__item--active"
+        #active="routerLinkActive"
+        [attr.aria-current]="active.isActive ? 'page' : null"
+      >
+        {{ section.label }}
+      </a>
+    }
+  </nav>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

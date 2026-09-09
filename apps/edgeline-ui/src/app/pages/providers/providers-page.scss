@@ -1,0 +1,90 @@
+.provider + .provider {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.provider__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.provider__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.provider__name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.quota {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quota__bar {
+  display: block;
+  flex: 1;
+  max-width: 460px;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+}
+
+.quota__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Past four-fifths the remaining credits are the thing to look at, not the
+ * spent ones. §8.4 only checks the budget at startup, so a cadence that fitted
+ * at boot can still run the month dry. */
+.quota__fill--tight {
+  background: var(--caution);
+}
+
+.quota__label {
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.provider__note {
+  margin: 8px 0 0;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.provider__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.budget {
+  width: 110px;
+  text-align: right;
+}
+
+.provider__reset {
+  margin-left: 12px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.notice--bad {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger-soft);
+}

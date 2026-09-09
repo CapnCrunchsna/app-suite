@@ -1,0 +1,84 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Matching</h1>
+    <p class="page__lede">
+      Rows the normalizer refused to map. Quarantining is the correct outcome, not a failure —
+      a guessed cross-book match is two different selections treated as one, which produces a
+      confident arbitrage between a team and a total.
+    </p>
+  </header>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  @if (failure()) {
+    <p class="notice notice--bad" role="alert">{{ failure() }}</p>
+  }
+
+  <ui-panel [heading]="showResolved() ? 'Reviewed' : 'Quarantine queue'">
+    <div class="toolbar">
+      <button type="button" class="button" (click)="toggleResolved()">
+        {{ showResolved() ? 'Show the queue' : 'Show reviewed rows' }}
+      </button>
+      <span class="toolbar__count">
+        {{ rows().length }} row{{ rows().length === 1 ? '' : 's' }}
+      </span>
+    </div>
+
+    @if (loadError()) {
+      <p class="failure">
+        Could not read the queue. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    } @else {
+      @for (row of rows(); track row.id) {
+        <div class="item">
+          <div class="item__head">
+            <button
+              type="button"
+              class="item__toggle"
+              [attr.aria-expanded]="expanded() === row.id"
+              (click)="toggleRow(row.id)"
+            >
+              {{ expanded() === row.id ? '▾' : '▸' }}
+              <span class="item__reason">{{ row.reason }}</span>
+            </button>
+            <span class="dim">{{ row.provider_key }}</span>
+            <span class="dim">{{ time(row.created_at) }}</span>
+            <span class="item__spacer"></span>
+            @if (!row.resolved) {
+              <button
+                type="button"
+                class="button"
+                [disabled]="busy() === row.id"
+                (click)="resolve(row)"
+              >
+                {{ busy() === row.id ? 'Marking…' : 'Mark reviewed' }}
+              </button>
+            } @else {
+              <span class="dim">reviewed</span>
+            }
+          </div>
+
+          @if (expanded() === row.id) {
+            <!-- Verbatim, not summarised. What put this row here is that nothing
+                 could be trusted to read it. -->
+            <pre class="item__raw">{{ raw(row) }}</pre>
+          }
+        </div>
+      } @empty {
+        <p class="empty">
+          @if (loading()) {
+            Reading…
+          } @else if (showResolved()) {
+            <strong>Nothing has been reviewed yet.</strong>
+          } @else {
+            <strong>The quarantine queue is empty.</strong> That is the good state: every row
+            the normalizer has seen so far mapped cleanly onto a canonical event and selection.
+            Rows appear here when they do not, and they wait rather than being guessed at.
+          }
+        </p>
+      }
+    }
+  </ui-panel>
+</div>

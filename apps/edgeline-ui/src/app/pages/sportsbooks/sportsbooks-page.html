@@ -1,0 +1,176 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Sportsbooks</h1>
+    <p class="page__lede">
+      Which books you can actually bet at. Enabling one makes its prices eligible for
+      recommendations; it does not create an account, log in anywhere, or place anything.
+    </p>
+  </header>
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  @if (failure()) {
+    <p class="notice notice--bad" role="alert">{{ failure() }}</p>
+  }
+
+  <ui-panel heading="Books">
+    @if (loadError()) {
+      <p class="failure">
+        Could not read the sportsbook list. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    } @else {
+      <p class="lede">
+        <strong>{{ enabledCount() }}</strong> of {{ books().length }} enabled. A +EV call needs
+        several books quoting the same market before it means anything, and an arbitrage needs
+        two — so enabling one book changes the dashboard's arithmetic but not its answer.
+      </p>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>On</th>
+              <th>Book</th>
+              <th>MD licensed</th>
+              <th class="num">Priority</th>
+              <th>Deep links</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (bk of books(); track bk.id) {
+              <tr [class.row--off]="!bk.enabled">
+                <td>
+                  <input
+                    type="checkbox"
+                    [checked]="bk.enabled === true"
+                    [disabled]="busy() === bk.id"
+                    [attr.aria-label]="'Enable ' + (bk.display_name ?? bk.id)"
+                    (change)="setEnabled(bk, $any($event.target).checked)"
+                  />
+                </td>
+                <td>
+                  {{ bk.display_name ?? bk.id }}
+                  <span class="dim key">{{ bk.id }}</span>
+                </td>
+                <td>
+                  @if (bk.md_licensed === true) {
+                    <span class="chip chip--ok">verified</span>
+                  } @else if (bk.md_licensed === false) {
+                    <span class="chip chip--bad">not licensed</span>
+                  } @else {
+                    <span class="dim">unverified</span>
+                  }
+                </td>
+                <td class="num">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="priority"
+                    [value]="bk.priority ?? 0"
+                    [disabled]="busy() === bk.id"
+                    [attr.aria-label]="'Priority for ' + (bk.display_name ?? bk.id)"
+                    (change)="setPriority(bk, $any($event.target).value)"
+                  />
+                </td>
+                <td>
+                  @if (hasLinks(bk)) {
+                    {{ linkSummary(bk) }}
+                  } @else {
+                    <!-- §16.3: no book has a verified template yet, and a guessed
+                         one is worse than none. Absent, visibly. -->
+                    <span class="no-link">no link</span>
+                  }
+                </td>
+                <td>
+                  <button type="button" class="button" (click)="openLinks(bk)">
+                    Edit links
+                  </button>
+                </td>
+              </tr>
+
+              @if (editing() === bk.id) {
+                <tr class="editor">
+                  <td colspan="6">
+                    <p class="editor__lede">
+                      §9.4's ladder, highest first. The engine uses the highest rung whose
+                      placeholders it can fill and records which one it used. Nothing here is
+                      guessed for you — a wrong URL sends a person to the wrong market on a
+                      real sportsbook with money in hand, which is why an empty rung is the
+                      correct answer until you have opened the page yourself.
+                    </p>
+
+                    @for (level of levels; track level) {
+                      <div class="editor__row">
+                        <label class="editor__label" [attr.for]="'tpl-' + bk.id + '-' + level">
+                          {{ level }}
+                        </label>
+                        <input
+                          [id]="'tpl-' + bk.id + '-' + level"
+                          type="text"
+                          class="editor__input"
+                          [value]="draft()[level]"
+                          [placeholder]="
+                            level === 'book_home'
+                              ? 'https://sportsbook.example.com/'
+                              : 'https://sportsbook.example.com/event/{event_id}'
+                          "
+                          (input)="setDraft(level, $any($event.target).value)"
+                        />
+                        <button
+                          type="button"
+                          class="button"
+                          [disabled]="!testable(draft()[level])"
+                          [title]="
+                            testable(draft()[level])
+                              ? 'Opens this URL in a new tab'
+                              : whyNotTestable(draft()[level])
+                          "
+                          (click)="testLink(draft()[level])"
+                        >
+                          Test link
+                        </button>
+                      </div>
+                      @if (draft()[level] && !testable(draft()[level])) {
+                        <p class="editor__why">{{ whyNotTestable(draft()[level]) }}</p>
+                      }
+                    }
+
+                    <div class="editor__actions">
+                      <button
+                        type="button"
+                        class="button button--primary"
+                        [disabled]="busy() === bk.id"
+                        (click)="saveLinks(bk)"
+                      >
+                        Save templates
+                      </button>
+                      <button type="button" class="button" (click)="closeLinks()">Cancel</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="6">
+                  <p class="empty">
+                    @if (loading()) {
+                      Reading…
+                    } @else {
+                      <strong>No sportsbooks are seeded.</strong> The engine seeds this list at
+                      bootstrap, so an empty table means it has not reached Elasticsearch —
+                      check that the cluster is up.
+                    }
+                  </p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ui-panel>
+</div>

@@ -50,6 +50,9 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
+      "options": {
+        "proxyConfig": "apps/edgeline-ui/proxy.conf.json"
+      },
       "configurations": {
         "production": {
           "buildTarget": "edgeline-ui:build:production"

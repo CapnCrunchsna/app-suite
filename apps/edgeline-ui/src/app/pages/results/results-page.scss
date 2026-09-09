@@ -1,0 +1,41 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.toolbar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.segmented {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.segmented__item {
+  padding: 7px 14px;
+  border: none;
+  background: var(--surface);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.segmented__item + .segmented__item {
+  border-left: 1px solid var(--border);
+}
+
+.segmented__item--on {
+  background: var(--surface-2);
+  color: var(--accent);
+  font-weight: 600;
+}

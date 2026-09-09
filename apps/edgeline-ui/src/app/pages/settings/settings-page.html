@@ -1,0 +1,201 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Settings</h1>
+    <p class="page__lede">
+      Every runtime value the engine reads (§3.2), grouped by what it governs. Changes are
+      written to the single settings document the scheduler, the detectors and the grader all
+      read, so they take effect on the next cycle rather than on a restart.
+    </p>
+  </header>
+
+  @if (loadError()) {
+    <ui-panel>
+      <p class="failure">
+        Could not read settings. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    </ui-panel>
+  }
+
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  @if (failure()) {
+    <p class="notice notice--bad" role="alert">{{ failure() }}</p>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    @for (group of groups; track group.id) {
+      <ui-panel class="group" [heading]="group.title">
+        <p class="group__blurb">{{ group.blurb }}</p>
+
+        <div class="fields">
+          @for (field of group.fields; track field.key) {
+            <div class="field row">
+              <label class="field__label" [attr.for]="'set-' + field.key">
+                {{ field.label }}
+              </label>
+
+              <div class="row__input">
+                @switch (field.kind) {
+                  @case ('select') {
+                    <select
+                      [id]="'set-' + field.key"
+                      [formControlName]="field.key"
+                      (change)="onInput()"
+                    >
+                      @for (option of field.options; track option) {
+                        <option [value]="option">{{ option }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('cents') {
+                    <span class="money-input">
+                      <span class="money-input__mark">$</span>
+                      <input
+                        [id]="'set-' + field.key"
+                        type="number"
+                        step="0.01"
+                        [attr.min]="field.min"
+                        [formControlName]="field.key"
+                        (input)="onInput()"
+                      />
+                    </span>
+                    <!-- §1 stores integer cents. Showing what will actually be
+                         written keeps the representation visible instead of
+                         implied by a field name the reader cannot see. -->
+                    <span class="row__unit">{{ centsEcho(field.key) }}</span>
+                  }
+                  @case ('number') {
+                    <input
+                      [id]="'set-' + field.key"
+                      type="number"
+                      [attr.step]="field.step"
+                      [attr.min]="field.min"
+                      [formControlName]="field.key"
+                      (input)="onInput()"
+                    />
+                    @if (field.unit) {
+                      <span class="row__unit">{{ field.unit }}</span>
+                    }
+                  }
+                  @default {
+                    <input
+                      [id]="'set-' + field.key"
+                      type="text"
+                      class="wide"
+                      [formControlName]="field.key"
+                      (input)="onInput()"
+                    />
+                  }
+                }
+              </div>
+
+              <p class="field__hint">
+                <code>{{ field.key }}</code> — {{ field.hint }}
+              </p>
+              @if (errorFor(field.key); as error) {
+                <p class="field__error">{{ error }}</p>
+              }
+            </div>
+          }
+        </div>
+      </ui-panel>
+    }
+
+    <div class="save">
+      <button type="submit" class="button button--primary" [disabled]="saving() || pendingCount() === 0">
+        {{ saving() ? 'Saving…' : 'Save changes' }}
+      </button>
+      <span class="save__count">
+        @if (pendingCount() === 0) {
+          Nothing changed.
+        } @else {
+          {{ pendingCount() }} setting{{ pendingCount() === 1 ? '' : 's' }} will be sent — only
+          the ones you changed.
+        }
+      </span>
+    </div>
+  </form>
+
+  <!-- §11.1's fourth group, and the reason it is not in the form above:
+       §16.2 reserves loosening a guardrail to an explicit user action, and a
+       flag that saves alongside `poll_interval_s` is a flag that gets flipped
+       while doing something else. -->
+  <ui-panel [heading]="safety.title" class="safety">
+    <p class="group__blurb">{{ safety.blurb }}</p>
+
+    <form [formGroup]="safetyForm">
+      <div class="fields">
+        @for (field of safety.fields; track field.key) {
+          <div class="field row row--bool">
+            <label class="field__label" [attr.for]="'set-' + field.key">
+              <input
+                [id]="'set-' + field.key"
+                type="checkbox"
+                [formControlName]="field.key"
+                (change)="onInput()"
+              />
+              {{ field.label }}
+            </label>
+            <p class="field__hint">
+              <code>{{ field.key }}</code> — {{ field.hint }}
+            </p>
+          </div>
+        }
+      </div>
+    </form>
+
+    @if (hasSafetyChanges()) {
+      <div class="safety__pending" [class.safety__pending--loosening]="loosening()">
+        <p class="safety__lede">
+          @if (loosening()) {
+            <strong>This removes a protection.</strong>
+          } @else {
+            <strong>This adds a protection.</strong>
+          }
+          Nothing is written until you press the button below.
+        </p>
+        <ul class="safety__list">
+          @for (change of safetyChanges(); track change.key) {
+            <li>
+              <strong>{{ change.label }}</strong>: {{ change.from ? 'on' : 'off' }} →
+              {{ change.to ? 'on' : 'off' }}.
+              @if (change.key === 'paper_mode' && !change.to) {
+                Recommendations become live-money advice. §15's go-live gate expects at least
+                200 paper recommendations and a reviewed CLV report first — the engine still
+                never places a bet, but what it tells you will no longer be flagged as
+                hypothetical.
+              }
+              @if (change.key === 'kill_switch' && !change.to) {
+                Alerting starts again. If the daily loss stop is what engaged it, today's
+                losses have already reached the stop.
+              }
+            </li>
+          }
+        </ul>
+
+        @if (!confirmingSafety()) {
+          <button type="button" class="button button--danger" (click)="stageSafety()">
+            Review this change
+          </button>
+        } @else {
+          <p class="safety__confirm">
+            You are about to change a guardrail. This is the only action in the app that does.
+          </p>
+          <div class="safety__actions">
+            <button
+              type="button"
+              class="button button--danger"
+              [disabled]="saving()"
+              (click)="applySafety()"
+            >
+              {{ saving() ? 'Applying…' : 'Yes — apply' }}
+            </button>
+            <button type="button" class="button" (click)="cancelSafety()">Cancel</button>
+          </div>
+        }
+      </div>
+    }
+  </ui-panel>
+</div>

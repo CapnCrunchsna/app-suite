@@ -1,0 +1,125 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Opportunities</h1>
+    <p class="page__lede">
+      What the detectors found, before the alerting thresholds had their say. A row here with
+      no recommendation against it is usually <code>min_edge_to_bet_pct</code> doing its job —
+      logged, deliberately not worth telling you about.
+    </p>
+  </header>
+
+  <ui-panel heading="Live">
+    <div class="toolbar">
+      <label class="toolbar__field">
+        <span>Status</span>
+        <select [value]="statusFilter()" (change)="setStatus($any($event.target).value)">
+          @for (option of statuses; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="toolbar__field">
+        <span>Type</span>
+        <select [value]="typeFilter()" (change)="setType($any($event.target).value)">
+          @for (option of types; track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+
+      <span class="toolbar__spacer"></span>
+
+      <span class="toolbar__status">
+        @if (loading()) {
+          reading…
+        } @else if (lastRefresh()) {
+          updated {{ time(lastRefresh()) }} · refreshes every 15s
+        }
+      </span>
+      <button type="button" class="button" (click)="refreshNow()">Refresh now</button>
+    </div>
+
+    @if (loadError()) {
+      <p class="failure">
+        Could not read opportunities. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Detected</th>
+              <th>Type</th>
+              <th>Market</th>
+              <th class="num">Edge</th>
+              <th>Legs</th>
+              <th>Status</th>
+              <th class="num">Closing edge</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.id) {
+              <tr>
+                <td>{{ time(row.detected_at) }}</td>
+                <td>
+                  <span class="chip" [class.chip--arb]="row.type === 'arb'">{{ row.type }}</span>
+                </td>
+                <td>
+                  {{ row.market_key }}
+                  <span class="dim block">{{ row.event_id }}</span>
+                </td>
+                <td class="num">{{ percent(row.edge_pct) }}</td>
+                <td>
+                  @for (leg of row.legs; track leg.book_key + leg.selection) {
+                    <span class="leg" [class.leg--first]="leg.bet_first">
+                      <span class="leg__book">{{ leg.book_key }}</span>
+                      <span class="leg__pick">{{ leg.selection }}</span>
+                      @if (leg.line !== null && leg.line !== undefined) {
+                        <span class="dim">{{ leg.line }}</span>
+                      }
+                      <span class="leg__price">
+                        {{ odds(leg.price_decimal) }}
+                        <span class="dim">({{ american(leg.price_decimal) }})</span>
+                      </span>
+                      @if (leg.bet_first) {
+                        <!-- §6.6: the leg more likely to move is the one you
+                             place first, and getting the order wrong is how a
+                             two-leg arb becomes a one-leg bet. -->
+                        <span class="leg__flag" title="Place this leg first (§6.6)">1st</span>
+                      }
+                    </span>
+                  } @empty {
+                    <span class="dim">—</span>
+                  }
+                </td>
+                <td>{{ row.status }}</td>
+                <td class="num">{{ percent(row.closing_edge_pct) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  <p class="empty">
+                    @if (loading()) {
+                      Reading…
+                    } @else if (filtered()) {
+                      <strong>Nothing matches these filters.</strong> Clear them to see
+                      everything that has been detected.
+                    } @else {
+                      <strong>Nothing has been detected.</strong> Prices are polled and stored
+                      whether or not anything clears a threshold, so an empty table here means
+                      no market has produced a detection yet — not that polling has stopped.
+                      Check the worker's heartbeat on the dashboard, and that enough books are
+                      enabled for a comparison to be possible at all.
+                    }
+                  </p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ui-panel>
+</div>

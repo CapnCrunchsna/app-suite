@@ -1,0 +1,152 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Results</h1>
+    <p class="page__lede">
+      What happened after the alert. While paper mode is on the P&amp;L is hypothetical by
+      construction — CLV is the number carrying information about whether the detector is
+      finding real edges.
+    </p>
+  </header>
+
+  <div class="toolbar">
+    <label class="toolbar__field">
+      <span>Group by</span>
+      <select [value]="group()" (change)="setGroup($any($event.target).value)">
+        <option value="day">day</option>
+        <option value="week">week</option>
+      </select>
+    </label>
+
+    <!-- §11.1's rec-vs-executed toggle. -->
+    <div class="segmented" role="group" aria-label="Recommended or executed">
+      <button
+        type="button"
+        class="segmented__item"
+        [class.segmented__item--on]="scope() === 'all'"
+        (click)="setScope('all')"
+      >
+        All recommendations
+      </button>
+      <button
+        type="button"
+        class="segmented__item"
+        [class.segmented__item--on]="scope() === 'executed'"
+        (click)="setScope('executed')"
+      >
+        Executed only
+      </button>
+    </div>
+  </div>
+
+  <div class="tiles">
+    <!-- CLV first, deliberately. It is the figure §15's go-live gate rests on,
+         and the only one that means anything while nothing is placed. -->
+    <div class="tile">
+      <span class="tile__label">Average CLV</span>
+      <span class="tile__value">{{ signedPercent(totals().avg_clv_pct) }}</span>
+      <span class="tile__sub">
+        @if (totals().avg_clv_pct === null || totals().avg_clv_pct === undefined) {
+          no closing lines captured yet
+        } @else {
+          against the closing line
+        }
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">P&amp;L</span>
+      <span
+        class="tile__value"
+        [class.pos]="pnlCents() > 0"
+        [class.neg]="pnlCents() < 0"
+      >
+        {{ nothingGraded() ? noData : signedMoney(pnlCents()) }}
+      </span>
+      <span class="tile__sub">
+        {{ countLabel() }}{{ status.paperMode() && scope() === 'all' ? ' · hypothetical' : '' }}
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">Hit rate</span>
+      <span class="tile__value">{{ ratio(totals().hit_rate) }}</span>
+      <span class="tile__sub">
+        @if (nothingSettled()) {
+          <!-- Not 0%. Nothing has settled, which is a different claim. -->
+          nothing has settled yet
+        } @else {
+          {{ totals().wins ?? 0 }} of {{ totals().settled ?? 0 }} settled
+        }
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">Executed</span>
+      <span class="tile__value">{{ executedCount() }}</span>
+      <span class="tile__sub">
+        of {{ totals().graded }} graded · {{ signedMoney(executedPnlCents()) }}
+      </span>
+    </div>
+  </div>
+
+  <ui-panel [heading]="group() === 'day' ? 'Per day' : 'Per week'">
+    @if (loadError()) {
+      <p class="failure">
+        Could not read results. The engine has to be running:
+        <code>nx run edgeline-api:serve</code>.
+      </p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ group() === 'day' ? 'Day' : 'Week of' }}</th>
+              <th class="num">{{ scope() === 'executed' ? 'Executed' : 'Graded' }}</th>
+              <th class="num">P&amp;L</th>
+              <th class="num">Hit rate</th>
+              <th class="num">Avg CLV</th>
+              <th class="num">Paper</th>
+              <th class="num">Needs review</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (bucket of buckets(); track bucket.key) {
+              <tr>
+                <td>{{ day(bucket.key) }}</td>
+                <td class="num">{{ bucketCount(bucket) }}</td>
+                <td
+                  class="num"
+                  [class.pos]="bucketPnl(bucket) > 0"
+                  [class.neg]="bucketPnl(bucket) < 0"
+                >
+                  {{ signedMoney(bucketPnl(bucket)) }}
+                </td>
+                <td class="num">{{ ratio(bucket.hit_rate) }}</td>
+                <td class="num">{{ signedPercent(bucket.avg_clv_pct) }}</td>
+                <td class="num dim">{{ bucket.paper }}</td>
+                <td class="num" [class.neg]="bucket.needs_manual > 0">
+                  {{ bucket.needs_manual }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">
+                  <p class="empty">
+                    @if (loading()) {
+                      Reading…
+                    } @else {
+                      <strong>Nothing has been graded.</strong> The grading job runs nightly and
+                      grades recommendations that have a finished event behind them — with no
+                      recommendations yet, there is nothing for it to grade. An em-dash in the
+                      tiles above means <em>no data</em>, not zero.
+                    }
+                  </p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ui-panel>
+</div>

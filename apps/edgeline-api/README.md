@@ -270,8 +270,11 @@ file.
 
 ## The UI
 
-`edgeline-ui` (Angular, spec §11) **is scaffolded** as of commit bbd1125 — an app shell that
-lints, typechecks, tests and builds. Its pages are Phase 3 work.
+`edgeline-ui` (Angular, spec §11) was scaffolded in commit bbd1125 and now has §11.1's eight
+pages (T3.3). **`apps/edgeline-ui/README.md` is the one to read** for how to run it and how it
+reaches this API — the short version is that the dev server proxies `/api` to `:8000`, so this
+app needs no CORS middleware and the UI's base URL is the same empty string in dev and in
+production, where §10 has FastAPI serve the bundle at `/`.
 
 Getting it in took a bypass worth knowing about. `nx g @nx/angular:application` refuses in this
 workspace: the generator asserts against Nx's TS solution setup, which is exactly what this

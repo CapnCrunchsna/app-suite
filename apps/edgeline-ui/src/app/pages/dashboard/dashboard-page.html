@@ -1,0 +1,250 @@
+<div class="page">
+  <header class="page__head">
+    <h1 class="page__title">Dashboard</h1>
+    <p class="page__lede">
+      What the engine is doing right now, and what it would need before it could do anything.
+    </p>
+  </header>
+
+  <div class="tiles">
+    <div class="tile">
+      <span class="tile__label">Bankroll</span>
+      <span class="tile__value">{{ money(bankrollCents()) }}</span>
+      <span class="tile__sub">
+        ledger total across books · <a routerLink="/results">results</a>
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">Today's recommendations</span>
+      <span class="tile__value">{{ today().length }}</span>
+      <span class="tile__sub">
+        since local midnight{{ status.paperMode() ? ', all flagged PAPER' : '' }}
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">Sportsbooks enabled</span>
+      <span class="tile__value">{{ enabledBooks().length }}<span class="tile__of">/{{ bookCount() }}</span></span>
+      <span class="tile__sub">
+        <a routerLink="/sportsbooks">
+          {{
+            enabledBooks().length === bookCount()
+              ? 'priority and link templates'
+              : 'enable the ones you hold'
+          }}
+        </a>
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">Worker</span>
+      <span class="tile__value tile__value--small" [class.neg]="!workerAlive()">
+        {{ heartbeatAt() ? (workerAlive() ? 'alive' : 'stopped') : 'never seen' }}
+      </span>
+      <span class="tile__sub">
+        @if (heartbeatAt()) {
+          heartbeat {{ heartbeatAge() }}
+        } @else {
+          no heartbeat recorded — <code>nx run edgeline-api:worker</code>
+        }
+      </span>
+    </div>
+  </div>
+
+  <!-- The page's real job today. An empty table with no sentence under it reads
+       as a broken engine; this says which of the two silences it is. -->
+  <ui-panel heading="What the detectors need">
+    <p class="reason">
+      @if (blockedReason() === 'no-books') {
+        <strong>No sportsbook is enabled.</strong> Prices are still polled and stored, but a
+        detection needs books you can actually bet at, and none are switched on. Enable the
+        ones you hold accounts with on <a routerLink="/sportsbooks">Sportsbooks</a>.
+      } @else if (blockedReason() === 'ev-and-arb') {
+        <strong>One book is not enough for either detector.</strong> An arbitrage is two
+        prices at two different books, so it needs at least {{ arbMinBooks }}; a +EV call is
+        measured against a consensus, which needs {{ evMinBooks() }}.
+      } @else if (blockedReason() === 'ev-only') {
+        <strong>Arbitrage can fire; +EV cannot.</strong> You have
+        {{ enabledBooks().length }} books enabled, which is enough for an arb (needs
+        {{ arbMinBooks }}) but short of the {{ evMinBooks() }} a +EV call needs — so no market
+        can clear the consensus gate, however the prices move.
+      } @else {
+        <strong>Enough books are enabled for both detectors — in principle.</strong> Enabling
+        a book is necessary, not sufficient: the provider still has to quote it for the market
+        in question, and it is the books that actually quoted that get counted.
+      }
+    </p>
+    <!-- The off-by-one that cost a full investigation (db40040): four enabled
+         books at the default gives each of them three others, and the gate never
+         opens. Naming the arithmetic here is cheaper than rediscovering it. -->
+    <p class="reason reason--dim">
+      §6.4 measures a book's price against the consensus of the <em>other</em> books, because
+      a book never votes on its own fair value. So
+      <code>min_books_for_consensus = {{ minBooksForConsensus() }}</code> means
+      {{ evMinBooks() }} books have to quote one market before any of them can be priced —
+      not {{ minBooksForConsensus() }}. An arbitrage needs only {{ arbMinBooks }}, which is
+      arithmetic rather than configuration. The consensus floor is a §3.2 setting on
+      <a routerLink="/settings">Settings</a>; lowering it makes the consensus worse, not the
+      engine better.
+    </p>
+  </ui-panel>
+
+  <ui-panel heading="System">
+    <div class="health">
+      <div class="health__row">
+        <span class="health__key">Mode</span>
+        <span class="health__value">
+          <span class="chip" [class.chip--caution]="status.paperMode()">
+            {{ status.paperMode() ? 'PAPER' : 'LIVE' }}
+          </span>
+          {{
+            status.paperMode()
+              ? 'recommendations are recorded and alerted, flagged PAPER'
+              : 'recommendations are live-money advice'
+          }}
+        </span>
+      </div>
+
+      <div class="health__row">
+        <span class="health__key">Alerting</span>
+        <span class="health__value">
+          <span class="chip" [class.chip--danger]="status.killSwitch()">
+            {{ status.killSwitch() ? 'STOPPED' : 'RUNNING' }}
+          </span>
+          {{
+            status.killSwitch()
+              ? 'kill_switch is on — polling continues, nothing is sent'
+              : 'kill_switch is off'
+          }}
+        </span>
+      </div>
+
+      <div class="health__row">
+        <span class="health__key">Sports</span>
+        <span class="health__value">
+          {{ status.sportsEnabled().length ? status.sportsEnabled().join(', ') : 'none enabled' }}
+        </span>
+      </div>
+
+      <div class="health__row">
+        <span class="health__key">Quota</span>
+        <span class="health__value">
+          @for (row of quota(); track row.provider) {
+            <span class="quota">
+              <span class="quota__name">{{ row.provider }}</span>
+              <span class="quota__bar" aria-hidden="true">
+                <span
+                  class="quota__fill"
+                  [style.width.%]="
+                    row.quota_budget ? ((row.quota_used ?? 0) / row.quota_budget) * 100 : 0
+                  "
+                ></span>
+              </span>
+              <span class="quota__count">
+                {{ row.quota_used ?? 0 }} / {{ row.quota_budget ?? '—' }} credits
+              </span>
+            </span>
+          } @empty {
+            <span class="dim">no provider has reported a quota yet</span>
+          }
+        </span>
+      </div>
+    </div>
+
+    <!-- §11.1's "big KILL/RESUME button". -->
+    <div class="kill">
+      @if (status.killSwitch() && confirmingResume()) {
+        <p class="kill__confirm">
+          Resuming turns alerting back on. If §12's daily loss stop is what engaged the kill
+          switch, check today's P&amp;L on <a routerLink="/results">Results</a> before you do.
+        </p>
+      }
+      <div class="kill__actions">
+        <button
+          type="button"
+          class="kill__button"
+          [class.kill__button--kill]="!status.killSwitch()"
+          [class.kill__button--resume]="status.killSwitch()"
+          [disabled]="status.pending()"
+          (click)="toggleKillSwitch()"
+        >
+          @if (status.pending()) {
+            working…
+          } @else if (!status.killSwitch()) {
+            KILL ALERTING
+          } @else if (confirmingResume()) {
+            YES — RESUME ALERTING
+          } @else {
+            RESUME ALERTING
+          }
+        </button>
+        @if (confirmingResume()) {
+          <button type="button" class="button" (click)="cancelResume()">Cancel</button>
+        }
+      </div>
+      <p class="kill__note">
+        Stopping alerting never stops polling — snapshots keep being recorded so closing lines
+        and CLV stay intact. Nothing here places, or can place, a bet.
+      </p>
+    </div>
+  </ui-panel>
+
+  <ui-panel heading="Today's recommendations">
+    @if (status.failure()) {
+      <p class="failure">The engine is not answering, so this list is not current.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Sent</th>
+              <th>Market</th>
+              <th class="num">Edge</th>
+              <th class="num">Stake</th>
+              <th>Mode</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of today(); track row.id) {
+              <tr>
+                <td>{{ clock(row.sent_at) }}</td>
+                <td>
+                  {{ row.opportunity?.market_key ?? '—' }}
+                  <span class="dim">{{ row.opportunity?.type ?? '' }}</span>
+                </td>
+                <td class="num">{{ percent(row.opportunity?.edge_pct) }}</td>
+                <td class="num">{{ money(stakeCents(row)) }}</td>
+                <td>{{ row.paper ? 'PAPER' : 'live' }}</td>
+                <td>
+                  {{ row.result ? row.result.outcome : 'ungraded' }}
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">
+                  <p class="empty">
+                    @if (loading()) {
+                      Reading…
+                    } @else {
+                      <strong>Nothing has been recommended today.</strong>
+                      @if (blockedReason()) {
+                        That is the configuration above, not a quiet market — nothing can be
+                        recommended until enough books are enabled.
+                      } @else {
+                        The detectors ran and found nothing over their thresholds. See
+                        <a routerLink="/opportunities">Opportunities</a> for what was detected
+                        but not alerted.
+                      }
+                    }
+                  </p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ui-panel>
+</div>

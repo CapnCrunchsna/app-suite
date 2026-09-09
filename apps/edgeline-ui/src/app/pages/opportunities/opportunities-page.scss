@@ -1,0 +1,80 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.toolbar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.toolbar__spacer {
+  flex: 1;
+}
+
+.toolbar__status {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.chip {
+  padding: 1px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+/* An arb is a different kind of claim from a +EV call — it is arithmetic across
+ * two books rather than a bet on a consensus being right — so it does not share
+ * the neutral chip. */
+.chip--arb {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.block {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.leg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.leg + .leg {
+  margin-top: 4px;
+}
+
+.leg__book {
+  min-width: 92px;
+  color: var(--text-dim);
+}
+
+.leg__pick {
+  font-weight: 600;
+}
+
+.leg__price {
+  font-variant-numeric: tabular-nums;
+}
+
+.leg__flag {
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+}

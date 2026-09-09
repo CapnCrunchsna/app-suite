@@ -115,7 +115,8 @@ needs the same four.
 ```
 app-suite/                        # the existing Nx monorepo (its own git repo)
   apps/
-    edgeline-ui/                  # Angular app shell — SCAFFOLDED; pages are Phase 3
+    edgeline-ui/                  # Angular app — shell + §11.1's eight pages (T3.3)
+      proxy.conf.json             # dev only: /api -> 127.0.0.1:8000, so the base URL is ''
       src/app/pages/...           # pages per §11
     edgeline-api/
       pyproject.toml  uv.lock
@@ -826,10 +827,10 @@ the channel that announces it. T3.1–T3.3 remain untouched and in order.*
 
 - [x] **T3.1 — DONE 2026-09-08.** FastAPI routers per §10 under `api/routers/`, OpenAPI published at `/api/openapi.json` for §11.3
 - [x] **T3.2 — DONE 2026-09-08.** Generated client committed at `libs/edgeline/api-client` with an `nx run edgeline-api-client:generate-client` target. *Placed at `libs/edgeline/api-client` rather than §11.3's `libs/api-client`: §2.1's workspace convention is `libs/<project>/<lib>`, and §2.2 already reserves `libs/edgeline/` for Edgeline-only libs. A local deterministic emitter is used rather than `openapi-ts` — the workspace already has that exact pattern for Ledgerline, and a worktree cannot `npm install` a new dependency.*
-- [ ] T3.3 Pages per §11.1 (dashboard, settings, sportsbooks, opportunities, recommendations first; rest after)
+- [x] **T3.3 — DONE 2026-09-09.** All eight §11.1 pages in `apps/edgeline-ui/src/app/pages/` (§2.2's location, so no feature lib), standalone components on signals, house `METRUM_THEME` for §11.2's teal and emerald. *Dev wiring is a proxy, not CORS: `proxy.conf.json` sends `/api` to `:8000`, so the base URL is the empty string in dev and in production — where §10 has FastAPI serve the bundle at `/`. Ledgerline uses CORS because its API never serves a bundle and dev is its only arrangement.* Empty is the normal state everywhere today, so every page owns an explanation of its own silence, and the dashboard derives the reason from `min_books_for_consensus` rather than a literal. `null` hit rate and CLV render as no-data, never as zero; a missing `deep_link` renders as words, never as a dead anchor (§16.3)
 - [x] **T3.4 — DONE 2026-09-07.** Grading job + CLV (§12) in `grading.py`, plus the closing-capture task and the rest of §13's scheduler, so `nx run edgeline-api:worker` is a real process
 - [x] **T3.5 — DONE 2026-09-07.** Bankroll ledger deltas on executed results only, and the daily loss stop tripping `kill_switch`
-- [ ] **Exit:** every §3.2 setting editable in UI; nightly grading produces results + CLV; kill switch works from dashboard
+- [x] **Exit — MET 2026-09-09.** All 26 §3.2 keys are editable in the UI, and a test asserts the form's field table against the key set rather than against itself, so a key added to §3.2 and forgotten in the form fails a test instead of going quietly un-editable. The kill switch works from the dashboard both ways — one press to engage, two to release, because releasing loosens a guardrail (§16.2) and §12's daily loss stop may be what engaged it. *Grading is the qualified third: `grading.py` produces results and CLV and 48 grading/CLV tests pass against a live cluster (T3.4), but it has produced nothing in production because nothing has been recommended yet. That is input, not work — the same distinction Phase 1's exit draws.*
 
 **Phase 4 — Production hardening**
 - [ ] T4.1 `ASK USER`: approve paid The Odds API tier within $100/mo; set `quota_monthly_budget`

@@ -1,0 +1,137 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header__brand:hover .header__name {
+  text-decoration: underline;
+}
+
+.header__brand--here {
+  cursor: default;
+}
+
+.header__brand--here:hover .header__name {
+  text-decoration: none;
+}
+
+.header__tagline {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.header__spacer {
+  flex: 1;
+}
+
+.header__badge {
+  padding: 3px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+/* Amber rather than the accent. Paper mode is not a *good* state or a bad one —
+ * it is a state to keep noticing, and the accent green in this palette means
+ * "this is the number you came for" everywhere else. */
+.header__badge--paper {
+  border-color: var(--caution);
+  color: var(--caution-soft);
+}
+
+/* The one badge that gets the danger weight. §15's Phase 4 gate is the only
+ * thing that should ever produce it, and a reader who sees it without having
+ * done that needs to notice immediately. */
+.header__badge--live {
+  border-color: var(--danger);
+  background: none;
+  color: var(--danger-soft);
+}
+
+.header__badge--killed {
+  border-color: var(--danger);
+  color: var(--danger-soft);
+}
+
+.banner {
+  margin: 0;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.banner--killed {
+  background: color-mix(in srgb, var(--caution) 14%, var(--surface));
+  border-bottom-color: var(--caution);
+}
+
+.banner--down {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-bottom-color: var(--danger);
+}
+
+.shell {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px 20px 60px;
+}
+
+.rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 180px;
+}
+
+.rail__item {
+  display: block;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rail__item:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.rail__item--active {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  /* The opportunities and recommendations tables are the widest things here —
+     legs, prices, edge, staleness and a timestamp. */
+  max-width: 1240px;
+}

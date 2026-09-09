@@ -1,0 +1,8 @@
+{
+  "//": "Dev only. §10 has FastAPI serve the built Angular bundle at / in production, so the app's API base URL is the empty string and every request is a same-origin /api/... . This proxy is what makes `nx run edgeline-ui:serve` (4200) match that: the browser only ever talks to 4200, so the engine needs no CORS middleware and the base URL is the same string in dev and in production. See the note at the top of src/app/edgeline-api.service.ts.",
+  "/api": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "changeOrigin": false
+  }
+}

@@ -1,0 +1,109 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.toolbar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.block {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.chip {
+  padding: 1px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.chip--paper {
+  border-color: var(--caution);
+  color: var(--caution-soft);
+}
+
+.plan__total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.leg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.82rem;
+}
+
+.leg__book {
+  min-width: 88px;
+  color: var(--text-dim);
+}
+
+.leg__pick {
+  font-weight: 600;
+}
+
+.leg__stake {
+  font-variant-numeric: tabular-nums;
+}
+
+.leg__link {
+  color: var(--accent);
+}
+
+.dialog-row td {
+  background: var(--surface-1);
+}
+
+.dialog__lede {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+}
+
+.dialog__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+
+.dialog__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.money-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.money-input__mark {
+  color: var(--text-dim);
+}
+
+.dialog input[type='number'] {
+  width: 140px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice--bad {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger-soft);
+}
