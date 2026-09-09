@@ -171,15 +171,28 @@ def test_sportsbook_seed_matches_the_spec_list_and_starts_disabled():
     assert all(book["enabled"] is False for book in SPORTSBOOK_SEEDS.values())
 
 
-def test_sportsbook_seed_asserts_nothing_it_has_not_verified():
-    """§16.3 and §4.3's "verify Maryland licensure first".
+def test_sportsbook_seed_records_the_confirmed_maryland_licensure():
+    """§4.3's "verify Maryland licensure before enabling".
 
-    Both `md_licensed` and any deep-link template are left absent rather than
-    guessed — `false` would be as much of an unverified claim as `true`.
+    All eight were confirmed licensed by the user on 2026-09-08. Before that the
+    field was absent rather than `False`, because an unverified negative is as
+    much of a claim as an unverified positive.
     """
     for key, book in SPORTSBOOK_SEEDS.items():
-        assert "md_licensed" not in book, key
+        assert book["md_licensed"] is True, key
+
+
+def test_sportsbook_seed_still_guesses_no_deep_links():
+    """§16.3 — a URL schema may only be filled in from a verified event URL (T4.3)."""
+    for key, book in SPORTSBOOK_SEEDS.items():
         assert book["link_templates"] == {}, key
+
+
+def test_licensed_does_not_mean_enabled():
+    """Two different questions. §4.3 reserves enabling to the user, and it is the
+    switch that decides which books' prices reach detection at all."""
+    assert all(book["md_licensed"] for book in SPORTSBOOK_SEEDS.values())
+    assert not any(book["enabled"] for book in SPORTSBOOK_SEEDS.values())
 
 
 def test_seed_documents_only_use_mapped_fields():

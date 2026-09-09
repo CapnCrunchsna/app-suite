@@ -304,6 +304,17 @@ Seed `edgeline-sportsbooks` with (verify Maryland licensure before enabling — 
 confirm the final list): `draftkings, fanduel, betmgm, williamhill_us (Caesars), betrivers,
 espnbet, fanatics, bet365`. All start `enabled: false`; the user enables from the UI.
 
+**Confirmed 2026-09-08:** the user confirms all eight are licensed in Maryland, so the seed
+carries `md_licensed: true`. Two things that does *not* change. The user holds **no accounts at
+any of them yet**, so nothing here is actionable advice until accounts exist — while
+`paper_mode` is on that is irrelevant, because the value of an enabled book is the CLV evidence
+its prices produce, not the ability to bet at it. And `enabled` stays `false` on every book:
+§4.3 reserves that switch to the user, and it is what decides which prices reach §6.4/§6.5 at
+all. Note the thresholds before choosing — **+EV needs ≥ `min_books_for_consensus` (4) enabled
+books quoting a market, and an arb needs ≥ 2 different ones**, so enabling three would surface
+arbs only. Licensure is a fact about a date, not a permanent one; re-confirm if this list is
+still driving decisions much later.
+
 ---
 
 ## 5. Canonical Pydantic Schemas (engine-internal I/O)
@@ -841,7 +852,7 @@ the channel that announces it. T3.1–T3.3 remain untouched and in order.*
 | Docker Desktop available (or an existing local ES 9.x to point `ES_URL` at) | §4.1, T0.3 |
 | Discord bot token + alert channel id | T2.1 |
 | Real starting bankroll (per book if known) | §3.2 seed |
-| Confirmed Maryland book list to enable | §4 seed |
+| ~~Confirmed Maryland book list to enable~~ — **supplied 2026-09-08: all eight licensed; no accounts held yet, so none enabled** | §4 seed |
 | Display timezone (default America/New_York) | §9.2, UI |
 | Paid-tier approval (≤ $100/mo) when leaving dev cadence | T4.1 |
 

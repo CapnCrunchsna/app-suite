@@ -186,20 +186,28 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
 
 #: §4.3's closing paragraph. Every book starts disabled; the user enables from the UI.
 #:
-#: Two fields are deliberately **absent** from each seed rather than guessed:
-#: ``md_licensed`` (the spec says verify Maryland licensure first — writing `false`
-#: would assert an unverified negative just as much as `true` asserts a positive)
-#: and any ``link_templates`` entry (§16.3 forbids guessing a deep-link URL schema).
-#: ``priority`` is simply the spec's list order and is user-editable.
+#: ``md_licensed`` is ``True`` on all eight as of **2026-09-08**, confirmed by the user —
+#: which is the only way that field may ever be set. §4.3 says to verify Maryland
+#: licensure before enabling and §16.3 forbids the implementer guessing it, so until
+#: that confirmation the field was deliberately absent rather than ``False``. It records
+#: a fact about the world on a date, not a permanent truth: re-confirm if this list is
+#: still driving decisions much later.
+#:
+#: ``link_templates`` stays empty — §16.3 also forbids guessing a deep-link URL schema,
+#: and filling these in is T4.3, one verified event URL per book.
+#:
+#: ``enabled`` stays ``False`` for every book, deliberately. §4.3 reserves enabling to
+#: the user, and it is the switch that decides which prices reach §6.4/§6.5 at all.
+#: ``priority`` is the spec's list order and is user-editable.
 SPORTSBOOK_SEEDS: dict[str, dict[str, Any]] = {
-    "draftkings": {"display_name": "DraftKings", "enabled": False, "priority": 1, "link_templates": {}},
-    "fanduel": {"display_name": "FanDuel", "enabled": False, "priority": 2, "link_templates": {}},
-    "betmgm": {"display_name": "BetMGM", "enabled": False, "priority": 3, "link_templates": {}},
-    "williamhill_us": {"display_name": "Caesars", "enabled": False, "priority": 4, "link_templates": {}},
-    "betrivers": {"display_name": "BetRivers", "enabled": False, "priority": 5, "link_templates": {}},
-    "espnbet": {"display_name": "ESPN BET", "enabled": False, "priority": 6, "link_templates": {}},
-    "fanatics": {"display_name": "Fanatics", "enabled": False, "priority": 7, "link_templates": {}},
-    "bet365": {"display_name": "bet365", "enabled": False, "priority": 8, "link_templates": {}},
+    "draftkings": {"display_name": "DraftKings", "md_licensed": True, "enabled": False, "priority": 1, "link_templates": {}},
+    "fanduel": {"display_name": "FanDuel", "md_licensed": True, "enabled": False, "priority": 2, "link_templates": {}},
+    "betmgm": {"display_name": "BetMGM", "md_licensed": True, "enabled": False, "priority": 3, "link_templates": {}},
+    "williamhill_us": {"display_name": "Caesars", "md_licensed": True, "enabled": False, "priority": 4, "link_templates": {}},
+    "betrivers": {"display_name": "BetRivers", "md_licensed": True, "enabled": False, "priority": 5, "link_templates": {}},
+    "espnbet": {"display_name": "ESPN BET", "md_licensed": True, "enabled": False, "priority": 6, "link_templates": {}},
+    "fanatics": {"display_name": "Fanatics", "md_licensed": True, "enabled": False, "priority": 7, "link_templates": {}},
+    "bet365": {"display_name": "bet365", "md_licensed": True, "enabled": False, "priority": 8, "link_templates": {}},
 }
 
 #: ``index -> {_id: document}`` written once at bootstrap, never overwritten (§4.4 rule 1).
