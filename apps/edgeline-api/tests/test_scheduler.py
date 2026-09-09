@@ -27,19 +27,40 @@ def settings(**overrides) -> Settings:
 # ---- §8.4's arithmetic -----------------------------------------------------
 
 
-def test_dev_cadence_matches_the_figure_in_the_spec():
-    """§8.4: "every 6 h (4x/day -> ~360/mo)". 4 x 3 markets x 1 region x 30."""
+def test_dev_cadence_still_costs_what_the_spec_budgeted():
+    """§8.4 budgeted ~360/month for the dev cadence, and it still is.
+
+    The shape changed on 2026-09-09 — 2 polls/day over 2 regions rather than 4
+    over 1 — because `us` alone could not supply the four books §6.4 needs. The
+    arithmetic lands in the same place: 2 x 3 markets x 2 regions x 30.
+    """
     plan = plan_budget(settings())
-    assert plan.featured_interval_s == 21_600
+    assert plan.featured_interval_s == 43_200
+    assert plan.regions == 2
     assert plan.projected_monthly_credits == 360
     assert plan.affordable
 
 
+def test_each_extra_region_multiplies_the_bill():
+    """The reason the poll rate had to halve when `us2` was added."""
+    one = plan_budget(settings(regions=["us"]))
+    two = plan_budget(settings(regions=["us", "us2"]))
+    assert two.projected_monthly_credits == 2 * one.projected_monthly_credits
+
+
+def test_the_old_six_hour_cadence_would_now_be_unaffordable():
+    """Two regions at the previous 6 h rate is 720 against a 500 budget — which
+    is precisely what the guard exists to refuse."""
+    plan = plan_budget(settings(poll_interval_dev_s=21_600))
+    assert plan.projected_monthly_credits == 720
+    assert not plan.affordable
+
+
 def test_production_cadence_is_far_beyond_the_free_tier():
-    """720 polls/day x 3 markets x 30 days. This is the mistake worth refusing."""
-    plan = plan_budget(settings(quota_monthly_budget=100_000, poll_interval_s=120))
+    """720 polls/day x 3 markets x 2 regions x 30. The mistake worth refusing."""
+    plan = plan_budget(settings(quota_monthly_budget=1_000_000, poll_interval_s=120))
     assert plan.featured_interval_s == 120
-    assert plan.projected_monthly_credits == 64_800
+    assert plan.projected_monthly_credits == 129_600
 
 
 def test_more_sports_cost_proportionally_more():
@@ -58,7 +79,7 @@ def test_fewer_markets_cost_less():
 
 def test_the_dev_cadence_applies_while_the_budget_is_the_free_tier():
     assert featured_interval_s(settings()) == settings().poll_interval_dev_s
-    assert featured_interval_s(settings(quota_monthly_budget=FREE_TIER_BUDGET)) == 21_600
+    assert featured_interval_s(settings(quota_monthly_budget=FREE_TIER_BUDGET)) == 43_200
 
 
 def test_a_raised_budget_switches_to_the_production_cadence():
@@ -86,7 +107,7 @@ def test_an_unaffordable_cadence_refuses_to_start():
         check_budget(settings(quota_monthly_budget=FREE_TIER_BUDGET + 1))
 
     message = str(excinfo.value)
-    assert "64800" in message  # what it would cost
+    assert "129600" in message  # what it would cost
     assert "501" in message  # what is allowed
     assert "T4.1" in message  # and how to fix it
 
@@ -117,13 +138,14 @@ def test_scheduler_registers_every_job_the_spec_lists():
 def test_one_poll_job_per_enabled_sport():
     from edgeline.scheduler import build_scheduler
 
-    # Two sports at the 120s cadence cost 129,600/month, so the budget has to
-    # clear that or the guard (correctly) refuses before any job is registered.
+    # Two sports at the 120s cadence over two regions cost 259,200/month, so the
+    # budget has to clear that or the guard (correctly) refuses before any job is
+    # registered.
     scheduler = build_scheduler(
         provider=None,
         client=None,
         settings=settings(sports_enabled=["baseball_mlb", "americanfootball_nfl"],
-                          quota_monthly_budget=200_000),
+                          quota_monthly_budget=500_000),
     )
     polls = [job for job in scheduler.get_jobs() if job.id.startswith("poll_featured:")]
     assert len(polls) == 2

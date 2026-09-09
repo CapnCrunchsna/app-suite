@@ -41,8 +41,13 @@ SPEC_DEFAULTS = {
     "sports_enabled": ["baseball_mlb"],
     "markets_featured": ["h2h", "spreads", "totals"],
     "markets_props": ["batter_home_runs", "pitcher_strikeouts"],
+    # Not in §3.2's original table — added 2026-09-09, see §8.4. `us` alone
+    # returns only four MD-legal books, one short of what §6.4's consensus needs.
+    "regions": ["us", "us2"],
     "poll_interval_s": 120,
-    "poll_interval_dev_s": 21600,
+    # 12 h, not §3.2's original 6 h: two regions double the per-poll cost, so the
+    # halved rate keeps the dev cadence at the same 360 credits/month.
+    "poll_interval_dev_s": 43200,
     "props_poll_interval_s": 600,
     "closing_capture_offset_s": 300,
     "quota_monthly_budget": 500,

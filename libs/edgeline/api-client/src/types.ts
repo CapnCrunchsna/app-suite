@@ -157,6 +157,7 @@ export interface Settings {
   sports_enabled?: string[];
   markets_featured?: string[];
   markets_props?: string[];
+  regions?: string[];
   poll_interval_s?: number;
   poll_interval_dev_s?: number;
   props_poll_interval_s?: number;

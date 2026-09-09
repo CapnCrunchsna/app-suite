@@ -29,8 +29,6 @@ from .schemas import utc_now_iso
 
 log = logging.getLogger(__name__)
 
-#: §8.4's regions parameter. `us` is the only region v1 requests (§8).
-REGIONS = 1
 SECONDS_PER_DAY = 86_400
 DAYS_PER_MONTH = 30
 #: §13: the free tier's budget is what selects the dev cadence.
@@ -69,15 +67,22 @@ def featured_interval_s(settings: Settings) -> int:
 
 
 def plan_budget(settings: Settings) -> BudgetPlan:
-    """§8.4: `(86400/interval) x markets x regions x 30`, per enabled sport."""
+    """§8.4: `(86400/interval) x markets x regions x 30`, per enabled sport.
+
+    `regions` is counted from the setting rather than assumed. It used to be a
+    hardcoded 1, which would have under-reported the cost by half the moment a
+    second region was added — and under-reporting is the one direction this
+    calculation must never fail in, since its whole job is refusing to start.
+    """
     interval = featured_interval_s(settings)
     markets = len(settings.markets_featured)
+    regions = max(len(settings.regions), 1)
     sports = max(len(settings.sports_enabled), 1)
-    per_sport = (SECONDS_PER_DAY / interval) * markets * REGIONS * DAYS_PER_MONTH
+    per_sport = (SECONDS_PER_DAY / interval) * markets * regions * DAYS_PER_MONTH
     return BudgetPlan(
         featured_interval_s=interval,
         markets=markets,
-        regions=REGIONS,
+        regions=regions,
         sports=sports,
         projected_monthly_credits=int(per_sport * sports),
         budget=settings.quota_monthly_budget,

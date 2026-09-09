@@ -209,8 +209,9 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys |
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
 | `markets_props` | `["batter_home_runs","pitcher_strikeouts"]` | polled per §8.4 |
+| `regions` | `["us","us2"]` | **added 2026-09-09.** The Odds API region buckets to request. `us` alone returns only 4 MD-legal books, one short of what §6.4's consensus needs — see §8.4. Each region multiplies the credit cost |
 | `poll_interval_s` | `120` | featured-markets cycle (production) |
-| `poll_interval_dev_s` | `21600` | dev/free tier: 4 polls/day |
+| `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month |
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
 | `quota_monthly_budget` | `500` | credits; raise when paid tier starts |
@@ -576,12 +577,22 @@ measures `min_books_for_consensus` against the *other* books, four enabled books
 three others and **nothing is ever priced** — zero +EV detections, structurally, regardless of
 how the market moves. Arbitrage is unaffected (it needs two books).
 
-The fix is a user decision, not an implementation one (§16.2): add `us2` and absorb the doubled
-region cost — 360 → 720 credits/month against a 500 budget, which the §13 budget guard will
-refuse until `quota_monthly_budget` rises (T4.1) or the interval lengthens to 12 h — or lower
-`min_books_for_consensus` to 3 and accept a weaker fair value. `regions` is currently hardcoded
-to `us` in `providers/the_odds_api.py`; making it a §3.2 setting is the natural follow-up if the
-first option is chosen.
+**Resolved 2026-09-09, by user decision:** add `us2` and halve the dev poll rate to pay for it.
+`regions` is now a §3.2 setting defaulting to `["us","us2"]`, `poll_interval_dev_s` is 12 h, and
+the §13 budget guard counts regions from the setting rather than assuming one — it used to
+hardcode `1`, which would have under-reported the bill by half the moment a second region
+appeared, and under-reporting is the one direction that calculation must never fail in.
+Net cost is unchanged at 360 credits/month. `min_books_for_consensus` stays at 4: the threshold
+was not the problem, the book coverage was.
+
+**Three further books arrive with `us2` and are worth verifying** (`ASK USER`, per §4.3 —
+licensure is never assumed): `ballybet`, `betparx` and `hardrockbet` are real US-licensed
+operators in at least some states, so if any are MD-legal they can be seeded and enabled,
+lifting usable coverage well clear of the consensus threshold. `fliff` is a sweepstakes product
+rather than a licensed sportsbook and is a separate question. The remaining feed entries —
+`bovada`, `betonlineag`, `betus`, `lowvig`, `mybookieag` — are offshore and unlicensed in the
+US; note that **all five of those live in the `us` bucket**, which is why that bucket alone
+yielded no usable additions.
 
 ---
 

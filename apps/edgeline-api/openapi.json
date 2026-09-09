@@ -1559,6 +1559,13 @@
             "type": "array",
             "title": "Markets Props"
           },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Regions"
+          },
           "poll_interval_s": {
             "type": "integer",
             "title": "Poll Interval S",
@@ -1567,7 +1574,7 @@
           "poll_interval_dev_s": {
             "type": "integer",
             "title": "Poll Interval Dev S",
-            "default": 21600
+            "default": 43200
           },
           "props_poll_interval_s": {
             "type": "integer",

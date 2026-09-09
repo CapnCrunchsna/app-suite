@@ -115,10 +115,22 @@ class Settings(BaseModel):
     markets_props: list[str] = Field(
         default_factory=lambda: ["batter_home_runs", "pitcher_strikeouts"]
     )
+    #: The Odds API region buckets to request (§8). Not in §3.2's original table —
+    #: added 2026-09-09 because it turned out to be the setting that decides
+    #: whether detection can work at all, and it had been hardcoded to "us".
+    #:
+    #: `us` alone returns only four Maryland-legal books for MLB, and §6.4 needs a
+    #: consensus from four *other* books, so nothing was ever priced. `us2` brings
+    #: a fifth (espnbet), which is exactly enough. Each extra region multiplies the
+    #: credit cost (§8.4), which is why `poll_interval_dev_s` doubled alongside it.
+    regions: list[str] = Field(default_factory=lambda: ["us", "us2"])
 
     # Cadence
     poll_interval_s: int = 120
-    poll_interval_dev_s: int = 21_600
+    #: 12 h, not §3.2's original 6 h. Requesting two regions doubles the per-poll
+    #: credit cost, so halving the poll rate keeps the dev cadence at the same
+    #: 360 credits/month it always cost — inside the free tier's 500 (§8.4).
+    poll_interval_dev_s: int = 43_200
     props_poll_interval_s: int = 600
     closing_capture_offset_s: int = 300
 

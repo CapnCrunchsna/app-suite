@@ -609,7 +609,9 @@ async def run_once(
     books = await load_enabled_books(client, prefix=prefix)
     report.enabled_books = len(books)
 
-    response = await provider.fetch_odds(sport_key, settings.markets_featured)
+    response = await provider.fetch_odds(
+        sport_key, settings.markets_featured, regions=",".join(settings.regions)
+    )
     report.quota_used = response.quota.used
     report.quota_remaining = response.quota.remaining
 
@@ -773,7 +775,9 @@ async def capture_closing_lines(
     now = now or datetime.now(timezone.utc)
     window_end = now + timedelta(seconds=settings.closing_capture_offset_s)
 
-    response = await provider.fetch_odds(sport_key, settings.markets_featured)
+    response = await provider.fetch_odds(
+        sport_key, settings.markets_featured, regions=",".join(settings.regions)
+    )
     snapshots = normalize(provider.key, response.payload)
 
     due = [
