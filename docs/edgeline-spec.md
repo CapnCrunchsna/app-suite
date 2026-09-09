@@ -567,6 +567,21 @@ Base URL `https://api.the-odds-api.com/v4`. Auth: `apiKey` query param.
 The scheduler must refuse to start a cadence whose computed monthly cost exceeds
 `quota_monthly_budget`, and must log the computed figure at startup.
 
+**`regions=us` does not cover the Maryland book list (measured 2026-09-09).** For
+`baseball_mlb` it returns 9 books, of which only **4** are MD-legal — `draftkings`, `fanduel`,
+`betmgm`, `betrivers`; the rest are offshore. Adding `us2` reaches 14 books and **5** MD-legal
+(adds `espnbet`); `bet365`, `fanatics` and `williamhill_us` appear in neither. Because §6.4
+measures `min_books_for_consensus` against the *other* books, four enabled books means each sees
+three others and **nothing is ever priced** — zero +EV detections, structurally, regardless of
+how the market moves. Arbitrage is unaffected (it needs two books).
+
+The fix is a user decision, not an implementation one (§16.2): add `us2` and absorb the doubled
+region cost — 360 → 720 credits/month against a 500 budget, which the §13 budget guard will
+refuse until `quota_monthly_budget` rises (T4.1) or the interval lengthens to 12 h — or lower
+`min_books_for_consensus` to 3 and accept a weaker fair value. `regions` is currently hardcoded
+to `us` in `providers/the_odds_api.py`; making it a §3.2 setting is the natural follow-up if the
+first option is chosen.
+
 ---
 
 ## 9. Discord Notifications
