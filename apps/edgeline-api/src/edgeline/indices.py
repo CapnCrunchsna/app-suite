@@ -208,7 +208,20 @@ SPORTSBOOK_SEEDS: dict[str, dict[str, Any]] = {
     "espnbet": {"display_name": "ESPN BET", "md_licensed": True, "enabled": False, "priority": 6, "link_templates": {}},
     "fanatics": {"display_name": "Fanatics", "md_licensed": True, "enabled": False, "priority": 7, "link_templates": {}},
     "bet365": {"display_name": "bet365", "md_licensed": True, "enabled": False, "priority": 8, "link_templates": {}},
+    # Beyond §4.3's original eight. Both surfaced in the `us2` region feed on
+    # 2026-09-09 and the user confirmed both are Maryland-legal. They matter more
+    # than two extra rows suggests: §4.3's eight yielded only five books actually
+    # present in the feed, exactly the minimum §6.4 needs, and these lift that to
+    # seven — clearing the consensus threshold rather than sitting on it.
+    "betparx": {"display_name": "betPARX", "md_licensed": True, "enabled": False, "priority": 9, "link_templates": {}},
+    "ballybet": {"display_name": "Bally Bet", "md_licensed": True, "enabled": False, "priority": 10, "link_templates": {}},
 }
+
+#: Present in the `us2` feed and plausibly legitimate, but **not** confirmed
+#: Maryland-legal, so deliberately unseeded (§4.3, §16.3): `hardrockbet`.
+#: `fliff` is a sweepstakes product rather than a licensed sportsbook — a
+#: different question entirely, not merely an unverified one.
+UNVERIFIED_CANDIDATES = ("hardrockbet",)
 
 #: ``index -> {_id: document}`` written once at bootstrap, never overwritten (§4.4 rule 1).
 SEEDS: dict[str, dict[str, dict[str, Any]]] = {

@@ -159,6 +159,7 @@ def test_settings_seed_is_the_full_default_set():
 
 def test_sportsbook_seed_matches_the_spec_list_and_starts_disabled():
     assert set(SPORTSBOOK_SEEDS) == {
+        # §4.3's original eight.
         "draftkings",
         "fanduel",
         "betmgm",
@@ -167,8 +168,21 @@ def test_sportsbook_seed_matches_the_spec_list_and_starts_disabled():
         "espnbet",
         "fanatics",
         "bet365",
+        # Confirmed Maryland-legal by the user on 2026-09-09, after the `us2`
+        # region feed surfaced them.
+        "betparx",
+        "ballybet",
     }
     assert all(book["enabled"] is False for book in SPORTSBOOK_SEEDS.values())
+
+
+def test_an_unconfirmed_candidate_is_not_seeded():
+    """§16.3 — `hardrockbet` is in the feed and plausible, which is not the same
+    as verified. It stays out until someone checks."""
+    from edgeline.indices import UNVERIFIED_CANDIDATES
+
+    for key in UNVERIFIED_CANDIDATES:
+        assert key not in SPORTSBOOK_SEEDS
 
 
 def test_sportsbook_seed_records_the_confirmed_maryland_licensure():

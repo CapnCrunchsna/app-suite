@@ -180,9 +180,13 @@ async def test_sportsbooks_come_back_seeded_and_disabled(api):
     http, _client, _prefix = api
     response = await http.get("/api/sportsbooks")
 
+    from edgeline.indices import SPORTSBOOK_SEEDS
+
     assert response.status_code == 200
     books = response.json()
-    assert len(books) == 8
+    # Counted from the seed rather than written out, so adding a confirmed book
+    # is a one-line change instead of a test failure somewhere unrelated.
+    assert {book["id"] for book in books} == set(SPORTSBOOK_SEEDS)
     assert all(book["enabled"] is False for book in books)
     assert [book["priority"] for book in books] == sorted(b["priority"] for b in books)
 
