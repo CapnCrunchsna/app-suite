@@ -37,6 +37,8 @@ HEARTBEAT_INTERVAL_S = 60
 CLOSING_SWEEP_INTERVAL_S = 60
 #: Long enough for the first poll to settle, short enough to matter in a brief run.
 STARTUP_GRADE_DELAY_S = 15
+#: Just past startup logging, so the catch-up poll's output is not interleaved with it.
+STARTUP_POLL_DELAY_S = 3
 
 
 class BudgetExceeded(RuntimeError):
@@ -131,6 +133,28 @@ async def record_run(client, *, prefix: str, job: str) -> None:
     )
 
 
+async def poll_is_due(client, *, prefix: str, interval_s: int) -> bool:
+    """True when no poll has landed inside the last ``interval_s`` seconds.
+
+    Reads the same ``last_poll_at`` stamp :func:`record_run` writes. Anything
+    unreadable — no runtime document, no stamp, an unparseable one — answers
+    *due*: the cost of one extra cycle is a handful of credits, and the cost of
+    wrongly skipping is a worker that polls on the way to never.
+    """
+    try:
+        doc = await client.get(index=with_prefix(SETTINGS_INDEX, prefix), id="runtime")
+        stamp = doc["_source"].get("last_poll_at")
+    except Exception:
+        return True
+    if not stamp:
+        return True
+    try:
+        last = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    return datetime.now(timezone.utc) - last >= timedelta(seconds=interval_s)
+
+
 async def reset_quota(client, *, prefix: str) -> None:
     """§13's monthly job: zero `quota_used` on every provider."""
     from .indices import PROVIDERS_INDEX
@@ -194,6 +218,27 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             except Exception:
                 log.exception("grading failed for %s", sport_key)
 
+    async def _poll_startup() -> None:
+        """A catch-up poll at startup, when one is actually due.
+
+        An APScheduler interval job first fires one *full* interval after start,
+        which at the dev cadence is 12 hours. This process is expected to run in
+        short bursts on a laptop that sleeps, so without this the common case is
+        a worker that is started, does nothing, and is stopped — polling on the
+        way to never. Same reasoning as `grade_startup` below, for the job that
+        feeds it.
+
+        Conditional, because it spends real credits: §8.4's budget covers the
+        *cadence*, not the number of times the process is restarted, and each
+        cycle costs markets × regions credits. If a poll already landed inside
+        the current interval the cadence is being met, so this stands down.
+        """
+        if not await poll_is_due(client, prefix=prefix, interval_s=plan.featured_interval_s):
+            log.info("startup poll skipped: a cycle already landed inside the interval")
+            return
+        for sport_key in settings.sports_enabled:
+            await _poll(sport_key)
+
     for sport_key in settings.sports_enabled:
         scheduler.add_job(
             _poll,
@@ -204,6 +249,13 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             max_instances=1,
             coalesce=True,
         )
+
+    scheduler.add_job(
+        _poll_startup,
+        "date",
+        run_date=datetime.now(timezone.utc) + timedelta(seconds=STARTUP_POLL_DELAY_S),
+        id="poll_startup",
+    )
 
     scheduler.add_job(
         _closing_sweep,

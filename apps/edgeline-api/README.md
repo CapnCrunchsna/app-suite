@@ -216,20 +216,19 @@ uv run python -m edgeline.engine --once
 Fetches one poll cycle, normalizes it, stores snapshots and events, runs +EV and arbitrage
 detection, and prints what it found. It spends ~3 API credits and **never places a bet** (§16.1).
 
-**Zero detections is the expected output today, and the reason is structural rather than a quiet
-market.** Measured 2026-09-09 against a live `baseball_mlb` feed with all eight Maryland books
-enabled: 784 snapshots, 15 events, **0 detections**.
+**Zero detections was the expected output for a while, and the reason was structural rather than
+a quiet market.** Measured 2026-09-09 against a live `baseball_mlb` feed with §4.3's eight
+Maryland books enabled: 784 snapshots, 15 events, **0 detections**.
 
-The cause is a mismatch between who The Odds API returns and who you can bet with:
+The cause was a mismatch between who The Odds API returns and who you can bet with:
 
 | `regions` | books returned | of which MD-legal | credits |
 | --- | --- | --- | --- |
-| `us` (current) | 9 | **4** — draftkings, fanduel, betmgm, betrivers | ×1 |
+| `us` | 9 | **4** — draftkings, fanduel, betmgm, betrivers | ×1 |
 | `us,us2` | 14 | **5** — adds espnbet | ×2 |
 
-The other books in the feed (`bovada`, `lowvig`, `mybookieag`, `betonlineag`, `betus`, `fliff`,
-`hardrockbet`, `ballybet`, `betparx`) are offshore or not MD-licensed, so §6.4/§6.5 filter them
-out. `bet365`, `fanatics` and `williamhill_us` (Caesars) appear in **neither** region for MLB.
+`bet365`, `fanatics` and `williamhill_us` (Caesars) appear in **neither** region for MLB, so the
+seed list overstates real coverage by three books.
 
 That collides with `min_books_for_consensus = 4`, which §6.4 measures against the *other* books:
 with 4 MD books each one sees only 3 others, so **no selection is ever priced** and the gate can
@@ -244,6 +243,17 @@ Three ways out, all of them the user's call under §16.2 — do not just lower a
 2. **Lower `min_books_for_consensus` to 3**, which works on the current feed at no extra cost —
    but a fair value from three books is a weaker estimate, so expect more false edges.
 3. Accept that MLB featured markets will not produce +EV at these settings.
+
+**Resolved by (1), and by two books that came with it.** `us2` also surfaced `betparx` and
+`ballybet`, both confirmed Maryland-legal by the user on 2026-09-09 and now seeded — which takes
+the books actually present in an MLB response from five to **seven**, clear of the threshold
+rather than exactly on it. The first cycle at that coverage produced **14 detections and 2
+recommendations**, the first time the system found anything.
+
+Not every book in the feed made it. `hardrockbet` is confirmed **not** MD-legal (user, same day);
+`fliff` is a sweepstakes product, not a licensed sportsbook; and `bovada`, `lowvig`, `mybookieag`,
+`betonlineag`, `betus` are offshore. §6.4/§6.5 filter all of them out, and `EXCLUDED_BOOKS` in
+`indices.py` records the first two with their reason so the question is not re-asked.
 
 Arbitrage is separate and genuinely rare rather than blocked: it needs only 2 books, and the
 tightest market in the recorded fixture had an inverse sum of 1.000400 — the books keeping

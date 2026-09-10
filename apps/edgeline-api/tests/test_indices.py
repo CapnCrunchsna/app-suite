@@ -176,13 +176,20 @@ def test_sportsbook_seed_matches_the_spec_list_and_starts_disabled():
     assert all(book["enabled"] is False for book in SPORTSBOOK_SEEDS.values())
 
 
-def test_an_unconfirmed_candidate_is_not_seeded():
-    """§16.3 — `hardrockbet` is in the feed and plausible, which is not the same
-    as verified. It stays out until someone checks."""
-    from edgeline.indices import UNVERIFIED_CANDIDATES
+def test_an_excluded_book_is_not_seeded():
+    """§16.3 — being in the feed and looking plausible is not the same as being
+    usable, and every exclusion carries the reason it was excluded for.
 
-    for key in UNVERIFIED_CANDIDATES:
-        assert key not in SPORTSBOOK_SEEDS
+    `hardrockbet` was the open case and is now a closed one: the user confirmed
+    on 2026-09-09 that it is not Maryland-legal, so it stays out on a verified
+    answer rather than on a missing one.
+    """
+    from edgeline.indices import EXCLUDED_BOOKS
+
+    assert "hardrockbet" in EXCLUDED_BOOKS
+    for key, reason in EXCLUDED_BOOKS.items():
+        assert key not in SPORTSBOOK_SEEDS, key
+        assert reason, key
 
 
 def test_sportsbook_seed_records_the_confirmed_maryland_licensure():

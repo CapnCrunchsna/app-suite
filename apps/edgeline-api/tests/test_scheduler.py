@@ -8,6 +8,8 @@ without anyone touching it. §13 makes the check a precondition of starting.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from edgeline.config import Settings
@@ -17,6 +19,7 @@ from edgeline.scheduler import (
     check_budget,
     featured_interval_s,
     plan_budget,
+    poll_is_due,
 )
 
 
@@ -160,3 +163,62 @@ def test_building_a_scheduler_over_budget_refuses_before_registering_anything():
             provider=None, client=None,
             settings=settings(quota_monthly_budget=FREE_TIER_BUDGET + 1),
         )
+
+
+def test_a_startup_poll_is_registered_because_the_interval_fires_late():
+    """An APScheduler interval job's first fire is a full interval away — 12 h at
+    the dev cadence — and this worker is expected to run in short bursts on a
+    laptop that sleeps. Without a catch-up job the common case is a worker that
+    starts, does nothing, and is stopped."""
+    from edgeline.scheduler import build_scheduler
+
+    scheduler = build_scheduler(provider=None, client=None, settings=settings())
+    assert "poll_startup" in {job.id for job in scheduler.get_jobs()}
+
+
+# ---- when that catch-up poll is due (§8.4's budget) -------------------------
+
+
+class _RuntimeDoc:
+    """Just enough ES client for `poll_is_due`: one `get` of the runtime doc."""
+
+    def __init__(self, source: dict | None = None, *, missing: bool = False):
+        self._source = source or {}
+        self._missing = missing
+
+    async def get(self, **_kwargs):
+        if self._missing:
+            raise RuntimeError("index_not_found_exception")
+        return {"_source": self._source}
+
+
+def _stamp(**ago) -> str:
+    """A `last_poll_at` in `utc_now_iso`'s exact format, that long ago."""
+    return (datetime.now(timezone.utc) - timedelta(**ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+async def test_a_worker_that_has_never_polled_is_due():
+    assert await poll_is_due(_RuntimeDoc(), prefix="edgeline-", interval_s=43_200)
+
+
+async def test_a_poll_inside_the_interval_stands_the_startup_one_down():
+    """§8.4's budget pays for the *cadence*, not for the number of times the
+    process is restarted. Three restarts in an afternoon must not cost three
+    extra cycles on top of the two a day the budget was computed from."""
+    doc = _RuntimeDoc({"last_poll_at": _stamp(hours=1)})
+    assert not await poll_is_due(doc, prefix="edgeline-", interval_s=43_200)
+
+
+async def test_a_poll_older_than_the_interval_is_due_again():
+    doc = _RuntimeDoc({"last_poll_at": _stamp(hours=13)})
+    assert await poll_is_due(doc, prefix="edgeline-", interval_s=43_200)
+
+
+@pytest.mark.parametrize(
+    "doc",
+    [_RuntimeDoc(missing=True), _RuntimeDoc({"last_poll_at": "whenever"})],
+    ids=["no runtime document", "unparseable stamp"],
+)
+async def test_an_unreadable_stamp_answers_due(doc):
+    """Failing towards one wasted cycle rather than towards a silent worker."""
+    assert await poll_is_due(doc, prefix="edgeline-", interval_s=43_200)

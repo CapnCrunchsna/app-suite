@@ -217,11 +217,24 @@ SPORTSBOOK_SEEDS: dict[str, dict[str, Any]] = {
     "ballybet": {"display_name": "Bally Bet", "md_licensed": True, "enabled": False, "priority": 10, "link_templates": {}},
 }
 
-#: Present in the `us2` feed and plausibly legitimate, but **not** confirmed
-#: Maryland-legal, so deliberately unseeded (§4.3, §16.3): `hardrockbet`.
-#: `fliff` is a sweepstakes product rather than a licensed sportsbook — a
-#: different question entirely, not merely an unverified one.
-UNVERIFIED_CANDIDATES = ("hardrockbet",)
+#: In the `us2` feed and deliberately **not** seeded, each with its reason —
+#: recorded rather than merely absent, so a later reader of that feed does not
+#: re-open a question that already has an answer (§4.3, §16.3):
+#:
+#: * ``hardrockbet`` — the user confirmed on **2026-09-09** that it is not
+#:   Maryland-legal. That is a *verified* negative, which is a different thing
+#:   from the unverified one it replaced: §16.3's bar cuts both ways, so until
+#:   the answer arrived this key sat here as an open question rather than as a
+#:   guessed ``md_licensed=False``.
+#: * ``fliff`` — a sweepstakes product, not a licensed sportsbook. A different
+#:   question entirely, and not one Maryland licensure answers.
+#:
+#: Every candidate the `us2` region surfaced is now resolved: `betparx` and
+#: `ballybet` seeded above, these two out for good.
+EXCLUDED_BOOKS: dict[str, str] = {
+    "hardrockbet": "not Maryland-legal (user-confirmed 2026-09-09)",
+    "fliff": "sweepstakes product, not a licensed sportsbook",
+}
 
 #: ``index -> {_id: document}`` written once at bootstrap, never overwritten (§4.4 rule 1).
 SEEDS: dict[str, dict[str, dict[str, Any]]] = {

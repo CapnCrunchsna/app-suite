@@ -585,11 +585,14 @@ appeared, and under-reporting is the one direction that calculation must never f
 Net cost is unchanged at 360 credits/month. `min_books_for_consensus` stays at 4: the threshold
 was not the problem, the book coverage was.
 
-**Three further books arrive with `us2` and are worth verifying** (`ASK USER`, per §4.3 —
-licensure is never assumed): `ballybet`, `betparx` and `hardrockbet` are real US-licensed
-operators in at least some states, so if any are MD-legal they can be seeded and enabled,
-lifting usable coverage well clear of the consensus threshold. `fliff` is a sweepstakes product
-rather than a licensed sportsbook and is a separate question. The remaining feed entries —
+**Three further books arrive with `us2`, and all three were verified on 2026-09-09** (`ASK
+USER`, per §4.3 — licensure is never assumed): the user confirmed `ballybet` and `betparx` are
+Maryland-legal, and both are now seeded; `hardrockbet` is confirmed **not** MD-legal and stays
+out. That lifts the books actually present in an MLB response from five to seven, clear of the
+consensus threshold rather than sitting exactly on it. Both answers are recorded, the negative
+as deliberately as the positives — an unverified `False` would have been as much of a §16.3
+guess as an unverified `True`. `fliff` is a sweepstakes product rather than a licensed
+sportsbook and is a separate question. The remaining feed entries —
 `bovada`, `betonlineag`, `betus`, `lowvig`, `mybookieag` — are offshore and unlicensed in the
 US; note that **all five of those live in the `us` bucket**, which is why that bucket alone
 yielded no usable additions.
