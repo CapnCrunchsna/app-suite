@@ -97,6 +97,24 @@ three `test_engine` failures with the worker up, each passing on its own, and th
 the moment the worker was stopped. The failures point at ES lifecycle code and look nothing like
 the change under test, so this is worth knowing before debugging the wrong thing.
 
+**A second `pytest` run does the same thing, and more directly — check for one before blaming
+the worker.** `TEST_INDEX_PREFIX` in `tests/conftest.py` is a module constant with no env
+override, so two runs against this machine's one Elasticsearch are creating and deleting the
+*same* index names, not merely competing for heap. A worktree and the main checkout collide
+exactly this way. Measured 2026-09-09 with **no worker running at all**: two `pytest.exe`
+processes from the main checkout, `resource_already_exists_exception` on one run and
+`index_not_found_exception` on the next, and 383 passed the moment they finished. Anyone who
+reads only the paragraph above will stop a worker that is not running and still be red.
+
+```bash
+powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | ForEach-Object { '{0} :: {1}' -f $_.ProcessId, $_.CommandLine }"
+```
+
+Wait for it rather than killing it — it is usually another session's verification run, and the
+suite is ninety seconds. `tests/test_api.py` already uses its own prefix and never
+participates; giving the rest of the suite an env-overridable prefix would retire this whole
+class and has not been done.
+
 **`worker` polls once at startup, then on the cadence.** An APScheduler interval job first fires a
 *full* interval after start — twelve hours at the dev cadence — so without a catch-up job a worker
 run in short bursts on a laptop that sleeps would poll on the way to never. `poll_startup` runs a
