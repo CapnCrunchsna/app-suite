@@ -4,11 +4,16 @@
   "projectType": "application",
   "prefix": "el",
   "sourceRoot": "apps/edgeline-ui/src",
-  "tags": ["scope:el", "type:app"],
+  "tags": [
+    "scope:el",
+    "type:app"
+  ],
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/edgeline-ui",
@@ -21,7 +26,14 @@
             "input": "apps/edgeline-ui/public"
           }
         ],
-        "styles": ["apps/edgeline-ui/src/styles.scss"]
+        "styles": [
+          "apps/edgeline-ui/src/styles.scss"
+        ],
+        "stylePreprocessorOptions": {
+          "includePaths": [
+            "libs/shared/ui/styles"
+          ]
+        }
       },
       "configurations": {
         "production": {
