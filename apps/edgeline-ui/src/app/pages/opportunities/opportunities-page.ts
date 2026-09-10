@@ -27,7 +27,7 @@ import {
   signal,
 } from '@angular/core';
 import { Panel, formatLocalTime, formatPercent } from '@metrum/ui';
-import type { OpportunityRow } from '@metrum/edgeline-api-client';
+import type { OpportunityLegRow, OpportunityRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
@@ -104,6 +104,20 @@ export class OpportunitiesPage {
 
   protected refreshNow(): void {
     this.tick.update((value) => value + 1);
+  }
+
+  /**
+   * Whether to draw `line` beside the selection.
+   *
+   * §7.2's normalizer writes a selection that already carries it — `Over 29.5`,
+   * `Kansas City Royals -3.5` — so rendering the field beside it repeats the
+   * number: "Over 29.5  29.5". The column is still worth keeping for a market or
+   * a future provider whose selection does not embed the handicap, which is why
+   * this asks rather than dropping the field.
+   */
+  protected showLine(leg: OpportunityLegRow): boolean {
+    if (leg.line === null || leg.line === undefined) return false;
+    return !leg.selection.includes(String(leg.line));
   }
 
   protected time = formatLocalTime;

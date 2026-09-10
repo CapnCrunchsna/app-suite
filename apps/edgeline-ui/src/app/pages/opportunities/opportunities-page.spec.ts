@@ -98,6 +98,61 @@ describe('OpportunitiesPage (§11.1)', () => {
     expect(flags[0].closest('.leg')?.textContent).toContain('draftkings');
   });
 
+  /**
+   * Caught by looking at live data rather than at a stub: the normalizer writes
+   * a selection that already carries the handicap, so a row read
+   * "Over 29.5  29.5  6 (+500)". The field is still rendered when the selection
+   * does *not* carry it, which is why this tests both directions.
+   */
+  describe('the handicap is not printed twice', () => {
+    it('omits the line when the selection already carries it', async () => {
+      const { el } = await render((api) => {
+        api.rows = [
+          {
+            ...ROW,
+            market_key: 'totals',
+            legs: [
+              {
+                book_key: 'betparx',
+                selection: 'Over 29.5',
+                line: 29.5,
+                price_decimal: 6,
+                devig_prob: 0.15,
+                staleness: 3.26,
+                bet_first: true,
+              },
+            ],
+          },
+        ];
+      });
+      const leg = el.querySelector('.leg')?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+      expect(leg).toContain('Over 29.5');
+      expect(leg).not.toContain('29.5 29.5');
+    });
+
+    it('still renders a line the selection leaves out', async () => {
+      const { el } = await render((api) => {
+        api.rows = [
+          {
+            ...ROW,
+            legs: [
+              {
+                book_key: 'betparx',
+                selection: 'Baltimore Orioles',
+                line: -1.5,
+                price_decimal: 2.1,
+                devig_prob: 0.5,
+                staleness: null,
+                bet_first: false,
+              },
+            ],
+          },
+        ];
+      });
+      expect(el.querySelector('.leg')?.textContent).toContain('-1.5');
+    });
+  });
+
   it('renders a closing edge that has not been captured as no data, not as zero', async () => {
     const { el } = await render();
     const cells = [...(el.querySelectorAll('tbody tr td') ?? [])];

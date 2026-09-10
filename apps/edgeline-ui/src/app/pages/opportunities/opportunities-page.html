@@ -76,7 +76,10 @@
                     <span class="leg" [class.leg--first]="leg.bet_first">
                       <span class="leg__book">{{ leg.book_key }}</span>
                       <span class="leg__pick">{{ leg.selection }}</span>
-                      @if (leg.line !== null && leg.line !== undefined) {
+                      @if (showLine(leg)) {
+                        <!-- Only when the selection does not already carry it —
+                             the normalizer writes "Over 29.5", so printing the
+                             field beside it repeats the number. -->
                         <span class="dim">{{ leg.line }}</span>
                       }
                       <span class="leg__price">
