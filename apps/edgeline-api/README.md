@@ -89,6 +89,14 @@ it is the fastest way to tell a stale document from a current one.
 | `test` | `uv run pytest` |
 | `es-up` / `es-down` | `docker compose up -d` / `down` |
 
+**Stop the worker before running `npm run check`.** The suite and the worker share the one
+single-node Elasticsearch on a 1 GB heap, and `_fresh_cluster` in `tests/test_engine.py` already
+records what that cluster does under load: "index already exists" on a create that had just
+checked, "no such index" mid-test, and a *different* test failing each run. Measured 2026-09-09 —
+three `test_engine` failures with the worker up, each passing on its own, and the whole suite green
+the moment the worker was stopped. The failures point at ES lifecycle code and look nothing like
+the change under test, so this is worth knowing before debugging the wrong thing.
+
 **`worker` polls once at startup, then on the cadence.** An APScheduler interval job first fires a
 *full* interval after start — twelve hours at the dev cadence — so without a catch-up job a worker
 run in short bursts on a laptop that sleeps would poll on the way to never. `poll_startup` runs a
