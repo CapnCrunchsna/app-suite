@@ -38,7 +38,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Panel } from '@metrum/ui';
-import { formatCents } from '@metrum/ledgerline-domain';
+import { formatCents } from '@metrum/format';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type { Account, Merchant, Series } from '@metrum/api-client';
 

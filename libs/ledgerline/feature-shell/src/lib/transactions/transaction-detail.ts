@@ -17,8 +17,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { Account, Category, Merchant, TransactionDetail as Detail } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 @Component({
   selector: 'll-transaction-detail',

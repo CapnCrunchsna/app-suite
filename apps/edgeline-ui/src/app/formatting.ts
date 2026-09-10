@@ -1,3 +1,4 @@
+import { NO_DATA } from '@metrum/format';
 /**
  * The part of §1's display edge that is Edgeline's alone: odds.
  *
@@ -13,7 +14,6 @@
  * to a statement analyser.
  */
 
-import { NO_DATA } from '@metrum/ui';
 
 /**
  * Decimal odds in the convention the sportsbook will quote back.

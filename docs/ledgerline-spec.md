@@ -183,11 +183,12 @@ the job.
 | `domain` | `scope:ll`, `type:domain` | nothing | Pure types and arithmetic. No I/O, no framework. |
 | `parsing` | `scope:ll`, `type:parsing` | `type:domain` | Produces `RawRow[]`. **Never** touches the database. |
 | `normalize` | `scope:ll`, `type:normalize` | `type:domain`, `type:llm` | Deterministic chain first; LLM strictly optional. Returns values, never writes. |
-| `analyzers` | `scope:ll`, `type:analyzers` | `type:domain` | **Never** imports `data` or `llm`. Snapshot in, `Finding[]` / `LinkProposal[]` out. |
-| `data` | `scope:ll`, `type:data-access` | `type:domain` | The only lib that knows a store exists. Named methods, never raw query strings from callers. |
-| `llm` | `scope:ll`, `type:llm` | `type:domain` | No knowledge of statements or findings; it moves strings. |
-| `feature-shell` | `scope:ll`, `type:feature` | `type:domain`, `type:ui`, `type:api-client` | No direct `data`/`analyzers` imports — everything through HTTP. |
-| `ui` | `scope:shared`, `type:ui` | `type:ui` | Presentational only. |
+| `analyzers` | `scope:ll`, `type:analyzers` | `type:domain`, `type:format` | **Never** imports `data` or `llm`. Snapshot in, `Finding[]` / `LinkProposal[]` out. |
+| `data` | `scope:ll`, `type:data-access` | `type:domain`, `type:format` | The only lib that knows a store exists. Named methods, never raw query strings from callers. |
+| `llm` | `scope:ll`, `type:llm` | `type:domain`, `type:format` | No knowledge of statements or findings; it moves strings. |
+| `feature-shell` | `scope:ll`, `type:feature` | `type:domain`, `type:ui`, `type:api-client`, `type:format` | No direct `data`/`analyzers` imports — everything through HTTP. |
+| `format` | `scope:shared`, `type:format` | nothing | The display edge: integer cents, UTC timestamps, the missing-value convention. Framework-free, so a Node CLI can use it. |
+| `ui` | `scope:shared`, `type:ui` | `type:ui`, `type:format` | Presentational only. |
 | `api-client` | `scope:shared`, `type:api-client` | nothing | Generated. Never hand-edited. |
 | `ledgerline-api` | `scope:ll`, `type:app` | every `scope:ll` lib | Composition root. The only place the pure libs meet `data`. |
 | `ledgerline-ui` | `scope:ll`, `type:app` | `type:feature`, `type:ui`, `type:api-client`, `type:domain` | Shell only. |
@@ -198,14 +199,15 @@ The corresponding ESLint rule, which is the actual contract:
 "depConstraints": [
   { "sourceTag": "scope:ll",       "onlyDependOnLibsWithTags": ["scope:ll", "scope:shared"] },
   { "sourceTag": "scope:shared",   "onlyDependOnLibsWithTags": ["scope:shared"] },
-  { "sourceTag": "type:domain",    "onlyDependOnLibsWithTags": [] },
-  { "sourceTag": "type:parsing",   "onlyDependOnLibsWithTags": ["type:domain"] },
-  { "sourceTag": "type:normalize", "onlyDependOnLibsWithTags": ["type:domain", "type:llm"] },
-  { "sourceTag": "type:analyzers", "onlyDependOnLibsWithTags": ["type:domain"] },
-  { "sourceTag": "type:data-access","onlyDependOnLibsWithTags": ["type:domain"] },
-  { "sourceTag": "type:llm",       "onlyDependOnLibsWithTags": ["type:domain"] },
-  { "sourceTag": "type:feature",   "onlyDependOnLibsWithTags": ["type:domain", "type:ui", "type:api-client"] },
-  { "sourceTag": "type:ui",        "onlyDependOnLibsWithTags": ["type:ui"] },
+  { "sourceTag": "type:format",    "onlyDependOnLibsWithTags": [] },
+  { "sourceTag": "type:domain",    "onlyDependOnLibsWithTags": ["type:format"] },
+  { "sourceTag": "type:parsing",   "onlyDependOnLibsWithTags": ["type:domain", "type:format"] },
+  { "sourceTag": "type:normalize", "onlyDependOnLibsWithTags": ["type:domain", "type:llm", "type:format"] },
+  { "sourceTag": "type:analyzers", "onlyDependOnLibsWithTags": ["type:domain", "type:format"] },
+  { "sourceTag": "type:data-access","onlyDependOnLibsWithTags": ["type:domain", "type:format"] },
+  { "sourceTag": "type:llm",       "onlyDependOnLibsWithTags": ["type:domain", "type:format"] },
+  { "sourceTag": "type:feature",   "onlyDependOnLibsWithTags": ["type:domain", "type:ui", "type:api-client", "type:format"] },
+  { "sourceTag": "type:ui",        "onlyDependOnLibsWithTags": ["type:ui", "type:format"] },
   { "sourceTag": "type:api-client","onlyDependOnLibsWithTags": [] },
   { "sourceTag": "type:app",       "onlyDependOnLibsWithTags": ["*"] }
 ]
@@ -217,20 +219,26 @@ reach `type:llm` (§2.4's invariant depends on it) and `type:analyzers` must not
 enforcement — the boundary lint is a required target in the default build pipeline.
 
 **Tags say which libs may meet. They say nothing about which runtime the code lands in.**
-`feature-shell` is allowed to depend on `domain` and should be — that is where `formatCents`
-lives, and where it stays. `@metrum/ui` grew a second one on 2026-09-09 when Edgeline needed
-the same rendering, and the duplication is deliberate: `analyzers` renders money into finding
-text and may reach nothing but `domain`, while Edgeline is `scope:el` and may not reach
-`scope:ll` at all, so neither can use the other's. `feature-shell` is the only lib that sees
-both, which is why `money-parity.spec.ts` lives there and asserts the two render identically.
-Do not "resolve" the duplication by deleting one — that is what the test is for. But `domain`
-also holds §3.3's dedupe key, which hashes with `node:crypto`, so a
-single `export *` barrel handed a Node builtin to every Angular page that wanted a number
-formatted. `domain` therefore ships **two entry points**: `@metrum/ledgerline-domain` is
-loadable in any runtime, and `@metrum/ledgerline-domain/node` is the half that is not. The
-split is by platform rather than by feature so the rule for a new file is mechanical — if it
-imports `node:*`, it goes behind `/node`. Nothing enforces that but the build, which is why
-`build` is one of the targets `npm run check` runs (§9j).
+`feature-shell` is allowed to depend on `domain` and should be. But `domain` also holds
+§3.3's dedupe key, which hashes with `node:crypto`, so a single `export *` barrel handed a
+Node builtin to every Angular page that imported anything at all from it. `domain` therefore
+ships **two entry points**: `@metrum/ledgerline-domain` is loadable in any runtime, and
+`@metrum/ledgerline-domain/node` is the half that is not. The split is by platform rather
+than by feature so the rule for a new file is mechanical — if it imports `node:*`, it goes
+behind `/node`. Nothing enforces that but the build, which is why `build` is one of the
+targets `npm run check` runs (§9j).
+
+**`format` exists because the same question has a second answer: what a *person* reads is
+not domain knowledge.** `formatCents` lived in `domain` until 2026-09-10, and the cost showed
+up three times over — Edgeline is `scope:el` and may not reach `scope:ll` at all, so it grew
+its own; `tools/parse-statement.mjs` is a Node CLI that would have had to load Angular had the
+function gone to `ui` instead; and three Ledgerline pages had each written their own
+magnitude variant. One dependency-free lib serves all of them, which is why `type:format` has
+an empty allow-list and appears in nearly every other one. `domain` keeps `parseMoneyToCents`
+and `isOutflow` — reading a statement's text and knowing which way money moved are both
+things the ledger knows — and `money.spec.ts` keeps the round-trip assertion, because "what
+we print, we can parse back" is a property spanning the two libs that neither could check
+alone.
 
 **Analyzers as pure functions over a full snapshot.** A heavy household is six accounts ×
 120 months × ~80 transactions ≈ 58,000 transactions, which hydrates to roughly 60 MB of

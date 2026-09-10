@@ -29,7 +29,7 @@ import {
   formatSignedPercent,
   isFresh,
   startOfLocalDayIso,
-} from './format';
+} from './format.js';
 
 describe('money is rendered from integer cents', () => {
   it('divides by 100 and keeps both decimal places', () => {

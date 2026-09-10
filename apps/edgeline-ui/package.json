@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@metrum/edgeline-api-client": "0.0.1",
-    "@metrum/ui": "0.0.1"
+    "@metrum/ui": "0.0.1",
+    "@metrum/format": "0.0.1"
   }
 }

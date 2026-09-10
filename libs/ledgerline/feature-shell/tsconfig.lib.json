@@ -23,6 +23,9 @@
     },
     {
       "path": "../../shared/api-client/tsconfig.lib.json"
+    },
+    {
+      "path": "../../shared/format/tsconfig.lib.json"
     }
   ]
 }

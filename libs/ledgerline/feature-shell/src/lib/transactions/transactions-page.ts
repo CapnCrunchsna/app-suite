@@ -63,7 +63,8 @@ import {
 } from '@angular/core';
 import type { ElementRef } from '@angular/core';
 import { Panel } from '@metrum/ui';
-import { formatCents, isSpendAtRealMerchant } from '@metrum/ledgerline-domain';
+import { formatCents } from '@metrum/format';
+import { isSpendAtRealMerchant } from '@metrum/ledgerline-domain';
 import type {
   Account,
   Category,

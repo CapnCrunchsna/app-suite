@@ -105,14 +105,12 @@ export function parseMoneyToCents(input: string): MoneyParse {
   return { ok: true, cents: negative && cents !== 0 ? -cents : cents };
 }
 
-/** Render signed cents for display. Never used in arithmetic. */
-export function formatCents(cents: number): string {
-  const sign = cents < 0 ? '-' : '';
-  const abs = Math.abs(cents);
-  const dollars = Math.trunc(abs / 100);
-  const remainder = abs % 100;
-  return `${sign}$${dollars.toLocaleString('en-US')}.${String(remainder).padStart(2, '0')}`;
-}
+// `formatCents` used to live here. It moved to `@metrum/format` on 2026-09-10,
+// with the rest of the suite's display edge — rendering a number for a person is
+// not domain knowledge, and keeping a second copy here meant Edgeline (which may
+// not reach `scope:ll`) and `tools/parse-statement.mjs` each grew their own.
+// `money.spec.ts` still asserts the round trip against `parseMoneyToCents`,
+// because that property spans the two libs and belongs next to the parser.
 
 /** True when this amount represents money leaving the account (§3.1). */
 export function isOutflow(cents: number): boolean {

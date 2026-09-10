@@ -22,7 +22,8 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import { Panel, formatLocalTime } from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { formatLocalTime } from '@metrum/format';
 import type { UnmatchedRowResponse } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';

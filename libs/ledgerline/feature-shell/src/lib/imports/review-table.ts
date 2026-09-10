@@ -32,8 +32,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { NearDuplicateCandidate, ReviewRow } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 export type Resolution = 'replace' | 'keep_both' | 'skip';
 

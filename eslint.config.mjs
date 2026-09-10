@@ -42,20 +42,41 @@ export default [
               sourceTag: 'scope:shared',
               onlyDependOnLibsWithTags: ['scope:shared'],
             },
-            { sourceTag: 'type:domain', onlyDependOnLibsWithTags: [] },
-            { sourceTag: 'type:parsing', onlyDependOnLibsWithTags: ['type:domain'] },
+            // `type:format` is a leaf — it imports nothing, exactly like
+            // `type:domain` — so it appears in almost every allow-list below and
+            // weakens no invariant by doing so. The rule it encodes is "any lib
+            // may render a number for a person", which is simpler to hold than a
+            // list of which libs happen to print money today. `type:api-client`
+            // is the one exception: generated code imports nothing, by design.
+            { sourceTag: 'type:format', onlyDependOnLibsWithTags: [] },
+            { sourceTag: 'type:domain', onlyDependOnLibsWithTags: ['type:format'] },
+            {
+              sourceTag: 'type:parsing',
+              onlyDependOnLibsWithTags: ['type:domain', 'type:format'],
+            },
             {
               sourceTag: 'type:normalize',
-              onlyDependOnLibsWithTags: ['type:domain', 'type:llm'],
+              onlyDependOnLibsWithTags: ['type:domain', 'type:llm', 'type:format'],
             },
-            { sourceTag: 'type:analyzers', onlyDependOnLibsWithTags: ['type:domain'] },
-            { sourceTag: 'type:data-access', onlyDependOnLibsWithTags: ['type:domain'] },
-            { sourceTag: 'type:llm', onlyDependOnLibsWithTags: ['type:domain'] },
+            {
+              sourceTag: 'type:analyzers',
+              onlyDependOnLibsWithTags: ['type:domain', 'type:format'],
+            },
+            {
+              sourceTag: 'type:data-access',
+              onlyDependOnLibsWithTags: ['type:domain', 'type:format'],
+            },
+            { sourceTag: 'type:llm', onlyDependOnLibsWithTags: ['type:domain', 'type:format'] },
             {
               sourceTag: 'type:feature',
-              onlyDependOnLibsWithTags: ['type:domain', 'type:ui', 'type:api-client'],
+              onlyDependOnLibsWithTags: [
+                'type:domain',
+                'type:ui',
+                'type:api-client',
+                'type:format',
+              ],
             },
-            { sourceTag: 'type:ui', onlyDependOnLibsWithTags: ['type:ui'] },
+            { sourceTag: 'type:ui', onlyDependOnLibsWithTags: ['type:ui', 'type:format'] },
             { sourceTag: 'type:api-client', onlyDependOnLibsWithTags: [] },
             { sourceTag: 'type:app', onlyDependOnLibsWithTags: ['*'] },
           ],

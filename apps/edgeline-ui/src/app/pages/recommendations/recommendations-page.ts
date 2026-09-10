@@ -32,16 +32,8 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import {
-  Panel,
-  centsFromDollars,
-  dollarsFromCents,
-  formatCents,
-  formatLocalTime,
-  formatPercent,
-  formatSignedCents,
-  formatSignedPercent,
-} from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { centsFromDollars, dollarsFromCents, formatCents, formatLocalTime, formatPercent, formatSignedCents, formatSignedPercent } from '@metrum/format';
 import type { RecommendationRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';

@@ -30,13 +30,18 @@ const WORKSPACE_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 let parsing;
 let domain;
 let domainNode;
+let format;
 let normalize;
 try {
   parsing = await import('@metrum/ledgerline-parsing');
   domain = await import('@metrum/ledgerline-domain');
+  // Rendering a number for a person is not domain knowledge, so it is its own
+  // framework-free lib — which is exactly what lets this CLI use the same
+  // formatter the Angular pages do without loading Angular.
+  format = await import('@metrum/format');
   // §3.3's key hashes with `node:crypto`, so it ships from the Node-only entry point
   // rather than the universal barrel — see `domain/src/node.ts`. This tool is Node, so
-  // it can have it; an Angular page importing `formatCents` must not.
+  // it can have it; an Angular page importing the dedupe key must not.
   domainNode = await import('@metrum/ledgerline-domain/node');
   normalize = await import('@metrum/ledgerline-normalize');
 } catch (error) {
@@ -53,7 +58,8 @@ const {
   parseCsvWithProfile,
   sniffFileKind,
 } = parsing;
-const { collapseV1, formatCents } = domain;
+const { collapseV1 } = domain;
+const { formatCents } = format;
 const { dedupeKey, DEDUPE_KEY_VERSION } = domainNode;
 const { normalizeDescriptor, SEED_ALIASES, SEED_MERCHANT_KEYS } = normalize;
 

@@ -1,28 +1,26 @@
 /**
- * The display edge, shared by every app in this suite.
+ * The display edge. **One implementation, for every app in this suite.**
  *
  * Both apps store money as integer cents and timestamps as UTC ISO-8601
- * strings, and both have to turn those into something a person reads. Before
- * this file each did it separately — Ledgerline's magnitude formatter existed
- * three times over in three pages, Edgeline's lived in its own app — and the
- * two apps disagreed about small things that a reader would notice if they had
- * both open.
+ * strings, and both have to turn those into something a person reads. Until
+ * 2026-09-10 each did it separately: Ledgerline's magnitude formatter existed
+ * three times over in three pages, its signed one lived in
+ * `@metrum/ledgerline-domain`, and Edgeline had a third set inside its own app.
+ * Three copies of "divide by a hundred and put a dollar sign on it", disagreeing
+ * about decimal places and about what a missing value looks like.
  *
- * ## What is here and what is deliberately not
+ * ## Why this is its own lib rather than part of `@metrum/ui`
  *
- * Presentation only, and only the parts that have no home in an app's own
- * domain lib. In particular **`@metrum/ledgerline-domain`'s `formatCents` stays
- * where it is.** Ledgerline's spec §2.2 says so in as many words, and the
- * reason is structural rather than sentimental: `libs/ledgerline/analyzers`
- * renders money into finding text, and the boundary contract gives
- * `type:analyzers` exactly one allowed dependency, `type:domain`. Moving that
- * function here would either break the boundary lint or force a change to a
- * contract the spec calls load-bearing — for a six-line function.
+ * `tools/parse-statement.mjs` is a Node CLI that prints a statement to a
+ * terminal, and it needs `formatCents`. `@metrum/ui` resolves to an Angular
+ * Package Format bundle that imports `@angular/core`, so putting these
+ * functions there would mean a command-line tool loading a UI framework to
+ * render a dollar sign. Nothing here imports anything, which is what lets a
+ * browser page, a Node script and a future backend all use the same code.
  *
- * So the two implementations coexist on purpose, and
- * `libs/ledgerline/feature-shell/src/lib/money-parity.spec.ts` is what stops
- * them drifting: it is in the one lib allowed to import both, and it asserts
- * they render identically for every integer-cent input.
+ * That is also why the boundary contract gives `type:format` an empty
+ * dependency list, exactly like `type:domain` — it is a leaf, and a leaf is
+ * safe for anything to reach.
  *
  * ## `null` is not zero
  *
@@ -30,8 +28,12 @@
  * number. The rule matters most where an API distinguishes them on purpose —
  * Edgeline's hit rate and average CLV come back `null` when nothing has settled,
  * and a formatter that rendered that as `0.0%` would tell someone with an empty
- * database that they lose every bet. The `fallback` argument exists for the
- * places that want a blank cell instead of an em-dash.
+ * database that they lose every bet.
+ *
+ * The `fallback` argument exists for the one case where a blank reads better
+ * than an em-dash, and it is deliberately a *parameter* rather than a second
+ * function: the convention stays single, and a caller that departs from it has
+ * to say so at the call site where a reviewer can see it.
  */
 
 /** What a missing value renders as. Never `0`, never a silent blank. */
@@ -44,10 +46,11 @@ export const NO_DATA = '—';
 /**
  * Cents to dollars, negative amounts signed: `-$42.50`.
  *
- * Byte-identical to `@metrum/ledgerline-domain`'s `formatCents` for every
- * integer input — see the parity spec named above. It differs only where that
- * one is undefined: a non-integer or `NaN` input renders as `NO_DATA` here
- * rather than as `$42.50.5`.
+ * This replaced `@metrum/ledgerline-domain`'s `formatCents` and renders every
+ * integer input identically to it, which is what let the swap happen without
+ * touching a single Ledgerline screenshot. It differs only where that one was
+ * undefined: a non-integer or `NaN` renders as `NO_DATA` rather than as the
+ * `$42.50.5` the old string concatenation produced.
  *
  * Two decimal places always. `$12.5` beside `$12.50` in a column reads as a
  * different kind of number.

@@ -1,0 +1,14 @@
+{
+  "name": "format",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/format/src",
+  "projectType": "library",
+  "tags": [
+    "scope:shared",
+    "type:format"
+  ],
+  "metadata": {
+    "description": "The display edge every app shares: integer cents, UTC timestamps and the missing-value convention. Framework-free so a Node CLI can use it."
+  },
+  "targets": {}
+}

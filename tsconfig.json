@@ -41,6 +41,9 @@
     },
     {
       "path": "./libs/edgeline/api-client"
+    },
+    {
+      "path": "./libs/shared/format"
     }
   ],
   "compilerOptions": {}

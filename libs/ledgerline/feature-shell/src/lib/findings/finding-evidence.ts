@@ -38,8 +38,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { Finding, Transaction } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 /** One line of the mini-table. `value` is pre-formatted because the formatting
  *  rule differs per row — money through `formatCents`, dates as ISO, counts bare. */

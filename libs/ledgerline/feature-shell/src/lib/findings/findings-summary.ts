@@ -18,8 +18,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { FindingsSummary } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 @Component({
   selector: 'll-findings-summary',

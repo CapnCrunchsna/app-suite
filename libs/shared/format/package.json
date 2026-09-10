@@ -1,8 +1,9 @@
 {
-  "name": "@metrum/ledgerline-domain",
+  "name": "@metrum/format",
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "//": "Framework-free on purpose. tools/parse-statement.mjs is a Node CLI and must not pull Angular in to render a dollar sign, which is the whole reason this is not part of @metrum/ui.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,18 +14,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    },
-    "./node": {
-      "@metrum/source": "./src/node.ts",
-      "types": "./dist/node.d.ts",
-      "import": "./dist/node.js",
-      "default": "./dist/node.js"
     }
   },
   "dependencies": {
     "tslib": "^2.3.0"
-  },
-  "devDependencies": {
-    "@metrum/format": "0.0.1"
   }
 }

@@ -56,7 +56,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { formatCents } from '@metrum/ledgerline-domain';
+import { formatCents } from '@metrum/format';
 import type {
   ColumnMap,
   FormatProfile,

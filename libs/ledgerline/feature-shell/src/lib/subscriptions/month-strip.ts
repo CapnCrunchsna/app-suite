@@ -26,8 +26,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { Series } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 /** One day's worth of billing, as the strip renders it. */
 export interface StripDay {

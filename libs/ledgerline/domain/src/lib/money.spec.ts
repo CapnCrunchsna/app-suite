@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { formatCents } from '@metrum/format';
 
-import { formatCents, isOutflow, parseMoneyToCents } from './money.js';
+import { isOutflow, parseMoneyToCents } from './money.js';
 
 const cents = (input: string): number => {
   const result = parseMoneyToCents(input);
@@ -86,18 +87,20 @@ describe('parseMoneyToCents', () => {
   });
 });
 
-describe('formatCents', () => {
-  it('round-trips through the parser', () => {
+/**
+ * `formatCents` lives in `@metrum/format` now, and how it renders is tested
+ * there. What is tested *here* is the property that spans the two libs and can
+ * only be checked where the parser is: **what we print, we can parse back.**
+ *
+ * That is what makes the pair safe to use on the same value — a formatter that
+ * emitted a thousands separator the parser choked on would be correct in
+ * isolation and wrong in use, and neither lib's own spec could see it.
+ */
+describe('formatCents round-trips through the parser', () => {
+  it('survives sign, grouping, zero and sub-dollar amounts', () => {
     for (const value of [0, 475, -4500, 123456789, -1]) {
       expect(cents(formatCents(value))).toBe(value);
     }
-  });
-
-  it('renders sign, grouping and two decimals', () => {
-    expect(formatCents(0)).toBe('$0.00');
-    expect(formatCents(-4500)).toBe('-$45.00');
-    expect(formatCents(123456789)).toBe('$1,234,567.89');
-    expect(formatCents(5)).toBe('$0.05');
   });
 });
 

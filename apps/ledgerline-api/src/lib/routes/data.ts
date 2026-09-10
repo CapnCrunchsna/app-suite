@@ -14,11 +14,11 @@
  */
 
 import { mkdirSync } from 'node:fs';
+import { formatCents } from '@metrum/format';
 import { join } from 'node:path';
 
 import type { FastifyInstance } from 'fastify';
 
-import { formatCents } from '@metrum/ledgerline-domain';
 
 import { errorResponses } from './errors.js';
 import { ref } from './schemas.js';

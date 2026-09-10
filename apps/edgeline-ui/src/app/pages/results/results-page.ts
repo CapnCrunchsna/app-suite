@@ -28,15 +28,8 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import {
-  NO_DATA,
-  Panel,
-  formatCents,
-  formatLocalDay,
-  formatRatioAsPercent,
-  formatSignedCents,
-  formatSignedPercent,
-} from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { NO_DATA, formatCents, formatLocalDay, formatRatioAsPercent, formatSignedCents, formatSignedPercent } from '@metrum/format';
 import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';

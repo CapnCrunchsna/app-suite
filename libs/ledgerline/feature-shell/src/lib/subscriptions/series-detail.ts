@@ -35,8 +35,8 @@ import {
   output,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { Series, SeriesCharge } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 export type SeriesStatusChoice = 'active' | 'lapsed' | 'cancelled';
 

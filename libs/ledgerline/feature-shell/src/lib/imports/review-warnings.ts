@@ -29,8 +29,8 @@
  * `type:parsing` owns.
  */
 
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { ImportReview } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 export type ReviewWarningKind =
   'unparsed' | 'out_of_period' | 'pending' | 'balance' | 'zero_amount' | 'other';

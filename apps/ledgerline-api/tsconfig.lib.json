@@ -11,6 +11,9 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
+      "path": "../../libs/shared/format/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/ledgerline/llm/tsconfig.lib.json"
     },
     {

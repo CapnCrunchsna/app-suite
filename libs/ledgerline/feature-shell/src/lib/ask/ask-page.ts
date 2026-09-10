@@ -30,7 +30,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Panel, formatMagnitudeCents } from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { formatMagnitudeCents } from '@metrum/format';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type { AskResult } from '@metrum/api-client';
 
@@ -121,11 +122,11 @@ export class AskPage {
    * Cents to a readable amount. Magnitude, because §7.3's amounts are signed and
    * a spend table reading "-$1,099.00" throughout is noise, not information.
    *
-   * The empty-string fallback is this page's own: a §7.3 answer can have no total
-   * at all, and a blank cell says that better than an em-dash in a table where
-   * every other row has a number.
+   * A null `amountCents` renders as the house em-dash, not as a blank. §7.3
+   * queries can return rows that have no money column at all — a count by
+   * merchant, say — and those sit in the same table as rows that do. A blank
+   * cell beside `$21.98` reads as a rendering gap or as zero; `—` says the row
+   * has no amount, which is the fact.
    */
-  protected money(cents: number | null): string {
-    return formatMagnitudeCents(cents, '');
-  }
+  protected readonly money = formatMagnitudeCents;
 }

@@ -36,15 +36,8 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  Panel,
-  formatAge,
-  formatCents,
-  formatLocalClock,
-  formatPercent,
-  isFresh,
-  startOfLocalDayIso,
-} from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { formatAge, formatCents, formatLocalClock, formatPercent, isFresh, startOfLocalDayIso } from '@metrum/format';
 import type {
   BankrollResponse,
   RecommendationRow,

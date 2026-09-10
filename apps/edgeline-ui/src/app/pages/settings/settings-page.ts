@@ -42,7 +42,8 @@ import {
 } from '@angular/core';
 import { FormControl, FormRecord, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
-import { Panel, centsFromDollars, dollarsFromCents, formatCents } from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { centsFromDollars, dollarsFromCents, formatCents } from '@metrum/format';
 import type { Settings } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';

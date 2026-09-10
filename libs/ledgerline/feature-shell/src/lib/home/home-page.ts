@@ -40,8 +40,8 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Panel, formatLocalDay } from '@metrum/ui';
-import { formatCents } from '@metrum/ledgerline-domain';
+import { Panel } from '@metrum/ui';
+import { formatCents, formatLocalDay } from '@metrum/format';
 import type { Account, AccountCoverage, FindingsSummary } from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';

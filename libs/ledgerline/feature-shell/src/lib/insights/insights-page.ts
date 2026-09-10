@@ -35,7 +35,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Panel, formatMagnitudeDollars } from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { formatMagnitudeDollars } from '@metrum/format';
 import type {
   CategoryInsight,
   FeesInsight,

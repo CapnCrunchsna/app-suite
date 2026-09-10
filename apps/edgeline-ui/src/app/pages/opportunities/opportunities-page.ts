@@ -26,7 +26,8 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import { Panel, formatLocalTime, formatPercent } from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { formatLocalTime, formatPercent } from '@metrum/format';
 import type { OpportunityLegRow, OpportunityRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';

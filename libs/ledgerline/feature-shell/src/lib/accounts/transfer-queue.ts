@@ -28,8 +28,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { TransferLink } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 export type TransferDecision = 'confirm' | 'reject';
 

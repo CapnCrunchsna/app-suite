@@ -48,7 +48,7 @@ import {
   signal,
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
-import { formatCents } from '@metrum/ledgerline-domain';
+import { formatCents } from '@metrum/format';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type {
   Account,

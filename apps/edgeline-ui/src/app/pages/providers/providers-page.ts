@@ -19,7 +19,8 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import { NO_DATA, Panel, formatLocalTime } from '@metrum/ui';
+import { Panel } from '@metrum/ui';
+import { NO_DATA, formatLocalTime } from '@metrum/format';
 import type { ProviderRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';

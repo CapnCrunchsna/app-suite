@@ -28,8 +28,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { formatMagnitudeCents } from '@metrum/ui';
 import type { Transaction, TransactionLabel } from '@metrum/api-client';
+import { formatMagnitudeCents } from '@metrum/format';
 
 /** What one keystroke asserts. `nothing` is the four-false shorthand. */
 export type Assertion = 'recurring' | 'fee' | 'transfer' | 'outlier' | 'nothing' | 'clear';

@@ -65,7 +65,7 @@ import {
   signal,
 } from '@angular/core';
 import { Panel } from '@metrum/ui';
-import { formatCents } from '@metrum/ledgerline-domain';
+import { formatCents } from '@metrum/format';
 import { Router } from '@angular/router';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type {

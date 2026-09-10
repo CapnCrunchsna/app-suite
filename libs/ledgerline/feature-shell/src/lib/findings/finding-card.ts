@@ -36,8 +36,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { formatCents } from '@metrum/ledgerline-domain';
 import type { Finding, Transaction } from '@metrum/api-client';
+import { formatCents } from '@metrum/format';
 
 import { FindingEvidence } from './finding-evidence.js';
 

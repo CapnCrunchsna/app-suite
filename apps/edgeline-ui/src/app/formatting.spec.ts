@@ -7,9 +7,9 @@
  * "price" that is not one.
  */
 
-import { NO_DATA } from '@metrum/ui';
 
 import { formatDecimalOdds, toAmerican } from './formatting';
+import { NO_DATA } from '@metrum/format';
 
 describe('odds convert only at the display edge (§1)', () => {
   it('turns decimal into American on both sides of even money', () => {

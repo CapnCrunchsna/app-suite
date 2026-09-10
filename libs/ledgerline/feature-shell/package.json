@@ -18,7 +18,8 @@
     "@angular/router": "~22.0.4",
     "@metrum/api-client": "0.0.1",
     "@metrum/ledgerline-domain": "0.0.1",
-    "@metrum/ui": "0.0.1"
+    "@metrum/ui": "0.0.1",
+    "@metrum/format": "0.0.1"
   },
   "sideEffects": false
 }
