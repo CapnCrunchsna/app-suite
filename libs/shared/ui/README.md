@@ -13,6 +13,41 @@ Contents:
 - `Panel` (`<ui-panel>`) — the titled surface every §6 page is laid out on.
 - **Theming** (`src/lib/theming/`) — the token contract, the house palette,
   `provideTheming`, `<ui-theme-switcher>` and `<ui-mode-toggle>`.
+- **Formatting** (`src/lib/format.ts`) — the display edge both apps share.
+
+## Formatting
+
+Both apps in this suite store money as integer cents and timestamps as UTC
+ISO-8601 strings, so both need the same three conversions and the same
+missing-value convention. `format.ts` is the one implementation of them:
+`formatCents` and its magnitude/whole-dollar/always-signed variants,
+`formatPercent` / `formatRatioAsPercent`, `formatLocalTime` / `formatLocalDay` /
+`formatAge`, and `NO_DATA`.
+
+Two rules the functions encode rather than document:
+
+- **`null` is not zero.** Every formatter takes `null | undefined` and renders
+  `NO_DATA` (`—`). The rule earns its keep where an API distinguishes the two on
+  purpose — Edgeline returns `null` for a hit rate when nothing has settled, and
+  rendering that as `0.0%` would tell a reader with an empty database that they
+  lose every bet. Pass a `fallback` where a blank cell reads better.
+- **A ratio is not a percentage.** `formatRatioAsPercent` exists separately from
+  `formatPercent` because confusing them is silent: a 55% hit rate shown as
+  `0.55%` reads as a catastrophe rather than a good week.
+
+### There are two `formatCents` in this workspace, on purpose
+
+`@metrum/ledgerline-domain` has one too, and it stays there. Ledgerline's spec
+§2.2 says so, and the reason is structural: `libs/ledgerline/analyzers` renders
+money into finding text, and the boundary contract gives `type:analyzers`
+exactly one allowed dependency — `type:domain`. Meanwhile Edgeline is `scope:el`
+and may not reach `scope:ll` at all, so it could not use the domain one even if
+the tags allowed it.
+
+`libs/ledgerline/feature-shell/src/lib/money-parity.spec.ts` is what stops the
+two drifting. `type:feature` is the only tag that reaches both, which makes that
+lib the only place the assertion can be made. **If it fails, fix whichever
+implementation moved — the agreement is the point, not the test.**
 
 ## Theming
 
@@ -20,7 +55,7 @@ Two axes. A **theme** is an identity — one app's palette, registered by that a
 A **mode** is light, dark, or system within it. An app opts in with one call:
 
 ```ts
-providers: [provideTheming(MY_APP_THEME)]
+providers: [provideTheming(MY_APP_THEME)];
 ```
 
 That registers the palette, makes it the app's default, and puts it in the

@@ -30,7 +30,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Panel } from '@metrum/ui';
+import { Panel, formatMagnitudeCents } from '@metrum/ui';
 import { LedgerlineApiError } from '@metrum/api-client';
 import type { AskResult } from '@metrum/api-client';
 
@@ -117,13 +117,15 @@ export class AskPage {
     this.question.set(example);
   }
 
-  /** Cents to a readable amount. Magnitude, because §7.3's amounts are signed and a
-   *  spend table reading "-$1,099.00" throughout is noise, not information. */
+  /**
+   * Cents to a readable amount. Magnitude, because §7.3's amounts are signed and
+   * a spend table reading "-$1,099.00" throughout is noise, not information.
+   *
+   * The empty-string fallback is this page's own: a §7.3 answer can have no total
+   * at all, and a blank cell says that better than an em-dash in a table where
+   * every other row has a number.
+   */
   protected money(cents: number | null): string {
-    if (cents === null) return '';
-    return `$${(Math.abs(cents) / 100).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatMagnitudeCents(cents, '');
   }
 }

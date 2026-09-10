@@ -24,23 +24,29 @@
  * fact about the data. So a missing link is words, not a link.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
-import { Panel } from '@metrum/ui';
-import type { RecommendationRow } from '@metrum/edgeline-api-client';
-
-import { EdgelineApiService } from '../../edgeline-api.service';
-import { SystemStatus } from '../../system-status.service';
 import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
+import {
+  Panel,
   centsFromDollars,
   dollarsFromCents,
   formatCents,
-  formatDecimalOdds,
   formatLocalTime,
   formatPercent,
   formatSignedCents,
   formatSignedPercent,
-  toAmerican,
-} from '../../formatting';
+} from '@metrum/ui';
+import type { RecommendationRow } from '@metrum/edgeline-api-client';
+
+import { EdgelineApiService } from '../../edgeline-api.service';
+import { SystemStatus } from '../../system-status.service';
+import { formatDecimalOdds, toAmerican } from '../../formatting';
 
 /** One leg of a stored §5 `StakePlan`, read defensively out of an open blob. */
 export interface StakeLegView {

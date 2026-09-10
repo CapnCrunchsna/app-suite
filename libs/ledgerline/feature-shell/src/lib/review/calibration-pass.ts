@@ -27,14 +27,8 @@
  * Presentational: the container owns every request.
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { formatMagnitudeCents } from '@metrum/ui';
 import type { Transaction, TransactionLabel } from '@metrum/api-client';
 
 /** What one keystroke asserts. `nothing` is the four-false shorthand. */
@@ -155,10 +149,6 @@ export class CalibrationPass {
     }
   }
 
-  protected money(cents: number): string {
-    return `$${(Math.abs(cents) / 100).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
+  /** Magnitude — the pass is about what a row *is*, not which way the money went. */
+  protected readonly money = formatMagnitudeCents;
 }

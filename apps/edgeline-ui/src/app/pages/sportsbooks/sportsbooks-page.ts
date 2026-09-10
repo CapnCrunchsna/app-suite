@@ -2,10 +2,11 @@
  * §11.1's sportsbooks page — "table with enable toggles, priority, link-template
  * editor + 'test link' button".
  *
- * This is the page that unblocks everything else. No book is enabled today
- * because the user holds no accounts, and §6.4's consensus needs
- * `min_books_for_consensus` of them quoting one market before a +EV call is
- * possible at all — so the dashboard's silence ends here or nowhere.
+ * This is the page that decides what the detectors can see. A book has to be
+ * enabled here before its prices reach §6.4/§6.5 at all, and §6.4 needs
+ * `min_books_for_consensus` *other* books quoting the same market — one more
+ * book than the setting names — before any of them can be priced. The dashboard
+ * does that arithmetic; this page is where the answer changes.
  *
  * ## What "test link" can honestly do
  *
@@ -23,7 +24,14 @@
  * placeholder. `book_home` has no placeholders and tests directly.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Panel } from '@metrum/ui';
 import type { SportsbookRow } from '@metrum/edgeline-api-client';
@@ -162,11 +170,7 @@ export class SportsbooksPage {
     return this.linkSummary(book) !== 'none';
   }
 
-  private async patch(
-    key: string,
-    body: Record<string, unknown>,
-    success: string,
-  ): Promise<void> {
+  private async patch(key: string, body: Record<string, unknown>, success: string): Promise<void> {
     this.busy.set(key);
     this.failure.set(null);
     this.notice.set(null);

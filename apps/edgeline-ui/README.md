@@ -63,9 +63,16 @@ src/app/
   app.routes.ts          §11.1's eight routes, lazy
   edgeline-api.service.ts the one seam to @metrum/edgeline-api-client (§11.3)
   system-status.service.ts GET /api/system/health, held once for the whole app
-  formatting.ts          §1's display edge — cents, decimal odds, UTC times
+  formatting.ts          §1's odds edge — decimal to American, and only that
   pages/<name>/          one folder per §11.1 route
 ```
+
+Money, percentages, times and the `—` convention come from `@metrum/ui`'s
+`format.ts`, shared with Ledgerline: both apps store integer cents and UTC
+ISO-8601 strings, so there is one implementation and one set of tests. What
+stayed in this app is the conversion §1 allows only at a display edge and only
+this app has — decimal odds to American. Putting that in the shared UI lib would
+be exporting sports betting to a statement analyser.
 
 **§11.3 is a hard rule: UI code imports only from `@metrum/edgeline-api-client`.** There
 are no hand-written `HttpClient` calls, and `edgeline-api.service.ts` is the only file that
@@ -103,7 +110,7 @@ Every table in this app is empty on a fresh cluster, and an empty table with no 
 under it reads as a broken page rather than as a quiet market. So each page owns an
 explanation, and the explanations are the part most worth not breaking:
 
-- **Dashboard** computes *why* nothing is being found — no books enabled, or too few for a
+- **Dashboard** computes _why_ nothing is being found — no books enabled, or too few for a
   consensus. The floor it quotes is `min_books_for_consensus` read from §3.2, not a
   literal 4; the arb floor of two is arithmetic and is a constant.
 - **`null` is not zero.** `hit_rate`, `avg_clv_pct` and a result's `clv_pct` come back as

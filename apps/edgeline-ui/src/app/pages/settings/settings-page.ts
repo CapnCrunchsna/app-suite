@@ -32,15 +32,21 @@
  * sent.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { FormControl, FormRecord, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
-import { Panel } from '@metrum/ui';
+import { Panel, centsFromDollars, dollarsFromCents, formatCents } from '@metrum/ui';
 import type { Settings } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
-import { centsFromDollars, dollarsFromCents, formatCents } from '../../formatting';
 import {
   ALL_GROUPS,
   EDITABLE_GROUPS,

@@ -14,12 +14,18 @@
  * form.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
-import { Panel } from '@metrum/ui';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
+import { Panel, formatLocalTime } from '@metrum/ui';
 import type { UnmatchedRowResponse } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
-import { formatLocalTime } from '../../formatting';
 
 @Component({
   selector: 'el-matching-page',

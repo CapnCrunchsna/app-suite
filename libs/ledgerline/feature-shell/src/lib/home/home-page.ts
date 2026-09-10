@@ -40,7 +40,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Panel } from '@metrum/ui';
+import { Panel, formatLocalDay } from '@metrum/ui';
 import { formatCents } from '@metrum/ledgerline-domain';
 import type { Account, AccountCoverage, FindingsSummary } from '@metrum/api-client';
 
@@ -126,9 +126,7 @@ export class HomePage {
    */
   protected readonly staleRun = computed(() => {
     const summary = this.summary();
-    return Boolean(
-      summary?.lastRunConfigHash && summary.lastRunConfigHash !== summary.configHash,
-    );
+    return Boolean(summary?.lastRunConfigHash && summary.lastRunConfigHash !== summary.configHash);
   });
 
   protected readonly neverRun = computed(() => {
@@ -163,11 +161,10 @@ export class HomePage {
     this.coverageList.value().reduce((total, entry) => total + this.gapCount(entry), 0),
   );
 
+  /** The raw value is the fallback rather than an em-dash: if the API ever sends
+   *  something unparseable here, showing it is more use than hiding it. */
   protected formatDay(iso: string): string {
-    const date = new Date(iso);
-    return Number.isNaN(date.getTime())
-      ? iso
-      : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatLocalDay(iso, iso);
   }
 
   protected readonly formatCents = formatCents;

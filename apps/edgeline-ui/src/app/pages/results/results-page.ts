@@ -20,20 +20,27 @@
  * the em-dash.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
-import { Panel } from '@metrum/ui';
-import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client';
-
-import { EdgelineApiService } from '../../edgeline-api.service';
-import { SystemStatus } from '../../system-status.service';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import {
   NO_DATA,
+  Panel,
   formatCents,
   formatLocalDay,
   formatRatioAsPercent,
   formatSignedCents,
   formatSignedPercent,
-} from '../../formatting';
+} from '@metrum/ui';
+import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client';
+
+import { EdgelineApiService } from '../../edgeline-api.service';
+import { SystemStatus } from '../../system-status.service';
 
 type Group = 'day' | 'week';
 /** §11.1's toggle: every graded recommendation, or only the ones you actually

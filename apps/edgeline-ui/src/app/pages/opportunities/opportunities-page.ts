@@ -26,17 +26,12 @@ import {
   resource,
   signal,
 } from '@angular/core';
-import { Panel } from '@metrum/ui';
+import { Panel, formatLocalTime, formatPercent } from '@metrum/ui';
 import type { OpportunityRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
-import {
-  formatDecimalOdds,
-  formatLocalTime,
-  formatPercent,
-  toAmerican,
-} from '../../formatting';
+import { formatDecimalOdds, toAmerican } from '../../formatting';
 
 /** §11.1's cadence, named so the test can assert it rather than guess. */
 export const POLL_INTERVAL_MS = 15_000;

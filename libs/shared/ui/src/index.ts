@@ -1,3 +1,4 @@
+export * from './lib/format.js';
 export * from './lib/panel.js';
 export * from './lib/theming/theme.js';
 export * from './lib/theming/contrast.js';

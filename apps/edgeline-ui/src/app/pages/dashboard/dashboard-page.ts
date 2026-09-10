@@ -27,9 +27,24 @@
  * "check today's P&L first", which is what the confirmation says.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Panel } from '@metrum/ui';
+import {
+  Panel,
+  formatAge,
+  formatCents,
+  formatLocalClock,
+  formatPercent,
+  isFresh,
+  startOfLocalDayIso,
+} from '@metrum/ui';
 import type {
   BankrollResponse,
   RecommendationRow,
@@ -39,14 +54,6 @@ import type {
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
-import {
-  formatAge,
-  formatCents,
-  formatLocalClock,
-  formatPercent,
-  isFresh,
-  startOfLocalDayIso,
-} from '../../formatting';
 
 /** §13 stamps the heartbeat every 60 s, so three missed ones is a stopped
  *  worker rather than a slow one. */
@@ -101,9 +108,7 @@ export class DashboardPage {
     () => this.booksResource.isLoading() || this.todayResource.isLoading(),
   );
 
-  protected readonly bankrollCents = computed(
-    () => this.bankrollResource.value().total_cents,
-  );
+  protected readonly bankrollCents = computed(() => this.bankrollResource.value().total_cents);
 
   protected readonly enabledBooks = computed(() =>
     this.booksResource.value().filter((book) => book.enabled === true),

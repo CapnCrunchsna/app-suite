@@ -11,12 +11,18 @@
  * zero — a bar drawn at 0% for "we have never asked" reads as "plenty left".
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
-import { Panel } from '@metrum/ui';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
+import { NO_DATA, Panel, formatLocalTime } from '@metrum/ui';
 import type { ProviderRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
-import { NO_DATA, formatLocalTime } from '../../formatting';
 
 @Component({
   selector: 'el-providers-page',
@@ -70,7 +76,8 @@ export class ProvidersPage {
 
   protected usedLabel(provider: ProviderRow): string {
     const used = provider.quota_used;
-    if (used === null || used === undefined) return `${NO_DATA} of ${provider.quota_budget ?? NO_DATA}`;
+    if (used === null || used === undefined)
+      return `${NO_DATA} of ${provider.quota_budget ?? NO_DATA}`;
     return `${used} of ${provider.quota_budget ?? NO_DATA} credits`;
   }
 
@@ -81,11 +88,7 @@ export class ProvidersPage {
     return percent !== null && percent >= 80;
   }
 
-  private async patch(
-    key: string,
-    body: Record<string, unknown>,
-    success: string,
-  ): Promise<void> {
+  private async patch(key: string, body: Record<string, unknown>, success: string): Promise<void> {
     this.busy.set(key);
     this.notice.set(null);
     this.failure.set(null);

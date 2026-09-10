@@ -26,10 +26,22 @@
  * `LedgerlineApiService` is the one seam.
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  resource,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Panel } from '@metrum/ui';
-import type { CategoryInsight, FeesInsight, MoversInsight, RuleBackedInsight } from '@metrum/api-client';
+import { Panel, formatMagnitudeDollars } from '@metrum/ui';
+import type {
+  CategoryInsight,
+  FeesInsight,
+  MoversInsight,
+  RuleBackedInsight,
+} from '@metrum/api-client';
 
 import { LedgerlineApiService } from '../ledgerline-api.service.js';
 
@@ -130,13 +142,9 @@ export class InsightsPage {
     return Math.min(100, (Math.abs(totalCents) / peak) * 100);
   }
 
-  protected money(cents: number | null | undefined): string {
-    if (cents === null || cents === undefined) return '—';
-    return `$${(Math.abs(cents) / 100).toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })}`;
-  }
+  /** Magnitude, whole dollars. §6.6's figures are read as a size — a year in a
+   *  category — and the cents are below the resolution of that question. */
+  protected readonly money = formatMagnitudeDollars;
 
   /** §6.6's movers table. A null percentage is a rise from zero, which has none. */
   protected percent(value: number | null): string {

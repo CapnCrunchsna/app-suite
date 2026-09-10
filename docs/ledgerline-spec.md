@@ -218,7 +218,13 @@ enforcement — the boundary lint is a required target in the default build pipe
 
 **Tags say which libs may meet. They say nothing about which runtime the code lands in.**
 `feature-shell` is allowed to depend on `domain` and should be — that is where `formatCents`
-lives. But `domain` also holds §3.3's dedupe key, which hashes with `node:crypto`, so a
+lives, and where it stays. `@metrum/ui` grew a second one on 2026-09-09 when Edgeline needed
+the same rendering, and the duplication is deliberate: `analyzers` renders money into finding
+text and may reach nothing but `domain`, while Edgeline is `scope:el` and may not reach
+`scope:ll` at all, so neither can use the other's. `feature-shell` is the only lib that sees
+both, which is why `money-parity.spec.ts` lives there and asserts the two render identically.
+Do not "resolve" the duplication by deleting one — that is what the test is for. But `domain`
+also holds §3.3's dedupe key, which hashes with `node:crypto`, so a
 single `export *` barrel handed a Node builtin to every Angular page that wanted a number
 formatted. `domain` therefore ships **two entry points**: `@metrum/ledgerline-domain` is
 loadable in any runtime, and `@metrum/ledgerline-domain/node` is the half that is not. The
