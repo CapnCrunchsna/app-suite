@@ -5,7 +5,8 @@
       "name": "ledgerline-api",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "serve", "ledgerline-api"],
-      "port": 4310
+      "port": 4310,
+      "url": "http://127.0.0.1:4310"
     },
     {
       "name": "ledgerline-ui",

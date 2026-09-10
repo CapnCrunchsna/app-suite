@@ -50,6 +50,9 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
+      "options": {
+        "proxyConfig": "apps/ledgerline-ui/proxy.conf.mjs"
+      },
       "configurations": {
         "production": {
           "buildTarget": "ledgerline-ui:build:production"
@@ -63,15 +66,6 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "watch": false
-      }
-    },
-    "serve-static": {
-      "continuous": true,
-      "executor": "@nx/web:file-server",
-      "options": {
-        "buildTarget": "ledgerline-ui:build",
-        "staticFilePath": "dist/apps/ledgerline-ui/browser",
-        "spa": true
       }
     }
   }

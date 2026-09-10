@@ -99,13 +99,18 @@ import type {
 } from '@metrum/api-client';
 
 /**
- * Where the API lives.
+ * Where the API lives, for the caller who has to say.
  *
- * A token rather than a constant because the API's port is configurable
- * (`LEDGERLINE_PORT`) while its host is deliberately not — `apps/CLAUDE.md` and
- * §2.1 both fix it at `127.0.0.1`, and the reason it is not a setting is that the
- * only way to get it wrong is to make it one. Overriding this to a non-loopback
- * host would be pointing the UI at someone else's statements, so don't.
+ * Almost nobody does. `DEFAULT_BASE_URL` is the empty string (§9aj): the API
+ * serves this bundle at `/`, so every request is a same-origin `/api/...`, and
+ * `nx serve ledgerline-ui` reproduces that with `proxy.conf.mjs` rather than
+ * with a second origin and a CORS allow-list. A relative URL is also the only
+ * one that stays right when `LEDGERLINE_PORT` moves the API.
+ *
+ * The token remains for a test or a second dev server that genuinely has to
+ * reach another process. Overriding it to a non-loopback host would be pointing
+ * the UI at someone else's statements — `apps/CLAUDE.md` and §2.1 fix the API's
+ * host at `127.0.0.1` for exactly that reason — so don't.
  */
 export const LEDGERLINE_API_BASE_URL = new InjectionToken<string>('LEDGERLINE_API_BASE_URL');
 
@@ -569,5 +574,3 @@ export class LedgerlineApiService {
     return response.blob();
   }
 }
-
-

@@ -39,9 +39,13 @@ function statementCsv(rows: readonly StatementRow[]): string {
   let balance = 500_000;
   const lines = rows.map((row) => {
     balance += row.amountCents;
-    return [usDate(row.date), row.description, money(row.amountCents), money(balance), 'Posted'].join(
-      ',',
-    );
+    return [
+      usDate(row.date),
+      row.description,
+      money(row.amountCents),
+      money(balance),
+      'Posted',
+    ].join(',');
   });
 
   return [
@@ -131,43 +135,27 @@ describe('ledgerline-api calibration (§7.6, §9ab)', () => {
       headers: { 'content-type': encoded.headers.get('content-type') as string },
     });
     const [staged] = (uploaded.json() as { imports: { import: { id: string } }[] }).imports;
-    await app.inject({ method: 'PATCH', url: `/api/imports/${staged.import.id}`, payload: { accountId } });
-    await app.inject({ method: 'POST', url: `/api/imports/${staged.import.id}/commit`, payload: {} });
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/imports/${staged.import.id}`,
+      payload: { accountId },
+    });
+    await app.inject({
+      method: 'POST',
+      url: `/api/imports/${staged.import.id}/commit`,
+      payload: {},
+    });
 
     rows = context.store.db
-      .prepare('SELECT id, description_raw AS descriptionRaw, merchant_id AS merchantId FROM "transaction"')
+      .prepare(
+        'SELECT id, description_raw AS descriptionRaw, merchant_id AS merchantId FROM "transaction"',
+      )
       .all() as typeof rows;
   });
 
   afterEach(async () => {
     await app.close();
     context.close();
-  });
-
-  /**
-   * §9ab: the preflight has to name every method a route uses.
-   *
-   * This test exists because the browser found what the suite could not. Every
-   * other case here reaches the router through `app.inject`, which never sends a
-   * preflight — so a PUT route the CORS header did not list passed 297 tests and
-   * failed on the first keystroke in the actual page.
-   *
-   * It is asserted over the whole verb list rather than only this route's, because
-   * the failure it guards is *adding* a method — §6.8's Categories editor was the
-   * next thing to reach for POST, PATCH and DELETE on a surface that had only ever
-   * read (§9ad).
-   */
-  it('allows the methods its own routes use, so a browser can reach them', async () => {
-    const response = await app.inject({
-      method: 'OPTIONS',
-      url: '/api/transactions/whatever/label',
-      headers: { origin: 'http://localhost:4200' },
-    });
-
-    const allowed = response.headers['access-control-allow-methods'] as string;
-    for (const method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) {
-      expect(allowed).toContain(method);
-    }
   });
 
   // ------------------------------------------------------------- the write ---
@@ -403,7 +391,11 @@ describe('ledgerline-api calibration (§7.6, §9ab)', () => {
 
     it('leaves the assertions alone — a sweep has no opinion about them', async () => {
       const row = rowFor('SAFEWAY');
-      await label(row.id, { isFee: false, isRecurring: true, note: 'checked against the paper statement' });
+      await label(row.id, {
+        isFee: false,
+        isRecurring: true,
+        note: 'checked against the paper statement',
+      });
 
       await sweep();
 

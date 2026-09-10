@@ -62,8 +62,18 @@ import type {
   FormatProfilePreview,
 } from './schemas.js';
 
-/** Where the API listens by default (spec 2.1: it binds loopback, never 0.0.0.0). */
-export const DEFAULT_BASE_URL = 'http://127.0.0.1:4310';
+/**
+ * Empty, because the API serves the UI bundle at `/` (spec 9aj) — so every call
+ * is a same-origin `/api/...` and there is no host to name. In development the
+ * dev server's `proxy.conf.mjs` forwards `/api` to the same process, which is
+ * what makes the two arrangements identical.
+ *
+ * A literal `http://127.0.0.1:4310` here is what the CORS allow-list and the
+ * preflight of spec 9ab existed to serve, and it cost a production-only bug that
+ * no test could see. Override `baseUrl` for a client that genuinely has to reach
+ * another process; do not put a default host back.
+ */
+export const DEFAULT_BASE_URL = '';
 
 /** Base path every operation in spec 2.3's table is mounted under. */
 export const API_BASE_PATH = '/api';

@@ -19,7 +19,6 @@ import type { FastifyError, FastifyInstance } from 'fastify';
 import { SnapshotTooLargeError } from '@metrum/ledgerline-analyzers';
 import { MixedDedupeKeyVersionError, ZeroAmountRowError } from '@metrum/ledgerline-data';
 
-import { DEV_ORIGINS } from './config.js';
 import type { ApiConfig } from './config.js';
 import type { LedgerlineContext } from './context.js';
 import { ImportNotReadyError } from './import-service.js';
@@ -40,6 +39,7 @@ import { registerSettingsRoutes } from './routes/settings.js';
 import { registerSharedSchemas } from './routes/schemas.js';
 import { registerTransactionRoutes } from './routes/transactions.js';
 import { registerTransferRoutes } from './routes/transfers.js';
+import { registerUiBundle } from './ui-bundle.js';
 
 /** A statement CSV is small; a bank export of ten years is still under a few MB.
  *  The cap is here so a mis-drop cannot buffer an arbitrary file into memory. */
@@ -127,41 +127,6 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   // registration time, so a late `addSchema` fails at boot rather than silently.
   registerSharedSchemas(app);
 
-  /**
-   * The Angular dev server is a different origin from this API (`ng serve` on
-   * 4200, Fastify on 4310), so the browser preflights every non-GET the
-   * Transactions page makes.
-   *
-   * The allow-list is loopback only, and that is the whole security argument:
-   * this process has no authentication and holds every statement its owner has
-   * imported (§2.1), so `*` here would let any page in the browser read the lot.
-   * Loopback origins can only be served by something already running on this
-   * machine. `credentials` is deliberately absent — there is nothing to send.
-   */
-  app.addHook('onRequest', async (request, reply) => {
-    const origin = request.headers.origin;
-    if (origin !== undefined && DEV_ORIGINS.has(origin)) {
-      reply.header('access-control-allow-origin', origin);
-      reply.header('vary', 'origin');
-    }
-  });
-
-  app.options('/api/*', { schema: { hide: true } }, async (request, reply) =>
-    reply
-      // Every method any route uses. `PUT` arrived with §7.6's label (§9ab) and its
-      // absence here was invisible to the whole suite: `app.inject` dispatches
-      // straight at the router, so nothing that does not go through a browser can
-      // see a preflight refusal.
-      .header('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-      .header(
-        'access-control-allow-headers',
-        request.headers['access-control-request-headers'] ?? 'content-type',
-      )
-      .header('access-control-max-age', '600')
-      .code(204)
-      .send(),
-  );
-
   app.setErrorHandler((error: FastifyError, request, reply) => {
     // These three are decisions the caller can act on, not faults. Returning 500
     // for "your table holds two dedupe key versions" would bury the one message
@@ -237,6 +202,10 @@ export async function buildServer(options: BuildServerOptions): Promise<FastifyI
   registerAskRoutes(app, options.context);
   registerInsightRoutes(app, options.context);
   registerCalibrationRoutes(app, options.context);
+
+  // Last, and that ordering is load-bearing: it installs a not-found handler, so
+  // every route above is matched before the bundle is ever consulted.
+  registerUiBundle(app, options.config.uiDistDir);
 
   await app.ready();
   return app;

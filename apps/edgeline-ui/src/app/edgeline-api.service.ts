@@ -18,20 +18,21 @@
  *
  * Dev is the case that has to be made to match, and there are two ways to do it:
  *
- * - **Absolute URL + CORS**, which is what Ledgerline does — `DEV_ORIGINS` in
- *   `apps/ledgerline-api/src/lib/config.ts` allows `:4200` and the UI calls
- *   `127.0.0.1:4310` directly.
+ * - **Absolute URL + CORS**: the UI calls the engine's own host and port, and
+ *   the engine allows the dev server's origin.
  * - **A dev-server proxy**, which is what this app does: `proxy.conf.json` sends
  *   `/api` to `127.0.0.1:8000`, so the browser only ever talks to `:4200`.
  *
- * The proxy wins here for a reason Ledgerline does not have: its API never
- * serves the bundle, so an absolute URL is the only arrangement it can have and
- * dev is its only arrangement. Edgeline's API *does* serve the bundle, so with
- * CORS the app would need one base URL in dev and a different one in
- * production — a build-time switch, and a class of bug that only shows up after
- * a deploy. With the proxy the string is `''` in both, and the FastAPI app needs
- * no CORS middleware at all, which is the safer default for a service bound to
- * loopback.
+ * The proxy wins because this API *does* serve the bundle: with CORS the app
+ * would need one base URL in dev and a different one in production — a
+ * build-time switch, and a class of bug that only shows up after a deploy. With
+ * the proxy the string is `''` in both, and the FastAPI app needs no CORS
+ * middleware at all, which is the safer default for a service bound to loopback.
+ *
+ * Ledgerline used to be the counter-example here and is not any more: its API
+ * serves its bundle too (that spec's §9aj), for the same reasons and after the
+ * CORS-only bug its §9ab records. Both apps now have one arrangement rather than
+ * two.
  *
  * The token still exists so a test (or a second dev server) can point elsewhere
  * without editing this file.

@@ -16,14 +16,36 @@ rail item — the app name in the header is the way to it. Findings (§6.4) is s
 the page §6 calls the hero, and the home page's headline figure is §6.4's savings
 total and links straight to it.
 
+**One process is enough.** `ledgerline-api` serves this app's built bundle at `/`
+(§9aj), so the whole thing is at `127.0.0.1:4310`:
+
 ```bash
-npx nx serve ledgerline-api   # 127.0.0.1:4310 — the page has nothing to read without it
+npx nx build ledgerline-ui    # writes dist/apps/ledgerline-ui/browser
+npx nx serve ledgerline-api   # the app and its API, both on 127.0.0.1:4310
 npm run seed:dev              # import the committed fixture statements
-npx nx serve ledgerline-ui    # localhost:4200
 ```
 
-The API and the UI are different origins in development, which is why the API
-carries a loopback-only CORS allow-list (`apps/ledgerline-api/src/lib/server.ts`).
+The API looks for the bundle at `dist/apps/ledgerline-ui/browser`
+(`LEDGERLINE_UI_DIST` overrides it) and starts without one, serving the API
+alone — building the UI is not a precondition for running the backend.
+
+The dev server is for working *on* the UI, and needs the API up beside it:
+
+```bash
+npx nx serve ledgerline-ui    # localhost:4200, /api proxied to the API
+```
+
+`proxy.conf.mjs` forwards `/api` to the API, so the browser only ever talks to
+one origin either way and the app's API base URL is the **empty string** in both.
+That is what removed the CORS allow-list this app used to need: same origin, no
+preflight, and nothing to keep in step with a new HTTP method — see §9ab for the
+`PUT` that was missing from it and the bug that followed. The proxy reads
+`LEDGERLINE_PORT`, so set the same value for both commands if you move the API
+off 4310.
+
+There is no `serve-static` target. The API is the one thing that serves
+`dist/apps/ledgerline-ui/browser`, and a second server for the same directory
+would hand you the app with no API behind it.
 
 ## Two things this project does that the generator does not
 

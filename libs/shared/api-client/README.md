@@ -43,6 +43,14 @@ lib may depend on nothing, and an Angular import here would break that before th
 lint ever ran. Wrap `LedgerlineApi` in an injectable in the feature lib that
 consumes it; `libs/ledgerline/feature-shell` does exactly that.
 
+**`DEFAULT_BASE_URL` is the empty string.** `ledgerline-api` serves the UI bundle
+at `/` (§9aj), so every call is a same-origin `/api/...` and there is no host to
+name; `nx serve ledgerline-ui` reproduces that with a dev-server proxy rather
+than with a second origin. Pass `baseUrl` for a client that genuinely has to
+reach another process — a script, or a second dev server. The default was
+`http://127.0.0.1:4310` until the CORS allow-list that arrangement needed
+produced a bug no test could see (§9ab); don't put a host back.
+
 **Response types are `readonly` and money is integer cents.** Every money field
 on the wire is `amount_cents` (§3.1, §7.3). Format with `formatCents` from
 `@metrum/ledgerline-domain` for display and never parse a formatted string back.

@@ -12,14 +12,6 @@
 export const API_HOST = '127.0.0.1';
 export const DEFAULT_API_PORT = 4310;
 
-/** The Angular dev server, on both spellings of loopback. The only origins the
- *  API answers a cross-origin request from — see the CORS hook in `server.ts` for
- *  why the list is loopback rather than `*`. */
-export const DEV_ORIGINS: ReadonlySet<string> = new Set([
-  'http://localhost:4200',
-  'http://127.0.0.1:4200',
-]);
-
 export interface ApiConfig {
   readonly port: number;
   /** A path, or `:memory:` in tests. */
@@ -28,6 +20,15 @@ export interface ApiConfig {
   readonly profilesDir: string | null;
   /** Destination directory for `POST /api/data/backup`. */
   readonly backupDir: string;
+  /**
+   * Where `nx build ledgerline-ui` put the bundle, served at `/` when it is
+   * there (§9aj).
+   *
+   * Optional, and absent means "serve the API only" — which is what every test
+   * wants. A suite that picked up whichever bundle happened to be lying in
+   * `dist/` would pass or fail on the state of an unrelated build.
+   */
+  readonly uiDistDir?: string | null;
 }
 
 export function configFromEnvironment(env: NodeJS.ProcessEnv, workspaceRoot: string): ApiConfig {
@@ -39,5 +40,6 @@ export function configFromEnvironment(env: NodeJS.ProcessEnv, workspaceRoot: str
     databaseFile: env['LEDGERLINE_DB'] ?? `${workspaceRoot}/data/ledgerline.sqlite`,
     profilesDir: env['LEDGERLINE_PROFILES'] ?? `${workspaceRoot}/profiles`,
     backupDir: env['LEDGERLINE_BACKUPS'] ?? `${workspaceRoot}/data/backups`,
+    uiDistDir: env['LEDGERLINE_UI_DIST'] ?? `${workspaceRoot}/dist/apps/ledgerline-ui/browser`,
   };
 }

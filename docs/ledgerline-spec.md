@@ -2838,6 +2838,64 @@ plus the reason the ordinary ones matter — §9ab's point that a corpus of noth
 scores every rule perfectly. A completion percentage would be inventing a bar §7.6 does not
 set.
 
+## 9aj. Amendments from implementation — 2026-09-10 (§2.1, §2.3)
+
+§9ab closed a CORS preflight bug by adding a test, and the test was the wrong kind of fix.
+It asserted that `access-control-allow-methods` named every verb the routes use — so every
+method added after it had to be remembered twice, once in a route and once in a header,
+with nothing but somebody's memory joining the two. The seam was the problem, not the
+header. The UI ran on the Angular dev server and called the API on another port, which
+preflights every non-GET; `app.inject` dispatches straight at the router and never sends a
+preflight, so **the suite could not see that class of failure even in principle**. A test
+that has to be extended by hand for each new method is a reminder, not a guard.
+
+So the seam is gone. `ledgerline-api` serves the built Angular bundle at `/` — the same
+arrangement §10 of the Edgeline spec gives that engine — and the UI's API base URL becomes
+the empty string. One origin, no preflight, and nothing left to keep in step. It also
+collapses two processes into one for a single-user local app, which is worth having on its
+own account.
+
+| § | Amendment | Why |
+|---|---|---|
+| 2.1 | **The API serves `dist/apps/ledgerline-ui/browser` at `/`** when a build is there, reading the directory from `LEDGERLINE_UI_DIST`, and boots without one. | The UI is not a dependency of the backend, and an API that refused to start because nobody had run `nx build ledgerline-ui` would make it one. Mirrors Edgeline's `_mount_ui`, which degrades the same way for the same reason. |
+| 2.3 | **`DEFAULT_BASE_URL` is `''`.** Every request is a same-origin `/api/...`, and the base URL is the same string in development and in production. | A default host is what the allow-list existed to serve. It is also the one field that cannot stay correct when `LEDGERLINE_PORT` moves the API, and a relative URL needs no maintenance to follow it. |
+| 2.3 | **The `onRequest` CORS hook, the `OPTIONS /api/*` handler and `DEV_ORIGINS` are deleted.** | Nothing cross-origin remains to answer. Keeping them would leave a mechanism whose only purpose is to be kept in step with a thing that no longer happens. |
+| 2.1 | **`nx serve ledgerline-ui` proxies `/api` to the API** through `proxy.conf.mjs`, which reads `LEDGERLINE_PORT`. | Working on the UI still wants a dev server with hot reload. The proxy makes that arrangement identical to production rather than a second one with its own failure modes — the point Edgeline's `proxy.conf.json` already makes. |
+
+**The fallback is registered after every route, and still checks `/api` itself.** It is a
+not-found handler, so the router has already failed to match by the time it runs and no
+route can be shadowed. The prefix check is the second half: an unmatched `/api/...` has to
+stay a JSON 404 and never become an HTML page, because a `fetch` that receives
+`<!doctype html>` where it expected an error body reports a parse failure and says nothing
+about the route that does not exist.
+
+**A missing asset 404s; only an extensionless path becomes the page.** `/transactions` is
+one of §6's routes and has to survive a refresh, so it gets `index.html`. `/main-A1B2C3.js`
+is a file that should be on disk, and answering it with the page would make a broken build
+present as a syntax error inside HTML.
+
+**It is written by hand rather than with `@fastify/static`.** The whole job is: send a file
+from one directory, fall back to `index.html`, refuse to leave the directory, and never
+answer for `/api`. A static-file plugin brings range requests, ETags, dotfile policy and
+directory listings for a dozen files served over loopback to one person. The containment
+check is the part that matters and it is four lines: this process has no authentication of
+any kind (§2.1) and the database sits a few directories above the bundle.
+
+**The preflight test is deleted rather than replaced in kind.** It guarded a mechanism that
+no longer exists, and a test kept past its mechanism is a test that will one day be made to
+pass by re-adding one. What replaced it guards the seam that does exist now — that `/api`
+survives the fallback, that a deep link reaches the app, that a missing asset is not a page,
+and that a crafted URL cannot climb out of the bundle directory.
+
+**§9ab stays as written.** It is not superseded history; it is the reason this section
+exists. The bug it records is what a same-origin arrangement makes impossible, and deleting
+it would leave the change below looking like tidiness.
+
+**`ledgerline-ui`'s `serve-static` target is removed.** The API is now the one thing that
+serves that directory, and a file server on another port for the same files would hand you
+the app with no API behind it — an arrangement that looks like it works until the first
+request.
+
 ## 10. Open discrepancies — recorded, not resolved
 
 Building the persistence and import-commit path on 2026-08-06 found one place where this

@@ -27,25 +27,26 @@ npx nx run edgeline-ui:serve
 ```
 
 It comes up on **4201**, not 4200 — `.claude/launch.json` fixes that so it can run beside
-`ledgerline-ui`, whose API only accepts browser origins on 4200.
+`ledgerline-ui`, which takes 4200.
 
 ## How the UI reaches the API, and why it is a proxy
 
 `proxy.conf.json` sends `/api` from the dev server to `http://127.0.0.1:8000`. The app's
 API base URL is therefore the **empty string** — every request is a same-origin `/api/...`.
 
-That is a deliberate departure from Ledgerline, which does the opposite: `DEV_ORIGINS` in
-`apps/ledgerline-api/src/lib/config.ts` allows the Angular dev server's origin and the UI
-calls `127.0.0.1:4310` directly, cross-origin, with CORS.
+The reason is §10's last line: **FastAPI serves the built Angular bundle at `/` in
+production.** So in production the UI and the API are one origin and a relative `/api` is
+simply correct. With CORS instead, this app would need one base URL in dev and a different
+one in production — a build-time switch, and a class of bug that only shows up after a
+deploy. The proxy makes the dev arrangement match the production one, and as a bonus the
+engine needs no CORS middleware at all, which is the safer default for a service bound to
+loopback.
 
-The reason the two differ is §10's last line: **FastAPI serves the built Angular bundle at
-`/` in production.** So in production the UI and the API are one origin and a relative
-`/api` is simply correct. With CORS instead, this app would need one base URL in dev and a
-different one in production — a build-time switch, and a class of bug that only shows up
-after a deploy. The proxy makes the dev arrangement match the production one, and as a
-bonus the engine needs no CORS middleware at all, which is the safer default for a service
-bound to loopback. Ledgerline cannot make that trade because its API never serves the
-bundle; dev is its only arrangement.
+This used to be a deliberate departure from Ledgerline, which allowed the dev server's
+origin and called `127.0.0.1:4310` cross-origin. It is not any more — that app's §9aj
+moved it to this arrangement after the CORS-only bug its §9ab records, so the two now
+differ in one detail: Ledgerline's proxy config is a `.mjs` because its port is
+configurable, and this one is JSON because 8000 is a constant.
 
 `EDGELINE_API_BASE_URL` is an injection token, so a test or a second dev server can point
 elsewhere without editing `edgeline-api.service.ts`.
