@@ -65,6 +65,21 @@ checkout before running anything that needs the Odds API key.
 Kibana lands on <http://localhost:5601> and is the intended window into every index — there is no
 other admin UI, by design.
 
+**A §3.2 default only applies to a datastore that has never been seeded.** §4.4 rule 1 writes the
+settings document once at bootstrap and never overwrites it, so changing a default in `config.py`
+leaves an existing install on the old value — silently, because both values are valid. That is
+how the worker came to refuse to start on 2026-09-09 at 720 credits against a 500 budget: the
+code had moved to a 12-hour dev interval when `us2` was added, and the seeded document was still
+on 6 hours. Change a setting on a running install through the API, which validates it against
+§3.2 and rewrites the document whole:
+
+```bash
+curl -X PUT http://127.0.0.1:8000/api/settings -H "Content-Type: application/json" -d "{\"poll_interval_dev_s\": 43200}"
+```
+
+`uv run python -m edgeline.scheduler --check-budget` prints what the **stored** settings cost, so
+it is the fastest way to tell a stale document from a current one.
+
 ## Nx targets
 
 | Target | Command |
@@ -73,6 +88,13 @@ other admin UI, by design.
 | `worker` | `uv run python -m edgeline.scheduler` |
 | `test` | `uv run pytest` |
 | `es-up` / `es-down` | `docker compose up -d` / `down` |
+
+**`worker` polls once at startup, then on the cadence.** An APScheduler interval job first fires a
+*full* interval after start — twelve hours at the dev cadence — so without a catch-up job a worker
+run in short bursts on a laptop that sleeps would poll on the way to never. `poll_startup` runs a
+cycle three seconds in, but only when one is actually due: §8.4's budget pays for the cadence, not
+for how often the process is restarted, so it stands down if a poll already landed inside the
+current interval.
 
 **`test-py` was renamed to `test` in Phase 0 T0.5**, which is the moment the previous note in
 this file reserved for it: the target now has 151 tests behind it rather than a smoke test.
