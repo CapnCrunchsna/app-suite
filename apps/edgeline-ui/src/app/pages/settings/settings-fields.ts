@@ -1,14 +1,13 @@
 /**
- * §3.2's twenty-six keys as data, grouped the way §11.1 asks for them:
- * Staking, Thresholds, Polling, Safety.
+ * §3.2's keys as data, grouped the way §11.1 asks for them: Staking,
+ * Thresholds, Polling, Safety. Twenty-seven of them as of 2026-09-09.
  *
- * A table rather than twenty-six hand-written form rows, for one reason that is
- * worth more than the brevity: §3.2 is the list, and Phase 3's exit is "every
- * §3.2 setting editable in UI". A page built by hand goes out of step with the
- * spec the first time a key is added and nobody notices, because a missing input
- * looks like nothing at all. `settings-page.spec.ts` asserts this table against
- * the key set, so a new §3.2 key fails a test rather than quietly going
- * un-editable.
+ * A table rather than twenty-seven hand-written form rows, for one reason worth
+ * more than the brevity: §3.2 is the list, Phase 3's exit is "every §3.2 setting
+ * editable in UI", and a page built by hand goes out of step the first time a
+ * key is added — silently, because a missing input looks like nothing at all.
+ * The exhaustiveness check at the bottom of this file is what makes that a
+ * compile error instead.
  *
  * Every `hint` is §3.2's own "meaning" column, sometimes with the consequence
  * spelled out — these are guardrails, and a number you can change without
@@ -23,7 +22,7 @@ export type SettingKey = keyof Settings & string;
  * How a value is edited, which is not always how it is stored.
  *
  * - `cents` is §1's integer cents shown and typed as dollars. The conversion is
- *   the only one in the page and it lives in `formatting.ts`.
+ *   the only one in the page and it lives in `@metrum/ui`'s `format.ts`.
  * - `list` is a `string[]` edited as comma-separated text; `json` is
  *   `consensus_weights`, the one setting with real structure.
  */
@@ -49,7 +48,7 @@ export interface FieldGroup {
   readonly fields: readonly FieldSpec[];
 }
 
-export const STAKING: FieldGroup = {
+export const STAKING = {
   id: 'staking',
   title: 'Staking',
   blurb:
@@ -109,9 +108,9 @@ export const STAKING: FieldGroup = {
       hint: 'Graded losses today at or over this engage the kill switch automatically (§12). It is the one guardrail that acts on its own.',
     },
   ],
-};
+} as const satisfies FieldGroup;
 
-export const THRESHOLDS: FieldGroup = {
+export const THRESHOLDS = {
   id: 'thresholds',
   title: 'Thresholds',
   blurb:
@@ -172,9 +171,9 @@ export const THRESHOLDS: FieldGroup = {
       hint: 'Floor on the standard deviation used by §6.6, so a market where every book agrees does not divide by nearly zero.',
     },
   ],
-};
+} as const satisfies FieldGroup;
 
-export const POLLING: FieldGroup = {
+export const POLLING = {
   id: 'polling',
   title: 'Polling',
   blurb:
@@ -200,6 +199,12 @@ export const POLLING: FieldGroup = {
       hint: 'Polled on their own cadence, and only for events starting soon (§8.4).',
     },
     {
+      key: 'regions',
+      label: 'Provider regions',
+      kind: 'list',
+      hint: 'The Odds API region buckets to request, comma-separated. Each one multiplies the credit cost of every poll and the §13 budget guard counts them — `us` alone returns only four MD-legal books, one short of what a consensus needs, which is why the default is `us, us2` (§8.4).',
+    },
+    {
       key: 'poll_interval_s',
       label: 'Poll interval',
       kind: 'number',
@@ -215,7 +220,7 @@ export const POLLING: FieldGroup = {
       step: 1,
       min: 1,
       unit: 's',
-      hint: 'Free-tier cadence — the default of 21600 is four polls a day.',
+      hint: 'Free-tier cadence — the default of 43200 is two polls a day, halved from four on 2026-09-09 to pay for the second provider region.',
     },
     {
       key: 'props_poll_interval_s',
@@ -262,13 +267,13 @@ export const POLLING: FieldGroup = {
       hint: 'Provider credits per month. The scheduler refuses to start a cadence projected to exceed it.',
     },
   ],
-};
+} as const satisfies FieldGroup;
 
 /**
  * §11.1's fourth group. Both keys here are guardrails, and both are exposed
  * under their own confirmation on the page — see `settings-page.ts`.
  */
-export const SAFETY: FieldGroup = {
+export const SAFETY = {
   id: 'safety',
   title: 'Safety',
   blurb:
@@ -288,10 +293,42 @@ export const SAFETY: FieldGroup = {
       hint: 'On: polling continues and opportunities keep being recorded, but nothing is alerted. §12 engages this by itself when the daily loss stop is hit.',
     },
   ],
-};
+} as const satisfies FieldGroup;
 
 /** The three groups edited together, with one Save. */
 export const EDITABLE_GROUPS: readonly FieldGroup[] = [STAKING, THRESHOLDS, POLLING];
 
-/** All four, for the completeness check against §3.2. */
-export const ALL_GROUPS: readonly FieldGroup[] = [STAKING, THRESHOLDS, POLLING, SAFETY];
+/** All four. Deliberately not annotated `readonly FieldGroup[]` — the literal
+ *  key types are what the exhaustiveness check below reads, and an annotation
+ *  would widen them back to `SettingKey` and make the check vacuous. */
+export const ALL_GROUPS = [STAKING, THRESHOLDS, POLLING, SAFETY] as const;
+
+/**
+ * Phase 3's exit is "every §3.2 setting editable in UI". This is what makes that
+ * true rather than merely claimed.
+ *
+ * The check runs against **`Settings` from the generated client** — emitted from
+ * the engine's `openapi.json`, emitted in turn from `config.py` — so the chain
+ * runs from §3.2's real key set to this table with nothing hand-maintained in
+ * between. Add a key to §3.2 and forget the form, and `npm run check` fails to
+ * compile here with the key's own name in the error.
+ *
+ * A type-level check rather than a spec, on purpose. The obvious version — a
+ * test comparing this table against a literal list of §3.2's keys — compares two
+ * things the same author wrote at the same time and is blind to the API moving.
+ * That version existed first and proved the point by staying green when
+ * `regions` was added on 2026-09-09.
+ */
+type CoveredKey = (typeof ALL_GROUPS)[number]['fields'][number]['key'];
+
+/** A §3.2 key with no field in any group. Must be `never`. */
+type MissingField = Exclude<SettingKey, CoveredKey>;
+/** A field bound to a key §3.2 does not have. The API rejects an unknown key,
+ *  so the control would look like it saved and change nothing. Must be `never`. */
+type UnknownField = Exclude<CoveredKey, SettingKey>;
+
+// If either stops compiling, the offending key names itself in the error.
+const _everySettingIsEditable: MissingField extends never ? true : MissingField = true;
+const _everyFieldIsASetting: UnknownField extends never ? true : UnknownField = true;
+void _everySettingIsEditable;
+void _everyFieldIsASetting;

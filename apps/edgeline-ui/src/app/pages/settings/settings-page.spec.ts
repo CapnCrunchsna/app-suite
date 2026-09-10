@@ -1,12 +1,15 @@
 /**
- * §11.1's settings page, and Phase 3's exit condition: "every §3.2 setting
- * editable in UI".
+ * §11.1's settings page.
  *
- * The completeness test is the one that earns its place. Every other assertion
- * here is about a control someone can see; a *missing* control looks like
- * nothing at all, and the failure mode is a setting that the spec says is
- * editable, that the page silently does not render, and that nobody notices
- * until they go looking for it.
+ * Phase 3's exit condition — "every §3.2 setting editable in UI" — is **not**
+ * proven here. It is proven at compile time in `settings-fields.ts`, against the
+ * generated client's `Settings`, because that is the only version of the check
+ * that tracks the engine rather than tracking whatever this file happens to say.
+ *
+ * What is left here is behaviour a reader could see: that a control renders for
+ * each field, that dollars go back as cents, that a patch carries only what
+ * changed, and that the two guardrails in §11.1's Safety group need a second,
+ * labelled press before they move.
  */
 
 import { TestBed } from '@angular/core/testing';
@@ -16,7 +19,17 @@ import { SettingsPage } from './settings-page';
 import { ALL_GROUPS } from './settings-fields';
 import { EdgelineApiService } from '../../edgeline-api.service';
 
-/** §3.2's complete default set, verbatim. */
+/**
+ * §3.2's complete default set, verbatim, as stub data for the page.
+ *
+ * It is **not** the completeness oracle — that is the type-level check in
+ * `settings-fields.ts`, which reads the generated client's `Settings` and so
+ * tracks the engine rather than tracking this file. An earlier version of this
+ * spec compared the field table against `Object.keys` of this literal, which is
+ * two things the same person wrote at the same time: it stayed green when
+ * `regions` was added to §3.2 on 2026-09-09, which is precisely the failure it
+ * was written to catch.
+ */
 const SPEC_DEFAULTS: Settings = {
   paper_mode: true,
   kill_switch: false,
@@ -39,8 +52,9 @@ const SPEC_DEFAULTS: Settings = {
   sports_enabled: ['baseball_mlb'],
   markets_featured: ['h2h', 'spreads', 'totals'],
   markets_props: ['batter_home_runs', 'pitcher_strikeouts'],
+  regions: ['us', 'us2'],
   poll_interval_s: 120,
-  poll_interval_dev_s: 21600,
+  poll_interval_dev_s: 43200,
   props_poll_interval_s: 600,
   closing_capture_offset_s: 300,
   quota_monthly_budget: 500,
@@ -98,16 +112,19 @@ describe('SettingsPage (§11.1, §3.2)', () => {
 
   describe('completeness — Phase 3’s exit condition', () => {
     /**
-     * The field table is checked against §3.2's key set rather than against
-     * itself. Adding a key to the spec and forgetting the form is the failure
-     * this catches; so is a typo, which would otherwise be a control bound to a
-     * key the API rejects as unknown.
+     * That every §3.2 key *has* a field is proven at compile time in
+     * `settings-fields.ts`, against the generated client's `Settings`. What is
+     * left for a runtime test is the thing a type cannot say: that no key is
+     * claimed by two groups at once, which would render two controls writing the
+     * same setting and let the second silently win.
      */
-    it('covers every §3.2 key exactly once, across the four groups', () => {
+    it('claims every key exactly once, across the four groups', () => {
       const covered = ALL_GROUPS.flatMap((group) => group.fields.map((field) => field.key));
       expect(new Set(covered).size).toBe(covered.length);
-      expect([...covered].sort()).toEqual(Object.keys(SPEC_DEFAULTS).sort());
-      expect(covered).toHaveLength(26);
+      // The count is §3.2's, and moves when §3.2 does — 26 at Phase 3, plus
+      // `regions` on 2026-09-09.
+      expect(covered).toHaveLength(27);
+      expect(covered).toContain('regions');
     });
 
     it('groups them the way §11.1 names them', () => {
@@ -159,9 +176,7 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
       await settle(fixture);
 
-      expect(api.patches).toEqual([
-        { sports_enabled: ['baseball_mlb', 'americanfootball_nfl'] },
-      ]);
+      expect(api.patches).toEqual([{ sports_enabled: ['baseball_mlb', 'americanfootball_nfl'] }]);
     });
 
     it('refuses consensus weights that are not a flat map of numbers', async () => {
@@ -292,9 +307,7 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       await settle(fixture);
 
       expect(api.patches).toEqual([]);
-      expect((el.querySelector('#set-paper_mode') as HTMLInputElement).checked).toBe(
-        true,
-      );
+      expect((el.querySelector('#set-paper_mode') as HTMLInputElement).checked).toBe(true);
     });
   });
 });
