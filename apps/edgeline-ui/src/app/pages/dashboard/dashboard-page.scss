@@ -66,6 +66,17 @@
   color: var(--danger-soft);
 }
 
+/* offline_mode: a chosen, reversible state rather than a guardrail that
+ * engaged — so the accent weight, not caution or danger. */
+.chip--accent {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dim {
+  color: var(--text-dim);
+}
+
 .quota {
   display: flex;
   align-items: center;

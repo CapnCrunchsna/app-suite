@@ -23,21 +23,100 @@
   font-size: 0.82rem;
 }
 
+/* One chip shape for both detector types.
+ *
+ * These used to be a neutral chip and an accent-2 chip, which read as "a normal
+ * row" and "a special row" rather than as two kinds of claim — EV looked muted
+ * and unfinished beside it. They are now the same object in two colours: same
+ * padding, same weight, same tinted fill, differing only in hue.
+ *
+ * The distinction they carry is real and worth keeping legible. An arb is
+ * arithmetic across two books and is true or false; a +EV call is a bet that a
+ * consensus is right, and is a probability. Accent for EV, ember for ARB — far
+ * enough apart to tell at a glance across a long table, and both drawn from the
+ * palette rather than invented here. */
 .chip {
+  display: inline-block;
   padding: 1px 9px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface-2);
   font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-/* An arb is a different kind of claim from a +EV call — it is arithmetic across
- * two books rather than a bet on a consensus being right — so it does not share
- * the neutral chip. */
+.chip--ev {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
 .chip--arb {
   border-color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 14%, transparent);
   color: var(--accent-2);
+}
+
+/* The Type filter, wearing the same chips the table does. `.chip--ev` and
+ * `.chip--arb` are applied on top of these, so the colours cannot drift apart
+ * from the grid's — they are literally the same two rules. */
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.segmented__option {
+  padding: 3px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.segmented__option:hover {
+  color: var(--text);
+}
+
+/* Unselected options keep the hue but drop the fill, so the active one is the
+ * only filled thing in the row — the selection has to be readable at a glance,
+ * and three outlined chips in three colours is not a state, it is a palette. */
+.segmented__option:not(.segmented__option--active) {
+  background: none;
+}
+
+.segmented__option--active {
+  border-color: var(--accent);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.segmented__option--active.chip--ev {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.segmented__option--active.chip--arb {
+  border-color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 14%, transparent);
+  color: var(--accent-2);
+}
+
+.segmented__option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.event__teams {
+  font-weight: 600;
 }
 
 .block {

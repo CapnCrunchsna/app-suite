@@ -19,21 +19,26 @@ import {
   resource,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Panel } from '@metrum/ui';
 import { NO_DATA, formatLocalTime } from '@metrum/format';
 import type { ProviderRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
+import { SystemStatus } from '../../system-status.service';
 
 @Component({
   selector: 'el-providers-page',
-  imports: [Panel],
+  imports: [Panel, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './providers-page.html',
   styleUrl: './providers-page.scss',
 })
 export class ProvidersPage {
   private readonly api = inject(EdgelineApiService);
+  /** An empty list has two causes and §3.2's `offline_mode` is the actionable
+   *  one — a row cannot arrive while no request is being made. */
+  protected readonly status = inject(SystemStatus);
 
   protected readonly busy = signal<string | null>(null);
   protected readonly notice = signal<string | null>(null);

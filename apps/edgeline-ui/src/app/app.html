@@ -12,31 +12,55 @@
   <span class="header__tagline">finds bets · never places them</span>
   <span class="header__spacer"></span>
 
-  <!-- §16.2's flag, on every page because every page here is betting advice. -->
-  <span
-    class="header__badge"
+  <!-- §16.2's flags, on every page because every page here is betting advice.
+       These are status, not switches: §16.2 reserves both to an explicit user
+       action, and Settings deliberately keeps them out of the ordinary Save. So
+       each badge is a link to the control that changes it rather than a control
+       itself — discoverable, and still impossible to flip from the header by
+       brushing past it. `header__badge--link` is what makes that legible: an
+       underline on hover, and no button affordance at rest. -->
+  <a
+    class="header__badge header__badge--link"
     [class.header__badge--paper]="paperMode()"
     [class.header__badge--live]="!paperMode()"
+    routerLink="/settings"
+    fragment="guardrails"
     [title]="
       paperMode()
-        ? 'paper_mode is on: recommendations are recorded and alerted, flagged PAPER. No money is at stake unless you place one yourself.'
-        : 'paper_mode is OFF. Recommendations are live-money advice.'
+        ? 'paper_mode is on: recommendations are recorded and alerted, flagged PAPER. No money is at stake unless you place one yourself. Change it on Settings.'
+        : 'paper_mode is OFF. Recommendations are live-money advice. Change it on Settings.'
     "
   >
     {{ paperMode() ? 'PAPER' : 'LIVE' }}
-  </span>
+  </a>
 
-  <span
-    class="header__badge"
+  <a
+    class="header__badge header__badge--link"
     [class.header__badge--killed]="killSwitch()"
+    routerLink="/dashboard"
+    fragment="kill"
     [title]="
       killSwitch()
-        ? 'kill_switch is on: polling continues so data stays continuous, but nothing is being alerted.'
-        : 'Alerting is on.'
+        ? 'kill_switch is on: polling continues so data stays continuous, but nothing is being alerted. Resume from the dashboard.'
+        : 'Alerting is on. The dashboard has the kill switch.'
     "
   >
     {{ killSwitch() ? 'ALERTS OFF' : 'ALERTS ON' }}
-  </span>
+  </a>
+
+  <!-- §3.2's offline_mode. Only shown when engaged: unlike PAPER, whose whole
+       job is to be visible at all times, "polling is running" is the unremarkable
+       state and a permanent ONLINE chip would just be noise to read past. -->
+  @if (offlineMode()) {
+    <a
+      class="header__badge header__badge--link header__badge--offline"
+      routerLink="/settings"
+      fragment="guardrails"
+      title="offline_mode is on: no job makes a provider request. Everything else — worker, grading, this UI — keeps running on stored data. Change it on Settings."
+    >
+      OFFLINE
+    </a>
+  }
 
   <ui-theme-switcher />
 </header>
@@ -49,6 +73,18 @@
     <strong>Alerting is stopped.</strong> Polling continues and opportunities keep being
     recorded, so the tables below stay live — but nothing is being sent anywhere. Resume from
     the dashboard.
+  </p>
+}
+
+@if (offlineMode()) {
+  <!-- The mirror of the kill-switch banner, and misreadable in the opposite
+       direction: the worker's heartbeat stays green and every table simply stops
+       growing, which looks like a quiet market rather than like a stopped feed. -->
+  <p class="banner banner--offline" role="status">
+    <strong>Polling is off.</strong> <code>offline_mode</code> is on, so no job is making a
+    provider request and no new prices are arriving. Everything below is stored data, and
+    grading, the opportunity lifecycle and this UI carry on as normal. Turn it off on
+    <a routerLink="/settings" fragment="guardrails">Settings</a>.
   </p>
 }
 

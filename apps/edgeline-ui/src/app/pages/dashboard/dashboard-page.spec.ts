@@ -211,7 +211,9 @@ describe('DashboardPage (§11.1)', () => {
       expect(row?.textContent).toContain('$25.00');
       expect(row?.textContent).toContain('3.25%');
       expect(row?.textContent).toContain('PAPER');
-      expect(row?.textContent).toContain('ungraded');
+      expect(row?.textContent).toContain('Ungraded');
+      // `h2h` is a provider key, not a market name. The table renders the label.
+      expect(row?.textContent).toContain('Moneyline');
     });
 
     it('shows a quota bar against its budget', async () => {
@@ -224,7 +226,7 @@ describe('DashboardPage (§11.1)', () => {
     it('calls the worker stopped when the heartbeat is stale, absent when there is none', async () => {
       const never = await render();
       expect(never.el.textContent).toContain('never seen');
-      expect(never.el.textContent).toContain('no heartbeat recorded');
+      expect(never.el.textContent).toContain('No heartbeat recorded');
       TestBed.resetTestingModule();
 
       const stale = await render((api) => {

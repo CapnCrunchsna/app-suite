@@ -26,6 +26,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Panel } from '@metrum/ui';
 import { formatLocalTime, formatPercent } from '@metrum/format';
 import type { OpportunityLegRow, OpportunityRow } from '@metrum/edgeline-api-client';
@@ -33,6 +34,7 @@ import type { OpportunityLegRow, OpportunityRow } from '@metrum/edgeline-api-cli
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
 import { formatDecimalOdds, toAmerican } from '../../formatting';
+import { marketLabel, matchup, sportLabel, statusLabel, typeLabel } from '../../labels';
 
 /** §11.1's cadence, named so the test can assert it rather than guess. */
 export const POLL_INTERVAL_MS = 15_000;
@@ -42,7 +44,7 @@ type TypeFilter = 'all' | 'ev' | 'arb';
 
 @Component({
   selector: 'el-opportunities-page',
-  imports: [Panel],
+  imports: [Panel, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './opportunities-page.html',
   styleUrl: './opportunities-page.scss',
@@ -78,13 +80,35 @@ export class OpportunitiesPage {
         limit: 200,
       });
       this.lastRefresh.set(new Date().toISOString());
+      this.settled.set(rows);
       return rows;
     },
     defaultValue: [] as OpportunityRow[],
   });
 
-  protected readonly rows = computed(() => this.rowsResource.value());
+  /**
+   * The last rows that actually arrived, which is what the table renders.
+   *
+   * `resource` reverts `value()` to `defaultValue` the moment its params change,
+   * and the 15-second tick is a param — so every poll emptied the table for the
+   * length of one request. On a page of rows that collapsed the `<tbody>` to a
+   * single "nothing detected" cell, the document lost most of its height, and the
+   * browser pinned the scroll position to the top. It read as a full page reload
+   * every fifteen seconds.
+   *
+   * Holding the last good value means a refresh changes the rows and nothing
+   * else: no height change, no scroll jump, and the toolbar's "reading…" is what
+   * says a request is in flight.
+   */
+  private readonly settled = signal<OpportunityRow[]>([]);
+
+  protected readonly rows = this.settled.asReadonly();
   protected readonly loading = this.rowsResource.isLoading;
+  /** Only before the first response — after that the table has rows to show and
+   *  a spinner over them would be the same flicker in another form. */
+  protected readonly loadingFirst = computed(
+    () => this.rowsResource.isLoading() && this.settled().length === 0,
+  );
   protected readonly loadError = computed(() => this.rowsResource.error());
   protected readonly filtered = computed(
     () => this.statusFilter() !== 'all' || this.typeFilter() !== 'all',
@@ -125,4 +149,9 @@ export class OpportunitiesPage {
   protected percent = formatPercent;
   protected odds = formatDecimalOdds;
   protected american = toAmerican;
+  protected marketLabel = marketLabel;
+  protected sportLabel = sportLabel;
+  protected statusLabel = statusLabel;
+  protected typeLabel = typeLabel;
+  protected matchup = matchup;
 }

@@ -13,6 +13,11 @@
  *   That is the single most misreadable state the app can be in — the
  *   opportunities table keeps filling up while nothing is being sent — so the
  *   banner that explains it has to follow the reader onto the table.
+ * - **`offline_mode`.** §3.2's mirror of the above: polling stops, everything
+ *   else keeps running. It is misreadable in the opposite direction — every
+ *   table freezes while the worker's heartbeat stays green — so the reader who
+ *   is wondering why nothing has been detected since yesterday needs it on the
+ *   page, not in the settings screen they were not looking at.
  *
  * Held here rather than fetched per page so the dashboard's KILL/RESUME button
  * and the header badge cannot disagree: the button writes through this service,
@@ -52,6 +57,17 @@ export class SystemStatus {
    */
   readonly paperMode = computed(() => this.state()?.paper_mode !== false);
   readonly killSwitch = computed(() => this.state()?.kill_switch === true);
+  /**
+   * §3.2's `offline_mode`, added 2026-09-10 — "no job makes a provider request,
+   * and everything else keeps running on stored data".
+   *
+   * Defaults to `false` where `paperMode` defaults to `true`, and the asymmetry
+   * is deliberate: assuming PAPER is the cautious guess because it under-claims
+   * what the engine is doing, whereas assuming *offline* would have the UI
+   * announce that polling has stopped on no evidence, which would send someone
+   * to debug a worker that is fine.
+   */
+  readonly offlineMode = computed(() => this.state()?.offline_mode === true);
   readonly quota = computed(() => this.state()?.quota ?? []);
   readonly sportsEnabled = computed(() => this.state()?.sports_enabled ?? []);
 

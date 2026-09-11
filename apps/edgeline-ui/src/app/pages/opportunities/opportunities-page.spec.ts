@@ -77,6 +77,20 @@ async function settle(fixture: { whenStable(): Promise<unknown>; detectChanges()
   fixture.detectChanges();
 }
 
+/** Click one of the type filter's chips by its label — `All`, `EV`, `ARB`. */
+async function chooseType(
+  fixture: { whenStable(): Promise<unknown>; detectChanges(): void },
+  el: HTMLElement,
+  label: string,
+): Promise<void> {
+  const option = [...el.querySelectorAll('.segmented__option')].find(
+    (node) => node.textContent?.trim() === label,
+  ) as HTMLButtonElement | undefined;
+  if (!option) throw new Error(`no type filter option labelled ${label}`);
+  option.click();
+  await settle(fixture);
+}
+
 describe('OpportunitiesPage (§11.1)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
@@ -176,13 +190,110 @@ describe('OpportunitiesPage (§11.1)', () => {
       const { fixture, el } = await render((api) => {
         api.rows = [];
       });
-      const type = el.querySelectorAll('select')[1] as HTMLSelectElement;
-      type.value = 'arb';
-      type.dispatchEvent(new Event('change'));
-      await settle(fixture);
+      // The type filter is a segmented control, not a `<select>` — an `<option>`
+      // cannot be styled per-option with any consistency, and this filter has to
+      // wear the same chips the table does.
+      await chooseType(fixture, el, 'ARB');
 
       expect(el.querySelector('.empty')?.textContent).toContain('Nothing matches these filters');
     });
+
+    it('sends the chosen type to the API', async () => {
+      const { fixture, el, api } = await render();
+      await chooseType(fixture, el, 'ARB');
+
+      expect(api.queries.at(-1)).toEqual({ status: null, type: 'arb', limit: 200 });
+    });
+  });
+
+  describe('what the row actually says', () => {
+    /**
+     * `h2h` and `baseball_mlb:8dafff0a…` are provider keys. They were what this
+     * table printed, and they tell a reader nothing about which game they are
+     * being asked to bet on — which is the question the page exists to answer.
+     */
+    it('names the game and the market, not the provider keys', async () => {
+      const { el } = await render((api) => {
+        api.rows = [
+          {
+            ...ROW,
+            event_id: 'baseball_mlb:8dafff0a',
+            event: {
+              sport_key: 'baseball_mlb',
+              commence_time: '2026-09-11T23:10:00Z',
+              home_team: 'Cleveland Guardians',
+              away_team: 'Kansas City Royals',
+            },
+          },
+        ];
+      });
+
+      const row = el.querySelector('tbody tr');
+      expect(row?.textContent).toContain('Kansas City Royals @ Cleveland Guardians');
+      expect(row?.textContent).toContain('Moneyline');
+      expect(row?.textContent).toContain('MLB');
+      expect(row?.textContent).not.toContain('h2h');
+      // Still reachable — it is what you quote when asking why a row looks wrong.
+      expect(el.querySelector('.event__teams')?.getAttribute('title')).toBe(
+        'baseball_mlb:8dafff0a',
+      );
+    });
+
+    it('says so when the fixture is gone rather than rendering a blank', async () => {
+      const { el } = await render();
+      expect(el.querySelector('tbody tr')?.textContent).toContain('Fixture no longer on file');
+    });
+
+    // `open`/`alerted` and `ev`/`arb` are enum values, not prose.
+    it('capitalises the status and upper-cases the type', async () => {
+      const { el } = await render();
+      const row = el.querySelector('tbody tr');
+      expect(row?.textContent).toContain('Open');
+      expect(el.querySelector('.chip')?.textContent?.trim()).toBe('ARB');
+    });
+  });
+
+  /**
+   * The refresh used to empty the table for the length of each request, because
+   * `resource` reverts to `defaultValue` whenever its params change and the
+   * 15-second tick is a param. The rows vanishing collapsed the page's height and
+   * the browser pinned the scroll to the top — it read as a full reload every
+   * fifteen seconds.
+   */
+  it('keeps the rows on screen while a refresh is in flight', async () => {
+    // A response that is held open, so the assertion lands while the refresh is
+    // genuinely mid-flight rather than in whatever gap a timer leaves.
+    let release: (rows: OpportunityRow[]) => void = () => undefined;
+    const { fixture, el, api } = await render();
+    expect(el.querySelectorAll('tbody tr')).toHaveLength(1);
+
+    api.listOpportunities = (query: unknown) => {
+      api.queries.push(query);
+      return new Promise<OpportunityRow[]>((resolve) => {
+        release = resolve;
+      });
+    };
+
+    // Driven through the Refresh button rather than the interval: it bumps the
+    // same signal by the same path, and it is the one a reader can press.
+    (
+      [...el.querySelectorAll('button')].find(
+        (node) => node.textContent?.trim() === 'Refresh now',
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    // The request has gone out and has not come back. Before the fix this was a
+    // single "nothing detected" cell, and the height it lost took the scroll
+    // position with it.
+    expect(el.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(el.querySelector('.empty')).toBeNull();
+
+    release([ROW]);
+    await settle(fixture);
+    expect(el.querySelectorAll('tbody tr')).toHaveLength(1);
   });
 
   describe('the empty state', () => {

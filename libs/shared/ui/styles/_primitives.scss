@@ -30,20 +30,33 @@
   gap: 20px;
 }
 
+/* Title above lede, not beside it.
+ *
+ * These were a baseline-aligned row until 2026-09-11. Sharing a baseline is the
+ * right call for two runs of text at similar sizes, and the wrong one here: a
+ * 1.35rem heading against 0.9rem body means the lede's first line sits on the
+ * heading's baseline while its cap-height lands well below the heading's, which
+ * reads as a caption that slipped rather than as two aligned things. The moment
+ * the lede wrapped — which it does on every page in Edgeline — the remaining
+ * lines hung below the heading with nothing to align to at all.
+ *
+ * Stacking removes the problem rather than tuning it, and gives the lede a
+ * readable measure instead of whatever was left beside the title. */
 .page__head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 .page__title {
   margin: 0;
   font-size: 1.35rem;
+  line-height: 1.25;
 }
 
 .page__lede {
-  flex: 1 1 340px;
+  max-width: 76ch;
   margin: 0;
   color: var(--text-dim);
   font-size: 0.9rem;

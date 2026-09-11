@@ -11,7 +11,7 @@
       <span class="tile__label">Bankroll</span>
       <span class="tile__value">{{ money(bankrollCents()) }}</span>
       <span class="tile__sub">
-        ledger total across books · <a routerLink="/results">results</a>
+        Ledger total across books · <a routerLink="/results">results</a>
       </span>
     </div>
 
@@ -19,7 +19,7 @@
       <span class="tile__label">Today's recommendations</span>
       <span class="tile__value">{{ today().length }}</span>
       <span class="tile__sub">
-        since local midnight{{ status.paperMode() ? ', all flagged PAPER' : '' }}
+        Since local midnight{{ status.paperMode() ? ', all flagged PAPER' : '' }}
       </span>
     </div>
 
@@ -30,8 +30,8 @@
         <a routerLink="/sportsbooks">
           {{
             enabledBooks().length === bookCount()
-              ? 'priority and link templates'
-              : 'enable the ones you hold'
+              ? 'Priority and link templates'
+              : 'Enable the ones you hold'
           }}
         </a>
       </span>
@@ -44,9 +44,9 @@
       </span>
       <span class="tile__sub">
         @if (heartbeatAt()) {
-          heartbeat {{ heartbeatAge() }}
+          Heartbeat {{ heartbeatAge() }}
         } @else {
-          no heartbeat recorded — <code>nx run edgeline-api:worker</code>
+          No heartbeat recorded — <code>nx run edgeline-api:worker</code>
         }
       </span>
     </div>
@@ -100,8 +100,8 @@
           </span>
           {{
             status.paperMode()
-              ? 'recommendations are recorded and alerted, flagged PAPER'
-              : 'recommendations are live-money advice'
+              ? 'Recommendations are recorded and alerted, flagged PAPER'
+              : 'Recommendations are live-money advice'
           }}
         </span>
       </div>
@@ -114,9 +114,35 @@
           </span>
           {{
             status.killSwitch()
-              ? 'kill_switch is on — polling continues, nothing is sent'
+              ? 'kill_switch is on — nothing is sent'
               : 'kill_switch is off'
           }}
+        </span>
+      </div>
+
+      <!-- §3.2's mirror of the row above, and the reason the two sit together:
+           one stops the output while the input keeps running, the other stops the
+           input while everything else keeps running. Reading either one alone
+           tells you half of whether the engine is doing anything. -->
+      <div class="health__row">
+        <span class="health__key">Polling</span>
+        <span class="health__value">
+          <span class="chip" [class.chip--accent]="status.offlineMode()">
+            {{ status.offlineMode() ? 'OFFLINE' : 'LIVE' }}
+          </span>
+          @if (status.offlineMode()) {
+            <code>offline_mode</code> is on — no provider request is made by any job
+            @if (lastPollAt()) {
+              <span class="dim">· last poll {{ pollAge() }}</span>
+            }
+          } @else {
+            <code>offline_mode</code> is off — prices are being fetched
+            @if (lastPollAt()) {
+              <span class="dim">· last poll {{ pollAge() }}</span>
+            } @else {
+              <span class="dim">· no poll recorded yet</span>
+            }
+          }
         </span>
       </div>
 
@@ -146,14 +172,23 @@
               </span>
             </span>
           } @empty {
-            <span class="dim">no provider has reported a quota yet</span>
+            @if (status.offlineMode()) {
+              <span class="dim">
+                No provider has been asked for one — <code>offline_mode</code> is on, and a
+                quota is only reported by an adapter that answered a request.
+              </span>
+            } @else {
+              <span class="dim">No provider has reported a quota yet</span>
+            }
           }
         </span>
       </div>
     </div>
 
-    <!-- §11.1's "big KILL/RESUME button". -->
-    <div class="kill">
+    <!-- §11.1's "big KILL/RESUME button". `id` is the header's ALERTS badge
+         destination — that badge is a link to this control rather than a control
+         of its own (§16.2). -->
+    <div class="kill" id="kill">
       @if (status.killSwitch() && confirmingResume()) {
         <p class="kill__confirm">
           Resuming turns alerting back on. If §12's daily loss stop is what engaged the kill
@@ -183,9 +218,31 @@
           <button type="button" class="button" (click)="cancelResume()">Cancel</button>
         }
       </div>
+      <!-- What the button is *for*, which is not obvious from what it does. Most
+           readers will never press it: §12 presses it for them. -->
       <p class="kill__note">
-        Stopping alerting never stops polling — snapshots keep being recorded so closing lines
-        and CLV stay intact. Nothing here places, or can place, a bet.
+        <strong>What this is for.</strong> It stops recommendations going out while leaving
+        the engine running — and mostly you will not press it, because
+        <a routerLink="/settings" fragment="guardrails">§12's daily loss stop</a> presses it
+        for you when today's graded losses reach
+        <code>daily_loss_stop_cents</code>. This button is how you take it back off. Press it
+        yourself when you have stopped trusting the advice, or before editing thresholds so
+        alerts do not fire mid-change.
+      </p>
+      <p class="kill__note">
+        @if (status.offlineMode()) {
+          <!-- The claim below is the app's standing one and it is false right now.
+               Saying "snapshots keep being recorded" while offline_mode is on is
+               how someone concludes their CLV data is intact when it is not. -->
+          <strong>Not right now, though:</strong> <code>offline_mode</code> is on, so polling
+          is already stopped and no new snapshots are being recorded. Normally stopping
+          alerting leaves polling alone so closing lines and CLV stay intact — that is true
+          again as soon as you turn offline mode off.
+        } @else {
+          Stopping alerting never stops polling — snapshots keep being recorded so closing
+          lines and CLV stay intact.
+        }
+        Nothing here places, or can place, a bet.
       </p>
     </div>
   </ui-panel>
@@ -211,14 +268,22 @@
               <tr>
                 <td>{{ clock(row.sent_at) }}</td>
                 <td>
-                  {{ row.opportunity?.market_key ?? '—' }}
-                  <span class="dim">{{ row.opportunity?.type ?? '' }}</span>
+                  @if (row.opportunity?.event) {
+                    <span>{{ matchup(row.opportunity.event) }}</span>
+                    <span class="dim block">
+                      {{ marketLabel(row.opportunity.market_key) }} ·
+                      {{ typeLabel(row.opportunity.type) }}
+                    </span>
+                  } @else {
+                    {{ marketLabel(row.opportunity?.market_key) }}
+                    <span class="dim">{{ typeLabel(row.opportunity?.type) }}</span>
+                  }
                 </td>
                 <td class="num">{{ percent(row.opportunity?.edge_pct) }}</td>
                 <td class="num">{{ money(stakeCents(row)) }}</td>
-                <td>{{ row.paper ? 'PAPER' : 'live' }}</td>
+                <td>{{ row.paper ? 'PAPER' : 'LIVE' }}</td>
                 <td>
-                  {{ row.result ? row.result.outcome : 'ungraded' }}
+                  {{ row.result ? statusLabel(row.result.outcome) : 'Ungraded' }}
                 </td>
               </tr>
             } @empty {
@@ -232,6 +297,12 @@
                       @if (blockedReason()) {
                         That is the configuration above, not a quiet market — nothing can be
                         recommended until enough books are enabled.
+                      } @else if (status.offlineMode()) {
+                        <!-- "The detectors ran" is the standing explanation and it
+                             is not true while no prices are arriving to run them
+                             against. -->
+                        The detectors have nothing new to run on —
+                        <code>offline_mode</code> is on, so no prices are being fetched.
                       } @else {
                         The detectors ran and found nothing over their thresholds. See
                         <a routerLink="/opportunities">Opportunities</a> for what was detected

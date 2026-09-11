@@ -47,6 +47,7 @@ import type {
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
+import { marketLabel, matchup, statusLabel, typeLabel } from '../../labels';
 
 /** §13 stamps the heartbeat every 60 s, so three missed ones is a stopped
  *  worker rather than a slow one. */
@@ -135,6 +136,11 @@ export class DashboardPage {
   );
   protected readonly quota = this.status.quota;
 
+  /** §3.2's `offline_mode` makes this the figure that says whether prices are
+   *  still arriving — the heartbeat keeps ticking either way. */
+  protected readonly lastPollAt = this.status.lastPollAt;
+  protected readonly pollAge = computed(() => formatAge(this.status.lastPollAt()));
+
   /**
    * Which of the two detectors could fire at all with the books enabled right
    * now.
@@ -192,4 +198,8 @@ export class DashboardPage {
   protected money = formatCents;
   protected clock = formatLocalClock;
   protected percent = formatPercent;
+  protected marketLabel = marketLabel;
+  protected statusLabel = statusLabel;
+  protected typeLabel = typeLabel;
+  protected matchup = matchup;
 }

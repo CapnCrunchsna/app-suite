@@ -85,6 +85,16 @@
         <p class="empty">
           @if (loading()) {
             Reading…
+          } @else if (status.offlineMode()) {
+            <!-- Both reasons are true at once here, and the switched-off one is
+                 the actionable half: the generic explanation alone would leave a
+                 reader waiting for a row that cannot arrive. -->
+            <strong>No provider has reported, and none will while offline.</strong>
+            <code>offline_mode</code> is on, so no job makes a provider request — and a row
+            only appears once an adapter has answered one. §8 makes the provider's own
+            response header the only source of truth for <code>quota_used</code>, so there is
+            nothing to show until polling resumes. Turn it off on
+            <a routerLink="/settings" fragment="guardrails">Settings</a>.
           } @else {
             <strong>No provider has reported yet.</strong> Unlike the sportsbook list, this one
             is not seeded at bootstrap — a row appears the first time an adapter answers and

@@ -49,6 +49,7 @@ export class App {
   protected readonly sections = SECTIONS;
   protected readonly paperMode = this.status.paperMode;
   protected readonly killSwitch = this.status.killSwitch;
+  protected readonly offlineMode = this.status.offlineMode;
   protected readonly failure = this.status.failure;
 
   constructor() {

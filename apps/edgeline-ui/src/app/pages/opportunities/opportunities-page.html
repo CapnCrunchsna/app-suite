@@ -14,27 +14,45 @@
         <span>Status</span>
         <select [value]="statusFilter()" (change)="setStatus($any($event.target).value)">
           @for (option of statuses; track option) {
-            <option [value]="option">{{ option }}</option>
+            <option [value]="option">
+              {{ option === 'all' ? 'All' : statusLabel(option) }}
+            </option>
           }
         </select>
       </label>
 
-      <label class="toolbar__field">
-        <span>Type</span>
-        <select [value]="typeFilter()" (change)="setType($any($event.target).value)">
+      <!-- Buttons rather than a `<select>`, so the filter can look like the thing
+           it filters. Option elements cannot be styled per-option with any
+           consistency across browsers — on macOS the colours are ignored
+           outright — so a select here would have shown plain text beside a table
+           of coloured chips, which is the mismatch this is fixing. Three options
+           is also few enough to show at once. -->
+      <div class="toolbar__field">
+        <span id="type-filter-label">Type</span>
+        <div class="segmented" role="group" aria-labelledby="type-filter-label">
           @for (option of types; track option) {
-            <option [value]="option">{{ option }}</option>
+            <button
+              type="button"
+              class="segmented__option"
+              [class.segmented__option--active]="typeFilter() === option"
+              [class.chip--arb]="option === 'arb'"
+              [class.chip--ev]="option === 'ev'"
+              [attr.aria-pressed]="typeFilter() === option"
+              (click)="setType(option)"
+            >
+              {{ option === 'all' ? 'All' : typeLabel(option) }}
+            </button>
           }
-        </select>
-      </label>
+        </div>
+      </div>
 
       <span class="toolbar__spacer"></span>
 
-      <span class="toolbar__status">
+      <span class="toolbar__status" role="status">
         @if (loading()) {
-          reading…
+          Reading…
         } @else if (lastRefresh()) {
-          updated {{ time(lastRefresh()) }} · refreshes every 15s
+          Updated {{ time(lastRefresh()) }} · refreshes every 15s
         }
       </span>
       <button type="button" class="button" (click)="refreshNow()">Refresh now</button>
@@ -64,11 +82,38 @@
               <tr>
                 <td>{{ time(row.detected_at) }}</td>
                 <td>
-                  <span class="chip" [class.chip--arb]="row.type === 'arb'">{{ row.type }}</span>
+                  <span
+                    class="chip"
+                    [class.chip--arb]="row.type === 'arb'"
+                    [class.chip--ev]="row.type === 'ev'"
+                    >{{ typeLabel(row.type) }}</span
+                  >
                 </td>
                 <td>
-                  {{ row.market_key }}
-                  <span class="dim block">{{ row.event_id }}</span>
+                  <!-- The matchup first, the market under it. `event_id` is a
+                       primary key — `baseball_mlb:8dafff0a…` told the reader
+                       nothing about which game they were being asked to bet on,
+                       which is why the API now joins the fixture in. It stays on
+                       the row as a tooltip, because it is still what you would
+                       quote when asking why a row looks wrong. -->
+                  @if (row.event) {
+                    <span class="event__teams" [title]="row.event_id">
+                      {{ matchup(row.event) }}
+                    </span>
+                    <span class="dim block">
+                      {{ marketLabel(row.market_key) }} ·
+                      {{ sportLabel(row.event.sport_key) }} ·
+                      {{ time(row.event.commence_time) }}
+                    </span>
+                  } @else {
+                    <span class="event__teams">{{ marketLabel(row.market_key) }}</span>
+                    <!-- §7.2 upserts an event for every snapshot, so a missing one
+                         means the fixture was reaped from under a live row. Worth
+                         saying rather than rendering a blank. -->
+                    <span class="dim block" [title]="row.event_id">
+                      Fixture no longer on file
+                    </span>
+                  }
                 </td>
                 <td class="num">{{ percent(row.edge_pct) }}</td>
                 <td>
@@ -97,18 +142,28 @@
                     <span class="dim">—</span>
                   }
                 </td>
-                <td>{{ row.status }}</td>
+                <td>{{ statusLabel(row.status) }}</td>
                 <td class="num">{{ percent(row.closing_edge_pct) }}</td>
               </tr>
             } @empty {
               <tr>
                 <td colspan="7">
                   <p class="empty">
-                    @if (loading()) {
+                    @if (loadingFirst()) {
                       Reading…
                     } @else if (filtered()) {
                       <strong>Nothing matches these filters.</strong> Clear them to see
                       everything that has been detected.
+                    } @else if (status.offlineMode()) {
+                      <!-- The standing explanation below is "polling has not
+                           stopped", and while offline_mode is on that is exactly
+                           backwards — which would send someone hunting for a
+                           quiet market that is really a switched-off feed. -->
+                      <strong>Nothing has been detected, and nothing can be.</strong>
+                      <code>offline_mode</code> is on, so no prices are being fetched. What is
+                      here is whatever was detected before it was switched on. Turn it off on
+                      <a routerLink="/settings" fragment="guardrails">Settings</a> to start
+                      polling again.
                     } @else {
                       <strong>Nothing has been detected.</strong> Prices are polled and stored
                       whether or not anything clears a threshold, so an empty table here means

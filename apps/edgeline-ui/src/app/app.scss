@@ -73,6 +73,35 @@
   color: var(--danger-soft);
 }
 
+/* offline_mode. The accent rather than the danger weight: polling being off is a
+ * state someone chose and can undo, not a failure — §3.2 added it precisely so a
+ * spent quota stops polling and nothing else. */
+.header__badge--offline {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* These three badges link to the control that changes them; they are not
+ * controls. §16.2 reserves paper_mode and kill_switch to an explicit user
+ * action, and Settings keeps them out of the ordinary Save — so a header pill
+ * that flips a guardrail on one stray click would undo that on every page at
+ * once. No button affordance at rest, an underline on hover to say it goes
+ * somewhere, and the destination named in the tooltip. */
+.header__badge--link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header__badge--link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.header__badge--link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .banner {
   margin: 0;
   padding: 10px 20px;
@@ -88,6 +117,14 @@
 .banner--down {
   background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   border-bottom-color: var(--danger);
+}
+
+/* Not the caution weight the kill-switch banner uses. Offline is a deliberate,
+ * reversible setting rather than a guardrail that engaged — it should read as
+ * "here is why the tables are still", not as an alarm. */
+.banner--offline {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-bottom-color: var(--accent);
 }
 
 .shell {
