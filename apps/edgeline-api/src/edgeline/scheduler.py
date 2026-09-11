@@ -189,6 +189,16 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             report = await run_once(
                 provider, client, sport_key=sport_key, prefix=prefix, sink=sink
             )
+            if report.offline:
+                # Deliberately *not* stamped. `last_poll_at` means "odds were
+                # fetched at", and two things read it that way: `/health`, where
+                # a fresh stamp over stale data reads as working, and
+                # `poll_is_due`, which would then skip the startup catch-up poll
+                # on the first run after coming back online — leaving a real
+                # poll up to a full interval away, which is the exact failure
+                # `poll_startup` exists to prevent.
+                log.info("poll %s: skipped, offline_mode is on", sport_key)
+                return
             await record_run(client, prefix=prefix, job="poll")
             log.info(
                 "poll %s: %d snapshots, %d detections, %d alerted",

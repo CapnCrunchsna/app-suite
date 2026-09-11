@@ -210,6 +210,48 @@ def _stamp(**ago) -> str:
     return (datetime.now(timezone.utc) - timedelta(**ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+async def test_an_offline_cycle_does_not_stamp_last_poll_at():
+    """`last_poll_at` means "odds were fetched at", and `poll_is_due` reads it.
+
+    Stamping it for a cycle that fetched nothing makes `/health` show fresh data
+    over stale rows, and makes the first run after coming back online skip its
+    catch-up poll — leaving a real poll up to twelve hours away, which is the
+    failure `poll_startup` was added to prevent. Found live on 2026-09-10: the
+    offline worker's first tick stamped it within seconds of starting.
+    """
+    from edgeline.engine import CycleReport
+    from edgeline.scheduler import build_scheduler
+
+    stamped: list[str] = []
+
+    class _Client:
+        async def update(self, **kwargs):
+            stamped.append(kwargs.get("id", ""))
+
+    class _Provider:
+        key = "the_odds_api"
+
+    async def _offline_run_once(*_args, **kwargs):
+        report = CycleReport(sport_key=kwargs.get("sport_key", "baseball_mlb"))
+        report.offline = True
+        return report
+
+    import edgeline.engine as engine_module
+
+    original = engine_module.run_once
+    engine_module.run_once = _offline_run_once
+    try:
+        scheduler = build_scheduler(
+            provider=_Provider(), client=_Client(), settings=settings(offline_mode=True)
+        )
+        poll = scheduler.get_job("poll_featured:baseball_mlb")
+        await poll.func("baseball_mlb")
+    finally:
+        engine_module.run_once = original
+
+    assert stamped == [], "an offline cycle must not claim a poll happened"
+
+
 async def test_a_worker_that_has_never_polled_is_due():
     assert await poll_is_due(_RuntimeDoc(), prefix="edgeline-", interval_s=43_200)
 
