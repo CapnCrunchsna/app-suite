@@ -54,6 +54,10 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     },
+    "@angular/build:dev-server": {
+      "//dependsOn": "`nx serve` resolves `@metrum/…` the same way the app build does — through each lib's `dist/`, because every app tsconfig clears `customConditions`. Without `^build` the dev server compiles against whatever dist/ happened to be there, which is not a stale *render*: it is a stale *type surface*, so a field added to the generated api-client fails the serve with errors pointing at the consuming component. That is what happened on 2026-09-10 with `offline_mode`, and the errors named settings-fields.ts rather than the lib that was actually behind.",
+      "dependsOn": ["^build"]
+    },
     "@angular/build:unit-test": {
       "cache": true,
       "//dependsOn": "An executor-keyed default replaces the `test` one rather than merging with it, so `^build` has to be restated here. It is load-bearing, not tidiness: this executor hardcodes `externalPackages: true`, so a bare `@metrum/…` specifier resolves through node_modules to that lib's dist/ — and without `^build` the test runs against whatever dist/ was last left there. That is a test that passes or fails depending on task order.",
