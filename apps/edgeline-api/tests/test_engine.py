@@ -810,3 +810,128 @@ def test_detection_hash_is_order_independent_and_populated():
         detected_at=arb.detected_at,
     )
     assert rebuilt.hash == arb.hash
+
+
+# ---- what the closing sweep costs (§12 step 4, §13, §8.4) -------------------
+#
+# §13 runs this every 60 seconds. It used to fetch first and ask whether any
+# event was inside the window second, so every one of those ticks bought a full
+# featured-odds response — `markets x regions` credits — to learn that the
+# answer was no. On 2026-09-09 that emptied the 500-credit monthly free tier in
+# 66 minutes while the 12-hour featured poll never came round even once. The
+# §8.4 budget guard was blind to it: that arithmetic only counts the poll.
+#
+# Nothing here had a test before, which is how it shipped.
+
+
+def _payload_commencing_at(when: datetime) -> list[dict]:
+    return fair_only_payload(when.strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+
+@pytest.mark.es
+async def test_a_sweep_with_no_event_in_the_window_never_pays_the_provider(
+    es_url, test_index_prefix
+):
+    """The regression. No event due means no fetch — not a fetch that discovers
+    there was no event due."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    try:
+        await _fresh_cluster(client, prefix)
+        # An event a full day out: stored, findable, and nowhere near the window.
+        provider = _FixtureProvider(_payload_commencing_at(now + timedelta(days=1)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        # The due check reads `edgeline-events`, which `run_once` bulk-writes
+        # without `refresh`. In production the sweep is a minute behind the poll
+        # and never races it; here it is microseconds behind, and an unrefreshed
+        # index would make this test pass by finding nothing rather than by
+        # finding nothing *due*.
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(), prefix=prefix, now=now,
+        )
+
+        assert captured == []
+        assert provider.calls == [], "a sweep with nothing due must cost zero credits"
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_sweep_pays_once_for_an_event_inside_the_window(
+    es_url, test_index_prefix
+):
+    """And still captures: skipping the fetch must not cost the closing line,
+    which is unrepeatable and the only thing CLV can be computed against."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    try:
+        await _fresh_cluster(client, prefix)
+        # Inside §3.2's 300-second closing window.
+        provider = _FixtureProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(), prefix=prefix, now=now,
+        )
+
+        assert len(captured) == 1
+        assert len(provider.calls) == 1
+
+        # Second sweep, same window: already captured, so it stops paying.
+        # Same refresh caveat — the closing rows were just bulk-written, and the
+        # real sweep is 60 seconds behind rather than microseconds.
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+        again = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(), prefix=prefix, now=now,
+        )
+        assert again == []
+        assert provider.calls == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_sweep_whose_datastore_is_unreadable_skips_rather_than_fetches(
+    es_url, test_index_prefix
+):
+    """Fails closed. The sweep retries in 60 seconds, so an unreadable answer
+    costs a minute; failing the other way is what emptied a month of credits."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(fair_only_payload())
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=settings(),
+            # No index by this name, so the due check raises and answers "not due".
+            prefix="edgeline-absent-",
+        )
+
+        assert captured == []
+        assert provider.calls == []
+    finally:
+        await client.close()

@@ -771,9 +771,25 @@ async def capture_closing_lines(
     A sweep rather than a per-event timer is a deliberate substitution: an
     in-process one-shot is lost on restart, and losing it means losing that
     event's CLV forever. The observable behaviour is the same.
+
+    **"Cheap to call often" has to mean cheap in credits, not just in writes.**
+    This used to fetch first and ask whether anything was due second, so a sweep
+    on §13's 60-second interval bought a full featured-odds response every minute
+    — `markets x regions` credits — purely to discover that no event was inside
+    the window. Measured 2026-09-09: it spent the entire 500-credit monthly free
+    tier in 66 minutes, and the §8.4 budget guard never saw it coming because
+    that arithmetic only counts the featured poll. The window question is now
+    answered from Elasticsearch, which already holds every event's
+    `commence_time`, and the provider is only paid when there is something to
+    capture.
     """
     now = now or datetime.now(timezone.utc)
     window_end = now + timedelta(seconds=settings.closing_capture_offset_s)
+
+    if not await _closing_capture_is_due(
+        client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
+    ):
+        return []
 
     response = await provider.fetch_odds(
         sport_key, settings.markets_featured, regions=",".join(settings.regions)
@@ -808,6 +824,55 @@ async def capture_closing_lines(
     captured = sorted(event_ids - already)
     log.info("captured closing lines for %d event(s)", len(captured))
     return captured
+
+
+async def _closing_capture_is_due(
+    client, *, sport_key: str, now: datetime, window_end: datetime, prefix: str
+) -> bool:
+    """Is any stored event inside the closing window still missing its snapshot?
+
+    Answered from Elasticsearch alone, because the only other place to ask is the
+    provider, and the provider charges per question. `edgeline-events` already
+    carries `commence_time` for every event a poll has ever seen, which is the
+    same set the odds response would describe.
+
+    **Fails closed.** An unreadable answer returns `False`, skipping this tick.
+    The sweep runs every 60 seconds, so a transient Elasticsearch error costs one
+    minute of delay; failing the other way is what emptied a month of credits in
+    an hour, one wasted fetch at a time, and a *persistent* fault would do it
+    again. The exposure is bounded either way: a closing line is lost only if ES
+    stays unreadable for the whole window before an event starts.
+    """
+    stamp = "%Y-%m-%dT%H:%M:%SZ"
+    try:
+        found = await client.search(
+            index=with_prefix(EVENTS_INDEX, prefix),
+            size=1000,
+            source=False,
+            query={
+                "bool": {
+                    "filter": [
+                        {"term": {"sport_key": sport_key}},
+                        {
+                            "range": {
+                                "commence_time": {
+                                    "gt": now.strftime(stamp),
+                                    "lte": window_end.strftime(stamp),
+                                }
+                            }
+                        },
+                    ]
+                }
+            },
+        )
+    except Exception:
+        log.warning("closing-capture due check failed; skipping this sweep")
+        return False
+
+    event_ids = {hit["_id"] for hit in found["hits"]["hits"]}
+    if not event_ids:
+        return False
+    return bool(event_ids - await _events_with_closing_lines(client, event_ids, prefix=prefix))
 
 
 async def _events_with_closing_lines(
