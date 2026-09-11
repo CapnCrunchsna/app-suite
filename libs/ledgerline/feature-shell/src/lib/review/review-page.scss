@@ -1,41 +1,14 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page`, `.page__lede`, `.notice`, `.empty`, `.empty--bad` and `.table` come
+ * from `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`. What is left is §9ab's tabs and the
+ * scorecard, both of which only this page has. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.lede {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-dim, #7ea8a1);
-}
-
-.notice {
-  margin: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: var(--surface-2, #143034);
-  font-size: 0.8rem;
-  color: var(--text, #dcefeb);
-}
-
-.empty {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
-}
-
-.empty--bad {
-  color: var(--warn, #f0b429);
 }
 
 /* §9ab. Tabs rather than two panels: the two halves of this page are opposite
@@ -92,33 +65,6 @@
 .score dd {
   margin: 3px 0 0;
   color: var(--text, #dcefeb);
-}
-
-.score__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.76rem;
-}
-
-.score__table th {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border, #1f4a47);
-  text-align: left;
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
-}
-
-.score__table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 45%, transparent);
-  color: var(--text, #dcefeb);
-}
-
-.score__num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 /* The number this page exists for. Amber rather than red: a miss is information,

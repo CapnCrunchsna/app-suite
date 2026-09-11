@@ -1,5 +1,11 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.empty`, `.field`, `.table` and the `input`/`textarea` styling come from
+ * `libs/shared/ui/styles/_primitives.scss`. The price-step `<table>` is
+ * `class="table steps__table"`: `.table` is the look, `.steps__table` is the
+ * block name its `__up`/`__down`/`__unconfirmed` cells belong to — and the one
+ * selector that tells it apart from the ledger table on the page behind it. */
 
 :host {
   display: block;
@@ -57,12 +63,6 @@
   color: var(--text-dim, #7ea8a1);
 }
 
-.empty {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
-}
-
 /* ------------------------------------------------------------- chart --- */
 
 .chart__svg {
@@ -102,27 +102,6 @@
 
 /* ------------------------------------------------------------- steps --- */
 
-.steps__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-}
-
-.steps__table th,
-.steps__table td {
-  padding: 5px 8px 5px 0;
-  text-align: left;
-  border-bottom: 1px solid var(--border, #1f4a47);
-}
-
-.steps__table th {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-dim, #7ea8a1);
-}
-
 .steps__up {
   color: var(--warn, #f0b429);
 }
@@ -144,20 +123,9 @@
   gap: 14px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field__label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-dim, #7ea8a1);
-}
-
+/* `.field`, `.field__label` and `.field__hint` are the primitive's. What is left
+ * is this drawer's own: the input shares its row with the "open" link, so it
+ * needs to take the slack and be allowed to shrink. */
 .field__row {
   display: flex;
   gap: 8px;
@@ -168,34 +136,16 @@
 .field__area {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.82rem;
 }
 
 .field__area {
   resize: vertical;
 }
 
-.field__input:focus-visible,
-.field__area:focus-visible {
-  outline: 2px solid var(--accent, #2dd4bf);
-  outline-offset: 1px;
-}
-
 .field__open {
   flex: 0 0 auto;
   font-size: 0.78rem;
   color: var(--accent, #2dd4bf);
-}
-
-.field__hint {
-  font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
 }
 
 .override {

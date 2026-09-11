@@ -1,28 +1,21 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.notice` and the `select` styling come from
+ * `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`; so does the `.failure` panel.
+ *
+ * **This page has no `.table`.** What used to be called that here is `.txns`: a
+ * virtualized CSS grid of `<div>`s with a scrolling viewport and spacer rows, not
+ * a `<table>`. Sharing the primitive's name meant it silently picked up
+ * `width: 100%` and a 0.9rem body — and, worse, that two different things in one
+ * app answered to `.table`. */
 
 :host {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-}
-
-/* ------------------------------------------------------------- notice --- */
-
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--accent, #2dd4bf);
-  border-radius: var(--radius, 10px);
-  background: var(--surface-2, #143034);
-  font-size: 0.85rem;
-}
-
-.notice__text {
-  flex: 1 1 auto;
 }
 
 .notice__job {
@@ -32,19 +25,6 @@
   font-size: 0.72rem;
   color: var(--text-dim, #7ea8a1);
   white-space: nowrap;
-}
-
-.notice__dismiss {
-  border: 0;
-  background: transparent;
-  color: var(--text-dim, #7ea8a1);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text, #dcefeb);
-  }
 }
 
 /* ------------------------------------------------------------ toolbar --- */
@@ -71,16 +51,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-
-  select {
-    padding: 3px 6px;
-    border: 1px solid var(--border, #1f4a47);
-    border-radius: 5px;
-    background: var(--bg, #0a1517);
-    color: var(--text, #dcefeb);
-    font: inherit;
-    font-size: 0.8rem;
-  }
 }
 
 .toolbar__page {
@@ -103,30 +73,9 @@
   }
 }
 
-/* ------------------------------------------------------------ failure --- */
+/* --------------------------------------------------------------- rows --- */
 
-.failure {
-  padding: 16px;
-  border: 1px solid var(--danger, #e0796a);
-  border-radius: var(--radius, 10px);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-
-.failure__text {
-  margin: 0 0 6px;
-  font-size: 0.88rem;
-}
-
-.failure__detail {
-  margin: 0 0 12px;
-  font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
-  font-family: ui-monospace, Consolas, monospace;
-}
-
-/* -------------------------------------------------------------- table --- */
-
-.table {
+.txns {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -137,8 +86,8 @@
 
 /* One grid template for the header and every row, declared once so a column
  * cannot drift between them. */
-.table__head,
-.table__row {
+.txns__head,
+.txns__row {
   display: grid;
   grid-template-columns:
     minmax(112px, 120px)
@@ -151,7 +100,7 @@
   gap: 0 10px;
 }
 
-.table__head {
+.txns__head {
   padding: 0 12px;
   height: 38px;
   background: var(--surface-2, #143034);
@@ -163,7 +112,7 @@
   color: var(--text-dim, #7ea8a1);
 }
 
-.table__sort {
+.txns__sort {
   border: 0;
   background: transparent;
   color: inherit;
@@ -179,7 +128,7 @@
   }
 }
 
-.table__viewport {
+.txns__viewport {
   /* The scroll container. Everything below is either a rendered row or a spacer
      standing in for rows that are not in the DOM.
      *
@@ -198,12 +147,12 @@
   contain: content;
 }
 
-.table__spacer {
+.txns__spacer {
   width: 100%;
   flex: 0 0 auto;
 }
 
-.table__row {
+.txns__row {
   padding: 0 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
   font-size: 0.83rem;
@@ -218,39 +167,39 @@
   }
 }
 
-.table__row--expanded {
+.txns__row--expanded {
   background: var(--surface-2, #143034);
 }
 
-.table__row--pending {
+.txns__row--pending {
   /* Pending rows are stored and shown, and out of every total (§2.5). Dimmed so
      that is visible without reading the chip. */
   color: var(--text-dim, #7ea8a1);
 }
 
-.table__cell {
+.txns__cell {
   min-width: 0;
   overflow: hidden;
 }
 
-.table__cell--date {
+.txns__cell--date {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.table__cell--amount {
+.txns__cell--amount {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.table__cell--desc {
+.txns__cell--desc {
   display: flex;
   flex-direction: column;
   line-height: 1.25;
 }
 
-.table__cell--flags {
+.txns__cell--flags {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -258,7 +207,7 @@
   flex-wrap: nowrap;
 }
 
-.table__expand {
+.txns__expand {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -276,20 +225,20 @@
   }
 }
 
-.table__chevron {
+.txns__chevron {
   color: var(--text-dim, #7ea8a1);
   font-size: 0.7rem;
   width: 8px;
 }
 
-.table__raw {
+.txns__raw {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.8rem;
 }
 
-.table__normalized {
+.txns__normalized {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -298,7 +247,7 @@
   font-family: ui-monospace, Consolas, monospace;
 }
 
-.table__editable {
+.txns__editable {
   border: 0;
   border-bottom: 1px dashed color-mix(in srgb, var(--text-dim) 45%, transparent);
   background: transparent;
@@ -320,7 +269,7 @@
 
 /* §4.1 step 7's provisional merchants are the ones worth correcting, so they are
  * marked rather than blending in with a seeded name. */
-.table__provisional {
+.txns__provisional {
   font-style: italic;
 
   &::after {
@@ -329,22 +278,18 @@
   }
 }
 
-.table__select {
+/* The primitive's `select`, with the one thing that marks it as a live editor
+ * opened in place rather than a filter: an accent border. */
+.txns__select {
   width: 100%;
-  padding: 2px 4px;
-  border: 1px solid var(--accent, #2dd4bf);
-  border-radius: 4px;
-  background: var(--bg, #0a1517);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
+  border-color: var(--accent, #2dd4bf);
 }
 
-.table__credit {
+.txns__credit {
   color: var(--accent-2, #34d399);
 }
 
-.table__detail {
+.txns__detail {
   /* Not fixed-height: this is the one region the window arithmetic measures. */
   display: flex;
   flex-direction: column;
@@ -352,7 +297,7 @@
   padding: 0 0 4px;
 }
 
-.table__empty {
+.txns__empty {
   margin: 0;
   padding: 28px 16px;
   text-align: center;

@@ -1,23 +1,14 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__title`, `.page__lede`, `.button` and `.table` come from
+ * `libs/shared/ui/styles/_primitives.scss`. What is left is the §6.6 chart and
+ * the two direction colours, which are this page's own. */
 
 :host {
   display: grid;
   gap: 16px;
   min-width: 0;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text, #dcefeb);
-}
-
-.lede {
-  margin: 0 0 12px;
-  font-size: 0.78rem;
-  color: var(--text, #dcefeb);
 }
 
 .note {
@@ -40,31 +31,6 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-dim, #7ea8a1);
-}
-
-.range__field input {
-  padding: 5px 8px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface, #0f2124);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-}
-
-.button {
-  padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.button:hover {
-  border-color: var(--accent, #2dd4bf);
 }
 
 /* ------------------------------------------------------------------ chart --- */
@@ -190,34 +156,11 @@
 
 /* ------------------------------------------------------------------ table --- */
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.76rem;
-}
-
-.table th {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border, #1f4a47);
-  text-align: left;
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
-  white-space: nowrap;
-}
-
+/* Long merchant descriptors have no spaces to break on, and a `.table` cell will
+ * not wrap one on its own — it pushes the amount column off the panel instead.
+ * The rest of the table is the primitive. */
 .table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 45%, transparent);
-  color: var(--text, #dcefeb);
   overflow-wrap: anywhere;
-}
-
-.table__num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* Direction, not judgement: §6.6 is a page about what happened, and spending less

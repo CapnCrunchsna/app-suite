@@ -1,77 +1,17 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.notice`, `.empty` and `.button` come from
+ * `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`; so does the `.failure` panel. The pills
+ * and fold controls below keep their own names and sizes — they are §6.4's
+ * navigation, not actions. */
 
 :host {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-}
-
-/* -------------------------------------------------------------- notice --- */
-
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--accent, #2dd4bf);
-  border-radius: var(--radius, 10px);
-  background: var(--surface-2, #143034);
-  font-size: 0.85rem;
-}
-
-.notice__text {
-  flex: 1 1 auto;
-}
-
-.notice__dismiss {
-  border: 0;
-  background: transparent;
-  color: var(--text-dim, #7ea8a1);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text, #dcefeb);
-  }
-}
-
-/* ------------------------------------------------------------- failure --- */
-
-.failure {
-  padding: 16px;
-  border: 1px solid var(--danger, #e0796a);
-  border-radius: var(--radius, 10px);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-
-.failure__text {
-  margin: 0 0 6px;
-  font-size: 0.88rem;
-}
-
-.failure__detail {
-  margin: 0 0 12px;
-  font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
-  font-family: ui-monospace, Consolas, monospace;
-}
-
-.button {
-  padding: 5px 10px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.8rem;
-  cursor: pointer;
-
-  &:hover {
-    border-color: var(--accent, #2dd4bf);
-  }
 }
 
 /* ------------------------------------------------------------- toolbar --- */
@@ -127,16 +67,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-/* --------------------------------------------------------------- empty --- */
-
-.empty {
-  margin: 0;
-  padding: 8px 4px;
-  font-size: 0.86rem;
-  line-height: 1.6;
-  color: var(--text-dim, #7ea8a1);
 }
 
 /* ---- contents strip and collapsible groups (user feedback) ---- */

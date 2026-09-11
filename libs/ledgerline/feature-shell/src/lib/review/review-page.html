@@ -1,8 +1,13 @@
 <div class="page">
-  <p class="lede">
-    Questions about your statements that the app will not answer for itself. Nothing here is a
-    setting — it is all about the data you imported, and an answer is permanent.
-  </p>
+  <!-- The lede goes in a `.page__head` even with no title beside it: the
+       primitive's `.page__lede` is `flex: 1 1 340px`, which is a width in that
+       row and a 340px-tall block anywhere else. -->
+  <div class="page__head">
+    <p class="page__lede">
+      Questions about your statements that the app will not answer for itself. Nothing here is a
+      setting — it is all about the data you imported, and an answer is permanent.
+    </p>
+  </div>
 
   <!-- Two kinds of work, one page, one at a time (§9ab). The queue is the app asking
        you something it could not settle; the pass is you telling it things it never
@@ -97,22 +102,22 @@
         @if (report.unavailableReason) {
           <p class="note">{{ report.unavailableReason }}</p>
         } @else if (report.rules.length > 0) {
-          <table class="score__table">
+          <table class="table">
             <thead>
               <tr>
                 <th scope="col">Rule</th>
-                <th scope="col" class="score__num">You said</th>
-                <th scope="col" class="score__num">Found</th>
-                <th scope="col" class="score__num">Missed</th>
+                <th scope="col" class="num">You said</th>
+                <th scope="col" class="num">Found</th>
+                <th scope="col" class="num">Missed</th>
               </tr>
             </thead>
             <tbody>
               @for (rule of report.rules; track rule.ruleId) {
                 <tr>
                   <td>{{ rule.ruleId }}</td>
-                  <td class="score__num">{{ rule.expected }}</td>
-                  <td class="score__num">{{ rule.found }}</td>
-                  <td class="score__num" [class.score__miss]="rule.missed > 0">{{ rule.missed }}</td>
+                  <td class="num">{{ rule.expected }}</td>
+                  <td class="num">{{ rule.found }}</td>
+                  <td class="num" [class.score__miss]="rule.missed > 0">{{ rule.missed }}</td>
                 </tr>
               }
             </tbody>

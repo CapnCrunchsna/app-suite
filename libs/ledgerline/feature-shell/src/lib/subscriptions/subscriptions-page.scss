@@ -1,15 +1,18 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page`, `.table`, `.notice`, `.empty` and `.empty--bad` come from
+ * `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`. The ledger's `<table>` is
+ * `class="table ledger"`: `.table` is the look, `.ledger` is the block name the
+ * `__row`/`__merchant`/`__annual` parts below belong to, and what §6.5's tests
+ * address the table by. `.ledger` itself needs no declarations.
+ *
+ * `.toolbar` and `.chip` have no primitive to move to — they stay here. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 /* ---------------------------------------------------------- headline --- */
@@ -92,32 +95,6 @@
 
 /* ------------------------------------------------------------ ledger --- */
 
-.ledger {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.ledger th,
-.ledger td {
-  padding: 8px 10px 8px 0;
-  text-align: left;
-  border-bottom: 1px solid var(--border, #1f4a47);
-}
-
-.ledger th {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-dim, #7ea8a1);
-}
-
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
 .ledger__row {
   cursor: pointer;
 }
@@ -190,26 +167,6 @@
 }
 
 /* ------------------------------------------------------------- other --- */
-
-.notice {
-  margin: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: var(--surface-2, #143034);
-  font-size: 0.8rem;
-  color: var(--text, #dcefeb);
-}
-
-.empty {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-dim, #7ea8a1);
-}
-
-.empty--bad {
-  color: var(--warn, #f0b429);
-}
 
 .linkish {
   padding: 0;

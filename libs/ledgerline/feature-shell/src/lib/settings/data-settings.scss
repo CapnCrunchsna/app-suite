@@ -1,5 +1,11 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.button`, `.button--danger` and the `input` styling come from
+ * `libs/shared/ui/styles/_primitives.scss`. "Delete everything" used to be a
+ * filled amber button defined here; it is the primitive's outlined danger button
+ * now, and the amber box and type-to-confirm around it — which are the parts
+ * that actually gate §2.3's one irreversible operation — are unchanged. */
 
 :host {
   display: block;
@@ -34,26 +40,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.button {
-  padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .note,
@@ -103,27 +89,18 @@
   color: var(--text-dim, #7ea8a1);
 }
 
+/* The box and the type are the primitive's `input`; only the width is this
+ * field's own — it has to hold the confirmation phrase without scrolling. */
 .danger__input {
   min-width: 200px;
-  padding: 4px 8px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
 }
 
+/* Amber rather than the primitive's accent focus ring. Every other focusable
+ * thing on this page is safe to activate; this one empties the database, and the
+ * ring is the last thing a keyboard user sees before pressing Enter. */
 .danger__input:focus-visible {
   outline: 2px solid var(--warn, #f0b429);
   outline-offset: 1px;
-}
-
-.button--danger:not(:disabled) {
-  border-color: var(--warn, #f0b429);
-  background: var(--warn, #f0b429);
-  color: var(--surface-1, #0e2427);
-  font-weight: 600;
 }
 
 /* §6.8's degraded-LLM-call log. A dense three-column list rather than cards: it is

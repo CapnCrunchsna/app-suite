@@ -43,7 +43,7 @@ export interface TransferDecisionEvent {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (links().length === 0) {
-      <p class="queue__empty">
+      <p class="empty">
         @if (loading()) {
           Looking for transfers…
         } @else {
@@ -123,7 +123,7 @@ export interface TransferDecisionEvent {
               }
               <button
                 type="button"
-                class="button button--reject"
+                class="button button--reject button--danger"
                 [disabled]="busy()"
                 (click)="decided.emit({ link, decision: 'reject' })"
               >

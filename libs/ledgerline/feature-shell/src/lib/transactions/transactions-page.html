@@ -81,46 +81,46 @@
     <button type="button" class="toolbar__page" (click)="reload()">Try again</button>
   </div>
   } @else {
-  <div class="table" role="table" aria-label="Transactions">
-    <div class="table__head" role="row">
+  <div class="txns" role="table" aria-label="Transactions">
+    <div class="txns__head" role="row">
       <button
         type="button"
-        class="table__cell table__cell--date table__sort"
+        class="txns__cell txns__cell--date txns__sort"
         role="columnheader"
         (click)="toggleDateSort()"
         title="Ordered by effective date — the statement's posted date is display-only and never orders anything."
       >
         Date @if (sort() === 'date_desc') { ↓ } @else if (sort() === 'date_asc') { ↑ }
       </button>
-      <span class="table__cell table__cell--desc" role="columnheader">Descriptor</span>
-      <span class="table__cell table__cell--merchant" role="columnheader">Merchant</span>
-      <span class="table__cell table__cell--category" role="columnheader">Category</span>
+      <span class="txns__cell txns__cell--desc" role="columnheader">Descriptor</span>
+      <span class="txns__cell txns__cell--merchant" role="columnheader">Merchant</span>
+      <span class="txns__cell txns__cell--category" role="columnheader">Category</span>
       <button
         type="button"
-        class="table__cell table__cell--amount table__sort"
+        class="txns__cell txns__cell--amount txns__sort"
         role="columnheader"
         (click)="toggleAmountSort()"
       >
         Amount @if (sort() === 'amount_desc') { ↓ } @else if (sort() === 'amount_asc') { ↑ }
       </button>
-      <span class="table__cell table__cell--flags" role="columnheader">Flags</span>
+      <span class="txns__cell txns__cell--flags" role="columnheader">Flags</span>
     </div>
 
     <!-- The scrolling viewport. Only the windowed slice is in the DOM; the two
            spacers stand in for the rest so the scrollbar is the right size. -->
     <div
-      class="table__viewport"
+      class="txns__viewport"
       #viewport
       (scroll)="onScroll($event)"
       [style.--row-height.px]="ROW_HEIGHT"
     >
       @if (rows().length === 0 && !page.isLoading()) {
-      <p class="table__empty">
+      <p class="txns__empty">
         Nothing matches. If the database is empty, import a statement first — the API's
         <code>POST /api/imports</code> path, or the Import page once it exists.
       </p>
       } @else {
-      <div class="table__spacer" [style.height.px]="window().paddingTop"></div>
+      <div class="txns__spacer" [style.height.px]="window().paddingTop"></div>
 
       @for (entry of visibleRows(); track entry.row.transaction.id) { @let t =
       entry.row.transaction;
@@ -133,46 +133,46 @@
            these two rules exist to protect. -->
       <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
       <div
-        class="table__row"
+        class="txns__row"
         role="row"
-        [class.table__row--expanded]="expandedId() === t.id"
-        [class.table__row--pending]="t.isPending"
+        [class.txns__row--expanded]="expandedId() === t.id"
+        [class.txns__row--pending]="t.isPending"
         [style.height.px]="ROW_HEIGHT"
         (click)="onRowClick(t.id, $event)"
       >
         <button
           type="button"
-          class="table__cell table__cell--date table__expand"
+          class="txns__cell txns__cell--date txns__expand"
           role="cell"
           (click)="toggleExpanded(t.id)"
           [attr.aria-expanded]="expandedId() === t.id"
           [title]="'Show the verbatim statement line and covering imports'"
         >
-          <span class="table__chevron">{{ expandedId() === t.id ? '▾' : '▸' }}</span>
+          <span class="txns__chevron">{{ expandedId() === t.id ? '▾' : '▸' }}</span>
           {{ t.effectiveDate }}
         </button>
 
-        <span class="table__cell table__cell--desc" role="cell" [title]="t.descriptionRaw">
-          <span class="table__raw">{{ t.descriptionRaw }}</span>
-          <span class="table__normalized">{{ t.descriptionNormalized }}</span>
+        <span class="txns__cell txns__cell--desc" role="cell" [title]="t.descriptionRaw">
+          <span class="txns__raw">{{ t.descriptionRaw }}</span>
+          <span class="txns__normalized">{{ t.descriptionNormalized }}</span>
         </span>
 
         <button
           type="button"
-          class="table__cell table__cell--merchant table__editable"
+          class="txns__cell txns__cell--merchant txns__editable"
           role="cell"
           (click)="startMerchantEdit(t.id)"
           title="Assign a merchant. Every merchant edit offers to apply to all matching descriptors."
         >
-          <span [class.table__provisional]="isProvisional(t.merchantId)">
+          <span [class.txns__provisional]="isProvisional(t.merchantId)">
             {{ merchantLabel(t.merchantId) }}
           </span>
         </button>
 
         @if (isEditing(t.id, 'category')) {
-        <span class="table__cell table__cell--category" role="cell">
+        <span class="txns__cell txns__cell--category" role="cell">
           <select
-            class="table__select"
+            class="txns__select"
             (change)="assignCategory(t, $any($event.target).value)"
             (blur)="cancelEdit()"
           >
@@ -187,7 +187,7 @@
         } @else {
         <button
           type="button"
-          class="table__cell table__cell--category table__editable"
+          class="txns__cell txns__cell--category txns__editable"
           role="cell"
           (click)="startEdit(t.id, 'category')"
           title="Assign a category"
@@ -197,14 +197,14 @@
         }
 
         <span
-          class="table__cell table__cell--amount"
+          class="txns__cell txns__cell--amount"
           role="cell"
-          [class.table__credit]="t.amountCents > 0"
+          [class.txns__credit]="t.amountCents > 0"
         >
           {{ formatCents(t.amountCents) }}
         </span>
 
-        <span class="table__cell table__cell--flags" role="cell">
+        <span class="txns__cell txns__cell--flags" role="cell">
           @if (t.isPending) {
           <span class="chip chip--pending" title="Stored and shown; out of every total.">
             pending
@@ -243,7 +243,7 @@
       <!-- One variable-height region per row, which is what keeps the
                  window arithmetic to a single `expandedHeight`. -->
       @if (expandedId() === t.id) {
-      <div class="table__detail" #detailPanel>
+      <div class="txns__detail" #detailPanel>
         @if (isEditing(t.id, 'merchant')) {
         <ll-merchant-assign
           [transaction]="t"
@@ -261,7 +261,7 @@
       </div>
       } }
 
-      <div class="table__spacer" [style.height.px]="window().paddingBottom"></div>
+      <div class="txns__spacer" [style.height.px]="window().paddingBottom"></div>
       }
     </div>
   </div>

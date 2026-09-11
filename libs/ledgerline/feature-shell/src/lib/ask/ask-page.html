@@ -1,4 +1,4 @@
-<h2 class="title">Ask</h2>
+<h2 class="page__title">Ask</h2>
 
 <!-- §6.7: "disabled with a clear explanation and a link to Settings when the
      provider is `none`." The explanation is the API's own, because it names the
@@ -14,7 +14,7 @@
   </ui-panel>
 } @else {
   <ui-panel heading="Ask a question">
-    <p class="lede">
+    <p class="page__lede">
       Questions are answered by running one of six fixed queries over your ledger and describing
       what came back. The model never sees your rows and never writes a query of its own — it
       picks one, and the numbers you read are checked against the result before you see them.
@@ -77,8 +77,8 @@
           <thead>
             <tr>
               <th scope="col">What</th>
-              <th scope="col" class="table__num">Amount</th>
-              <th scope="col" class="table__num">Charges</th>
+              <th scope="col" class="num">Amount</th>
+              <th scope="col" class="num">Charges</th>
               <th scope="col">When</th>
             </tr>
           </thead>
@@ -86,8 +86,8 @@
             @for (row of answer.rows; track $index) {
               <tr>
                 <td>{{ row.label }}</td>
-                <td class="table__num">{{ money(row.amountCents) }}</td>
-                <td class="table__num">{{ row.count ?? '' }}</td>
+                <td class="num">{{ money(row.amountCents) }}</td>
+                <td class="num">{{ row.count ?? '' }}</td>
                 <td>{{ row.date ?? '' }}</td>
               </tr>
             }

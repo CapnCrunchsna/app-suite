@@ -21,7 +21,10 @@
             "input": "apps/ledgerline-ui/public"
           }
         ],
-        "styles": ["apps/ledgerline-ui/src/styles.scss"]
+        "styles": ["apps/ledgerline-ui/src/styles.scss"],
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/shared/ui/styles"]
+        }
       },
       "configurations": {
         "production": {

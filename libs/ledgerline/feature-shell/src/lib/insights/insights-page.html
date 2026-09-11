@@ -1,4 +1,4 @@
-<h2 class="title">Insights</h2>
+<h2 class="page__title">Insights</h2>
 
 <!-- §6.6's date-range selector. Empty means the whole ledger — the API defaults to
      the first and last row rather than to a window the data may not cover. -->
@@ -67,7 +67,7 @@
       produces a table of large falls that are all the same artefact.
     </p>
   } @else {
-    <p class="lede">{{ mov.fromMonth }} → {{ mov.toMonth }}, the last two months covered end to end.</p>
+    <p class="page__lede">{{ mov.fromMonth }} → {{ mov.toMonth }}, the last two months covered end to end.</p>
 
     <div class="movers">
       <section>
@@ -80,8 +80,8 @@
               @for (row of mov.risers; track row.category) {
                 <tr>
                   <td>{{ row.category }}</td>
-                  <td class="table__num">{{ money(row.fromCents) }} → {{ money(row.toCents) }}</td>
-                  <td class="table__num table__up">{{ percent(row.percent) }}</td>
+                  <td class="num">{{ money(row.fromCents) }} → {{ money(row.toCents) }}</td>
+                  <td class="num table__up">{{ percent(row.percent) }}</td>
                 </tr>
               }
             </tbody>
@@ -99,8 +99,8 @@
               @for (row of mov.fallers; track row.category) {
                 <tr>
                   <td>{{ row.category }}</td>
-                  <td class="table__num">{{ money(row.fromCents) }} → {{ money(row.toCents) }}</td>
-                  <td class="table__num table__down">{{ percent(row.percent) }}</td>
+                  <td class="num">{{ money(row.fromCents) }} → {{ money(row.toCents) }}</td>
+                  <td class="num table__down">{{ percent(row.percent) }}</td>
                 </tr>
               }
             </tbody>
@@ -121,7 +121,7 @@
       was avoidable.
     </p>
   } @else {
-    <p class="lede">{{ money(fee.totalCents) }} across {{ fee.accounts.length }}
+    <p class="page__lede">{{ money(fee.totalCents) }} across {{ fee.accounts.length }}
       {{ fee.accounts.length === 1 ? 'account' : 'accounts' }}.</p>
 
     @for (account of fee.accounts; track account.accountId) {
@@ -136,8 +136,8 @@
             @for (row of account.byMerchant; track row.label) {
               <tr>
                 <td>{{ row.label }}</td>
-                <td class="table__num">{{ row.count }}</td>
-                <td class="table__num">{{ money(row.amountCents) }}</td>
+                <td class="num">{{ row.count }}</td>
+                <td class="num">{{ money(row.amountCents) }}</td>
               </tr>
             }
           </tbody>
@@ -159,14 +159,14 @@
       <thead>
         <tr>
           <th scope="col">What</th>
-          <th scope="col" class="table__num">Over the usual</th>
+          <th scope="col" class="num">Over the usual</th>
         </tr>
       </thead>
       <tbody>
         @for (row of out.rows; track row.findingId) {
           <tr>
             <td>{{ row.title }}</td>
-            <td class="table__num">{{ money(row.impactAnnualCents) }}</td>
+            <td class="num">{{ money(row.impactAnnualCents) }}</td>
           </tr>
         }
       </tbody>
@@ -182,7 +182,7 @@
   } @else if (small.rows.length === 0) {
     <p class="note">Nothing here yet — this fills in once there is a year of habit to add up.</p>
   } @else {
-    <p class="lede">
+    <p class="page__lede">
       Money you are already choosing to spend, totalled because you have probably never seen it
       totalled. Nothing here is a saving on its own.
     </p>
@@ -190,16 +190,16 @@
       <thead>
         <tr>
           <th scope="col">What</th>
-          <th scope="col" class="table__num">A month</th>
-          <th scope="col" class="table__num">A year</th>
+          <th scope="col" class="num">A month</th>
+          <th scope="col" class="num">A year</th>
         </tr>
       </thead>
       <tbody>
         @for (row of small.rows; track row.findingId) {
           <tr>
             <td>{{ row.title }}</td>
-            <td class="table__num">{{ money(row.impactMonthlyCents) }}</td>
-            <td class="table__num">{{ money(row.impactAnnualCents) }}</td>
+            <td class="num">{{ money(row.impactMonthlyCents) }}</td>
+            <td class="num">{{ money(row.impactAnnualCents) }}</td>
           </tr>
         }
       </tbody>

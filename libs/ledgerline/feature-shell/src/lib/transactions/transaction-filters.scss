@@ -32,20 +32,9 @@
   color: var(--text-dim, #7ea8a1);
 }
 
+/* Box, type and focus ring are the primitive's `input`/`select`. */
 .filters__input {
-  padding: 6px 8px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: var(--bg, #0a1517);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.875rem;
   min-width: 0;
-
-  &:focus-visible {
-    outline: 2px solid var(--accent, #2dd4bf);
-    outline-offset: 1px;
-  }
 }
 
 .filters__input--invalid {
