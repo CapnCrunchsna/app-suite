@@ -115,6 +115,53 @@ suite is ninety seconds. `tests/test_api.py` already uses its own prefix and nev
 participates; giving the rest of the suite an env-overridable prefix would retire this whole
 class and has not been done.
 
+## Credits, and what actually spends them
+
+Written down because three separate wrong guesses were made about this in one
+session, each of which cost real credits or real time.
+
+| Endpoint | Cost | Who calls it |
+| --- | --- | --- |
+| `/v4/sports` | **0** — free, and `x-requests-last: 0` confirms it | diagnostics only |
+| `/v4/sports/{sport}/odds` | **markets × regions** (6 at current settings) | `run_once`, `capture_closing_lines` |
+| `/v4/sports/{sport}/scores?daysFrom=` | **2** | `grading.grade` |
+
+Two consequences that are not obvious from §8.4:
+
+- **The §13 budget guard counts only the featured poll.** `plan_budget` projects
+  `(86400/interval) × markets × regions × 30` and knows nothing about the closing
+  sweep or grading. It reported a comfortable 360/500 while the real spend was
+  about 6 credits a minute. Treat its number as a floor, not a bill.
+- **Grading costs 2 credits every time the worker starts.** §13 runs a catch-up
+  grade 15 seconds in, so restarting the worker five times costs 10 credits
+  before anything is polled.
+
+`uv run python -m edgeline.scheduler --check-budget` prints the projection.
+Actual remaining credits only come from a response header — the dashboard at
+<https://dash.the-odds-api.com/> is where the balance and the monthly reset date
+live.
+
+## Working with no credits
+
+Set `offline_mode` (§3.2, in the UI under Safety, or by API):
+
+```bash
+curl -X PUT http://127.0.0.1:8000/api/settings -H "Content-Type: application/json" -d "{\"offline_mode\": true}"
+```
+
+No job makes a provider request; the worker, API, UI, grading and the §7.4
+lifecycle all keep running on stored data. `--check-budget` reports 0, so any
+cadence starts. Nothing new is ingested, including closing lines, which cannot be
+recovered afterwards.
+
+It is enforced at each seam that reaches the provider rather than by not
+registering jobs, so an offline job still appears in the logs saying what it
+declined to do. **The seams are not enumerated anywhere on purpose** —
+`test_no_scheduled_job_touches_the_provider_while_offline` drives every
+registered job against a recording provider and asserts it was never touched,
+because enumerating them by hand is exactly what missed `grading.grade` the first
+time.
+
 **`worker` polls once at startup, then on the cadence.** An APScheduler interval job first fires a
 *full* interval after start — twelve hours at the dev cadence — so without a catch-up job a worker
 run in short bursts on a laptop that sleeps would poll on the way to never. `poll_startup` runs a
