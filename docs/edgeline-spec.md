@@ -215,6 +215,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month |
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
+| `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option |
 | `quota_monthly_budget` | `500` | credits; raise when paid tier starts |
 
 ---

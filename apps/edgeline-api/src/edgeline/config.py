@@ -28,6 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = PROJECT_ROOT / ".env"
 
 DevigMethod = Literal["multiplicative", "additive", "power", "shin"]
+ClosingCaptureMode = Literal["off", "recommended", "all"]
 
 
 class MissingSecretError(RuntimeError):
@@ -149,6 +150,23 @@ class Settings(BaseModel):
     poll_interval_dev_s: int = 43_200
     props_poll_interval_s: int = 600
     closing_capture_offset_s: int = 300
+    #: Whether to **buy** closing lines, and for which events (§12.4). Added
+    #: 2026-09-11, when the real cost was measured rather than assumed.
+    #:
+    #: * ``off`` — buy none. CLV falls back to the last stored price before the
+    #:   event started, which costs nothing because that poll was already paid
+    #:   for. Weaker (up to a poll interval stale) but universal: it covers every
+    #:   event, including ones no recommendation was made on.
+    #: * ``recommended`` — buy one targeted snapshot per event that has an
+    #:   ungraded recommendation. True closing lines where CLV actually decides
+    #:   something. Measured at roughly 90 credits/month on this fixture list.
+    #: * ``all`` — buy one for every event in the window. What the code did
+    #:   before this setting existed, at **1,188 credits/month against a 500
+    #:   budget** — 2.4x the whole allowance, spent mostly on events nobody bet.
+    #:
+    #: `off` is the default because it is the only one that cannot overspend, and
+    #: flipping to `recommended` on a paid tier is a one-setting change.
+    closing_capture_mode: ClosingCaptureMode = "off"
 
     # Provider budget
     quota_monthly_budget: int = 500

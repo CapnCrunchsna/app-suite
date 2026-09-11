@@ -804,7 +804,19 @@ async def capture_closing_lines(
         # the provider, and better than a CLV built from prices nobody fetched.
         return []
 
-    if not await _closing_capture_is_due(
+    if settings.closing_capture_mode == "off":
+        # §3.2, the default. CLV derives from the last price already stored
+        # before the event started, so this buys nothing. Measured 2026-09-11:
+        # buying one for every event is 1,188 credits/month against a budget of
+        # 500, and most of it goes on events nobody bet.
+        return []
+
+    if settings.closing_capture_mode == "recommended":
+        if not await _recommended_events_awaiting_closing(
+            client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
+        ):
+            return []
+    elif not await _closing_capture_is_due(
         client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
     ):
         return []
@@ -861,6 +873,18 @@ async def _closing_capture_is_due(
     again. The exposure is bounded either way: a closing line is lost only if ES
     stays unreadable for the whole window before an event starts.
     """
+    event_ids = await _events_in_window(
+        client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
+    )
+    if not event_ids:
+        return False
+    return bool(event_ids - await _events_with_closing_lines(client, event_ids, prefix=prefix))
+
+
+async def _events_in_window(
+    client, *, sport_key: str, now: datetime, window_end: datetime, prefix: str
+) -> set[str]:
+    """Stored events starting inside the closing window. Empty on any failure."""
     stamp = "%Y-%m-%dT%H:%M:%SZ"
     try:
         found = await client.search(
@@ -885,12 +909,47 @@ async def _closing_capture_is_due(
         )
     except Exception:
         log.warning("closing-capture due check failed; skipping this sweep")
-        return False
+        return set()
+    return {hit["_id"] for hit in found["hits"]["hits"]}
 
-    event_ids = {hit["_id"] for hit in found["hits"]["hits"]}
+
+async def _recommended_events_awaiting_closing(
+    client, *, sport_key: str, now: datetime, window_end: datetime, prefix: str
+) -> bool:
+    """`closing_capture_mode="recommended"`: is any event in the window one we
+    actually alerted a bet on?
+
+    CLV exists only for a recommendation, so an event nobody bet needs no bought
+    closing line — its price still gets derived from the last stored poll for
+    free. This is the difference between ~90 credits a month and 1,188.
+    """
+    event_ids = await _events_in_window(
+        client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
+    )
     if not event_ids:
         return False
-    return bool(event_ids - await _events_with_closing_lines(client, event_ids, prefix=prefix))
+    outstanding = event_ids - await _events_with_closing_lines(
+        client, event_ids, prefix=prefix
+    )
+    if not outstanding:
+        return False
+
+    try:
+        found = await client.search(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            size=0,
+            query={
+                "bool": {
+                    "filter": [
+                        {"terms": {"event_id": sorted(outstanding)}},
+                        {"term": {"status": STATUS_ALERTED}},
+                    ]
+                }
+            },
+        )
+    except Exception:
+        return False
+    return found["hits"]["total"]["value"] > 0
 
 
 async def _events_with_closing_lines(

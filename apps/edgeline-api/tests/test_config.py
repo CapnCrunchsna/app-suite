@@ -55,6 +55,10 @@ SPEC_DEFAULTS = {
     "poll_interval_dev_s": 43200,
     "props_poll_interval_s": 600,
     "closing_capture_offset_s": 300,
+    # Not in §3.2's original table — added 2026-09-11. `off` derives CLV from
+    # the last stored poll before kickoff and buys nothing; buying one for every
+    # event measured at 1,188 credits/month against a budget of 500.
+    "closing_capture_mode": "off",
     "quota_monthly_budget": 500,
 }
 

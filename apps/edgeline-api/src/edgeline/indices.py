@@ -156,6 +156,16 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             "outcome": _KEYWORD,  # win | loss | push | void
             "pnl_cents": _LONG,
             "clv_pct": _DOUBLE,
+            #: Which price `clv_pct` was measured against: `closing` for a real
+            #: T-minus-5-minutes snapshot, `derived` for the last price seen
+            #: before the event started. Recorded rather than inferred so a CLV
+            #: distribution can be filtered to the strong evidence — the two are
+            #: not the same measurement and averaging them silently would be a
+            #: worse answer than either.
+            "clv_source": _KEYWORD,
+            #: How stale the derived price was, in seconds before commence. Null
+            #: for a true closing line, which is the point of keeping both.
+            "clv_staleness_s": _LONG,
             "needs_manual": _BOOLEAN,
             "graded_at": _DATE,
         },

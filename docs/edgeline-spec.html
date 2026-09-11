@@ -235,6 +235,7 @@ ES_URL=http://localhost:9200</code></pre>
 <tr><td><code>poll_interval_dev_s</code></td><td><code>43200</code></td><td>dev/free tier: 2 polls/day. <strong>Halved from 6 h on 2026-09-09</strong> — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month</td></tr>
 <tr><td><code>props_poll_interval_s</code></td><td><code>600</code></td><td>props, only for events starting within 6 h</td></tr>
 <tr><td><code>closing_capture_offset_s</code></td><td><code>300</code></td><td>force snapshot at start_time − 5 min (CLV)</td></tr>
+<tr><td><code>closing_capture_mode</code></td><td><code>"off"</code></td><td><strong>added 2026-09-11.</strong> Whether to <em>buy</em> closing lines: <code>off</code> buys none and derives CLV from the last price already stored before kickoff; <code>recommended</code> buys one per event carrying an alerted opportunity (~90 credits/month); <code>all</code> buys one per event in the window — <strong>1,188 credits/month against a 500 budget</strong>, measured, which is what this setting exists to stop being the only option</td></tr>
 <tr><td><code>quota_monthly_budget</code></td><td><code>500</code></td><td>credits; raise when paid tier starts</td></tr>
 </table></div>
 <h2 id="s4">4. Elasticsearch Setup, Indices &amp; Mappings</h2>

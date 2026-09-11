@@ -33,12 +33,13 @@ class BootstrapReport:
 
     created_indices: list[str] = field(default_factory=list)
     existing_indices: list[str] = field(default_factory=list)
+    updated_mappings: list[str] = field(default_factory=list)
     seeded_documents: list[str] = field(default_factory=list)
     existing_documents: list[str] = field(default_factory=list)
 
     @property
     def changed(self) -> bool:
-        return bool(self.created_indices or self.seeded_documents)
+        return bool(self.created_indices or self.updated_mappings or self.seeded_documents)
 
 
 @lru_cache(maxsize=1)
@@ -52,6 +53,46 @@ async def close_client() -> None:
     if get_client.cache_info().currsize:
         await get_client().close()
         get_client.cache_clear()
+
+
+async def _sync_mapping(es, index: str, mapping: dict, report: "BootstrapReport") -> None:
+    """Add any §4.3 properties an existing index does not have yet.
+
+    Every index here is `dynamic: strict`, so a field added to a mapping in code
+    is *rejected* by an index created before it — the write fails, and it fails
+    at grading time rather than at startup. Creation-only bootstrap made adding a
+    field a silent trap on every existing install.
+
+    Elasticsearch permits adding properties to a live mapping and refuses to
+    change the type of one that exists. That is the behaviour wanted here, so the
+    refusal is logged loudly rather than swallowed: a genuine type conflict needs
+    a reindex and a person, and pretending otherwise would corrupt the data it is
+    trying to protect.
+    """
+    properties = mapping.get("properties")
+    if not properties:
+        return
+    try:
+        current = await es.indices.get_mapping(index=index)
+        live = current[index]["mappings"].get("properties", {})
+    except Exception:
+        live = {}
+
+    missing = {name: spec for name, spec in properties.items() if name not in live}
+    if not missing:
+        return
+    try:
+        await es.indices.put_mapping(index=index, properties=missing)
+    except Exception as exc:
+        log.error(
+            "could not add %s to %s: %s. The index needs a reindex by hand.",
+            ", ".join(sorted(missing)),
+            index,
+            exc,
+        )
+        return
+    report.updated_mappings.append(index)
+    log.info("added %s to %s", ", ".join(sorted(missing)), index)
 
 
 async def ensure_indices(
@@ -73,6 +114,7 @@ async def ensure_indices(
         index = with_prefix(name, prefix)
         if await es.indices.exists(index=index):
             report.existing_indices.append(index)
+            await _sync_mapping(es, index, mapping, report)
             continue
         await es.indices.create(index=index, mappings=mapping)
         report.created_indices.append(index)

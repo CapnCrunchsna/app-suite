@@ -1596,6 +1596,16 @@
             "title": "Closing Capture Offset S",
             "default": 300
           },
+          "closing_capture_mode": {
+            "type": "string",
+            "enum": [
+              "off",
+              "recommended",
+              "all"
+            ],
+            "title": "Closing Capture Mode",
+            "default": "off"
+          },
           "quota_monthly_budget": {
             "type": "integer",
             "title": "Quota Monthly Budget",

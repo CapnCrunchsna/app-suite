@@ -39,6 +39,7 @@ from .indices import (
     event_doc_id,
     with_prefix,
 )
+from .dedup import parse_iso
 from .oddsmath import clv_pct, consensus, devig, implied_prob
 from .schemas import utc_now_iso
 
@@ -51,6 +52,10 @@ VOID = "void"
 
 REASON_WON = "bet_won"
 REASON_LOST = "bet_lost"
+
+#: What `clv_pct` was measured against (§12.4).
+CLV_CLOSING = "closing"
+CLV_DERIVED = "derived"
 
 H2H_MARKETS = frozenset({"h2h"})
 SPREAD_MARKETS = frozenset({"spreads"})
@@ -327,6 +332,8 @@ async def _grade_one(
     pnl_total = 0
     clv_numerator = 0.0
     clv_weight = 0
+    clv_sources: set[str] = set()
+    staleness_seen: list[int] = []
 
     for index, opp_leg in enumerate(opportunity_legs):
         stake_leg = stake_legs[index] if index < len(stake_legs) else {}
@@ -343,8 +350,11 @@ async def _grade_one(
             client, event_id, market_key, selection, settings, prefix=prefix
         )
         if closing is not None and price > 1.0 and stake_cents > 0:
-            clv_numerator += clv_pct(closing, price) * stake_cents
+            clv_numerator += clv_pct(closing.prob, price) * stake_cents
             clv_weight += stake_cents
+            clv_sources.add(closing.source)
+            if closing.staleness_s is not None:
+                staleness_seen.append(closing.staleness_s)
 
     outcome = combine_outcomes(outcomes)
     # §6.8 defines CLV for one bet. A multi-leg recommendation reports the
@@ -357,6 +367,17 @@ async def _grade_one(
         "outcome": outcome,
         "pnl_cents": pnl_total,
         "clv_pct": clv,
+        # A multi-leg recommendation whose legs came from different sources is
+        # reported as `derived`: the weaker leg is what the number inherits, and
+        # calling the pair `closing` would overstate it.
+        "clv_source": (
+            None
+            if not clv_sources
+            else CLV_CLOSING
+            if clv_sources == {CLV_CLOSING}
+            else CLV_DERIVED
+        ),
+        "clv_staleness_s": max(staleness_seen) if staleness_seen else None,
         "needs_manual": outcome == VOID,
         "graded_at": utc_now_iso(),
     }
@@ -400,27 +421,27 @@ async def closing_consensus_prob(
     Returns `None` when no closing snapshot exists — CLV is simply unknown for
     that bet, which is honest. It happens whenever the closing-capture task did
     not run for the event.
+
+    **Falls back to the last price seen before the event started.** A true
+    closing snapshot has to be bought inside a five-minute window, and buying one
+    for every event costs 2.4x the entire monthly allowance (measured
+    2026-09-11). But every poll already stored every book's price for every
+    event, paid for and sitting in the same index — so when no `is_closing` row
+    exists, the newest rows before `commence_time` are used instead.
+
+    It is a weaker measurement, not an equal one: at the dev cadence that price
+    can be twelve hours old, and a line that moved after it is invisible. So the
+    source is returned alongside the number and stored on the result, and the two
+    are never averaged together silently. `None` still means genuinely unknown.
     """
-    try:
-        found = await client.search(
-            index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix),
-            size=500,
-            query={
-                "bool": {
-                    "filter": [
-                        {"term": {"event_id": event_id}},
-                        {"term": {"market_key": market_key}},
-                        {"term": {"is_closing": True}},
-                    ]
-                }
-            },
-        )
-    except Exception:
+    rows, source, staleness = await _closing_rows(
+        client, event_id, market_key, prefix=prefix
+    )
+    if not rows:
         return None
 
     by_book: dict[str, dict[str, float]] = {}
-    for hit in found["hits"]["hits"]:
-        row = hit["_source"]
+    for row in rows:
         by_book.setdefault(row["book_key"], {})[row["selection"]] = row["price_decimal"]
 
     fair: dict[str, float] = {}
@@ -436,7 +457,79 @@ async def closing_consensus_prob(
 
     if not fair:
         return None
-    return consensus(fair, settings.consensus_weights)
+    return ClosingPrice(
+        prob=consensus(fair, settings.consensus_weights),
+        source=source,
+        staleness_s=staleness,
+    )
+
+
+@dataclass(frozen=True)
+class ClosingPrice:
+    """A closing probability and, just as importantly, where it came from."""
+
+    prob: float
+    source: str  # CLV_CLOSING | CLV_DERIVED
+    staleness_s: int | None = None
+
+
+async def _closing_rows(
+    client, event_id: str, market_key: str, *, prefix: str
+) -> tuple[list[dict[str, Any]], str, int | None]:
+    """Real closing snapshots if they exist, else the last poll before kickoff."""
+    index = with_prefix(ODDS_SNAPSHOTS_INDEX, prefix)
+    base = [{"term": {"event_id": event_id}}, {"term": {"market_key": market_key}}]
+
+    try:
+        found = await client.search(
+            index=index,
+            size=500,
+            query={"bool": {"filter": [*base, {"term": {"is_closing": True}}]}},
+        )
+        rows = [hit["_source"] for hit in found["hits"]["hits"]]
+    except Exception:
+        return [], CLV_DERIVED, None
+    if rows:
+        return rows, CLV_CLOSING, None
+
+    commence = await _commence_time(client, event_id, prefix=prefix)
+    if commence is None:
+        return [], CLV_DERIVED, None
+
+    try:
+        found = await client.search(
+            index=index,
+            size=500,
+            sort=[{"@timestamp": {"order": "desc"}}],
+            query={
+                "bool": {
+                    "filter": [*base, {"range": {"@timestamp": {"lte": commence}}}]
+                }
+            },
+        )
+        hits_ = found["hits"]["hits"]
+    except Exception:
+        return [], CLV_DERIVED, None
+    if not hits_:
+        return [], CLV_DERIVED, None
+
+    # One poll writes every row with the same stamp, so the newest stamp is the
+    # last complete picture of the market before the event started. Taking rows
+    # from two different polls would blend prices minutes or hours apart.
+    newest = hits_[0]["_source"]["@timestamp"]
+    rows = [h["_source"] for h in hits_ if h["_source"]["@timestamp"] == newest]
+    staleness = int(
+        (parse_iso(commence) - parse_iso(newest)).total_seconds()
+    )
+    return rows, CLV_DERIVED, max(staleness, 0)
+
+
+async def _commence_time(client, event_id: str, *, prefix: str) -> str | None:
+    try:
+        found = await client.get(index=with_prefix(EVENTS_INDEX, prefix), id=event_id)
+        return found["_source"].get("commence_time")
+    except Exception:
+        return None
 
 
 async def today_executed_losses(

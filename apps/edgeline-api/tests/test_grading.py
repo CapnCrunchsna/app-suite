@@ -387,9 +387,82 @@ async def test_grading_settles_a_recommendation_and_computes_clv(es_url, test_in
 
 
 @pytest.mark.es
-async def test_clv_is_null_when_no_closing_line_was_captured(es_url, test_index_prefix):
-    """Honest absence beats a fabricated number: without an `is_closing` snapshot
-    there is nothing to compare the alert price against."""
+async def test_a_real_closing_line_is_labelled_as_one(es_url, test_index_prefix):
+    """The source is stored, not inferred. A CLV distribution that mixes bought
+    closing lines with derived ones is two measurements averaged together, and
+    only the label makes them separable afterwards."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.grading import CLV_CLOSING, grade
+    from edgeline.indices import RESULTS_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _seed(client, prefix)
+        await grade(
+            _ScoresProvider(completed_scores_payload()),
+            client, sport_key="baseball_mlb", settings=settings(), prefix=prefix,
+        )
+        source = (await client.get(index=with_prefix(RESULTS_INDEX, prefix), id=REC_ID))["_source"]
+        assert source["clv_source"] == CLV_CLOSING
+        assert source["clv_staleness_s"] is None  # nothing stale about a real one
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_clv_falls_back_to_the_last_price_before_kickoff(es_url, test_index_prefix):
+    """The change that makes CLV affordable. No `is_closing` row was ever bought,
+    but the poll that ran an hour before kickoff is still in the index, already
+    paid for — so the number exists, labelled `derived` and carrying how stale
+    it was, instead of being null."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.grading import CLV_DERIVED, grade
+    from edgeline.indices import ODDS_SNAPSHOTS_INDEX, RESULTS_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _seed(client, prefix, with_closing=False)
+
+        # The same five-book market, seen by an ordinary poll an hour out, and
+        # a staler one before it that must lose.
+        for stamp, price in (("2026-09-02T15:41:00Z", 1.90), ("2026-09-02T09:00:00Z", 1.50)):
+            for book in ["dk", "fd", "mgm", "czr", "brv"]:
+                for selection, p in ((REDS, price), (PADRES, 2.00)):
+                    await client.index(
+                        index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix),
+                        document={
+                            "event_id": EVENT_ID, "book_key": book, "market_key": "h2h",
+                            "selection": selection, "line": None, "price_decimal": p,
+                            "is_closing": False, "@timestamp": stamp,
+                        },
+                        refresh="wait_for",
+                    )
+
+        await grade(
+            _ScoresProvider(completed_scores_payload()),
+            client, sport_key="baseball_mlb", settings=settings(), prefix=prefix,
+        )
+        source = (await client.get(index=with_prefix(RESULTS_INDEX, prefix), id=REC_ID))["_source"]
+
+        assert source["clv_source"] == CLV_DERIVED
+        # Same 1.90/2.00 market as the real closing test, so the same number —
+        # which is the point: the arithmetic is identical, only the price's
+        # provenance differs.
+        assert source["clv_pct"] == pytest.approx(7.6923, abs=1e-3)
+        # 15:41 against a 16:41 kickoff.
+        assert source["clv_staleness_s"] == 3600
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_clv_is_null_when_no_price_was_ever_stored(es_url, test_index_prefix):
+    """Honest absence still beats a fabricated number. The fallback widens where
+    CLV can be computed; it does not invent one where nothing was ever seen."""
     from elasticsearch import AsyncElasticsearch
 
     from edgeline.grading import grade

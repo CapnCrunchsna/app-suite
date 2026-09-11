@@ -1,6 +1,6 @@
 /**
  * §3.2's keys as data, grouped the way §11.1 asks for them: Staking,
- * Thresholds, Polling, Safety. Twenty-eight of them as of 2026-09-10.
+ * Thresholds, Polling, Safety. Twenty-nine of them as of 2026-09-11.
  *
  * A table rather than twenty-seven hand-written form rows, for one reason worth
  * more than the brevity: §3.2 is the list, Phase 3's exit is "every §3.2 setting
@@ -238,7 +238,14 @@ export const POLLING = {
       step: 1,
       min: 0,
       unit: 's before start',
-      hint: 'Forces a snapshot this far before start time. This is what CLV is measured against — while paper mode is on, it is the only number carrying information about whether the detector works.',
+      hint: 'How far before start time a bought closing snapshot is taken. Only used when closing capture is not off.',
+    },
+    {
+      key: 'closing_capture_mode',
+      label: 'Closing capture',
+      kind: 'select',
+      options: ['off', 'recommended', 'all'],
+      hint: 'Whether to spend credits buying closing lines. Off buys none and measures CLV against the last price already stored before kickoff — free, but up to a poll interval stale. Recommended buys one only for events carrying an alerted opportunity, which is where CLV decides anything (~90 credits/month). All buys one per event in the window: measured at 1,188 credits/month against a 500 budget, so it needs a paid tier.',
     },
     {
       key: 'alert_cooldown_s',

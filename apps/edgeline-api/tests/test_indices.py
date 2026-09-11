@@ -62,7 +62,12 @@ def expected_es_type(field: str) -> str:
     """§4.2's field-type conventions, applied to a field name."""
     if field in BLOB_FIELDS:
         return "blob"
-    if field.endswith("_cents") or field in COUNT_FIELDS:
+    # `_s` is seconds everywhere in §3.2 — `poll_interval_s`,
+    # `alert_cooldown_s`, `closing_capture_offset_s`. Those all live in the
+    # settings document, which is `dynamic: false` and has no properties, so
+    # `clv_staleness_s` (2026-09-11) is the first duration to reach a mapping.
+    # Stating the rule here means the next one does not have to rediscover it.
+    if field.endswith(("_cents", "_s")) or field in COUNT_FIELDS:
         return "long"
     if field.endswith("_at") or field in {"@timestamp", "commence_time"}:
         return "date"
