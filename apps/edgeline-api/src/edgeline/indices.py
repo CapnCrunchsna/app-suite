@@ -193,28 +193,46 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
 #: a fact about the world on a date, not a permanent truth: re-confirm if this list is
 #: still driving decisions much later.
 #:
-#: ``link_templates`` stays empty — §16.3 also forbids guessing a deep-link URL schema,
-#: and filling these in is T4.3, one verified event URL per book.
+#: ``link_templates`` carries **only** §9.4's lowest rung, ``book_home``, and only
+#: for the eight books whose landing page was actually fetched and identified on
+#: **2026-09-11** (HTTP 200, page title confirming the book). Two are absent
+#: because they could not be verified from here rather than because they lack a
+#: site: `espnbet` does not resolve from this machine, and `bet365` answers
+#: Cloudflare's bot check with 403. §16.3 means absent, not guessed.
+#:
+#: The ``event`` rung stays empty and may be **impossible** rather than pending.
+#: The only placeholder the ladder can fill is ``{provider_event_id}`` — The Odds
+#: API's own id — and no sportsbook puts that in its URLs. Closing that rung
+#: needs either a book-native id the provider does not return, or a placeholder
+#: set extended to team names and date. That is the real content of T4.3.
+LINK_TEMPLATES_VERIFIED_ON = "2026-09-11"
 #:
 #: ``enabled`` stays ``False`` for every book, deliberately. §4.3 reserves enabling to
 #: the user, and it is the switch that decides which prices reach §6.4/§6.5 at all.
 #: ``priority`` is the spec's list order and is user-editable.
+def _home(url: str) -> dict[str, str]:
+    """§9.4's `book_home` rung, and nothing above it."""
+    return {"book_home": url}
+
+
 SPORTSBOOK_SEEDS: dict[str, dict[str, Any]] = {
-    "draftkings": {"display_name": "DraftKings", "md_licensed": True, "enabled": False, "priority": 1, "link_templates": {}},
-    "fanduel": {"display_name": "FanDuel", "md_licensed": True, "enabled": False, "priority": 2, "link_templates": {}},
-    "betmgm": {"display_name": "BetMGM", "md_licensed": True, "enabled": False, "priority": 3, "link_templates": {}},
-    "williamhill_us": {"display_name": "Caesars", "md_licensed": True, "enabled": False, "priority": 4, "link_templates": {}},
-    "betrivers": {"display_name": "BetRivers", "md_licensed": True, "enabled": False, "priority": 5, "link_templates": {}},
+    "draftkings": {"display_name": "DraftKings", "md_licensed": True, "enabled": False, "priority": 1, "link_templates": _home("https://sportsbook.draftkings.com/")},
+    "fanduel": {"display_name": "FanDuel", "md_licensed": True, "enabled": False, "priority": 2, "link_templates": _home("https://sportsbook.fanduel.com/")},
+    "betmgm": {"display_name": "BetMGM", "md_licensed": True, "enabled": False, "priority": 3, "link_templates": _home("https://www.md.betmgm.com/en/sports")},
+    "williamhill_us": {"display_name": "Caesars", "md_licensed": True, "enabled": False, "priority": 4, "link_templates": _home("https://sportsbook.caesars.com/us/md/bet")},
+    "betrivers": {"display_name": "BetRivers", "md_licensed": True, "enabled": False, "priority": 5, "link_templates": _home("https://md.betrivers.com/")},
+    # Unverifiable from this machine on 2026-09-11: the host does not resolve.
     "espnbet": {"display_name": "ESPN BET", "md_licensed": True, "enabled": False, "priority": 6, "link_templates": {}},
-    "fanatics": {"display_name": "Fanatics", "md_licensed": True, "enabled": False, "priority": 7, "link_templates": {}},
+    "fanatics": {"display_name": "Fanatics", "md_licensed": True, "enabled": False, "priority": 7, "link_templates": _home("https://betfanatics.com/")},
+    # Unverifiable from this machine on 2026-09-11: Cloudflare answers 403.
     "bet365": {"display_name": "bet365", "md_licensed": True, "enabled": False, "priority": 8, "link_templates": {}},
     # Beyond §4.3's original eight. Both surfaced in the `us2` region feed on
     # 2026-09-09 and the user confirmed both are Maryland-legal. They matter more
     # than two extra rows suggests: §4.3's eight yielded only five books actually
     # present in the feed, exactly the minimum §6.4 needs, and these lift that to
     # seven — clearing the consensus threshold rather than sitting on it.
-    "betparx": {"display_name": "betPARX", "md_licensed": True, "enabled": False, "priority": 9, "link_templates": {}},
-    "ballybet": {"display_name": "Bally Bet", "md_licensed": True, "enabled": False, "priority": 10, "link_templates": {}},
+    "betparx": {"display_name": "betPARX", "md_licensed": True, "enabled": False, "priority": 9, "link_templates": _home("https://md.betparx.com/")},
+    "ballybet": {"display_name": "Bally Bet", "md_licensed": True, "enabled": False, "priority": 10, "link_templates": _home("https://www.ballybet.com/")},
 }
 
 #: In the `us2` feed and deliberately **not** seeded, each with its reason —
