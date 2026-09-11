@@ -81,12 +81,16 @@ def plan_budget(settings: Settings) -> BudgetPlan:
     regions = max(len(settings.regions), 1)
     sports = max(len(settings.sports_enabled), 1)
     per_sport = (SECONDS_PER_DAY / interval) * markets * regions * DAYS_PER_MONTH
+    # `offline_mode` makes every provider request a no-op (§3.2), so the cadence
+    # costs nothing and no cadence can be unaffordable. Without this the guard
+    # would refuse to start an offline worker over a bill it will never incur.
+    projected = 0 if settings.offline_mode else int(per_sport * sports)
     return BudgetPlan(
         featured_interval_s=interval,
         markets=markets,
         regions=regions,
         sports=sports,
-        projected_monthly_credits=int(per_sport * sports),
+        projected_monthly_credits=projected,
         budget=settings.quota_monthly_budget,
     )
 
@@ -174,7 +178,7 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
     """Register §13's jobs. Returns the scheduler, not started."""
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-    from .engine import capture_closing_lines, run_once
+    from .engine import capture_closing_lines, load_settings, run_once
     from .grading import grade
 
     plan = check_budget(settings)
@@ -199,10 +203,17 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             log.exception("poll cycle failed for %s", sport_key)
 
     async def _closing_sweep() -> None:
-        for sport_key in settings.sports_enabled:
+        # Re-read §3.2 each tick, the way `run_once` already does for `_poll`,
+        # so flipping `offline_mode` (or any other setting) in the UI takes
+        # effect on the next sweep instead of on the next restart. An unreadable
+        # settings document falls back to §3.2 defaults here exactly as it does
+        # for polling; the due check inside `capture_closing_lines` fails closed
+        # in that case anyway, so no request goes out on a sick datastore.
+        current = await load_settings(client, prefix=prefix)
+        for sport_key in current.sports_enabled:
             try:
                 await capture_closing_lines(
-                    provider, client, sport_key=sport_key, settings=settings, prefix=prefix
+                    provider, client, sport_key=sport_key, settings=current, prefix=prefix
                 )
             except Exception:
                 log.exception("closing capture failed for %s", sport_key)

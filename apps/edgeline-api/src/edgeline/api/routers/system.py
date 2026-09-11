@@ -42,6 +42,7 @@ async def health(context: Context = Depends(get_context)) -> HealthResponse:
     return {
         "paper_mode": settings.paper_mode,
         "kill_switch": settings.kill_switch,
+        "offline_mode": settings.offline_mode,
         "runtime": runtime,
         "quota": [
             {

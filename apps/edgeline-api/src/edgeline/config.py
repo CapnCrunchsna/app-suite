@@ -80,6 +80,22 @@ class Settings(BaseModel):
     # Mode and safety. paper_mode starts true and only the user may flip it (§16.2).
     paper_mode: bool = True
     kill_switch: bool = False
+    #: When true, **no job makes a provider request** — the worker, the API, the
+    #: UI, grading and the §7.4 lifecycle all keep running on what is already
+    #: stored. Added 2026-09-10, after a spent monthly allowance stopped every
+    #: kind of development at once, including the kinds that never needed the
+    #: provider.
+    #:
+    #: The mirror of `kill_switch`, which stops alerting and keeps polling. This
+    #: stops polling and keeps everything else, so the two together cover both
+    #: halves of "run, but not that part".
+    #:
+    #: It deliberately does **not** replay recorded fixtures into the live
+    #: indices. §12 computes CLV from those rows, and fabricated prices sitting
+    #: beside real ones would corrupt the one measurement that says whether the
+    #: detector works. Replay belongs against a separate index prefix, which is
+    #: what the test suite already does.
+    offline_mode: bool = False
 
     # Staking
     kelly_fraction: float = 0.25

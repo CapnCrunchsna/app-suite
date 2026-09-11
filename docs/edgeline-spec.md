@@ -190,6 +190,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 |---|---|---|
 | `paper_mode` | `true` | recommendations recorded, alerts sent, but flagged PAPER |
 | `kill_switch` | `false` | when true: polling continues, all alerting stops |
+| `offline_mode` | `false` | **added 2026-09-10.** When true: no job makes a provider request, and everything else — worker, API, UI, grading, §7.4 lifecycle — keeps running on stored data. The mirror of `kill_switch`, and the switch that lets development continue when the month's credits are spent. Does **not** replay fixtures into the live indices: §12 computes CLV from those rows, and fabricated prices beside real ones would corrupt the one measurement that says whether the detector works |
 | `kelly_fraction` | `0.25` | fraction of full Kelly |
 | `bankroll_start_cents` | `100000` | $1,000 default — ASK USER for real value |
 | `ev_threshold_pct` | `2.0` | min EV% to alert |

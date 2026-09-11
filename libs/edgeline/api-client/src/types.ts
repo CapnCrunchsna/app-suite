@@ -47,6 +47,7 @@ export interface HTTPValidationError {
 export interface HealthResponse {
   paper_mode: boolean;
   kill_switch: boolean;
+  offline_mode?: boolean;
   runtime?: Record<string, unknown>;
   quota?: QuotaRow[];
   sports_enabled?: string[];
@@ -138,6 +139,7 @@ export interface ResultRow {
 export interface Settings {
   paper_mode?: boolean;
   kill_switch?: boolean;
+  offline_mode?: boolean;
   kelly_fraction?: number;
   bankroll_start_cents?: number;
   ev_threshold_pct?: number;

@@ -925,6 +925,11 @@
             "type": "boolean",
             "title": "Kill Switch"
           },
+          "offline_mode": {
+            "type": "boolean",
+            "title": "Offline Mode",
+            "default": false
+          },
           "runtime": {
             "additionalProperties": true,
             "type": "object",
@@ -1448,6 +1453,11 @@
           "kill_switch": {
             "type": "boolean",
             "title": "Kill Switch",
+            "default": false
+          },
+          "offline_mode": {
+            "type": "boolean",
+            "title": "Offline Mode",
             "default": false
           },
           "kelly_fraction": {

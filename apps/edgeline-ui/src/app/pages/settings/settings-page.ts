@@ -10,8 +10,8 @@
  * a page that made you press Save twenty times to change a cadence would be
  * worse at its job.
  *
- * Safety does not join them. `paper_mode` and `kill_switch` are guardrails, and
- * §16.2 reserves loosening one to an explicit user instruction. Landing them in
+ * Safety does not join them. `paper_mode`, `kill_switch` and `offline_mode` are
+ * guardrails, and §16.2 reserves loosening one to an explicit user instruction. Landing them in
  * the same Save as `poll_interval_s` would make turning off paper mode something
  * that happens *while doing something else* — which is exactly the shape of the
  * accident the rule exists to prevent. So they stage a change, the page names
@@ -107,7 +107,7 @@ export class SettingsPage {
   protected readonly loadError = computed(() => this.settingsResource.error());
   protected readonly current = computed(() => this.settingsResource.value());
 
-  /** Which of the two guardrails is staged away from what the server holds. */
+  /** Which safety flags are staged away from what the server holds. */
   protected readonly safetyChanges = computed<SafetyChange[]>(() => {
     this.revision();
     const settings = this.current();
@@ -117,7 +117,9 @@ export class SettingsPage {
       const to = control.value === true;
       const from = readValue(settings, field.key) === true;
       if (to === from) return [];
-      // Both flags protect when true, so turning either off is the loosening.
+      // Every flag in this group protects when true, so turning any of them off
+      // is the loosening — including `offline_mode`, where off means the engine
+      // starts spending credits and talking to the provider again.
       return [{ key: field.key, label: field.label, from, to, loosening: from && !to }];
     });
   });

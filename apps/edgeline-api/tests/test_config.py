@@ -22,6 +22,11 @@ from edgeline.config import (
 SPEC_DEFAULTS = {
     "paper_mode": True,
     "kill_switch": False,
+    # Not in §3.2's original table — added 2026-09-10. The mirror of
+    # `kill_switch`: that one keeps polling and stops alerting, this one keeps
+    # everything and stops polling, so a spent monthly allowance no longer
+    # blocks the work that never needed the provider.
+    "offline_mode": False,
     "kelly_fraction": 0.25,
     "bankroll_start_cents": 100000,
     "ev_threshold_pct": 2.0,

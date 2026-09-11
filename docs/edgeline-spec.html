@@ -211,6 +211,7 @@ ES_URL=http://localhost:9200</code></pre>
 <tr><th>key</th><th>default</th><th>meaning</th></tr>
 <tr><td><code>paper_mode</code></td><td><code>true</code></td><td>recommendations recorded, alerts sent, but flagged PAPER</td></tr>
 <tr><td><code>kill_switch</code></td><td><code>false</code></td><td>when true: polling continues, all alerting stops</td></tr>
+<tr><td><code>offline_mode</code></td><td><code>false</code></td><td><strong>added 2026-09-10.</strong> When true: no job makes a provider request, and everything else — worker, API, UI, grading, <a href="#s7">§7.4</a> lifecycle — keeps running on stored data. The mirror of <code>kill_switch</code>, and the switch that lets development continue when the month's credits are spent. Does <strong>not</strong> replay fixtures into the live indices: <a href="#s12">§12</a> computes CLV from those rows, and fabricated prices beside real ones would corrupt the one measurement that says whether the detector works</td></tr>
 <tr><td><code>kelly_fraction</code></td><td><code>0.25</code></td><td>fraction of full Kelly</td></tr>
 <tr><td><code>bankroll_start_cents</code></td><td><code>100000</code></td><td>$1,000 default — ASK USER for real value</td></tr>
 <tr><td><code>ev_threshold_pct</code></td><td><code>2.0</code></td><td>min EV% to alert</td></tr>

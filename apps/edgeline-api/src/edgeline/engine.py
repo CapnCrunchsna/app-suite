@@ -536,6 +536,9 @@ class CycleReport:
     alerted: list[Detection] = field(default_factory=list)
     enabled_books: int = 0
     skipped_reason: str | None = None
+    #: True when `offline_mode` stopped the cycle before any provider request.
+    #: Distinct from `skipped_reason`, which means "polled, but did not alert".
+    offline: bool = False
     quota_used: int | None = None
     quota_remaining: int | None = None
     # §7.4 lifecycle, and T2.5's line-death instrumentation.
@@ -605,6 +608,15 @@ async def run_once(
     settings = settings or await load_settings(client, prefix=prefix)
     sink = sink or LogSink()
     report = CycleReport(sport_key=sport_key)
+
+    if settings.offline_mode:
+        # §3.2: the whole point is that nothing else stops. The worker stays up,
+        # its other jobs run, and the API keeps serving — this cycle simply does
+        # not buy anything. Checked before `load_enabled_books` so an offline
+        # cycle touches neither the provider nor the datastore.
+        report.offline = True
+        log.info("offline_mode: skipping the %s poll, no provider request made", sport_key)
+        return report
 
     books = await load_enabled_books(client, prefix=prefix)
     report.enabled_books = len(books)
@@ -785,6 +797,12 @@ async def capture_closing_lines(
     """
     now = now or datetime.now(timezone.utc)
     window_end = now + timedelta(seconds=settings.closing_capture_offset_s)
+
+    if settings.offline_mode:
+        # §3.2. Closing lines are unrepeatable, so this does lose them for any
+        # event starting while offline — which is the honest cost of not paying
+        # the provider, and better than a CLV built from prices nobody fetched.
+        return []
 
     if not await _closing_capture_is_due(
         client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
@@ -1072,6 +1090,11 @@ def _format(report: CycleReport) -> str:
         lines.append(
             f"line death       {death.type} {death.market_key} "
             f"lived {death.lifetime_s:.0f}s at {death.edge_pct:+.2f}%"
+        )
+    if report.offline:
+        lines.append(
+            "OFFLINE          offline_mode is on, so no provider request was "
+            "made and nothing was ingested (§3.2)."
         )
     if report.skipped_reason:
         lines.append(f"NOT ALERTING     {report.skipped_reason}")

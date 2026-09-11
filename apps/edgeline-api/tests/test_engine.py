@@ -910,6 +910,68 @@ async def test_a_sweep_pays_once_for_an_event_inside_the_window(
 
 
 @pytest.mark.es
+async def test_offline_mode_polls_nothing_and_says_so(es_url, test_index_prefix):
+    """§3.2's `offline_mode`: the worker keeps running, this cycle buys nothing.
+
+    The switch exists because a spent monthly allowance stopped every kind of
+    development at once, including the kinds that never needed the provider.
+    """
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(doctored_payload())
+
+        report = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix,
+            settings=settings(offline_mode=True),
+        )
+
+        assert provider.calls == []
+        assert report.offline is True
+        assert report.snapshots == 0
+        assert report.detections == []
+        # Distinct from `skipped_reason`, which means "polled but did not alert".
+        assert report.skipped_reason is None
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_offline_mode_also_stops_the_closing_sweep(es_url, test_index_prefix):
+    """Every seam that can reach the provider, not just the obvious one — the
+    closing sweep is the one that actually emptied the quota."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    try:
+        await _fresh_cluster(client, prefix)
+        # An event squarely inside the window, so only `offline_mode` can stop it.
+        provider = _FixtureProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(offline_mode=True), prefix=prefix, now=now,
+        )
+
+        assert captured == []
+        assert provider.calls == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
 async def test_a_sweep_whose_datastore_is_unreadable_skips_rather_than_fetches(
     es_url, test_index_prefix
 ):

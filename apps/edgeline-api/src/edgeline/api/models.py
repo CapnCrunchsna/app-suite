@@ -158,6 +158,10 @@ class QuotaRow(BaseModel):
 class HealthResponse(BaseModel):
     paper_mode: bool
     kill_switch: bool
+    #: §3.2. Surfaced here because it is the difference between "the worker is
+    #: dead" and "the worker is deliberately not polling" — and `runtime` alone
+    #: cannot tell those apart: the heartbeat keeps ticking either way.
+    offline_mode: bool = False
     #: §13's heartbeat stamps this; a stale value means polling has stopped even
     #: though the API is still answering.
     runtime: dict[str, Any] = Field(default_factory=dict)

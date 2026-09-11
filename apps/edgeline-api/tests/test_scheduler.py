@@ -59,6 +59,19 @@ def test_the_old_six_hour_cadence_would_now_be_unaffordable():
     assert not plan.affordable
 
 
+def test_offline_mode_costs_nothing_so_no_cadence_is_unaffordable():
+    """§3.2. An offline worker makes no provider request, so the guard must not
+    refuse to start it over a bill it will never incur — including at the
+    production cadence that is otherwise 130x the free tier."""
+    plan = plan_budget(settings(offline_mode=True, poll_interval_s=120,
+                                quota_monthly_budget=FREE_TIER_BUDGET + 1))
+    assert plan.projected_monthly_credits == 0
+    assert plan.affordable
+
+    # And the precondition that reads it agrees, rather than raising.
+    assert check_budget(settings(offline_mode=True, quota_monthly_budget=1)).affordable
+
+
 def test_production_cadence_is_far_beyond_the_free_tier():
     """720 polls/day x 3 markets x 2 regions x 30. The mistake worth refusing."""
     plan = plan_budget(settings(quota_monthly_budget=1_000_000, poll_interval_s=120))

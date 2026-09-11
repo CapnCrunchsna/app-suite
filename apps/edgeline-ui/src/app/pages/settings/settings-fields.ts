@@ -1,6 +1,6 @@
 /**
  * §3.2's keys as data, grouped the way §11.1 asks for them: Staking,
- * Thresholds, Polling, Safety. Twenty-seven of them as of 2026-09-09.
+ * Thresholds, Polling, Safety. Twenty-eight of them as of 2026-09-10.
  *
  * A table rather than twenty-seven hand-written form rows, for one reason worth
  * more than the brevity: §3.2 is the list, Phase 3's exit is "every §3.2 setting
@@ -270,15 +270,15 @@ export const POLLING = {
 } as const satisfies FieldGroup;
 
 /**
- * §11.1's fourth group. Both keys here are guardrails, and both are exposed
- * under their own confirmation on the page — see `settings-page.ts`.
+ * §11.1's fourth group. Every key here is a guardrail, and each is exposed
+ * under its own confirmation on the page — see `settings-page.ts`.
  */
 export const SAFETY = {
   id: 'safety',
   title: 'Safety',
   blurb:
-    'The two flags that decide whether any of the above reaches you, and in what form. ' +
-    'Neither is a casual toggle.',
+    'The flags that decide whether any of the above reaches you, in what form, and whether ' +
+    'the engine spends anything to find it. None is a casual toggle.',
   fields: [
     {
       key: 'paper_mode',
@@ -291,6 +291,12 @@ export const SAFETY = {
       label: 'Kill switch',
       kind: 'bool',
       hint: 'On: polling continues and opportunities keep being recorded, but nothing is alerted. §12 engages this by itself when the daily loss stop is hit.',
+    },
+    {
+      key: 'offline_mode',
+      label: 'Offline mode',
+      kind: 'bool',
+      hint: 'On: no provider request is made by any job, and everything else keeps running on stored data — the worker stays up, this UI stays usable, grading and the opportunity lifecycle carry on. The mirror of the kill switch, and what lets work continue when the month’s credits are spent. Nothing new is ingested while it is on, including closing lines, which cannot be recovered afterwards.',
     },
   ],
 } as const satisfies FieldGroup;
