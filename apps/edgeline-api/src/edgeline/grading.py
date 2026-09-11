@@ -67,6 +67,8 @@ class GradingReport:
     ledger_entries: int = 0
     daily_loss_cents: int = 0
     kill_switch_tripped: bool = False
+    #: True when `offline_mode` stopped the run before any scores were fetched.
+    offline: bool = False
 
 
 # ---- settlement (§12 step 2), pure ----------------------------------------
@@ -188,6 +190,18 @@ async def grade(
     sink = sink or LogSink()
     now = now or datetime.now(timezone.utc)
     report = GradingReport()
+
+    if settings.offline_mode:
+        # §3.2. This is the third seam that reaches the provider, and the one
+        # that proved per-caller guarding is fragile: `/v4/scores` with
+        # `daysFrom` costs 2 credits, and an offline worker quietly spent them on
+        # its startup grade because only `run_once` and `capture_closing_lines`
+        # had been guarded. Settling needs fresh scores, so there is nothing
+        # useful to do here without them — this returns rather than grading a
+        # subset from stale event rows.
+        report.offline = True
+        log.info("offline_mode: skipping the %s grade, no scores fetched", sport_key)
+        return report
 
     # 1. Scores -> events.
     response = await provider.fetch_scores(sport_key, days_from=2)

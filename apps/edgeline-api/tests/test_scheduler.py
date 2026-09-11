@@ -210,6 +210,72 @@ def _stamp(**ago) -> str:
     return (datetime.now(timezone.utc) - timedelta(**ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+@pytest.mark.es
+async def test_no_scheduled_job_touches_the_provider_while_offline(
+    es_url, test_index_prefix
+):
+    """The exhaustiveness check, written because per-caller guarding missed one.
+
+    `offline_mode` first guarded `run_once` and `capture_closing_lines` — the two
+    obvious seams — and shipped. `grading.grade` is the third: it calls
+    `/v4/scores`, which costs 2 credits with `daysFrom`, and the startup grade
+    spent them roughly twenty seconds after the first offline worker started.
+
+    So this does not name the seams. It runs **every registered job** against a
+    provider that raises on any method, and asserts none of them raised. A fourth
+    seam added later fails here without anyone remembering to update a list.
+    """
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.es import ensure_indices
+    from edgeline.scheduler import build_scheduler
+
+    touched: list[str] = []
+
+    class _Recorder:
+        """Records instead of raising, deliberately.
+
+        Every job body wraps its work in `except Exception`, so a provider that
+        raised would be caught and logged and this test would pass while the
+        credits were spent — which is precisely how the real miss stayed
+        invisible. A record the assertion reads afterwards cannot be swallowed.
+        """
+
+        key = "the_odds_api"
+
+        def __getattr__(self, name: str):
+            async def _record(*_args, **_kwargs):
+                touched.append(name)
+
+            return _record
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await ensure_indices(client, prefix=prefix)
+        await client.update(
+            index=f"{prefix}settings",
+            id="global",
+            doc={"offline_mode": True},
+            doc_as_upsert=True,
+            refresh="wait_for",
+        )
+        scheduler = build_scheduler(
+            provider=_Recorder(), client=client,
+            settings=settings(offline_mode=True), prefix=prefix,
+        )
+
+        for job in scheduler.get_jobs():
+            # `reset_quota` and `heartbeat` take their arguments as kwargs; the
+            # rest close over what they need. Both shapes are covered by calling
+            # with the job's own registered arguments.
+            await job.func(*job.args, **job.kwargs)
+
+        assert touched == [], f"offline_mode still reached the provider: {touched}"
+    finally:
+        await client.close()
+
+
 async def test_an_offline_cycle_does_not_stamp_last_poll_at():
     """`last_poll_at` means "odds were fetched at", and `poll_is_due` reads it.
 

@@ -229,12 +229,17 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
                 log.exception("closing capture failed for %s", sport_key)
 
     async def _grade() -> None:
-        for sport_key in settings.sports_enabled:
+        current = await load_settings(client, prefix=prefix)
+        for sport_key in current.sports_enabled:
             try:
-                await grade(
-                    provider, client, sport_key=sport_key, settings=settings,
+                report = await grade(
+                    provider, client, sport_key=sport_key, settings=current,
                     prefix=prefix, sink=sink,
                 )
+                if report.offline:
+                    # Same reasoning as `_poll`: `last_grade_at` means scores
+                    # were fetched and settlement was attempted against them.
+                    continue
                 await record_run(client, prefix=prefix, job="grade")
             except Exception:
                 log.exception("grading failed for %s", sport_key)
