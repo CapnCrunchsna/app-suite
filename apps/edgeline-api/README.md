@@ -136,6 +136,14 @@ Two consequences that are not obvious from §8.4:
   grade 15 seconds in, so restarting the worker five times costs 10 credits
   before anything is polled.
 
+**The enforcement is a pace guard, not the projection.** `_check_pace` in the adapter refuses a
+request locally — nothing sent — when `x-requests-used` is past `quota_monthly_budget`, or past
+`elapsed_month_fraction + 15%` of it. It compares two facts and models nothing, so it catches a
+job nobody modelled, a second worker, or someone looping `--once`. On the failure that prompted
+it — 80% of the budget gone with 30% of the month elapsed — it trips within the first hour. Free
+endpoints are never refused, and the worker arms the guard at startup with a free `/sports` call
+so its first *paid* request is already covered.
+
 `uv run python -m edgeline.scheduler --check-budget` prints the projection.
 Actual remaining credits only come from a response header — the dashboard at
 <https://dash.the-odds-api.com/> is where the balance and the monthly reset date

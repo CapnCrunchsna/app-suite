@@ -7,6 +7,7 @@ from __future__ import annotations
 from .base import (
     OddsProvider,
     ProviderAuthError,
+    ProviderBudgetExceeded,
     ProviderError,
     ProviderQuotaExhausted,
     ProviderRateLimited,
@@ -20,6 +21,7 @@ from .base import (
 __all__ = [
     "OddsProvider",
     "ProviderAuthError",
+    "ProviderBudgetExceeded",
     "ProviderError",
     "ProviderQuotaExhausted",
     "ProviderRateLimited",

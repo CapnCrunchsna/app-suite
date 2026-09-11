@@ -34,6 +34,22 @@ class ProviderAuthError(ProviderError):
     """401 — credentials rejected. Kills the cycle; retrying cannot help."""
 
 
+class ProviderBudgetExceeded(ProviderError):
+    """Refused locally: this request would spend past the month's own pace.
+
+    Not a provider response at all — nothing was sent. The provider would have
+    answered this request happily, which is the point: by the time the provider
+    says no, the credits are gone.
+
+    The rule compares two *facts* — `x-requests-used` from the last response and
+    the calendar — and models nothing about what any job ought to cost. That is
+    deliberate. The §13 budget projection is a model, it covered one of three
+    spending jobs, and it read a comfortable 360/500 while the real burn was
+    about 6 credits a minute. A pace rule cannot be wrong about a job it has
+    never heard of.
+    """
+
+
 class ProviderQuotaExhausted(ProviderError):
     """401 — the key is valid but the month's credits are spent.
 

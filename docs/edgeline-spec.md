@@ -570,6 +570,25 @@ Base URL `https://api.the-odds-api.com/v4`. Auth: `apiKey` query param.
 The scheduler must refuse to start a cadence whose computed monthly cost exceeds
 `quota_monthly_budget`, and must log the computed figure at startup.
 
+**That projection is a floor, not a bill, and must not be trusted as one (added 2026-09-11).**
+It counts the featured poll only. Three jobs spend credits — the featured poll, the closing
+sweep (`markets × regions` per fetch) and grading (`/v4/scores` with `daysFrom`, 2 credits, once
+per run *and* once per worker start). On 2026-09-09 the projection read a comfortable 360/500
+while the real burn was roughly 6 credits a minute, and the month's allowance was gone in 66
+minutes.
+
+So the enforcement that matters is not the projection but a **pace guard at the provider seam**,
+which compares two facts and models nothing: `x-requests-used` as the provider last reported it,
+and how far through the calendar month we are. A request is refused locally — nothing sent —
+when spend is past `quota_monthly_budget`, or past `elapsed_fraction + 15%` of it. A rule that
+models no job cannot be wrong about a job it has never heard of, which is exactly how the
+projection failed. Free endpoints (`/sports`, `/events`) are never refused, and the worker arms
+the guard at startup with a free `/sports` call so its first *paid* request is already covered.
+
+Endpoint costs, since guessing at them has been expensive: `/sports` and `/events` are free;
+`/odds` is `markets × regions`; `/scores` is 1, or 2 with `daysFrom`; historical odds is
+**10 × markets × regions**.
+
 **`regions=us` does not cover the Maryland book list (measured 2026-09-09).** For
 `baseball_mlb` it returns 9 books, of which only **4** are MD-legal — `draftkings`, `fanduel`,
 `betmgm`, `betrivers`; the rest are offshore. Adding `us2` reaches 14 books and **5** MD-legal
