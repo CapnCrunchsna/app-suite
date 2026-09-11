@@ -1,7 +1,7 @@
 /* Ledgerline global styles.
  *
  * The palette is no longer here. `@metrum/ui`'s `ThemeService` writes every token
- * onto `:root` at bootstrap from `app/ledgerline.theme.ts`, in the mode the user
+ * onto `:root` at bootstrap from `@metrum/ui`'s `LEDGERLINE_THEME`, in the mode the user
  * chose — so this file holds structure, and the one thing a stylesheet can do
  * that a bootstrap-time service cannot.
  *

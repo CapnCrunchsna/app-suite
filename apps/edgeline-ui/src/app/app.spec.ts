@@ -9,10 +9,11 @@
 
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { METRUM_THEME } from '@metrum/ui';
+import { EDGELINE_THEME, METRUM_THEME, ThemeService } from '@metrum/ui';
 import type { HealthResponse } from '@metrum/edgeline-api-client';
 
 import { App } from './app';
+import { appConfig } from './app.config';
 import { EdgelineApiService } from './edgeline-api.service';
 
 const HEALTHY: HealthResponse = {
@@ -122,16 +123,27 @@ describe('the Edgeline shell (§11.1, §11.2)', () => {
   });
 });
 
-describe('the theme (§11.2)', () => {
+describe('the theme (§11.2 as amended)', () => {
   /**
-   * §11.2 names the two colours. `METRUM_THEME` already is them, which is why
-   * this app registers the house theme rather than a near-copy — and this is
-   * what stops a later edit to the shared lib from quietly moving Edgeline off
-   * the palette its spec names.
+   * The app's default is its own palette, not the house one. This is the
+   * assertion that would have caught the original problem: registering
+   * `METRUM_THEME` here made Edgeline identical to the workspace dashboard *and*
+   * collapsed the switcher to a single entry, neither of which looked like a bug
+   * from inside the code.
    */
-  it('is the MetrumDigital teal and emerald §11.2 asks for', () => {
-    expect(METRUM_THEME.dark.accent).toBe('#2dd4bf');
-    expect(METRUM_THEME.dark.accent2).toBe('#34d399');
+  it('defaults to Edgeline amber, not the house teal', () => {
+    expect(EDGELINE_THEME.dark.accent).toBe('#f0a33c');
+    expect(EDGELINE_THEME.dark.accent).not.toBe(METRUM_THEME.dark.accent);
+  });
+
+  it('offers every suite palette, its own first', () => {
+    TestBed.configureTestingModule({ providers: [...appConfig.providers] });
+
+    expect(TestBed.inject(ThemeService).themes().map((theme) => theme.id)).toEqual([
+      'edgeline',
+      'metrum',
+      'ledgerline',
+    ]);
   });
 
   // styles.scss declares these two literally, as the ground painted between the
@@ -139,7 +151,7 @@ describe('the theme (§11.2)', () => {
   // only tokens duplicated anywhere in this app, and this is what stops the
   // duplicate from drifting into a one-frame flash of the wrong colour.
   it('matches the pre-bootstrap floor in styles.scss', () => {
-    expect(METRUM_THEME.dark.bg).toBe('#0a1517');
-    expect(METRUM_THEME.dark.text).toBe('#dcefeb');
+    expect(EDGELINE_THEME.dark.bg).toBe('#13161c');
+    expect(EDGELINE_THEME.dark.text).toBe('#e9ecf3');
   });
 });

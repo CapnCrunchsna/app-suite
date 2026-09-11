@@ -2,16 +2,19 @@
  * The theming system, and the one claim in it that cannot be made by reading:
  * that the light palettes are legible.
  *
- * `auditTheme` is run here over the house theme, and every app that registers its
- * own is expected to run it over that one — `apps/ledgerline-ui` does. Between
- * them, no palette in the suite can ship a foreground nobody can read on the
- * ground it sits on.
+ * `auditTheme` is run here over every palette in `SUITE_THEMES`, which since
+ * 2026-09-11 is all of them: each app defaults to its own theme and offers the
+ * others, so any of these can end up painting any app and "legible in the app
+ * that authored it" is not the bar. Each app additionally pins its own
+ * pre-bootstrap floor against its theme, which is the one duplicate of a palette
+ * value anywhere in the suite.
  */
 
 import { TestBed } from '@angular/core/testing';
 
 import { auditTheme, contrastRatio, relativeLuminance } from './contrast.js';
 import { METRUM_THEME } from './metrum.theme.js';
+import { SUITE_THEMES } from './suite-themes.js';
 import { provideTheming } from './provide-theming.js';
 import { ThemeService } from './theme.service.js';
 import { ThemeSwitcher } from './theme-switcher.js';
@@ -69,9 +72,22 @@ describe('contrast', () => {
   });
 });
 
-describe('the house theme', () => {
-  it('is legible in both modes, on every ground', () => {
-    expect(auditTheme(METRUM_THEME).map((failure) => failure.message)).toEqual([]);
+describe('the suite palettes', () => {
+  // Every theme, not just the house one: since the suite settled on "each app
+  // defaults to its own and offers the others", any app can be painted in any of
+  // these, so a palette that is only legible in the app that authored it is not
+  // good enough.
+  it.each(SUITE_THEMES.map((theme) => [theme.label, theme] as const))(
+    '%s is legible in both modes, on every ground',
+    (_label, theme) => {
+      expect(auditTheme(theme).map((failure) => failure.message)).toEqual([]);
+    },
+  );
+
+  it('offers one entry per app, and no duplicate ids', () => {
+    const ids = SUITE_THEMES.map((theme) => theme.id);
+    expect(ids).toEqual(['metrum', 'ledgerline', 'edgeline']);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   // The dark half is the palette the workspace has been shipping. If it drifts,
@@ -80,6 +96,18 @@ describe('the house theme', () => {
     expect(METRUM_THEME.dark.bg).toBe('#0a1517');
     expect(METRUM_THEME.dark.accent).toBe('#2dd4bf');
     expect(METRUM_THEME.dark.text).toBe('#dcefeb');
+  });
+
+  // Two apps that look alike is the thing this arrangement exists to prevent, and
+  // it is a mistake a copy-paste of a palette makes silently. Grounds and accents
+  // are what a reader actually distinguishes at a glance, so those are what is
+  // pinned apart.
+  it('gives each app a ground and an accent of its own', () => {
+    const grounds = SUITE_THEMES.map((theme) => theme.dark.bg);
+    const accents = SUITE_THEMES.map((theme) => theme.dark.accent);
+
+    expect(new Set(grounds).size).toBe(SUITE_THEMES.length);
+    expect(new Set(accents).size).toBe(SUITE_THEMES.length);
   });
 });
 

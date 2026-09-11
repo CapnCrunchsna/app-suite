@@ -1,8 +1,8 @@
 /* Edgeline global styles.
  *
  * The palette is not here. `@metrum/ui`'s `ThemeService` writes every token onto
- * `:root` at bootstrap from `METRUM_THEME` (§11.2's teal and emerald), in the
- * mode the reader chose — so this file holds structure only.
+ * `:root` at bootstrap from `EDGELINE_THEME` (amber on graphite, §11.2 as
+ * amended), in the mode the reader chose — so this file holds structure only.
  *
  * ## The two values below are a floor, not a copy of the palette
  *
@@ -30,8 +30,8 @@
 :root {
   color-scheme: dark;
 
-  --bg: #0a1517;
-  --text: #dcefeb;
+  --bg: #13161c;
+  --text: #e9ecf3;
 }
 
 * {

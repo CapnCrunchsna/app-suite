@@ -695,9 +695,23 @@ Summary and bankroll endpoints are thin wrappers over ES aggregations (`date_his
 
 ### 11.2 Conventions
 
-Standalone components, Angular signals for state, no NgRx (overkill). Blue-green theme
-consistent with the MetrumDigital palette (accent teal `#2dd4bf`, emerald `#34d399`) in
-`libs/ui-kit`. All money rendered from cents; all times rendered in the user's tz.
+Standalone components, Angular signals for state, no NgRx (overkill). All money rendered
+from cents; all times rendered in the user's tz.
+
+**Theme — amended 2026-09-11.** This section originally read "blue-green theme consistent
+with the MetrumDigital palette (accent teal `#2dd4bf`, emerald `#34d399`)". Those two hexes
+*are* `METRUM_THEME` in `libs/shared/ui`, so the app registered the house theme verbatim —
+and the result was that Edgeline, Ledgerline and the workspace dashboard were
+indistinguishable at a glance, while the theme picker hid itself because a single
+registered theme is nothing to switch between.
+
+The rule is now **each app defaults to its own palette and offers every other one**.
+Edgeline's is amber on graphite (`EDGELINE_THEME`, accent `#f0a33c`, ember `#ff8c55`), a
+theme of a live trading screen rather than of a document — see the file's own header for
+what that bought and what it cost, notably that `danger` had to move off coral. Every
+palette in `SUITE_THEMES` is audited against WCAG in both modes by `theming.spec.ts`, since
+any app can now be painted in any of them. The house teal remains one selection away and is
+still what `artifacts/_template.html` and the dashboard use.
 
 ### 11.3 Generated client
 

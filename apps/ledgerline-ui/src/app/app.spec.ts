@@ -1,11 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { provideTheming } from '@metrum/ui';
+import { LEDGERLINE_THEME, provideTheming } from '@metrum/ui';
 import { LedgerlineApiService } from '@metrum/ledgerline-feature-shell';
 import type { MerchantReviewQueue, Settings } from '@metrum/api-client';
 import { App } from './app';
 import { appRoutes } from './app.routes';
-import { LEDGERLINE_THEME } from './ledgerline.theme';
 
 /**
  * The shell, and only the shell.

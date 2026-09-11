@@ -104,25 +104,29 @@ as built output. Rebuild the lib, then reload.
 ## Styling
 
 Dark-first, per §6 — and dark-first now means a default rather than the only
-option (§9u). The palette lives in `src/app/ledgerline.theme.ts` and is registered
-at bootstrap with one call:
+option (§9u). The palette moved to `@metrum/ui` on 2026-09-11, when Edgeline got
+an identity of its own and the suite settled on **each app defaults to its own
+theme and offers every other one**. An app cannot import another app, so a
+palette more than one app offers has to live in the lib they share:
 
 ```ts
-providers: [provideTheming(LEDGERLINE_THEME)]
+providers: [provideTheming(LEDGERLINE_THEME, { also: SUITE_THEMES })]
 ```
 
 `@metrum/ui` owns everything after that: it writes the tokens onto `:root` before
 the first paint, keeps `color-scheme` in step, remembers the choice per app, and
-renders the header's `<ui-theme-switcher>`. Two themes are offered — Ledgerline's
-own and the MetrumDigital house palette, which is the one `artifacts/_template.html`
-and the dashboard use — each in light and dark, with "system" following
-`prefers-color-scheme`.
+renders the header's `<ui-theme-switcher>`. Three themes are offered — Ledgerline's
+own, the MetrumDigital house palette that `artifacts/_template.html` and the
+dashboard use, and Edgeline's amber — each in light and dark, with "system"
+following `prefers-color-scheme`.
 
 `src/styles.scss` holds structure and **two** colour literals: `--bg` and `--text`
 at Ledgerline's dark values, as the ground painted between the browser reading
 `index.html` and Angular's initializer running. They are the only tokens duplicated
-anywhere, and `ledgerline.theme.spec.ts` asserts the duplicate matches.
+anywhere, and `ledgerline.theme.spec.ts` asserts the duplicate matches — that
+assertion is all that stayed behind, since only this app knows what its own
+stylesheet declared.
 
 Nothing else in this app or in `libs/ledgerline/feature-shell` names a colour.
-`ledgerline.theme.spec.ts` also runs `@metrum/ui`'s `auditTheme` over the palette,
-which is what makes the light half checked rather than eyeballed.
+The WCAG audit moved with the palette: `theming.spec.ts` runs `auditTheme` over
+every theme in `SUITE_THEMES`, because any app can now be painted in any of them.

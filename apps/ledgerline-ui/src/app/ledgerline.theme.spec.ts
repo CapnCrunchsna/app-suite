@@ -1,23 +1,14 @@
-import { auditTheme } from '@metrum/ui';
-import { LEDGERLINE_THEME } from './ledgerline.theme';
+import { LEDGERLINE_THEME } from '@metrum/ui';
 
 /**
- * The one thing about a palette that cannot be settled by looking at it.
+ * What stays with the app once the palette itself moved to `@metrum/ui`.
  *
- * `@metrum/ui` runs the same audit over the house theme. This is the app half of
- * that arrangement, and it is the reason `auditTheme` is exported rather than
- * kept inside the lib's own spec: an app that brings its own palette brings its
- * own obligation to prove it is readable, and the proof is one line.
- *
- * The light half is the half this exists for. Every colour in the dark palette
- * was picked against a dark ground and looks right; `#46d492` on cream is 2.1:1
- * and looks right too, in the sense that it is definitely green.
+ * The WCAG audit moved with it — `theming.spec.ts` now runs `auditTheme` over
+ * every palette in `SUITE_THEMES`, because any app can be painted in any of
+ * them. What cannot move is the assertion below: the pre-bootstrap floor is a
+ * value in *this app's* stylesheet, and only this app knows what it declared.
  */
 describe('the Ledgerline theme', () => {
-  it('is legible in both modes, on every ground', () => {
-    expect(auditTheme(LEDGERLINE_THEME).map((failure) => failure.message)).toEqual([]);
-  });
-
   // styles.scss declares these two literally, as the ground colour painted
   // between the browser reading index.html and Angular's initializer running.
   // They are the only tokens duplicated anywhere, and this is what stops the
