@@ -15,6 +15,7 @@ import respx
 
 from edgeline.providers.base import (
     ProviderAuthError,
+    ProviderQuotaExhausted,
     ProviderRateLimited,
     ProviderUnavailable,
 )
@@ -190,6 +191,71 @@ async def test_401_kills_the_cycle_immediately_with_a_clear_message():
     assert "API key invalid" in str(excinfo.value)
     assert "ODDS_API_KEY" in str(excinfo.value)
     assert odds_route().call_count == 1
+
+
+@respx.mock
+async def test_a_spent_quota_is_not_reported_as_a_bad_key():
+    """The Odds API answers an exhausted monthly allowance with 401, not 429.
+
+    Reading that as "API key invalid" sends the reader at the one thing that is
+    definitely fine — on 2026-09-10 it cost an investigation its first hour,
+    with a valid key and 496 of 500 credits spent.
+    """
+    odds_route().mock(
+        return_value=httpx.Response(
+            401,
+            headers={"x-requests-remaining": "0", "x-requests-used": "500"},
+            json={"message": "Usage quota has been reached. Please upgrade."},
+        )
+    )
+    p = provider()
+    try:
+        with pytest.raises(ProviderQuotaExhausted) as excinfo:
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    message = str(excinfo.value)
+    assert "allowance is spent" in message
+    assert "remaining 0" in message  # the numbers, not just the verdict
+    assert "used 500" in message
+    assert "key is valid" in message
+    assert "offline_mode" in message  # and what to do about it
+    assert odds_route().call_count == 1  # still no retry: backing off cannot help
+
+
+@respx.mock
+async def test_the_body_alone_is_enough_when_no_quota_header_comes_back():
+    """Not every endpoint reports `x-requests-remaining` — the free listings do
+    not — so the body is the fallback signal rather than an afterthought."""
+    odds_route().mock(
+        return_value=httpx.Response(
+            401, json={"message": "Usage quota has been reached"}
+        )
+    )
+    p = provider()
+    try:
+        with pytest.raises(ProviderQuotaExhausted):
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+
+@respx.mock
+async def test_a_genuinely_bad_key_is_still_a_bad_key():
+    """The split must not swallow the case it was carved out of."""
+    odds_route().mock(
+        return_value=httpx.Response(401, json={"message": "Invalid API key"})
+    )
+    p = provider()
+    try:
+        with pytest.raises(ProviderAuthError) as excinfo:
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert "API key invalid" in str(excinfo.value)
+    assert not isinstance(excinfo.value, ProviderQuotaExhausted)
 
 
 @respx.mock

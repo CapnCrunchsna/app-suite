@@ -1,12 +1,20 @@
 """The ``OddsProvider`` protocol and its shared vocabulary — spec §8, §7.2.
 
-The three error types exist because §8 assigns each HTTP failure a *different
-pipeline consequence*, and the caller has to be able to tell them apart without
+The error types exist because §8 assigns each HTTP failure a *different pipeline
+consequence*, and the caller has to be able to tell them apart without
 inspecting status codes:
 
-    401 -> ProviderAuthError    kill the cycle, surface "API key invalid" in the UI
-    5xx -> ProviderUnavailable  skip this cycle, log, try again next tick
-    429 -> ProviderRateLimited  only after the ×2 backoff has been exhausted
+    401 -> ProviderAuthError       the key is wrong; kill the cycle, retrying cannot help
+    401 -> ProviderQuotaExhausted  the key is fine and the month's credits are gone
+    5xx -> ProviderUnavailable     skip this cycle, log, try again next tick
+    429 -> ProviderRateLimited     only after the ×2 backoff has been exhausted
+
+**Two of those share a status code**, which is the trap. The Odds API answers a
+spent monthly allowance with 401 and an explanatory body — not 429 — so the
+obvious reading of the status is wrong exactly when the system is most likely to
+hit it. Collapsing both into "API key invalid" sent a real investigation at a
+key that was never the problem; the adapter now reads the body and the
+`x-requests-remaining` header before deciding which of the two it is.
 
 ``QuotaStatus`` carries what the provider's response headers said. Per §8 the
 header is truth: we never track quota by counting our own requests.
@@ -24,6 +32,16 @@ class ProviderError(RuntimeError):
 
 class ProviderAuthError(ProviderError):
     """401 — credentials rejected. Kills the cycle; retrying cannot help."""
+
+
+class ProviderQuotaExhausted(ProviderError):
+    """401 — the key is valid but the month's credits are spent.
+
+    Distinct from :class:`ProviderRateLimited`, which is a *temporary* 429 that
+    backing off resolves. This one does not resolve until the allowance resets
+    or the plan changes, so a caller that retries is wasting its time rather
+    than being patient.
+    """
 
 
 class ProviderUnavailable(ProviderError):

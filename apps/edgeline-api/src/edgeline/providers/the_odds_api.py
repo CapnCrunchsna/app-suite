@@ -37,6 +37,7 @@ from ..schemas import utc_now_iso
 from .base import (
     ProviderAuthError,
     ProviderError,
+    ProviderQuotaExhausted,
     ProviderRateLimited,
     ProviderResponse,
     ProviderUnavailable,
@@ -178,10 +179,7 @@ class TheOddsApiProvider:
             status = response.status_code
 
             if status == 401:
-                raise ProviderAuthError(
-                    "The Odds API rejected the key (401): API key invalid. "
-                    "Check ODDS_API_KEY in .env (§3.1)."
-                )
+                raise self._explain_401(path, response)
 
             if status == 429:
                 if attempt < self.max_attempts:
@@ -226,6 +224,42 @@ class TheOddsApiProvider:
 
         # Unreachable: the loop either returns or raises on its final attempt.
         raise ProviderError(f"The Odds API {path} exhausted attempts without a verdict")
+
+    @staticmethod
+    def _explain_401(path: str, response: httpx.Response) -> ProviderError:
+        """Decide which kind of 401 this is, and say so in the message.
+
+        The Odds API returns 401 both for a bad key and for a spent monthly
+        allowance, so the status alone cannot tell them apart — and the second
+        is the one a free-tier install actually hits. `x-requests-remaining` is
+        the reliable signal when present; the body is the fallback, because the
+        listing endpoints that do not report quota still explain themselves.
+
+        Whichever it is, the message carries the numbers. "API key invalid" on a
+        key that was valid cost a real investigation its first hour.
+        """
+        quota = QuotaStatus.from_headers(response.headers)
+        try:
+            body = response.text.strip()
+        except Exception:  # a body that will not decode is not worth failing over
+            body = ""
+        said = f" Provider said: {body[:200]}" if body else ""
+
+        spent = quota.remaining == 0 or any(
+            word in body.lower() for word in ("quota", "usage limit", "upgrade")
+        )
+        if spent:
+            return ProviderQuotaExhausted(
+                f"The Odds API {path} refused the request (401): the monthly credit "
+                f"allowance is spent (used {quota.used}, remaining {quota.remaining}). "
+                f"The key is valid — this resolves when the allowance resets or the "
+                f"plan changes, not by retrying. Set `offline_mode` to keep working "
+                f"without the provider (§3.2).{said}"
+            )
+        return ProviderAuthError(
+            f"The Odds API {path} rejected the key (401): API key invalid. "
+            f"Check ODDS_API_KEY in .env (§3.1).{said}"
+        )
 
     # ---- fixture recorder (§8, debug flag) ---------------------------------
 
