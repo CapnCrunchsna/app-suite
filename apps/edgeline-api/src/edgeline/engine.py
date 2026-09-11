@@ -172,6 +172,21 @@ def _market_selections(quotes: dict[str, _BookQuote]) -> list[str]:
     return sorted(max((q.prices for q in quotes.values()), key=len))
 
 
+def _has_started(commence_time: str, detected_at: str) -> bool:
+    """Has the event begun by the time this cycle ran?
+
+    An unparseable or missing timestamp answers *no*: dropping a real edge over a
+    malformed date would be worse than the thing this guards, and the §7.4
+    expiry still catches the event afterwards.
+    """
+    if not commence_time:
+        return False
+    try:
+        return parse_iso(commence_time) <= parse_iso(detected_at)
+    except (ValueError, TypeError):
+        return False
+
+
 def detect_opportunities(
     snapshots: list[BookOddsSnapshot],
     settings: Settings,
@@ -184,6 +199,16 @@ def detect_opportunities(
     `enabled_books` of `None` means "consider every book present", which is what
     the fixture-replay tests want. In production it is the enabled set from
     `edgeline-sportsbooks`, and an empty set legitimately yields no detections.
+
+    **An event that has already started is skipped.** §7.4 expires an opportunity
+    once its event begins, but expiry ran *after* detection had already stored,
+    alerted and staked it — so the gate never stopped anything, it only tidied up
+    afterwards. Measured 2026-09-11 against the live index: **all 27 stored
+    opportunities were detected after kickoff**, by 8 to 158 minutes, including
+    the 10.71% arb and 23.56% EV that were recorded as this system's first real
+    finds. They are not edges. A book that leaves a pre-game line up after first
+    pitch, or prices in-play differently, is not a market being slow — and §16's
+    whole premise is handing a person a bet they can still place.
     """
     from .normalizer import group_same_line  # local: avoids a circular import
 
@@ -195,6 +220,8 @@ def detect_opportunities(
             r for r in rows if enabled_books is None or r.book_key in enabled_books
         ]
         if len(usable) < 2:
+            continue
+        if _has_started(usable[0].commence_time, detected_at):
             continue
 
         quotes = _book_quotes(usable, settings.devig_method)
@@ -596,8 +623,14 @@ async def run_once(
     prefix: str = "edgeline-",
     settings: Settings | None = None,
     sink: AlertSink | None = None,
+    now_iso: str | None = None,
 ) -> CycleReport:
     """One §7.1 poll cycle: fetch, store, detect, reconcile lifecycle, dispatch.
+
+    `now_iso` overrides the clock for detection *and* the §7.4 lifecycle, so the
+    two never disagree about what time it is. Tests need it because the only
+    honest way to watch an opportunity expire is to detect it before its event
+    and reconcile it after — which by wall clock takes hours.
 
     `sink` is where alerts go. It defaults to `LogSink` because §9's Discord
     channel has no token yet; swapping in a real channel later changes this
@@ -659,11 +692,11 @@ async def run_once(
     # "enabled books", so an empty set must mean no detections rather than
     # quietly falling back to every book the feed happened to return.
     report.detections = detect_opportunities(
-        snapshots, settings, enabled_books=set(books)
+        snapshots, settings, enabled_books=set(books), now_iso=now_iso
     )
 
-    now = datetime.now(timezone.utc)
-    now_iso = utc_now_iso()
+    now = parse_iso(now_iso) if now_iso else datetime.now(timezone.utc)
+    now_iso = now_iso or utc_now_iso()
     opportunities = with_prefix(OPPORTUNITIES_INDEX, prefix)
 
     # §7.4 lifecycle. Everything still open or alerted from an earlier cycle is
