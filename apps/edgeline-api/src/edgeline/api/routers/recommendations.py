@@ -25,8 +25,9 @@ from ...indices import (
     RESULTS_INDEX,
 )
 from ...schemas import utc_now_iso
-from ..deps import Context, get_context, hits, search
+from ..deps import Context, get_context, hits, mget, search
 from ..models import BetRow, RecommendationRow
+from .opportunities import attach_events
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -47,10 +48,11 @@ async def list_recommendations(
     limit: int = Query(default=100, ge=1, le=1000),
     context: Context = Depends(get_context),
 ) -> list[RecommendationRow]:
-    """History, with each row's opportunity and result joined in.
+    """History, with each row's opportunity, that opportunity's event, and its
+    result joined in.
 
-    Elasticsearch has no joins, so this is two `mget`s over the ids the first
-    query returned — bounded by `limit` and therefore cheap, and far better than
+    Elasticsearch has no joins, so this is three `mget`s over the ids the previous
+    step returned — bounded by `limit` and therefore cheap, and far better than
     making the UI issue N+1 requests to assemble a table.
     """
     filters: list[dict[str, Any]] = []
@@ -75,10 +77,13 @@ async def list_recommendations(
     if not rows:
         return []
 
-    opportunities = await _mget(
+    opportunities = await mget(
         context, OPPORTUNITIES_INDEX, [r.get("opportunity_id", "") for r in rows]
     )
-    results = await _mget(context, RESULTS_INDEX, [r["id"] for r in rows])
+    # The embedded opportunity carries the matchup too, so a recommendations table
+    # can name the game without a second round trip per row.
+    await attach_events(context, list(opportunities.values()))
+    results = await mget(context, RESULTS_INDEX, [r["id"] for r in rows])
 
     for row in rows:
         row["opportunity"] = opportunities.get(row.get("opportunity_id", ""))
@@ -118,22 +123,3 @@ async def confirm(
         body.odds_actual_decimal,
     )
     return {"id": created["_id"], **document}
-
-
-async def _mget(
-    context: Context, index: str, ids: list[str]
-) -> dict[str, dict[str, Any]]:
-    wanted = sorted({doc_id for doc_id in ids if doc_id})
-    if not wanted:
-        return {}
-    try:
-        found = await context.client.mget(index=context.index(index), ids=wanted)
-    except Exception:
-        return {}
-    # Fold `_id` in, exactly as `hits()` does for a search: the joined
-    # opportunity is a row the UI addresses by id like any other.
-    return {
-        doc["_id"]: {"id": doc["_id"], **doc["_source"]}
-        for doc in found["docs"]
-        if doc.get("found")
-    }

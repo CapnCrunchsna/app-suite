@@ -321,7 +321,7 @@
           "recommendations"
         ],
         "summary": "List Recommendations",
-        "description": "History, with each row's opportunity and result joined in.\n\nElasticsearch has no joins, so this is two `mget`s over the ids the first\nquery returned — bounded by `limit` and therefore cheap, and far better than\nmaking the UI issue N+1 requests to assemble a table.",
+        "description": "History, with each row's opportunity, that opportunity's event, and its\nresult joined in.\n\nElasticsearch has no joins, so this is three `mget`s over the ids the previous\nstep returned — bounded by `limit` and therefore cheap, and far better than\nmaking the UI issue N+1 requests to assemble a table.",
         "operationId": "listRecommendations",
         "parameters": [
           {
@@ -902,6 +902,35 @@
         "title": "ConfirmBody",
         "description": "What the human actually got on the book."
       },
+      "EventRow": {
+        "properties": {
+          "sport_key": {
+            "type": "string",
+            "title": "Sport Key"
+          },
+          "commence_time": {
+            "type": "string",
+            "title": "Commence Time"
+          },
+          "home_team": {
+            "type": "string",
+            "title": "Home Team"
+          },
+          "away_team": {
+            "type": "string",
+            "title": "Away Team"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport_key",
+          "commence_time",
+          "home_team",
+          "away_team"
+        ],
+        "title": "EventRow",
+        "description": "The fixture an opportunity is about — §4.3's `edgeline-events` document.\n\nJoined onto every opportunity because `event_id` alone\n(`baseball_mlb:8dafff0a…`) is a primary key, not information: it tells a\nreader nothing about which game they are being asked to bet on. The engine\nhas had these fields since §7.2's normalizer upserted them; they were simply\nnever carried out to the API.\n\nOptional on the row rather than required: an opportunity outlives its event\ndocument only if something has gone wrong, but a table that 500s because one\nfixture was reaped is worse than a table with one thin row in it."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1082,6 +1111,16 @@
           "event_id": {
             "type": "string",
             "title": "Event Id"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "market_key": {
             "type": "string",

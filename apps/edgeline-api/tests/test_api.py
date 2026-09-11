@@ -75,12 +75,27 @@ async def api(es_url):
     await client.close()
 
 
-async def seed_recommendation(client, prefix, *, paper=True):
+async def seed_recommendation(client, prefix, *, paper=True, with_event=True):
     from edgeline.indices import (
+        EVENTS_INDEX,
         OPPORTUNITIES_INDEX,
         RECOMMENDATIONS_INDEX,
         with_prefix,
     )
+
+    if with_event:
+        await client.index(
+            index=with_prefix(EVENTS_INDEX, prefix),
+            id=EVENT_ID,
+            document={
+                "sport_key": "baseball_mlb",
+                "commence_time": "2026-09-11T23:10:00Z",
+                "home_team": "Cleveland Guardians",
+                "away_team": "Kansas City Royals",
+                "completed": False,
+            },
+            refresh="wait_for",
+        )
 
     await client.index(
         index=with_prefix(OPPORTUNITIES_INDEX, prefix),
@@ -228,6 +243,31 @@ async def test_opportunities_filter_by_status_and_type(api):
     assert len((await http.get("/api/opportunities?type=arb")).json()) == 0
 
 
+async def test_opportunities_carry_the_matchup_not_just_the_event_id(api):
+    """`event_id` is a primary key, not information. §4.3 makes it the events
+    index `_id`, so the row joins the fixture in and the UI can name the game."""
+    http, client, prefix = api
+    await seed_recommendation(client, prefix)
+
+    row = (await http.get("/api/opportunities")).json()[0]
+    assert row["event"]["home_team"] == "Cleveland Guardians"
+    assert row["event"]["away_team"] == "Kansas City Royals"
+    assert row["event"]["commence_time"] == "2026-09-11T23:10:00Z"
+    # The id lives on the opportunity; repeating it inside the nested object
+    # would put the same string on the row twice under two names.
+    assert "id" not in row["event"]
+
+
+async def test_an_opportunity_whose_event_is_gone_still_renders(api):
+    """A reaped fixture thins one row; it does not 500 the table."""
+    http, client, prefix = api
+    await seed_recommendation(client, prefix, with_event=False)
+
+    row = (await http.get("/api/opportunities")).json()[0]
+    assert row["event"] is None
+    assert row["event_id"] == EVENT_ID
+
+
 async def test_an_invalid_status_is_a_422_not_an_empty_table(api):
     http, _client, _prefix = api
     assert (await http.get("/api/opportunities?status=banana")).status_code == 422
@@ -243,6 +283,9 @@ async def test_recommendations_join_their_opportunity(api):
     rows = (await http.get("/api/recommendations")).json()
     assert len(rows) == 1
     assert rows[0]["opportunity"]["market_key"] == "h2h"
+    # The embedded opportunity gets the same event join, so a recommendations
+    # table can name the game without a request per row.
+    assert rows[0]["opportunity"]["event"]["away_team"] == "Kansas City Royals"
     assert rows[0]["result"] is None  # not graded yet
 
 

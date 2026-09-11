@@ -48,10 +48,31 @@ class OpportunityLegRow(BaseModel):
     bet_first: bool = False
 
 
+class EventRow(BaseModel):
+    """The fixture an opportunity is about — §4.3's `edgeline-events` document.
+
+    Joined onto every opportunity because `event_id` alone
+    (`baseball_mlb:8dafff0a…`) is a primary key, not information: it tells a
+    reader nothing about which game they are being asked to bet on. The engine
+    has had these fields since §7.2's normalizer upserted them; they were simply
+    never carried out to the API.
+
+    Optional on the row rather than required: an opportunity outlives its event
+    document only if something has gone wrong, but a table that 500s because one
+    fixture was reaped is worse than a table with one thin row in it.
+    """
+
+    sport_key: str
+    commence_time: str
+    home_team: str
+    away_team: str
+
+
 class OpportunityRow(BaseModel):
     id: str
     type: str
     event_id: str
+    event: EventRow | None = None
     market_key: str
     legs: list[OpportunityLegRow] = Field(default_factory=list)
     edge_pct: float

@@ -40,6 +40,14 @@ export interface ConfirmBody {
   odds_actual_decimal: number;
 }
 
+/** The fixture an opportunity is about — §4.3's `edgeline-events` document. */
+export interface EventRow {
+  sport_key: string;
+  commence_time: string;
+  home_team: string;
+  away_team: string;
+}
+
 export interface HTTPValidationError {
   detail?: ValidationError[];
 }
@@ -80,6 +88,7 @@ export interface OpportunityRow {
   id: string;
   type: string;
   event_id: string;
+  event?: EventRow | null;
   market_key: string;
   legs?: OpportunityLegRow[];
   edge_pct: number;
