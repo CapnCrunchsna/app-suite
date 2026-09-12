@@ -130,9 +130,10 @@ stylesheet declared.
 Nothing else in this app or in `libs/ledgerline/feature-shell` names a colour.
 Every rule in both used to be written `var(--token, #hex)`; those 660 fallbacks
 are gone, along with three in `@metrum/ui`'s `ui-panel`, whose docstring already
-promised it carried no palette of its own. Ten of the same kind survive in that
-lib's `mode-toggle` and `theme-switcher`, which Edgeline renders too and which
-this app therefore does not get to decide alone. None of them could ever fire —
+promised it carried no palette of its own, and the last ten in that lib's
+`mode-toggle` and `theme-switcher` — held back a commit because Edgeline renders
+those two as well, then removed once both apps had been checked in all three
+themes, light and dark. None of them could ever fire —
 `ThemeService` sets every token on `:root` before the first paint, so the only gap
 they covered is the one `--bg` and `--text` above exist to cover — and they had
 drifted into exactly the second, stale palette this work removed: `--warn` stood

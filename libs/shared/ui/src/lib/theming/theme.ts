@@ -11,12 +11,12 @@
  * ## Why the contract is a TypeScript type and not a stylesheet
  *
  * The properties below are what every component in the suite already consumes,
- * as `var(--text-dim, …)` and friends. Writing them as a type buys two things a
+ * as `var(--text-dim)` and friends. Writing them as a type buys two things a
  * `.scss` file cannot:
  *
  * - **A new theme cannot be half-written.** Omit `dangerSoft` and the compiler
- *   says so, rather than the app rendering a fallback hex from whichever
- *   component happened to declare one.
+ *   says so, rather than every `var(--danger-soft)` in the suite resolving to
+ *   nothing at render time.
  * - **The palette is data, so it can be checked.** `contrast.ts` audits every
  *   registered theme's foreground/background pairs against WCAG, in a test. A
  *   light palette that reads well is a claim; a light palette that clears 4.5:1

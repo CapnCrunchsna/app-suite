@@ -42,9 +42,9 @@ import type { ThemeMode } from './theme.js';
     .modes {
       display: inline-flex;
       padding: 2px;
-      border: 1px solid var(--border, #1f4a47);
+      border: 1px solid var(--border);
       border-radius: 999px;
-      background: var(--surface-2, #143034);
+      background: var(--surface-2);
     }
 
     .modes__button {
@@ -52,7 +52,7 @@ import type { ThemeMode } from './theme.js';
       border: none;
       border-radius: 999px;
       background: none;
-      color: var(--text-dim, #7ea8a1);
+      color: var(--text-dim);
       font: inherit;
       font-size: 0.72rem;
       line-height: 1.5;
@@ -60,14 +60,14 @@ import type { ThemeMode } from './theme.js';
     }
 
     .modes__button:hover {
-      color: var(--text, #dcefeb);
+      color: var(--text);
     }
 
     /* Filled rather than outlined: an outline inside a pill that already has one
        reads as a second control instead of as the selected third of this one. */
     .modes__button--active {
-      background: var(--accent, #2dd4bf);
-      color: var(--on-accent, #06201c);
+      background: var(--accent);
+      color: var(--on-accent);
       font-weight: 600;
     }
   `,

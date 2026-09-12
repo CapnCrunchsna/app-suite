@@ -112,8 +112,8 @@ describe('the suite palettes', () => {
 });
 
 describe('token names', () => {
-  // A near miss (`--surface2`) would leave every existing `var(--surface-2, …)`
-  // silently falling back to its hardcoded default, in every component.
+  // A near miss (`--surface2`) would leave every existing `var(--surface-2)`
+  // resolving to nothing, in every component.
   it('match the properties the suite already consumes', () => {
     expect(tokenName('bg')).toBe('--bg');
     expect(tokenName('textDim')).toBe('--text-dim');
