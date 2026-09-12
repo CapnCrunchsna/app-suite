@@ -21,7 +21,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Panel } from '@metrum/ui';
-import { NO_DATA, formatLocalTime } from '@metrum/format';
+import { NO_DATA, formatLocalDay } from '@metrum/format';
 import type { ProviderRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
@@ -80,11 +80,49 @@ export class ProvidersPage {
     return Math.min(100, (used / budget) * 100);
   }
 
+  /** Whether the bar is showing a measurement at all. */
+  protected unknownUsage(provider: ProviderRow): boolean {
+    return provider.quota_used === null || provider.quota_used === undefined;
+  }
+
+  /**
+   * The bar fills with credits *spent*, so it names that.
+   *
+   * "— of 500" beside an empty track was ambiguous in the worst direction: an
+   * empty progress bar reads as "nothing left" about as easily as "nothing
+   * used", and the honest answer is neither — nothing has been *reported*.
+   * Filling it instead would be worse, because a full bar is a claim that 500
+   * credits are available, which is the one number §8.4 must not be wrong
+   * about and which no provider has told us yet.
+   */
   protected usedLabel(provider: ProviderRow): string {
-    const used = provider.quota_used;
-    if (used === null || used === undefined)
-      return `${NO_DATA} of ${provider.quota_budget ?? NO_DATA}`;
-    return `${used} of ${provider.quota_budget ?? NO_DATA} credits`;
+    const budget = provider.quota_budget ?? NO_DATA;
+    if (this.unknownUsage(provider)) return `Usage unknown · ${budget} credit budget`;
+    return `${provider.quota_used} of ${budget} credits used`;
+  }
+
+  /**
+   * When the allowance rolls over.
+   *
+   * `quota_reset_at` is only known once the provider has answered and said so,
+   * and until then the row read "resets —", which says nothing to someone
+   * trying to work out whether a spent month matters today. A monthly budget
+   * rolls over on the first, so that date is derivable — and it is marked
+   * *expected* rather than printed plainly, because §16.3's rule is that a
+   * value we worked out ourselves must never be dressed as one the provider
+   * reported.
+   */
+  protected resetLabel(provider: ProviderRow): string {
+    if (provider.quota_reset_at) return `Resets ${formatLocalDay(provider.quota_reset_at)}`;
+    const now = new Date();
+    const firstOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return `Resets ${formatLocalDay(firstOfNextMonth.toISOString())} (expected)`;
+  }
+
+  protected resetTitle(provider: ProviderRow): string {
+    return provider.quota_reset_at
+      ? 'Reported by the provider with its last response.'
+      : 'The first of next month — a monthly budget rolls over then. The provider has not reported its own reset date yet, so this is worked out, not quoted.';
   }
 
   /** Over four-fifths spent is worth a colour: §8.4's budget check is a startup
@@ -109,6 +147,7 @@ export class ProvidersPage {
     }
   }
 
-  protected time = formatLocalTime;
-  protected readonly noData = NO_DATA;
+  // No `time`/`noData` here any more: the two places this page rendered a bare
+  // em-dash — the quota bar's label and the reset date — now say what they do
+  // not know instead, so the template has nothing left to format directly.
 }

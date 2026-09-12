@@ -38,7 +38,16 @@
           </div>
 
           <div class="quota">
-            <span class="quota__bar" aria-hidden="true">
+            <!-- Hatched when nothing has been reported, filled when something
+                 has. An empty track beside a budget reads as a measurement —
+                 and "nothing left" about as readily as "nothing used" — so the
+                 unknown case has to look unlike a reading rather than like a
+                 reading of zero. -->
+            <span
+              class="quota__bar"
+              [class.quota__bar--unknown]="unknownUsage(provider)"
+              aria-hidden="true"
+            >
               @if (usedPercent(provider) !== null) {
                 <span
                   class="quota__fill"
@@ -47,7 +56,11 @@
                 ></span>
               }
             </span>
-            <span class="quota__label" [class.neg]="tight(provider)">
+            <span
+              class="quota__label"
+              [class.neg]="tight(provider)"
+              [class.dim]="unknownUsage(provider)"
+            >
               {{ usedLabel(provider) }}
             </span>
           </div>
@@ -76,8 +89,12 @@
               (change)="setBudget(provider, $any($event.target).value)"
             />
             <span class="dim">credits</span>
-            <span class="provider__reset">
-              resets {{ provider.quota_reset_at ? time(provider.quota_reset_at) : noData }}
+            <span
+              class="provider__reset"
+              [class.provider__reset--expected]="!provider.quota_reset_at"
+              [title]="resetTitle(provider)"
+            >
+              {{ resetLabel(provider) }}
             </span>
           </div>
         </div>

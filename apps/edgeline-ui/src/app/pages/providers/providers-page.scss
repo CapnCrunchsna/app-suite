@@ -40,6 +40,20 @@
   background: var(--surface-1);
 }
 
+/* Nothing reported yet. Hatching says "this is not a reading" in a way an empty
+ * track cannot — an empty bar is itself a plausible measurement, and the two
+ * readings it invites ("nothing used", "nothing left") are opposites. */
+.quota__bar--unknown {
+  border-style: dashed;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-1),
+    var(--surface-1) 5px,
+    var(--surface-2) 5px,
+    var(--surface-2) 10px
+  );
+}
+
 .quota__fill {
   display: block;
   height: 100%;
@@ -81,6 +95,18 @@
   margin-left: 12px;
   color: var(--text-dim);
   font-size: 0.82rem;
+}
+
+/* A date we derived, not one the provider gave us (§16.3). Dotted underline so
+ * it carries its own hedge on the page, rather than only in the tooltip. */
+.provider__reset--expected {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.dim {
+  color: var(--text-dim);
 }
 
 .notice--bad {
