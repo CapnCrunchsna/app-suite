@@ -48,6 +48,33 @@ type LinkLevel = (typeof LINK_LEVELS)[number];
 
 type Draft = Record<LinkLevel, string>;
 
+/**
+ * The rungs that name **one event**, and must therefore vary per event.
+ *
+ * This is the distinction the editor was missing, and it is the one that makes
+ * "template" mean something. A `betslip` or `event` value without a placeholder
+ * is not a template, it is one game's URL — and storing it would point every
+ * recommendation at this book, forever, at that same game. That is the §16.3
+ * failure in its purest form: a link that works, opens a real sportsbook, and is
+ * about the wrong match.
+ *
+ * `league` and `book_home` are the opposite: the same URL every time, so a
+ * placeholder in one of them is equally wrong.
+ */
+const PER_EVENT: readonly LinkLevel[] = ['betslip', 'event'];
+
+/**
+ * The placeholders the engine can actually fill — `engine.py`'s `_stake_leg`
+ * passes exactly this one, and `build_deep_link` skips any template naming
+ * something else rather than emitting a URL with a hole in it.
+ *
+ * Worth stating where a reader will meet it: `provider_event_id` is *The Odds
+ * API's* id, and no sportsbook puts it in a URL. So a correctly-formed `event`
+ * template is still one the engine cannot use, which is why that rung is empty
+ * for every book and not merely unfinished.
+ */
+const FILLABLE: readonly string[] = ['provider_event_id'];
+
 /** Built from `LINK_LEVELS` rather than written out, so adding a rung to the
  *  ladder cannot leave a field the editor silently never shows. Adding `league`
  *  is what found the two hand-written copies this replaces. */
@@ -134,17 +161,84 @@ export class SportsbooksPage {
     this.closeLinks();
   }
 
-  /** What a rung is meant to hold, shown as the input's own placeholder text.
-   *  `league` and `book_home` are plain URLs — which is exactly why they are the
-   *  rungs that can be confirmed by opening them. */
+  protected isPerEvent(level: LinkLevel): boolean {
+    return PER_EVENT.includes(level);
+  }
+
+  /** What each rung *is*. All four had the same hint until 2026-09-12, which
+   *  made `betslip` and `event` look like alternative spellings of one thing. */
+  protected describe(level: LinkLevel): string {
+    switch (level) {
+      case 'betslip':
+        return 'The selection already loaded into a betslip — one tap from placing it. Needs the book’s own market and selection ids.';
+      case 'event':
+        return 'One game’s page at the book. Needs the book’s own event id — the number on the end of a real event URL.';
+      case 'league':
+        return 'The book’s MLB page. A plain URL, the same every time, and the highest rung that can be filled today.';
+      case 'book_home':
+        return 'The book’s front door. The fallback when nothing above it is set.';
+    }
+  }
+
+  /** What a rung is meant to hold, shown as the input's own placeholder text. */
   protected hintFor(level: LinkLevel): string {
     switch (level) {
-      case 'book_home':
-        return 'https://sportsbook.example.com/';
+      case 'betslip':
+        return 'https://sportsbook.example.com/bet?event={event_id}&selection={selection_id}';
+      case 'event':
+        return 'https://sportsbook.example.com/event/{event_id}';
       case 'league':
         return 'https://sportsbook.example.com/leagues/baseball/mlb';
-      default:
-        return 'https://sportsbook.example.com/event/{event_id}';
+      case 'book_home':
+        return 'https://sportsbook.example.com/';
+    }
+  }
+
+  /** Why this value cannot be stored on this rung, or `null` if it can.
+   *
+   *  Empty is always fine — an empty rung is the correct answer nearly
+   *  everywhere, and the ladder is built to fall through it. */
+  protected problemWith(level: LinkLevel, raw: string): string | null {
+    const value = raw.trim();
+    if (!value) return null;
+    const holes = this.placeholders(value);
+
+    if (this.isPerEvent(level)) {
+      if (holes.length === 0) {
+        return `That is one game’s URL, not a template. Stored here it would send every ${level} link at this book to that same game, forever — which is worse than no link, because it works. The ${level} rung has to carry a placeholder where the id goes.`;
+      }
+      const unfillable = holes.filter((hole) => !FILLABLE.includes(hole));
+      if (unfillable.length > 0) {
+        return `The engine can only fill {provider_event_id}, so ${unfillable
+          .map((hole) => `{${hole}}`)
+          .join(', ')} would never be filled and this rung would be skipped. And {provider_event_id} is The Odds API’s id, which no sportsbook uses in its URLs — so there is no spelling of this rung that works today. Leave it empty.`;
+      }
+      return null;
+    }
+
+    if (holes.length > 0) {
+      return `The ${level} rung is the same URL every time, so it cannot contain ${holes
+        .map((hole) => `{${hole}}`)
+        .join(', ')}.`;
+    }
+    if (!this.isUrl(value)) return 'Not a valid http(s) URL.';
+    return null;
+  }
+
+  /** Any rung the editor would refuse. Save is disabled while this is true —
+   *  the alternative is storing a link that is wrong in a way nobody sees until
+   *  it is tapped with money in hand. */
+  protected readonly saveBlocked = computed(() => {
+    const draft = this.draft();
+    return LINK_LEVELS.some((level) => this.problemWith(level, draft[level]) !== null);
+  });
+
+  private isUrl(value: string): boolean {
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' || url.protocol === 'http:';
+    } catch {
+      return false;
     }
   }
 
@@ -156,12 +250,7 @@ export class SportsbooksPage {
   protected testable(template: string): boolean {
     const value = template.trim();
     if (!value || this.placeholders(value).length > 0) return false;
-    try {
-      const url = new URL(value);
-      return url.protocol === 'https:' || url.protocol === 'http:';
-    } catch {
-      return false;
-    }
+    return this.isUrl(value);
   }
 
   protected whyNotTestable(template: string): string {

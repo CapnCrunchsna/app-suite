@@ -103,23 +103,31 @@
                       correct answer until you have opened the page yourself.
                     </p>
                     <p class="editor__lede">
-                      <strong>League</strong> is the one worth filling in. The two rungs above
-                      it need a book-native event id that the odds provider does not return,
-                      and no fetch from here can confirm one — books either refuse a non-browser
-                      client outright or serve the same empty shell for every path, real or
-                      mistyped. Your browser renders the page, so you can see what a fetch
-                      cannot.
+                      Two of these are <strong>templates</strong> and two are plain URLs, and
+                      the difference decides what belongs in them. Betslip and event name one
+                      game, so they must carry a placeholder — pasting a real event URL there
+                      would point every link at this book to that one match. League and book
+                      home are the same URL every time, so they must not.
+                    </p>
+                    <p class="editor__lede">
+                      <strong>League is the one worth filling in.</strong> Both template rungs
+                      need a book-native id the odds provider does not return, so there is no
+                      spelling of them that works today — the editor will say so if you try.
                     </p>
 
                     @for (level of levels; track level) {
                       <div class="editor__row">
                         <label class="editor__label" [attr.for]="'tpl-' + bk.id + '-' + level">
                           {{ level }}
+                          <span class="editor__kind">{{
+                            isPerEvent(level) ? 'template' : 'plain URL'
+                          }}</span>
                         </label>
                         <input
                           [id]="'tpl-' + bk.id + '-' + level"
                           type="text"
                           class="editor__input"
+                          [class.editor__input--bad]="problemWith(level, draft()[level])"
                           [value]="draft()[level]"
                           [placeholder]="hintFor(level)"
                           (input)="setDraft(level, $any($event.target).value)"
@@ -138,7 +146,10 @@
                           Test link
                         </button>
                       </div>
-                      @if (draft()[level] && !testable(draft()[level])) {
+                      <p class="editor__what">{{ describe(level) }}</p>
+                      @if (problemWith(level, draft()[level]); as problem) {
+                        <p class="editor__why editor__why--bad">{{ problem }}</p>
+                      } @else if (draft()[level] && !testable(draft()[level])) {
                         <p class="editor__why">{{ whyNotTestable(draft()[level]) }}</p>
                       }
                     }
@@ -147,10 +158,13 @@
                       <button
                         type="button"
                         class="button button--primary"
-                        [disabled]="busy() === bk.id"
+                        [disabled]="busy() === bk.id || saveBlocked()"
+                        [title]="
+                          saveBlocked() ? 'Fix the rung marked above first' : 'Store these links'
+                        "
                         (click)="saveLinks(bk)"
                       >
-                        Save templates
+                        Save links
                       </button>
                       <button type="button" class="button" (click)="closeLinks()">Cancel</button>
                     </div>

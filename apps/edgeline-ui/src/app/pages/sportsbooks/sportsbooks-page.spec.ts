@@ -123,8 +123,12 @@ describe('SportsbooksPage (§11.1)', () => {
       clickText(el, 'Edit links');
       await settle(fixture);
 
+      // `provider_event_id` deliberately — it is the one placeholder the engine
+      // can fill, so this template is *valid* and the only thing wrong with it
+      // is that it cannot be opened. Any other name is refused outright now, by
+      // a different rule and its own test below.
       const input = el.querySelector('#tpl-draftkings-event') as HTMLInputElement;
-      input.value = 'https://sportsbook.example.com/event/{event_id}';
+      input.value = 'https://sportsbook.example.com/event/{provider_event_id}';
       input.dispatchEvent(new Event('input'));
       await settle(fixture);
 
@@ -132,7 +136,7 @@ describe('SportsbooksPage (§11.1)', () => {
         (b) => b.textContent?.trim() === 'Test link',
       ) as HTMLButtonElement;
       expect(test.disabled).toBe(true);
-      expect(el.textContent).toContain('{event_id}');
+      expect(el.textContent).toContain('{provider_event_id}');
       expect(el.textContent).toContain('Paste a real event URL from the book');
     });
 
@@ -176,11 +180,11 @@ describe('SportsbooksPage (§11.1)', () => {
       await settle(fixture);
 
       const input = el.querySelector('#tpl-draftkings-event') as HTMLInputElement;
-      input.value = 'https://sportsbook.example.com/event/{event_id}';
+      input.value = 'https://sportsbook.example.com/event/{provider_event_id}';
       input.dispatchEvent(new Event('input'));
       await settle(fixture);
 
-      clickText(el, 'Save templates');
+      clickText(el, 'Save links');
       await settle(fixture);
 
       // An empty rung is omitted, not stored as "". §9.4 walks the ladder
@@ -188,7 +192,9 @@ describe('SportsbooksPage (§11.1)', () => {
       expect(api.patches).toEqual([
         {
           key: 'draftkings',
-          body: { link_templates: { event: 'https://sportsbook.example.com/event/{event_id}' } },
+          body: {
+            link_templates: { event: 'https://sportsbook.example.com/event/{provider_event_id}' },
+          },
         },
       ]);
     });
@@ -216,7 +222,7 @@ describe('SportsbooksPage (§11.1)', () => {
       const test = input.parentElement?.querySelector('button') as HTMLButtonElement;
       expect(test.disabled).toBe(false);
 
-      clickText(el, 'Save templates');
+      clickText(el, 'Save links');
       await settle(fixture);
 
       expect(api.patches).toEqual([
@@ -229,11 +235,72 @@ describe('SportsbooksPage (§11.1)', () => {
       ]);
     });
 
+    /**
+     * The failure a reader walks straight into: the field says "template", so a
+     * real event URL looks like the thing to paste. It is not — stored, it would
+     * send every event link at this book to one game in perpetuity, and it would
+     * *work*, which is what makes it worse than an empty rung.
+     *
+     * The URL is the real one that prompted this (DraftKings, Mets at Yankees),
+     * kept verbatim so the double-encoded `@` and the trailing book-native id
+     * both stay in the test.
+     */
+    it('refuses one game’s URL on a per-event rung, and blocks the save', async () => {
+      const { fixture, el, api } = await render();
+      clickText(el, 'Edit links');
+      await settle(fixture);
+
+      const input = el.querySelector('#tpl-draftkings-event') as HTMLInputElement;
+      input.value = 'https://sportsbook.draftkings.com/event/ny-mets-%2540-ny-yankees/34653904';
+      input.dispatchEvent(new Event('input'));
+      await settle(fixture);
+
+      expect(el.textContent).toContain('not a template');
+
+      const save = [...el.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Save links',
+      ) as HTMLButtonElement;
+      expect(save.disabled).toBe(true);
+
+      clickText(el, 'Save links');
+      await settle(fixture);
+      expect(api.patches).toEqual([]);
+    });
+
+    /** The other half: a well-formed template the engine still cannot fill. */
+    it('refuses a placeholder the engine does not supply', async () => {
+      const { fixture, el } = await render();
+      clickText(el, 'Edit links');
+      await settle(fixture);
+
+      const input = el.querySelector('#tpl-draftkings-event') as HTMLInputElement;
+      input.value = 'https://sportsbook.draftkings.com/event/{dk_event_id}';
+      input.dispatchEvent(new Event('input'));
+      await settle(fixture);
+
+      expect(el.textContent).toContain('{dk_event_id}');
+      expect(el.textContent).toContain('provider_event_id');
+    });
+
+    /** And the mirror of it, so the rule reads both ways. */
+    it('refuses a placeholder on a rung that is the same URL every time', async () => {
+      const { fixture, el } = await render();
+      clickText(el, 'Edit links');
+      await settle(fixture);
+
+      const input = el.querySelector('#tpl-draftkings-league') as HTMLInputElement;
+      input.value = 'https://sportsbook.draftkings.com/leagues/{sport}';
+      input.dispatchEvent(new Event('input'));
+      await settle(fixture);
+
+      expect(el.textContent).toContain('rung is the same URL every time');
+    });
+
     it('says what saving nothing means', async () => {
       const { fixture, el } = await render();
       clickText(el, 'Edit links');
       await settle(fixture);
-      clickText(el, 'Save templates');
+      clickText(el, 'Save links');
       await settle(fixture);
 
       expect(el.textContent).toContain('no link templates');

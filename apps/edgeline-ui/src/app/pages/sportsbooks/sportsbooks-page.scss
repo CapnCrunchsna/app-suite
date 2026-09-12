@@ -60,15 +60,39 @@
   font-weight: 600;
 }
 
+/* Which kind of rung this is, under its name. The whole confusion this answers
+ * was that four fields looked like one kind of thing. */
+.editor__kind {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+
 .editor__input {
   flex: 1;
   min-width: 0;
+}
+
+.editor__input--bad {
+  border-color: var(--danger);
+}
+
+.editor__what {
+  margin: -4px 0 8px 102px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
 }
 
 .editor__why {
   margin: -4px 0 10px 102px;
   color: var(--text-dim);
   font-size: 0.8rem;
+}
+
+/* A refusal, not a hint — this one means Save is disabled until it is gone. */
+.editor__why--bad {
+  color: var(--danger);
 }
 
 .editor__actions {
