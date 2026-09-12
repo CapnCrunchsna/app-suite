@@ -350,8 +350,17 @@ Three ways out, all of them the user's call under §16.2 — do not just lower a
 **Resolved by (1), and by two books that came with it.** `us2` also surfaced `betparx` and
 `ballybet`, both confirmed Maryland-legal by the user on 2026-09-09 and now seeded — which takes
 the books actually present in an MLB response from five to **seven**, clear of the threshold
-rather than exactly on it. The first cycle at that coverage produced **14 detections and 2
-recommendations**, the first time the system found anything.
+rather than exactly on it.
+
+**The detections that followed were not real, and this section said they were.** The first cycle
+at that coverage produced 14 detections and 2 recommendations, recorded here and in `d1b411e` as
+the first time the system found anything. It was not: **every one of the 27 opportunities ever
+stored was detected after its event had already started**, by 8 to 158 minutes (measured
+2026-09-11). They were dead pre-game lines books had not taken down — betPARX showing 7.5 on the
+Marlins 3h40m after first pitch, against a market of 1.80. `detect_opportunities` now refuses an
+event that has started, so the count above is the honest one: **this system has not yet detected
+a real edge.** It has not had the chance — no cycle has run against a live pre-game market with
+the current book coverage.
 
 Not every book in the feed made it. `hardrockbet` is confirmed **not** MD-legal (user, same day);
 `fliff` is a sweepstakes product, not a licensed sportsbook; and `bovada`, `lowvig`, `mybookieag`,

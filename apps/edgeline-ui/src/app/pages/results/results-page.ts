@@ -18,6 +18,16 @@
  * would tell a reader with an empty database that they lose every bet. So the
  * tiles say "nothing has settled yet" in words, and the per-day table renders
  * the em-dash.
+ *
+ * ## The CLV tile names its own evidence
+ *
+ * Since 2026-09-11 a CLV may be measured against a bought closing snapshot or
+ * derived from the last price stored before kickoff, which at the dev cadence
+ * can be twelve hours old (§3.2 `closing_capture_mode`). The tile used to say
+ * "against the closing line" whatever the number was. It now reports the split,
+ * and shows the closing-only average beside the mixed one when they can differ —
+ * the same reasoning as the `null` rule above, one level up: a number that
+ * overstates where it came from is worse than no number.
  */
 
 import {
@@ -68,6 +78,36 @@ export class ResultsPage {
   protected readonly loadError = computed(() => this.summaryResource.error());
   protected readonly buckets = computed(() => this.summaryResource.value().buckets ?? []);
   protected readonly totals = computed(() => this.summaryResource.value().totals);
+
+  /**
+   * Where the CLV figure actually came from, in words.
+   *
+   * This tile used to read "against the closing line" whatever the number was.
+   * That stopped being true when §3.2's `closing_capture_mode` gained a free
+   * fallback: a CLV may now be measured against a price up to twelve hours
+   * before kickoff. Overstating the evidence matters more here than anywhere
+   * else on the page — §15's go-live gate reads this tile, and "against the
+   * closing line" is precisely the claim it would be relying on.
+   */
+  protected readonly clvProvenance = computed(() => {
+    const totals = this.totals();
+    const closing = totals.clv_from_closing ?? 0;
+    const derived = totals.clv_from_derived ?? 0;
+    if (closing + derived === 0) return 'no closing price available yet';
+    if (derived === 0) return 'against the closing line';
+    if (closing === 0) return 'derived from the last price before kickoff';
+    return `${closing} against closing lines, ${derived} derived`;
+  });
+
+  /** The same average over bought closing lines alone, shown only when the
+   *  headline figure is a mix and the two can therefore disagree. */
+  protected readonly clvClosingOnly = computed(() => {
+    const totals = this.totals();
+    const closing = totals.clv_from_closing ?? 0;
+    const derived = totals.clv_from_derived ?? 0;
+    if (!closing || !derived) return null;
+    return totals.avg_clv_pct_closing ?? null;
+  });
 
   protected readonly executedCount = computed(() =>
     this.buckets().reduce((sum, bucket) => sum + bucket.executed, 0),

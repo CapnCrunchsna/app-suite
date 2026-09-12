@@ -342,6 +342,51 @@ async def test_hit_rate_is_null_rather_than_zero_with_nothing_settled(api):
     totals = (await http.get("/api/results/summary")).json()["totals"]
     assert totals["graded"] == 0
     assert totals["hit_rate"] is None
+    assert totals["clv_from_closing"] == 0
+    assert totals["avg_clv_pct_closing"] is None
+
+
+async def test_the_clv_average_travels_with_where_it_came_from(api):
+    """§12.4. A CLV measured against a price twelve hours before kickoff is not
+    the same evidence as one measured against a bought closing line, and the
+    go-live gate rests on telling them apart. The mixed average is still
+    reported — it is simply no longer the only number available."""
+    http, client, prefix = api
+    from edgeline.indices import RESULTS_INDEX, with_prefix
+
+    # One strong figure and two weak ones, deliberately far apart so a reader
+    # cannot mistake the mixed mean for either.
+    for doc_id, clv, source in (
+        ("r-closing", 2.0, "closing"),
+        ("r-derived-1", 20.0, "derived"),
+        ("r-derived-2", 20.0, "derived"),
+    ):
+        await client.index(
+            index=with_prefix(RESULTS_INDEX, prefix),
+            id=doc_id,
+            document={
+                "bet_id": "",
+                "outcome": "win",
+                "pnl_cents": 100,
+                "clv_pct": clv,
+                "clv_source": source,
+                "clv_staleness_s": None if source == "closing" else 43_200,
+                "needs_manual": False,
+                "graded_at": utc_now_iso(),
+            },
+            refresh="wait_for",
+        )
+
+    totals = (await http.get("/api/results/summary")).json()["totals"]
+
+    assert totals["clv_from_closing"] == 1
+    assert totals["clv_from_derived"] == 2
+    assert totals["avg_clv_pct"] == pytest.approx(14.0)  # the mix
+    assert totals["avg_clv_pct_closing"] == pytest.approx(2.0)  # the evidence
+
+    bucket = (await http.get("/api/results/summary")).json()["buckets"][0]
+    assert bucket["clv_from_closing"] == 1
+    assert bucket["clv_from_derived"] == 2
 
 
 # ---- bankroll (§10, §4.4 rule 3) -------------------------------------------

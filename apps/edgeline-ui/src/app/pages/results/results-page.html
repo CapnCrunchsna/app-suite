@@ -48,7 +48,10 @@
         @if (totals().avg_clv_pct === null || totals().avg_clv_pct === undefined) {
           no closing lines captured yet
         } @else {
-          against the closing line
+          {{ clvProvenance() }}
+          @if (clvClosingOnly() !== null) {
+            · {{ signedPercent(clvClosingOnly()) }} on closing lines alone
+          }
         }
       </span>
     </div>

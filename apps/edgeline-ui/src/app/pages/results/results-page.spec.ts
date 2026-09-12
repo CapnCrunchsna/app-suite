@@ -110,6 +110,57 @@ describe('ResultsPage (§11.1, §12)', () => {
       const { el } = await render();
       expect(tile(el, 'P&L').querySelector('.tile__value')?.textContent?.trim()).toBe('—');
     });
+  });
+
+  /**
+   * §3.2's `closing_capture_mode` made a CLV either a bought closing price or
+   * one derived from the last poll before kickoff — up to twelve hours old at
+   * the dev cadence. The tile used to claim "against the closing line" whatever
+   * the number was, which is the strongest claim this page makes resting on its
+   * weakest data. §15's go-live gate reads this tile.
+   */
+  describe('the CLV tile names its own evidence', () => {
+    const withProvenance = (
+      closing: number,
+      derived: number,
+      avgClosing: number | null = null,
+    ): SummaryResponse => ({
+      ...POPULATED,
+      totals: {
+        ...POPULATED.totals,
+        clv_from_closing: closing,
+        clv_from_derived: derived,
+        avg_clv_pct_closing: avgClosing,
+      },
+    });
+
+    it('claims the closing line only when every figure came from one', async () => {
+      const { el } = await render((api) => (api.summary = withProvenance(10, 0)));
+      expect(tile(el, 'Average CLV').textContent).toContain('against the closing line');
+    });
+
+    it('says so plainly when every figure was derived', async () => {
+      const { el } = await render((api) => (api.summary = withProvenance(0, 10)));
+      const text = tile(el, 'Average CLV').textContent ?? '';
+      expect(text).toContain('derived from the last price before kickoff');
+      expect(text).not.toContain('against the closing line');
+    });
+
+    it('splits the count on a mix, and shows the stronger average beside it', async () => {
+      const { el } = await render((api) => (api.summary = withProvenance(3, 7, -0.5)));
+      const text = tile(el, 'Average CLV').textContent ?? '';
+      expect(text).toContain('3 against closing lines, 7 derived');
+      // The headline is +1.40% from the mix; the evidence alone says -0.50%, and
+      // a reader who cannot see both cannot tell those apart.
+      expect(text).toContain('+1.40%');
+      expect(text).toContain('-0.50%');
+      expect(text).toContain('on closing lines alone');
+    });
+
+    it('does not show a closing-only average when there is nothing to compare', async () => {
+      const { el } = await render((api) => (api.summary = withProvenance(0, 10, null)));
+      expect(tile(el, 'Average CLV').textContent).not.toContain('on closing lines alone');
+    });
 
     it('explains an empty table, and says the em-dash means no data', async () => {
       const { el } = await render();
