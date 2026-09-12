@@ -19,6 +19,8 @@ from edgeline.indices import (
     OPPORTUNITIES_INDEX,
     SEEDS,
     SETTINGS_INDEX,
+    PROVIDER_SEEDS,
+    PROVIDERS_INDEX,
     SPORTSBOOK_SEEDS,
     SPORTSBOOKS_INDEX,
     TEST_INDEX_PREFIX,
@@ -174,6 +176,29 @@ def test_sportsbook_seed_matches_the_spec_list_and_starts_disabled():
         "ballybet",
     }
     assert all(book["enabled"] is False for book in SPORTSBOOK_SEEDS.values())
+
+
+def test_every_registered_adapter_has_a_provider_row():
+    """The Providers page sets `enabled` and `quota_budget`. Before this seed a
+    row only appeared once an adapter had answered a request — but §8.4 checks
+    projected spend against that budget *before* starting a cadence, so the
+    budget could not be set until a call was made and the call was gated on the
+    budget."""
+    from edgeline.providers.base import _REGISTRY
+    from edgeline.providers import the_odds_api  # noqa: F401  (registers the adapter)
+
+    assert set(PROVIDER_SEEDS) == set(_REGISTRY)
+    assert SEEDS[PROVIDERS_INDEX] is PROVIDER_SEEDS
+
+
+def test_a_seeded_provider_claims_no_credit_usage():
+    """§8 makes the provider's own response header the sole source of truth for
+    `quota_used`. Seeding a `0` would claim a full allowance on no evidence,
+    which is the one figure §8.4 must not be wrong about."""
+    for row in PROVIDER_SEEDS.values():
+        assert "quota_used" not in row
+        assert "quota_reset_at" not in row
+        assert row["quota_budget"] == DEFAULT_SETTINGS["quota_monthly_budget"]
 
 
 def test_an_excluded_book_is_not_seeded():

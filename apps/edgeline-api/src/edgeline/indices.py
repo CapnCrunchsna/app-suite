@@ -236,10 +236,36 @@ EXCLUDED_BOOKS: dict[str, str] = {
     "fliff": "sweepstakes product, not a licensed sportsbook",
 }
 
+#: One row per registered adapter, seeded at bootstrap like the sportsbook list.
+#:
+#: It was not seeded until 2026-09-12, and the omission made the Providers page
+#: unusable rather than merely empty. The page's job is to set `enabled` and
+#: `quota_budget`; a row only appeared once an adapter had answered a request and
+#: recorded its credit usage — but §8.4 checks the projected spend *against that
+#: budget before starting a cadence*. So the budget could not be set until a call
+#: had been made, and the call was gated on the budget. An empty page also reads
+#: as "no provider is configured", which was never true: `the_odds_api` is the
+#: only adapter in the registry and the engine has always used it.
+#:
+#: `quota_used` and `quota_reset_at` are deliberately absent rather than zero.
+#: §8 makes the provider's own response header the sole source of truth for them,
+#: and a seeded `0` would claim a full allowance on no evidence — which is the
+#: one number §8.4 must not be wrong about. The UI already renders their absence
+#: as "unknown rather than zero".
+PROVIDER_SEEDS: dict[str, dict[str, Any]] = {
+    "the_odds_api": {
+        "display_name": "The Odds API",
+        "enabled": True,
+        "quota_budget": DEFAULT_SETTINGS["quota_monthly_budget"],
+        "config": {},
+    },
+}
+
 #: ``index -> {_id: document}`` written once at bootstrap, never overwritten (§4.4 rule 1).
 SEEDS: dict[str, dict[str, dict[str, Any]]] = {
     SETTINGS_INDEX: {"global": DEFAULT_SETTINGS, "runtime": DEFAULT_RUNTIME},
     SPORTSBOOKS_INDEX: SPORTSBOOK_SEEDS,
+    PROVIDERS_INDEX: PROVIDER_SEEDS,
 }
 
 
