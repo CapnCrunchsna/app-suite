@@ -31,7 +31,10 @@
 
         <div class="fields">
           @for (field of group.fields; track field.key) {
-            <div class="field row">
+            <!-- Same `field-<key>` anchor the guardrail rows carry, so anything
+                 in the app that names a setting can link to the row that holds
+                 it rather than to the top of this page. -->
+            <div class="field row" [id]="'field-' + field.key">
               <label class="field__label" [attr.for]="'set-' + field.key">
                 {{ field.label }}
               </label>
@@ -45,7 +48,11 @@
                       (change)="onInput()"
                     >
                       @for (option of field.options; track option) {
-                        <option [value]="option">{{ option }}</option>
+                        <!-- The stored value is the provider's/engine's own key
+                             (`multiplicative`, `shin`); the reader sees it as a
+                             word. The `[value]` is untouched, so what gets saved
+                             is still exactly what §3.2 expects. -->
+                        <option [value]="option">{{ humanise(option) }}</option>
                       }
                     </select>
                   }
@@ -122,13 +129,19 @@
        §16.2 reserves loosening a guardrail to an explicit user action, and a
        flag that saves alongside `poll_interval_s` is a flag that gets flipped
        while doing something else. -->
-  <ui-panel [heading]="safety.title" class="safety">
+  <ui-panel [heading]="safety.title" class="safety" id="guardrails">
     <p class="group__blurb">{{ safety.blurb }}</p>
 
     <form [formGroup]="safetyForm">
       <div class="fields">
         @for (field of safety.fields; track field.key) {
-          <div class="field row row--bool">
+          <!-- `field-<key>` is the header badges' destination: PAPER links to
+               `#field-paper_mode` and OFFLINE to `#field-offline_mode`, so a badge
+               lands on the row it names rather than at the top of the page. The id
+               is on the row and not on the checkbox so the label and the hint
+               arrive with it — scrolling a bare input into view puts the
+               explanation off-screen above it. -->
+          <div class="field row row--bool" [id]="'field-' + field.key">
             <label class="field__label" [attr.for]="'set-' + field.key">
               <input
                 [id]="'set-' + field.key"

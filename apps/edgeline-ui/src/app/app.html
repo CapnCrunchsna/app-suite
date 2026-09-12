@@ -24,7 +24,7 @@
     [class.header__badge--paper]="paperMode()"
     [class.header__badge--live]="!paperMode()"
     routerLink="/settings"
-    fragment="guardrails"
+    fragment="field-paper_mode"
     [title]="
       paperMode()
         ? 'paper_mode is on: recommendations are recorded and alerted, flagged PAPER. No money is at stake unless you place one yourself. Change it on Settings.'
@@ -55,7 +55,7 @@
     <a
       class="header__badge header__badge--link header__badge--offline"
       routerLink="/settings"
-      fragment="guardrails"
+      fragment="field-offline_mode"
       title="offline_mode is on: no job makes a provider request. Everything else — worker, grading, this UI — keeps running on stored data. Change it on Settings."
     >
       OFFLINE
@@ -84,7 +84,7 @@
     <strong>Polling is off.</strong> <code>offline_mode</code> is on, so no job is making a
     provider request and no new prices are arriving. Everything below is stored data, and
     grading, the opportunity lifecycle and this UI carry on as normal. Turn it off on
-    <a routerLink="/settings" fragment="guardrails">Settings</a>.
+    <a routerLink="/settings" fragment="field-offline_mode">Settings</a>.
   </p>
 }
 

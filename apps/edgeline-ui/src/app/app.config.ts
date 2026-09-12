@@ -19,9 +19,18 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(
       appRoutes,
-      // The tables here are long and every rail item is a different table. Landing
-      // halfway down a fresh page because the last one was scrolled is disorienting.
-      withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
+      withInMemoryScrolling({
+        // The tables here are long and every rail item is a different table.
+        // Landing halfway down a fresh page because the last one was scrolled is
+        // disorienting.
+        scrollPositionRestoration: 'top',
+        // The header's PAPER/ALERTS/OFFLINE badges are links to the control that
+        // changes each flag (§16.2 — they are status, not switches). Without
+        // this the fragment is carried in the URL and then ignored, so the badge
+        // drops the reader at the top of Settings to hunt for the field it was
+        // pointing at. A link that names a destination has to arrive at it.
+        anchorScrolling: 'enabled',
+      }),
     ),
     provideTheming(EDGELINE_THEME, { also: SUITE_THEMES }),
   ],
