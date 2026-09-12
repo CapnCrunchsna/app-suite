@@ -19,6 +19,13 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "serve", "edgeline-ui", "--port=4201"],
       "port": 4201
+    },
+    {
+      "name": "edgeline-api",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "serve", "edgeline-api"],
+      "port": 8000,
+      "url": "http://127.0.0.1:8000"
     }
   ]
 }

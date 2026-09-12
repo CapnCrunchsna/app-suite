@@ -234,6 +234,32 @@ Two things worth knowing before using it:
   `dynamic: false`, so a typo would be saved, ignored by every reader, and look like it worked.
 
 When a UI bundle has been built, it is served at `/`; set `EDGELINE_UI_DIST` to point elsewhere.
+So the whole app is two commands:
+
+```bash
+npx nx build edgeline-ui       # writes dist/apps/edgeline-ui/browser
+npx nx run edgeline-api:serve  # serves the API and that bundle on :8000
+```
+
+**That path had never actually worked, and it failed three times over — each one
+invisible in the server log (2026-09-12).** Worth knowing before debugging the Angular app,
+which is where all three symptoms point:
+
+1. **Wrong bundle path.** `DEFAULT_UI_BUNDLE` was app-relative
+   (`apps/edgeline-ui/dist/...`) while Nx's `outputPath` is workspace-relative
+   (`dist/apps/edgeline-ui`). `_mount_ui` checks `is_dir()`, finds nothing, logs at INFO and
+   returns — so the API is healthy, `/api/*` answers, and every UI route is a 404.
+2. **`StaticFiles(html=True)` is not an SPA fallback.** It serves `index.html` for a
+   *directory* request and 404s everything else, so `/` worked and `/sportsbooks` did not.
+   There is now an explicit fallback, which excludes `/api/*` so a mistyped API path stays a
+   JSON 404 rather than becoming a page of HTML.
+3. **`.js` is `text/plain` on this machine.** `mimetypes` seeds from the Windows registry,
+   Starlette asks `mimetypes`, and a browser refuses an ES module served as text/plain. The
+   page renders blank with a 200 in the network tab. `.css` is correct in the same registry,
+   so the styles load and only the app is missing — which reads like an Angular bootstrap
+   error. The types are now registered explicitly at mount time.
+
+`tests/test_ui_bundle.py` pins all three, and needs no cluster.
 
 ### The generated client
 
