@@ -131,9 +131,24 @@ describe('the theme (§11.2 as amended)', () => {
    * collapsed the switcher to a single entry, neither of which looked like a bug
    * from inside the code.
    */
-  it('defaults to Edgeline amber, not the house teal', () => {
-    expect(EDGELINE_THEME.dark.accent).toBe('#f0a33c');
+  it('defaults to Edgeline violet, not the house teal', () => {
+    expect(EDGELINE_THEME.dark.accent).toBe('#a78bfa');
     expect(EDGELINE_THEME.dark.accent).not.toBe(METRUM_THEME.dark.accent);
+  });
+
+  /**
+   * The lesson from the amber palette this replaced. A brand colour that sits in
+   * the warning family makes every caution in the app compete with the chrome,
+   * and the fix was not to tune the ambers — it was to get the brand out of that
+   * hue entirely. `warn` being the house amber again is the evidence that
+   * happened; pinned so a future palette cannot quietly re-take it.
+   */
+  it('leaves the warning hues to the warnings', () => {
+    expect(EDGELINE_THEME.dark.warn).toBe(METRUM_THEME.dark.warn);
+    expect(EDGELINE_THEME.dark.danger).toBe(METRUM_THEME.dark.danger);
+    // §4.2's provenance hue has to stay distinct from the brand, which is the
+    // same rule read the other way: violet took what `ai` used to be.
+    expect(EDGELINE_THEME.dark.ai).not.toBe(EDGELINE_THEME.dark.accent);
   });
 
   it('offers every suite palette, its own first', () => {
@@ -151,7 +166,7 @@ describe('the theme (§11.2 as amended)', () => {
   // only tokens duplicated anywhere in this app, and this is what stops the
   // duplicate from drifting into a one-frame flash of the wrong colour.
   it('matches the pre-bootstrap floor in styles.scss', () => {
-    expect(EDGELINE_THEME.dark.bg).toBe('#13161c');
-    expect(EDGELINE_THEME.dark.text).toBe('#e9ecf3');
+    expect(EDGELINE_THEME.dark.bg).toBe('#151320');
+    expect(EDGELINE_THEME.dark.text).toBe('#eae8f5');
   });
 });

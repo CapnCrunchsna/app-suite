@@ -706,12 +706,21 @@ indistinguishable at a glance, while the theme picker hid itself because a singl
 registered theme is nothing to switch between.
 
 The rule is now **each app defaults to its own palette and offers every other one**.
-Edgeline's is amber on graphite (`EDGELINE_THEME`, accent `#f0a33c`, ember `#ff8c55`), a
-theme of a live trading screen rather than of a document — see the file's own header for
-what that bought and what it cost, notably that `danger` had to move off coral. Every
-palette in `SUITE_THEMES` is audited against WCAG in both modes by `theming.spec.ts`, since
-any app can now be painted in any of them. The house teal remains one selection away and is
-still what `artifacts/_template.html` and the dashboard use.
+Edgeline's is violet on charcoal (`EDGELINE_THEME`, accent `#a78bfa`, magenta `#f472b6`), a
+theme of a live trading screen rather than of a document. Every palette in `SUITE_THEMES` is
+audited against WCAG in both modes by `theming.spec.ts`, since any app can now be painted in
+any of them. The house teal remains one selection away and is still what
+`artifacts/_template.html` and the dashboard use.
+
+**A brand colour may not come from the warning family.** This palette was amber on graphite
+for a day before violet replaced it, and the failure is worth keeping written down: with the
+accent at `#f0a33c`, `warn` had to move to a lighter gold and `danger` off coral onto a
+rose-crimson, purely to avoid colliding with the chrome. The result was an interface whose
+warnings were its *least* distinguishable elements. Violet takes no signal hue, so `warn` is
+the house amber, `danger` is coral, and the warm colours on screen are only ever the ones
+asking for attention. The token this displaced instead is §4.2's `ai`, which moves to a
+teal-green here because the other themes' violet is now the brand — provenance still must not
+be inferred from tone alone.
 
 ### 11.3 Generated client
 
