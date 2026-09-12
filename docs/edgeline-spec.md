@@ -662,7 +662,8 @@ the bet button (`confirmed_via='reaction'`).
 
 ```json
 { "betslip": null,
-  "event":   "https://sportsbook.draftkings.com/event/{provider_event_id}",
+  "event":   null,
+  "league":  "https://sportsbook.draftkings.com/leagues/baseball/mlb",
   "book_home": "https://sportsbook.draftkings.com/" }
 ```
 
@@ -671,6 +672,33 @@ chosen level in `StakeLeg.link_level`. **v1 reality:** The Odds API gives no boo
 so `betslip` stays null for every book; templates for `event`/`book_home` must be verified
 manually per book (open the book's site, copy a real event URL, generalize it). Do not invent
 URL schemas — an unverified template stays null and the ladder falls through to `book_home`.
+
+**`league` was added 2026-09-11**, between `event` and `book_home`. It is one sport's landing
+page at a book — the MLB page rather than the front door with a casino carousel on it — and it
+exists because the two rungs above it turned out to be further out of reach than this section
+assumed. It holds a plain URL with no placeholders while `sports_enabled` holds one sport; a
+second sport is what makes it per-sport, and that is the moment to revisit it rather than now.
+
+**Why `event` is out of reach, measured 2026-09-11.** It cannot be *assembled*, because the
+provider returns its own event id and no book-native one. It also cannot be *verified* from
+this machine, for two reasons no amount of care gets past:
+
+- **Bot protection.** DraftKings, FanDuel and bet365 answer any non-browser client with 403.
+- **Client-rendered shells.** The rest serve a loader with no links in the HTML, and some —
+  Caesars measured — return **200 with an identical title for every path**, including
+  `/us/md/bet/this-path-does-not-exist`. A fetch there cannot tell a real league page from a
+  typo, so a 200 is not evidence, and reading it as evidence would manufacture exactly the
+  confident-but-wrong template §16.3 exists to prevent.
+
+The one technique that does work is to **probe a known-bad path first**. A host that 404s
+nonsense (betPARX and Fanatics, measured the same day) is one where a 200 on a candidate means
+the path routes; a host that 200s nonsense tells you nothing. Even on the first kind, "the path
+routes" is a weaker claim than "the page shows this market" — which is what the ladder actually
+rests on, and only a rendered page supports it.
+
+So every rung above `book_home` is a value a **person** supplies, through
+`PATCH /api/sportsbooks/{key}` or the Sportsbooks page's link editor, having looked at the
+page. That is the shape of the task, not a gap in the implementation.
 
 ---
 
@@ -893,7 +921,13 @@ the channel that announces it. T3.1–T3.3 remain untouched and in order.*
 **Phase 4 — Production hardening**
 - [ ] T4.1 `ASK USER`: approve paid The Odds API tier within $100/mo; set `quota_monthly_budget`
 - [ ] T4.2 Production cadences (§8.4) with startup budget check
-- [ ] T4.3 Manually verify `event` link templates for every enabled book (§9.4)
+- [~] **T4.3 — restated 2026-09-11, after the attempt.** `event` is not manually verifiable and
+  not assemblable: the provider returns no book-native id, and §9.4 records the two walls a
+  fetch hits. The rung §9.4 gained instead is `league`, which a **person** fills from a
+  rendered page through the Sportsbooks link editor. What is done: the ladder carries the rung,
+  the UI edits it, and `book_home` is verified for 8 of 10 books. What remains is data only —
+  one league URL per enabled book, plus the two books nothing here can reach (`espnbet` serves
+  ESPN's certificate rather than a sportsbook, `bet365` answers Cloudflare with 403)
 - [ ] T4.4 Run ≥ 200 paper recommendations; compute CLV distribution; report to user
 - [ ] **Exit / go-live gate:** user reviews CLV report and explicitly sets `paper_mode=false`. The implementer must NEVER flip this flag.
 
@@ -911,7 +945,14 @@ the channel that announces it. T3.1–T3.3 remain untouched and in order.*
    Elasticsearch data volume. Never bind ES to anything other than `127.0.0.1` while
    security is disabled (§4.1).
 5. **No scraping** of sportsbooks, X/Twitter, or Rotowire in v1 (future-work only, and only
-   via licensed APIs when it happens).
+   via licensed APIs when it happens). *Clarified 2026-09-11, because this rule was read as
+   forbidding more than it does and a task stalled on it.* What it forbids is **harvesting
+   data** — odds, event ids, injury reports — on any repeating or automated basis. It does not
+   forbid opening a book's own public pages a handful of times to read the shape of a URL:
+   the Architecture Plan's §8.2 already specifies a nightly job that fires each enabled
+   template against live events, so requesting a sportsbook URL was always in scope. The line
+   is the **account and the access control**, not the request count — never log in, never go
+   around a bot check, never take a feed. A 403 from a book is an answer, not an obstacle.
 6. **No features whose purpose is to disguise betting patterns** from sportsbooks.
 7. Do not add providers, sports, or notification channels not listed here without user
    approval.

@@ -193,6 +193,42 @@ describe('SportsbooksPage (§11.1)', () => {
       ]);
     });
 
+    /**
+     * §9.4's `league` rung, added 2026-09-11. It is the one rung above
+     * `book_home` a person can realistically confirm, so the editor has to offer
+     * it — and it has to be testable, because a league page is a plain URL with
+     * nothing to fill in. The rungs the ladder gained before this one were both
+     * hand-listed in two places; this pins that `league` reached the form.
+     */
+    it('offers league as a testable rung and stores it', async () => {
+      const { fixture, el, api } = await render();
+      clickText(el, 'Edit links');
+      await settle(fixture);
+
+      const input = el.querySelector('#tpl-draftkings-league') as HTMLInputElement;
+      expect(input).toBeTruthy();
+      input.value = 'https://sportsbook.example.com/leagues/baseball/mlb';
+      input.dispatchEvent(new Event('input'));
+      await settle(fixture);
+
+      // This rung's own button, not the first one on the form — every rung has
+      // a "Test link" and the ones above this are empty and therefore disabled.
+      const test = input.parentElement?.querySelector('button') as HTMLButtonElement;
+      expect(test.disabled).toBe(false);
+
+      clickText(el, 'Save templates');
+      await settle(fixture);
+
+      expect(api.patches).toEqual([
+        {
+          key: 'draftkings',
+          body: {
+            link_templates: { league: 'https://sportsbook.example.com/leagues/baseball/mlb' },
+          },
+        },
+      ]);
+    });
+
     it('says what saving nothing means', async () => {
       const { fixture, el } = await render();
       clickText(el, 'Edit links');

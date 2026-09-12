@@ -68,7 +68,7 @@ class StakeLeg(BaseModel):
     stake_cents: int
     to_win_cents: int
     deep_link: str
-    link_level: str  # 'betslip' | 'event' | 'book_home'
+    link_level: str  # 'betslip' | 'event' | 'league' | 'book_home' | 'none'
 
 
 class StakePlan(BaseModel):

@@ -102,6 +102,14 @@
                       real sportsbook with money in hand, which is why an empty rung is the
                       correct answer until you have opened the page yourself.
                     </p>
+                    <p class="editor__lede">
+                      <strong>League</strong> is the one worth filling in. The two rungs above
+                      it need a book-native event id that the odds provider does not return,
+                      and no fetch from here can confirm one — books either refuse a non-browser
+                      client outright or serve the same empty shell for every path, real or
+                      mistyped. Your browser renders the page, so you can see what a fetch
+                      cannot.
+                    </p>
 
                     @for (level of levels; track level) {
                       <div class="editor__row">
@@ -113,11 +121,7 @@
                           type="text"
                           class="editor__input"
                           [value]="draft()[level]"
-                          [placeholder]="
-                            level === 'book_home'
-                              ? 'https://sportsbook.example.com/'
-                              : 'https://sportsbook.example.com/event/{event_id}'
-                          "
+                          [placeholder]="hintFor(level)"
                           (input)="setDraft(level, $any($event.target).value)"
                         />
                         <button

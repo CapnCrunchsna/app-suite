@@ -10,10 +10,13 @@
  *
  * ## What "test link" can honestly do
  *
- * §16.3: never guess a deep-link URL schema. Every book ships
- * `link_templates: {}` and every stake leg therefore carries `deep_link: ""` and
- * `link_level: "none"` — that is T4.3's work, and it is work a *person* does:
- * open the book, copy a real event URL, generalise it.
+ * §16.3: never guess a deep-link URL schema. Eight books carry a verified
+ * `book_home` and nothing above it, so every stake leg still carries
+ * `deep_link: ""` and `link_level: "none"` — that is T4.3's work, and it is work
+ * a *person* does, because nothing else can. A fetch from this machine gets a
+ * 403 from the books with bot protection and an empty shell from the rest, and
+ * some of those answer 200 for a mistyped path as readily as a real one. Your
+ * browser renders the page; that is the whole difference.
  *
  * So the button tests what the user pasted, and only when it is testable. A
  * template with an unfilled `{event_id}` in it is not a URL, and opening it
@@ -38,14 +41,19 @@ import type { SportsbookRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 
-/** §9.4's ladder, highest first. `none` is the honest fourth state and is not
- *  editable — it is what you have when none of these are filled. */
-const LINK_LEVELS = ['betslip', 'event', 'book_home'] as const;
+/** §9.4's ladder, highest first. `none` is the honest state below all of them
+ *  and is not editable — it is what you have when none of these are filled. */
+const LINK_LEVELS = ['betslip', 'event', 'league', 'book_home'] as const;
 type LinkLevel = (typeof LINK_LEVELS)[number];
 
 type Draft = Record<LinkLevel, string>;
 
-const EMPTY_DRAFT: Draft = { betslip: '', event: '', book_home: '' };
+/** Built from `LINK_LEVELS` rather than written out, so adding a rung to the
+ *  ladder cannot leave a field the editor silently never shows. Adding `league`
+ *  is what found the two hand-written copies this replaces. */
+function emptyDraft(): Draft {
+  return Object.fromEntries(LINK_LEVELS.map((level) => [level, ''])) as Draft;
+}
 
 @Component({
   selector: 'el-sportsbooks-page',
@@ -62,7 +70,7 @@ export class SportsbooksPage {
   protected readonly failure = signal<string | null>(null);
   protected readonly notice = signal<string | null>(null);
   protected readonly editing = signal<string | null>(null);
-  protected readonly draft = signal<Draft>({ ...EMPTY_DRAFT });
+  protected readonly draft = signal<Draft>(emptyDraft());
 
   private readonly booksResource = resource({
     params: () => 0,
@@ -91,16 +99,16 @@ export class SportsbooksPage {
   protected openLinks(book: SportsbookRow): void {
     this.editing.set(book.id);
     const templates = book.link_templates ?? {};
-    this.draft.set({
-      betslip: readTemplate(templates, 'betslip'),
-      event: readTemplate(templates, 'event'),
-      book_home: readTemplate(templates, 'book_home'),
-    });
+    this.draft.set(
+      Object.fromEntries(
+        LINK_LEVELS.map((level) => [level, readTemplate(templates, level)]),
+      ) as Draft,
+    );
   }
 
   protected closeLinks(): void {
     this.editing.set(null);
-    this.draft.set({ ...EMPTY_DRAFT });
+    this.draft.set(emptyDraft());
   }
 
   protected setDraft(level: LinkLevel, value: string): void {
@@ -124,6 +132,20 @@ export class SportsbooksPage {
         : `${label(book)} link templates saved: ${Object.keys(templates).join(', ')}.`,
     );
     this.closeLinks();
+  }
+
+  /** What a rung is meant to hold, shown as the input's own placeholder text.
+   *  `league` and `book_home` are plain URLs — which is exactly why they are the
+   *  rungs that can be confirmed by opening them. */
+  protected hintFor(level: LinkLevel): string {
+    switch (level) {
+      case 'book_home':
+        return 'https://sportsbook.example.com/';
+      case 'league':
+        return 'https://sportsbook.example.com/leagues/baseball/mlb';
+      default:
+        return 'https://sportsbook.example.com/event/{event_id}';
+    }
   }
 
   /** A template with an unfilled placeholder is not a URL. */

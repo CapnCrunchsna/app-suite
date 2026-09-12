@@ -241,23 +241,31 @@ def test_sportsbook_seed_guesses_no_deep_link_schema():
     a schema stay empty, and that is what this pins — the ladder returning
     "no link" for a market is correct; sending someone to the wrong market on a
     real sportsbook with money in hand is the failure worth preventing.
+
+    `league` (§9.4, added 2026-09-11) is absent here for a different reason than
+    `event`: it is fillable, but only from a page a person has *looked at*, and
+    no fetch from this machine could confirm one. Seeding a plausible league URL
+    would be the same guess as seeding a plausible event URL.
     """
     for key, book in SPORTSBOOK_SEEDS.items():
         templates = book["link_templates"]
         assert "event" not in templates, key
         assert "betslip" not in templates, key
+        assert "league" not in templates, key
         assert set(templates) <= {"book_home"}, key
 
 
-def test_every_seeded_home_link_is_a_plain_verified_url():
-    """A `book_home` with a placeholder in it would be a guessed schema wearing
-    the safe rung's name, and `.format()` would fill it silently."""
+def test_every_seeded_link_is_a_plain_verified_url():
+    """A placeholder on a rung that is meant to hold a plain URL would be a
+    guessed schema wearing a safe rung's name, and `.format()` would fill it
+    silently. True of `book_home`, and of `league` whenever one is added."""
     for key, book in SPORTSBOOK_SEEDS.items():
-        home = book["link_templates"].get("book_home")
-        if home is None:
-            continue
-        assert home.startswith("https://"), key
-        assert "{" not in home and "}" not in home, key
+        for level in ("book_home", "league"):
+            url = book["link_templates"].get(level)
+            if url is None:
+                continue
+            assert url.startswith("https://"), f"{key}.{level}"
+            assert "{" not in url and "}" not in url, f"{key}.{level}"
 
 
 def test_the_two_unverifiable_books_are_recorded_as_absent_not_guessed():

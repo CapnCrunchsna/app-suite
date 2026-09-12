@@ -118,9 +118,12 @@ explanation, and the explanations are the part most worth not breaking:
   `null` when nothing has settled or no closing line was captured. Results renders those as
   an em-dash with a sentence, never as `0.0%` — "no data yet" and "you lose every bet" must
   not draw identically.
-- **`deep_link` is `""` and `link_level` is `"none"` on every leg** until T4.3 verifies URL
-  templates book by book. §16.3 forbids inventing one, so a missing link renders as words,
-  never as a dead anchor that looks tappable.
+- **`deep_link` is `""` and `link_level` is `"none"` on every leg** until someone fills a rung
+  on the Sportsbooks page. §16.3 forbids inventing one, so a missing link renders as words,
+  never as a dead anchor that looks tappable. §9.4's `league` rung (added 2026-09-11) is the
+  highest one that can be filled at all — `event` needs a book-native id the odds provider does
+  not return, and no fetch from this machine can confirm a book's URL anyway, so the link
+  editor is the only way a link ever gets here.
 - **`edgeline-providers` is not seeded.** Unlike the sportsbook list, a provider row appears
   only when an adapter answers and reports its credit usage, so an empty Providers page is
   a normal state and says so.

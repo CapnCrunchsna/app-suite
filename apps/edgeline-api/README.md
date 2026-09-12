@@ -199,7 +199,8 @@ src/edgeline/
   staking.py     ✅ fractional Kelly + guardrails (spec §6.7)
   engine.py      ✅ detection pipeline + the --once CLI (spec §7.1)
   dedup.py       ✅ opportunity hashing + lifecycle (spec §7.4)
-  deeplink.py    ✅ per-book link ladder (spec §9.4) — returns no link until T4.3
+  deeplink.py    ✅ per-book link ladder (spec §9.4) — still returns no link; the
+                 …rung that can be filled is `league`, and only a person can fill it
   notify/        ✅ message.py + sink.py (spec §9.2, channel-agnostic)
                  …a channel adapter is still to come (spec §9.1/§9.3)
   grading.py     ✅ settlement, P&L, CLV, ledger, daily loss stop (spec §12)

@@ -399,6 +399,49 @@ def test_stake_legs_carry_no_invented_deep_link():
         assert leg.link_level == "none"
 
 
+def test_league_outranks_book_home_but_yields_to_a_fillable_event():
+    """§9.4's ladder with the rung added 2026-09-11.
+
+    `league` exists because `event` cannot be built from provider data — but the
+    order still has to hold the day a book-native id arrives, or the new rung
+    would quietly outrank the better one forever.
+    """
+    snapshots = normalize(PROVIDER, doctored_payload())
+    ev = next(d for d in detect_opportunities(snapshots, settings()) if d.type == TYPE_EV)
+    book = ev.legs[0].book_key
+
+    def link_for(templates: dict[str, str]) -> tuple[str, str]:
+        plan, _g, _a = build_stake_plan(
+            ev,
+            settings(),
+            bankroll_cents=100_000,
+            link_templates={book: templates},
+            provider_event_id="abc123",
+        )
+        assert plan is not None
+        leg = next(leg for leg in plan.legs if leg.book_key == book)
+        return leg.deep_link, leg.link_level
+
+    home = "https://sportsbook.example.com/"
+    league = "https://sportsbook.example.com/leagues/baseball/mlb"
+
+    assert link_for({"book_home": home}) == (home, "book_home")
+    assert link_for({"league": league, "book_home": home}) == (league, "league")
+    assert link_for(
+        {
+            "event": "https://sportsbook.example.com/event/{provider_event_id}",
+            "league": league,
+            "book_home": home,
+        }
+    ) == ("https://sportsbook.example.com/event/abc123", "event")
+
+    # A rung whose placeholder cannot be filled is skipped, not emitted with a
+    # hole in it — the ladder drops to `league` rather than to the front door.
+    assert link_for(
+        {"event": "https://sportsbook.example.com/e/{book_event_id}", "league": league}
+    ) == (league, "league")
+
+
 def test_kill_switch_stops_the_recommendation_but_not_the_detection():
     """§7.1: keep polling and recording, stop alerting."""
     snapshots = normalize(PROVIDER, doctored_payload())

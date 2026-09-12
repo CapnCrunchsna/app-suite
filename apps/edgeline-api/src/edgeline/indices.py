@@ -207,14 +207,26 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
 #: for the eight books whose landing page was actually fetched and identified on
 #: **2026-09-11** (HTTP 200, page title confirming the book). Two are absent
 #: because they could not be verified from here rather than because they lack a
-#: site: `espnbet` does not resolve from this machine, and `bet365` answers
-#: Cloudflare's bot check with 403. §16.3 means absent, not guessed.
+#: site: `bet365` answers Cloudflare's bot check with 403, and `espnbet.com`
+#: serves ESPN's own certificate (altnames are `espn.com` / `*.espn.com`) rather
+#: than a sportsbook endpoint — more precise than the earlier "does not resolve",
+#: and it fails the same way for anyone. §16.3 means absent, not guessed.
 #:
-#: The ``event`` rung stays empty and may be **impossible** rather than pending.
-#: The only placeholder the ladder can fill is ``{provider_event_id}`` — The Odds
-#: API's own id — and no sportsbook puts that in its URLs. Closing that rung
-#: needs either a book-native id the provider does not return, or a placeholder
-#: set extended to team names and date. That is the real content of T4.3.
+#: **The ``event`` rung is settled as impossible from here, not pending** — the
+#: second attempt on 2026-09-11 established why, and §9.4 carries the detail. Two
+#: walls: bot protection (DraftKings, FanDuel, bet365 → 403) and client-rendered
+#: shells, some of which answer 200 with an identical title for *every* path, so
+#: a 200 is not evidence a page exists. §9.4 gained a ``league`` rung instead,
+#: which a person fills from a rendered page. Nothing is seeded into it here for
+#: the same reason nothing was guessed into ``event``.
+#:
+#: Three incidental findings from that pass, recorded so they are not rediscovered:
+#: `md.betparx.com` 404s an unknown path and routes `/sports/baseball` — so a
+#: candidate URL there can at least be shown to route, though not to display MLB;
+#: `www.md.betmgm.com` 301s to `www.betmgm.com`, so the seeded URL below is a
+#: redirect rather than the canonical one (left as-is — it lands correctly and
+#: keeps the Maryland hint); and `ballybet.com` was serving a maintenance page
+#: that day, which says nothing about the URL and everything about the timing.
 LINK_TEMPLATES_VERIFIED_ON = "2026-09-11"
 #:
 #: ``enabled`` stays ``False`` for every book, deliberately. §4.3 reserves enabling to

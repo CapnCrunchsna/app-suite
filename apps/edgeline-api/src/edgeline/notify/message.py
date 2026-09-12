@@ -10,10 +10,12 @@ rewrite of the pipeline.
 Two deviations from a literal reading, both forced and both deliberate:
 
 * **No link line when there is no link.** §9.2's `[Open {book}](link)` assumes a
-  usable deep link. No book has a verified template yet (§9.4, T4.3), so emitting
-  the line would render `[Open dk]()` — a dead control on a real money decision.
-  The line is omitted instead, which is visibly incomplete rather than quietly
-  broken.
+  usable deep link, and a book without a verified template has none (§9.4, T4.3),
+  so emitting the line would render `[Open dk]()` — a dead control on a real
+  money decision. The line is omitted instead, which is visibly incomplete rather
+  than quietly broken. Note this keys off the link being present, not off which
+  rung produced it: whatever the ladder returns — `league`, `book_home` — renders
+  the same way, so filling a rung on the Sportsbooks page is all it takes.
 * **Display timezone is a parameter, not a setting.** §17 lists it as a user
   input "used in §9.2, UI", but §3.2's key set does not contain it, and adding a
   key to that table is a spec change rather than an implementation choice. It
