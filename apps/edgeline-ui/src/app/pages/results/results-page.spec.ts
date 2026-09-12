@@ -101,8 +101,8 @@ describe('ResultsPage (§11.1, §12)', () => {
       const { el } = await render();
       expect(tile(el, 'Hit rate').querySelector('.tile__value')?.textContent?.trim()).toBe('—');
       expect(tile(el, 'Average CLV').querySelector('.tile__value')?.textContent?.trim()).toBe('—');
-      expect(el.textContent).toContain('nothing has settled yet');
-      expect(el.textContent).toContain('no closing lines captured yet');
+      expect(el.textContent).toContain('Nothing has settled yet');
+      expect(el.textContent).toContain('No closing lines captured yet');
       expect(el.textContent).not.toContain('0.0%');
     });
 

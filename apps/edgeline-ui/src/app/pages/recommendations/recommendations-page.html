@@ -19,9 +19,9 @@
       <label class="toolbar__field">
         <span>Mode</span>
         <select [value]="paperFilter()" (change)="setPaperFilter($any($event.target).value)">
-          <option value="all">all</option>
-          <option value="paper">paper only</option>
-          <option value="executed">live only</option>
+          <option value="all">All</option>
+          <option value="paper">Paper only</option>
+          <option value="executed">Live only</option>
         </select>
       </label>
 
@@ -65,15 +65,32 @@
               <tr>
                 <td>{{ time(row.sent_at) }}</td>
                 <td>
-                  {{ row.opportunity?.market_key ?? '—' }}
-                  <span class="dim block">{{ row.opportunity?.event_id ?? '' }}</span>
+                  <!-- Same treatment as the opportunities table: the game first,
+                       the market under it. The raw `event_id` was a primary key
+                       standing in for the one fact this row is about. -->
+                  @if (row.opportunity?.event) {
+                    <span class="event__teams" [title]="row.opportunity.event_id">
+                      {{ matchup(row.opportunity.event) }}
+                    </span>
+                    <span class="dim block">
+                      {{ marketLabel(row.opportunity.market_key) }} ·
+                      {{ sportLabel(row.opportunity.event.sport_key) }}
+                    </span>
+                  } @else {
+                    <span class="event__teams">
+                      {{ marketLabel(row.opportunity?.market_key) }}
+                    </span>
+                    <span class="dim block" [title]="row.opportunity?.event_id ?? ''">
+                      Fixture no longer on file
+                    </span>
+                  }
                 </td>
                 <td class="num">{{ percent(row.opportunity?.edge_pct) }}</td>
                 <td>
                   <span class="plan__total">{{ money(stakePlan.totalCents) }}</span>
-                  <span class="dim">· {{ stakePlan.method }}</span>
+                  <span class="dim">· {{ humanise(stakePlan.method) }}</span>
                   @if (stakePlan.guardrails.length) {
-                    <span class="dim block">capped by {{ stakePlan.guardrails.join(', ') }}</span>
+                    <span class="dim block">Capped by {{ stakePlan.guardrails.join(', ') }}</span>
                   }
                   @for (leg of stakePlan.legs; track leg.bookKey + leg.selection) {
                     <span class="leg">
@@ -87,13 +104,13 @@
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          open ({{ leg.linkLevel }})
+                          Open ({{ leg.linkLevel }})
                         </a>
                       } @else {
                         <!-- §16.3: no verified template for this book yet
                              (T4.3). Absent in words, never a dead anchor. -->
                         <span class="no-link" title="No verified link template for this book yet">
-                          no link — open the book yourself
+                          No link — open the book yourself
                         </span>
                       }
                     </span>
@@ -107,24 +124,26 @@
                 <td>
                   @if (row.result) {
                     <span [class.pos]="row.result.pnl_cents > 0" [class.neg]="row.result.pnl_cents < 0">
-                      {{ row.result.outcome }} {{ signedMoney(row.result.pnl_cents) }}
+                      {{ statusLabel(row.result.outcome) }} {{ signedMoney(row.result.pnl_cents) }}
                     </span>
                     <span class="dim block">
                       CLV
                       @if (row.result.clv_pct === null || row.result.clv_pct === undefined) {
                         <!-- Not zero. No closing line was captured for this one. -->
                         not captured
+                        <!-- Lower-case deliberately: it continues the "CLV …"
+                             phrase above rather than starting a sentence. -->
                       } @else {
                         {{ signedPercent(row.result.clv_pct) }}
                       }
                     </span>
                   } @else {
-                    <span class="dim">ungraded</span>
+                    <span class="dim">Ungraded</span>
                   }
                 </td>
                 <td>
                   @if (isExecuted(row)) {
-                    <span class="dim">confirmed</span>
+                    <span class="dim">Confirmed</span>
                   } @else {
                     <button type="button" class="button" (click)="openConfirm(row)">
                       Confirm bet

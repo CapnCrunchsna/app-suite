@@ -123,8 +123,8 @@ describe('RecommendationsPage (§11.1)', () => {
     const { el } = await render();
     const row = el.querySelector('tbody tr');
     expect(row?.textContent).toContain('$25.00');
-    expect(row?.textContent).toContain('kelly');
-    expect(row?.textContent).toContain('capped by max_stake_pct');
+    expect(row?.textContent).toContain('Kelly');
+    expect(row?.textContent).toContain('Capped by max_stake_pct');
     expect(row?.textContent).toContain('PAPER');
   });
 
@@ -181,7 +181,7 @@ describe('RecommendationsPage (§11.1)', () => {
         ];
       });
       const row = el.querySelector('tbody tr');
-      expect(row?.textContent).toContain('win +$27.50');
+      expect(row?.textContent).toContain('Win +$27.50');
       expect(row?.textContent).toContain('not captured');
       expect(row?.textContent).not.toContain('CLV +0.00%');
     });
@@ -260,7 +260,7 @@ describe('RecommendationsPage (§11.1)', () => {
       expect(
         [...el.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Confirm bet'),
       ).toBe(false);
-      expect(el.textContent).toContain('confirmed');
+      expect(el.textContent).toContain('Confirmed');
     });
   });
 

@@ -34,6 +34,13 @@
   color: var(--caution-soft);
 }
 
+/* Matches the opportunities table's Market column. Duplicated rather than
+ * shared because component styles are scoped and this is one declaration —
+ * a shared primitive for `font-weight: 600` would be worse than the copy. */
+.event__teams {
+  font-weight: 600;
+}
+
 .plan__total {
   font-variant-numeric: tabular-nums;
   font-weight: 600;

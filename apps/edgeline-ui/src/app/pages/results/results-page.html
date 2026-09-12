@@ -46,9 +46,9 @@
       <span class="tile__value">{{ signedPercent(totals().avg_clv_pct) }}</span>
       <span class="tile__sub">
         @if (totals().avg_clv_pct === null || totals().avg_clv_pct === undefined) {
-          no closing lines captured yet
+          No closing lines captured yet
         } @else {
-          against the closing line
+          Against the closing line
         }
       </span>
     </div>
@@ -73,7 +73,7 @@
       <span class="tile__sub">
         @if (nothingSettled()) {
           <!-- Not 0%. Nothing has settled, which is a different claim. -->
-          nothing has settled yet
+          Nothing has settled yet
         } @else {
           {{ totals().wins ?? 0 }} of {{ totals().settled ?? 0 }} settled
         }

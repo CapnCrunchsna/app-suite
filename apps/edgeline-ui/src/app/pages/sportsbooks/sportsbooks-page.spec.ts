@@ -98,7 +98,7 @@ describe('SportsbooksPage (§11.1)', () => {
   describe('deep links (§9.4, §16.3)', () => {
     it('renders a book with no templates as visibly absent, not as a dead link', async () => {
       const { el } = await render();
-      expect(el.querySelector('.no-link')?.textContent?.trim()).toBe('no link');
+      expect(el.querySelector('.no-link')?.textContent?.trim()).toBe('No link');
       expect(el.querySelector('tbody a[href=""]')).toBeNull();
     });
 

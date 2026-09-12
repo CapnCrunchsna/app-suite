@@ -39,6 +39,7 @@ import type { RecommendationRow } from '@metrum/edgeline-api-client';
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
 import { formatDecimalOdds, toAmerican } from '../../formatting';
+import { humanise, marketLabel, matchup, sportLabel, statusLabel } from '../../labels';
 
 /** One leg of a stored §5 `StakePlan`, read defensively out of an open blob. */
 export interface StakeLegView {
@@ -200,6 +201,11 @@ export class RecommendationsPage {
   protected signedPercent = formatSignedPercent;
   protected odds = formatDecimalOdds;
   protected american = toAmerican;
+  protected marketLabel = marketLabel;
+  protected sportLabel = sportLabel;
+  protected statusLabel = statusLabel;
+  protected matchup = matchup;
+  protected humanise = humanise;
 }
 
 function toLeg(value: unknown): StakeLegView {
