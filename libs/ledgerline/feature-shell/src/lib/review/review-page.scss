@@ -22,31 +22,31 @@
 
 .mode {
   padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.76rem;
   cursor: pointer;
 }
 
 .mode:hover {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .mode--on {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--text, #dcefeb);
-  background: color-mix(in srgb, var(--accent, #2dd4bf) 10%, transparent);
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .mode__count {
   margin-left: 6px;
   padding: 0 6px;
   border-radius: 999px;
-  background: var(--accent, #2dd4bf);
-  color: var(--bg, #0a1517);
+  background: var(--accent);
+  color: var(--bg);
   font-size: 0.68rem;
 }
 
@@ -59,22 +59,22 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .score dd {
   margin: 3px 0 0;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 /* The number this page exists for. Amber rather than red: a miss is information,
  * not a fault — it is what a threshold is about to be tuned against. */
 .score__miss {
-  color: var(--warn, #d9a441);
+  color: var(--warn);
 }
 
 .note {
   margin: 10px 0 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

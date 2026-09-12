@@ -12,7 +12,7 @@
 .note {
   margin: 0 0 12px;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .progress {
@@ -22,13 +22,13 @@
 .progress__track {
   height: 6px;
   border-radius: 999px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   overflow: hidden;
 }
 
 .progress__fill {
   height: 100%;
-  background: var(--accent, #2dd4bf);
+  background: var(--accent);
   /* Short, because the bar moves in page-sized steps rather than continuously —
    * a long ease would still be catching up when the next page lands. */
   transition: width 120ms linear;
@@ -37,7 +37,7 @@
 .progress__label {
   margin: 6px 0 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .progress__percent {

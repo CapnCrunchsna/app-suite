@@ -33,21 +33,21 @@
 .headline__value {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 /* The annual figure is the one §6.5 is written around, so it is the one that is
  * bigger than the others rather than merely present among them. */
 .headline__figure--lead .headline__value {
   font-size: 2rem;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .headline__label {
   font-size: 0.72rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ----------------------------------------------------------- toolbar --- */
@@ -68,18 +68,18 @@
 
 .scope__button {
   padding: 4px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text-dim, #7ea8a1);
+  background: var(--surface-2);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.78rem;
   cursor: pointer;
 }
 
 .scope__button--on {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--text, #dcefeb);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .scope__count {
@@ -90,7 +90,7 @@
 .toolbar__hint {
   margin: 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ------------------------------------------------------------ ledger --- */
@@ -101,39 +101,39 @@
 
 .ledger__row:hover,
 .ledger__row--open {
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
 }
 
 .ledger__row:focus-visible {
-  outline: 2px solid var(--accent, #2dd4bf);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
 .ledger__merchant {
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .ledger__account {
   margin-left: 8px;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .ledger__flag {
   margin-left: 6px;
   padding: 1px 5px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 3px;
   font-size: 0.62rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The column the page is sorted by, marked so the ordering is legible without a
  * sort indicator on a table that only sorts one way. */
 .ledger__annual {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -145,19 +145,19 @@
   border-radius: 999px;
   font-size: 0.7rem;
   text-transform: capitalize;
-  background: var(--surface-2, #143034);
-  border: 1px solid var(--border, #1f4a47);
-  color: var(--text-dim, #7ea8a1);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
 }
 
 .chip--active {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .chip--lapsed {
-  border-color: var(--warn, #f0b429);
-  color: var(--warn, #f0b429);
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 /* A manual override is marked on the chip rather than in a column of its own: it
@@ -172,7 +172,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;

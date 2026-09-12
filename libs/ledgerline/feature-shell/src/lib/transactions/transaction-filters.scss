@@ -29,7 +29,7 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Box, type and focus ring are the primitive's `input`/`select`. */
@@ -38,7 +38,7 @@
 }
 
 .filters__input--invalid {
-  border-color: var(--danger, #e0796a);
+  border-color: var(--danger);
 }
 
 .filters__toggles {
@@ -53,29 +53,29 @@
   align-items: center;
   gap: 6px;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   cursor: help;
   white-space: nowrap;
 
   input {
-    accent-color: var(--accent, #2dd4bf);
+    accent-color: var(--accent);
     cursor: pointer;
   }
 }
 
 .filters__reset {
   padding: 6px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--text, #dcefeb);
-    border-color: var(--accent, #2dd4bf);
+    color: var(--text);
+    border-color: var(--accent);
   }
 
   &:disabled {
@@ -88,7 +88,7 @@
   flex: 1 1 100%;
   margin: 0;
   font-size: 0.8rem;
-  color: var(--danger, #e0796a);
+  color: var(--danger);
 
   code {
     padding: 0 3px;

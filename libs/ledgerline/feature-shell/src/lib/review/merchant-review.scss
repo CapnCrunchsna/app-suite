@@ -12,13 +12,13 @@
 .note {
   margin: 10px 0 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .note--absent {
   margin-top: 18px;
   padding-top: 12px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .cards {
@@ -33,15 +33,15 @@
  * flat list invites answering them as a batch. */
 .card {
   padding: 12px 14px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
 }
 
 .card__claim {
   margin: 0 0 10px;
   font-size: 0.82rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .card__sides {
@@ -61,7 +61,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .side dd {
@@ -72,31 +72,31 @@
 
 .side__name {
   font-size: 0.8rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 
 .side__count {
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The real spellings, so the claim can be checked rather than trusted. */
 .side__spellings {
   font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   overflow-wrap: anywhere;
 }
 
 .side--folding .side__name {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .card__effect {
   margin: 0 0 10px;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .card__actions {
@@ -108,13 +108,13 @@
 .provisional {
   margin-top: 20px;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .provisional__title {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .provisional__list {
@@ -142,7 +142,7 @@
 }
 
 .provisional__name {
-  color: var(--text, #dcefeb);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 
@@ -150,36 +150,36 @@
  * however long the names are. */
 .provisional__count {
   margin-right: auto;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   white-space: nowrap;
 }
 
 .provisional__row .tag {
   padding: 1px 7px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   white-space: nowrap;
 }
 
 .provisional__row .tag--category {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .provisional__row .tag--saved {
-  border-color: var(--accent-2, #34d399);
-  color: var(--accent-2, #34d399);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
 }
 
 .provisional__edit,
 .provisional__more {
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 5px;
   padding: 2px 9px;
   background: transparent;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font: inherit;
   font-size: 0.7rem;
   cursor: pointer;
@@ -206,9 +206,9 @@
   gap: 10px 14px;
   margin-top: 8px;
   padding: 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: var(--radius, 8px);
-  background: var(--surface-1, #0f1726);
+  background: var(--surface-1);
 }
 
 .editor__field {
@@ -228,7 +228,7 @@
 .editor__label {
   font-size: 0.68rem;
   font-weight: 600;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The box, the focus ring and the type are the primitive's `input`/`select`.
@@ -243,7 +243,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.74rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -253,7 +253,7 @@
   margin: 0;
   font-size: 0.72rem;
   line-height: 1.5;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .editor__actions {
@@ -267,13 +267,13 @@
 .proposals {
   margin-top: 20px;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .proposals__title {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .proposals__list {
@@ -287,31 +287,31 @@
 .proposal__claim {
   margin: 0;
   font-size: 0.76rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 
 .proposal__claim code {
   font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .proposal__confidence {
   margin-left: 6px;
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .proposal__reason {
   margin: 3px 0 0;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The one that no threshold releases, marked so it does not read as the same
  * kind of "not yet" as the sub-floor list above it. */
 .proposal--blocked {
   padding-left: 8px;
-  border-left: 2px solid var(--warn, #d9a441);
+  border-left: 2px solid var(--warn);
 }

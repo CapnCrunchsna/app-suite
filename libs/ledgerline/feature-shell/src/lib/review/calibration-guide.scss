@@ -8,9 +8,9 @@
 
 .guide {
   padding: 12px 14px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: var(--radius, 10px);
-  background: var(--surface-1, #0e2427);
+  background: var(--surface-1);
 }
 
 .guide__head {
@@ -24,7 +24,7 @@
   margin: 0;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .guide__toggle {
@@ -32,14 +32,14 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.74rem;
   cursor: pointer;
 
   &:hover {
-    color: var(--text, #dcefeb);
-    border-color: var(--border, #1f4a47);
+    color: var(--text);
+    border-color: var(--border);
   }
 }
 
@@ -48,7 +48,7 @@
   max-width: 72ch;
   font-size: 0.76rem;
   line-height: 1.5;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .steps {
@@ -73,8 +73,8 @@
 /* The step this page is. Marked rather than merely highlighted, because "you are
  * here" is the one thing the sequence could not say before. */
 .step--here {
-  background: var(--surface-2, #143034);
-  box-shadow: inset 2px 0 0 var(--accent, #2dd4bf);
+  background: var(--surface-2);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 /* Not disabled — every step stays readable and reachable. Dimming says "not yet",
@@ -85,7 +85,7 @@
 
 .step__n {
   font-variant-numeric: tabular-nums;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .step__body {
@@ -96,15 +96,15 @@
 }
 
 .step__title {
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .step__here {
   margin-left: 8px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 0.64rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -114,11 +114,11 @@
 .step__why {
   font-size: 0.71rem;
   line-height: 1.45;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .step__status {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -129,7 +129,7 @@
 }
 
 .step__link {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   text-decoration: none;
 
   &:hover {
@@ -142,20 +142,20 @@
   max-width: 72ch;
   font-size: 0.74rem;
   line-height: 1.5;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 
   strong {
-    color: var(--text, #dcefeb);
+    color: var(--text);
   }
 
   kbd {
     padding: 0 4px;
-    border: 1px solid var(--border, #1f4a47);
+    border: 1px solid var(--border);
     border-radius: 4px;
-    background: var(--surface-2, #143034);
+    background: var(--surface-2);
     font-family: var(--mono, ui-monospace, Menlo, monospace);
     font-size: 0.7rem;
-    color: var(--text, #dcefeb);
+    color: var(--text);
   }
 }
 

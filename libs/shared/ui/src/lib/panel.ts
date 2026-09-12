@@ -20,8 +20,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   styles: `
     :host {
       display: block;
-      background: var(--surface, #0f2124);
-      border: 1px solid var(--border, #1f4a47);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: var(--radius, 10px);
       box-shadow: var(--shadow, 0 1px 3px rgb(0 0 0 / 50%));
     }
@@ -29,7 +29,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     .panel__heading {
       margin: 0;
       padding: 14px 20px;
-      border-bottom: 1px solid var(--border, #1f4a47);
+      border-bottom: 1px solid var(--border);
       font-size: 1rem;
       font-weight: 600;
       letter-spacing: 0.01em;

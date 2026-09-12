@@ -21,11 +21,11 @@
   align-items: center;
   gap: 12px;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .toolbar__status {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 /* -------------------------------------------------------------- groups --- */
@@ -41,7 +41,7 @@
   align-items: baseline;
   gap: 10px;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--border, #1f4a47);
+  border-bottom: 1px solid var(--border);
 }
 
 .group__rule {
@@ -49,12 +49,12 @@
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .group__count {
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .group__total {
@@ -74,18 +74,18 @@
 .toolbar__fold {
   margin-left: auto;
   padding: 3px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 4px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.72rem;
   cursor: pointer;
 }
 
 .toolbar__fold:hover {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--text, #dcefeb);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .contents {
@@ -100,21 +100,21 @@
   align-items: baseline;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface, #0f2124);
-  color: var(--text, #dcefeb);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 0.74rem;
   cursor: pointer;
 }
 
 .contents__item:hover {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .contents__count {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 
@@ -134,12 +134,12 @@
 }
 
 .group__chevron {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-size: 0.8em;
 }
 
 .group__blurb {
   margin: 2px 0 10px;
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

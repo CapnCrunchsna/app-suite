@@ -11,15 +11,15 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  background: var(--surface-2, #143034);
-  border: 1px solid var(--accent, #2dd4bf);
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
   border-radius: var(--radius, 10px);
 }
 
 .offer__what {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 
   code {
     font-family: var(--mono, ui-monospace, Menlo, monospace);
@@ -38,10 +38,10 @@
  * same weighting `merchant-assign` gives its own. */
 .offer__apply {
   padding: 6px 12px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 6px;
-  background: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  background: var(--accent);
+  color: var(--on-accent);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
@@ -58,13 +58,13 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--text, #dcefeb);
+    color: var(--text);
   }
 
   &:disabled {
@@ -78,5 +78,5 @@
   max-width: 68ch;
   font-size: 0.74rem;
   line-height: 1.5;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

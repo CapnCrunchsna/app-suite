@@ -29,7 +29,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.6rem;
   cursor: pointer;
@@ -40,11 +40,11 @@
 }
 
 .strip__day--loaded {
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .strip__day:focus-visible {
-  outline: 2px solid var(--accent, #2dd4bf);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -56,7 +56,7 @@
   width: 100%;
   height: calc(6px + (var(--fill, 0) * 40px));
   border-radius: 2px 2px 0 0;
-  background: var(--accent, #2dd4bf);
+  background: var(--accent);
 }
 
 .strip__day--empty .strip__number {
@@ -66,5 +66,5 @@
 .strip__legend {
   margin: 0;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

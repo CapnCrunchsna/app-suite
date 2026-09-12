@@ -13,7 +13,7 @@
   align-items: center;
   gap: 6px;
   padding: 34px 20px;
-  border: 2px dashed var(--border, #1f4a47);
+  border: 2px dashed var(--border);
   border-radius: var(--radius, 10px);
   background: color-mix(in srgb, var(--surface-2) 35%, transparent);
   text-align: center;
@@ -23,7 +23,7 @@
 }
 
 .zone--over {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
@@ -36,7 +36,7 @@
 .zone__hint {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .zone__browse {
@@ -44,14 +44,14 @@
   overflow: hidden;
   margin-top: 6px;
   padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.8rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   cursor: pointer;
 
   &:hover {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 }
 
@@ -85,18 +85,18 @@
   align-items: center;
   gap: 10px;
   padding: 7px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   font-size: 0.8rem;
 }
 
 .staged__row--selected {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .staged__row--failed {
-  border-color: var(--danger, #e0796a);
+  border-color: var(--danger);
 }
 
 .staged__name {
@@ -113,7 +113,7 @@
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--accent, #2dd4bf);
+    color: var(--accent);
   }
 
   &:disabled {
@@ -123,7 +123,7 @@
 }
 
 .staged__size {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -142,7 +142,7 @@
   display: block;
   width: 40%;
   height: 100%;
-  background: var(--accent, #2dd4bf);
+  background: var(--accent);
   animation: staged-progress 900ms linear infinite;
 }
 
@@ -170,30 +170,30 @@
 
 .badge {
   padding: 1px 8px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.68rem;
   white-space: nowrap;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .badge--ok {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .badge--busy {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .badge--warn {
-  border-color: var(--caution, #b08b4f);
-  color: var(--caution-soft, #d9b878);
+  border-color: var(--caution);
+  color: var(--caution-soft);
 }
 
 .badge--bad {
-  border-color: var(--danger, #e0796a);
-  color: var(--danger-soft, #eda596);
+  border-color: var(--danger);
+  color: var(--danger-soft);
   /* The API's own refusal reason, which is a sentence rather than a word. */
   white-space: normal;
   text-align: right;

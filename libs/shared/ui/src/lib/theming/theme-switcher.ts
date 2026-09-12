@@ -65,15 +65,15 @@ import { ThemeService } from './theme.service.js';
       font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--text-dim, #7ea8a1);
+      color: var(--text-dim);
     }
 
     .switcher__select {
       padding: 2px 6px;
-      border: 1px solid var(--border, #1f4a47);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      background: var(--surface-2, #143034);
-      color: var(--text, #dcefeb);
+      background: var(--surface-2);
+      color: var(--text);
       font: inherit;
       font-size: 0.76rem;
       cursor: pointer;

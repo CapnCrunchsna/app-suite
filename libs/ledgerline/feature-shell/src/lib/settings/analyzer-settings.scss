@@ -13,13 +13,13 @@
 .none {
   margin: 0 0 12px;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Where the evidence for a change comes from. Links rather than prose alone,
  * because the point of the sentence is that both halves are somewhere else. */
 .page__lede--where a {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   text-decoration: none;
 
   &:hover {
@@ -33,7 +33,7 @@
   gap: 8px;
   margin: 0 0 18px;
   font-size: 0.75rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .hash__label {
@@ -43,21 +43,21 @@
 
 .hash__tuned {
   padding: 1px 8px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 999px;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 /* All-defaults is the uncalibrated state §7.6 warns about, so it is stated rather
  * than shown as an absence. */
 .hash__tuned--stock {
-  border-color: var(--border, #1f4a47);
-  color: var(--text-dim, #7ea8a1);
+  border-color: var(--border);
+  color: var(--text-dim);
 }
 
 .group {
   padding: 14px 0;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .group__head {
@@ -71,14 +71,14 @@
 .group__title {
   margin: 0 0 8px;
   font-size: 0.88rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .group__spec {
   margin-left: 6px;
   font-size: 0.72rem;
   font-weight: 400;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .switches {
@@ -92,13 +92,13 @@
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   cursor: pointer;
 }
 
 .switch__counts {
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The one message on this page with a consequence attached, so it is the one
@@ -106,10 +106,10 @@
 .warn {
   margin: 8px 0 0;
   padding: 7px 10px;
-  border-left: 2px solid var(--warn, #f0b429);
-  background: var(--surface-2, #143034);
+  border-left: 2px solid var(--warn);
+  background: var(--surface-2);
   font-size: 0.75rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .fields {
@@ -133,7 +133,7 @@
 
 .field__name {
   font-size: 0.76rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 
@@ -149,13 +149,13 @@
  * uncalibrated guesses — knowing which ones you have moved is the difference
  * between tuning and drift. */
 .field--overridden .field__input {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .field__hint {
   grid-column: 1 / -1;
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .field__reset {
@@ -163,7 +163,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   font: inherit;
   font-size: 0.68rem;
   text-decoration: underline;
@@ -174,7 +174,7 @@
   margin: 0;
   padding-left: 18px;
   font-size: 0.75rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .unsettable li {
@@ -190,9 +190,9 @@
   width: 13px;
   height: 13px;
   margin-left: 5px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 50%;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-size: 0.6rem;
   font-style: italic;
   line-height: 1;
@@ -201,8 +201,8 @@
 }
 
 .field__info:hover {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--text, #dcefeb);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 /* The sentence reaches assistive technology through `aria-label` on the mark
@@ -213,5 +213,5 @@
 /* Spec 7.6 corpus tally (spec 9z). Same weight as the other counts beside it: it
  * is one more fact about the rule, not a score. */
 .switch__scored {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

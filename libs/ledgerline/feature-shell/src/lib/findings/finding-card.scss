@@ -10,9 +10,9 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 9px;
-  background: var(--surface, #0f2124);
+  background: var(--surface);
 }
 
 /* A finding the user has dealt with stays on the page but stops competing for
@@ -34,17 +34,17 @@
 
 /* The money moved. */
 .banner--changed {
-  border-color: var(--caution, #b08b4f);
+  border-color: var(--caution);
   background: color-mix(in srgb, var(--caution) 10%, transparent);
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
 }
 
 /* The rule moved. Visually distinct from the above on purpose — §5.1 groups
  * these separately because they mean different things. */
 .banner--reevaluated {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 /* -------------------------------------------------------------- head --- */
@@ -71,21 +71,21 @@
 
 .chip {
   padding: 1px 8px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.66rem;
   white-space: nowrap;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .chip--band[data-band='high'] {
-  border-color: var(--accent-2, #34d399);
-  color: var(--accent-2, #34d399);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
 }
 
 .chip--band[data-band='medium'] {
-  border-color: var(--caution, #b08b4f);
-  color: var(--caution-soft, #d9b878);
+  border-color: var(--caution);
+  color: var(--caution-soft);
 }
 
 .chip--band[data-band='low'] {
@@ -93,8 +93,8 @@
 }
 
 .chip--llm {
-  border-color: var(--ai, #8b7fd4);
-  color: var(--ai-soft, #b3a8ee);
+  border-color: var(--ai);
+  color: var(--ai-soft);
 }
 
 .chip--state {
@@ -121,7 +121,7 @@
 .card__monthly,
 .card__snoozed {
   font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .card__per {
@@ -139,16 +139,16 @@
 
 .action {
   padding: 5px 11px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font: inherit;
   font-size: 0.78rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 
   &:disabled {
@@ -158,8 +158,8 @@
 }
 
 .action--dismiss:hover:not(:disabled) {
-  border-color: var(--danger, #e0796a);
-  color: var(--danger-soft, #eda596);
+  border-color: var(--danger);
+  color: var(--danger-soft);
 }
 
 .action__group {
@@ -176,9 +176,9 @@
   display: flex;
   flex-direction: column;
   min-width: 260px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   box-shadow: var(--shadow, 0 1px 3px rgb(0 0 0 / 50%));
   overflow: hidden;
 }
@@ -212,14 +212,14 @@
 /* The scopes differ in blast radius, and the hint is where that is said. */
 .picker__hint {
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .card__rule {
   margin-left: auto;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* §7.6's judgement (§9z). Quiet by design: it sits in the footer beside the rule id
@@ -234,23 +234,23 @@
 
 .judge__ask {
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .judge__button {
   padding: 2px 9px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.7rem;
   cursor: pointer;
 }
 
 .judge__button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--text, #dcefeb);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .judge__button:disabled {
@@ -262,17 +262,17 @@
  * legible without a legend, and a coloured dot is not. */
 .judge__given {
   font-size: 0.7rem;
-  color: var(--accent-2, #34d399);
+  color: var(--accent-2);
 }
 
 .judge__given--incorrect {
-  color: var(--warn, #d9a441);
+  color: var(--warn);
 }
 
 /* Spec 5.1's staleness, applied to a label: the judgement stands but the claim it
  * was about has moved, so it is shown greyed with the question re-asked beside it
  * rather than silently recounted. */
 .judge__given--stale {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-style: italic;
 }

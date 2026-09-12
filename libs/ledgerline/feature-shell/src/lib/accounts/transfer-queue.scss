@@ -21,15 +21,15 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: var(--radius, 10px);
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
 }
 
 /* An auto-link has already moved money; the queue says so rather than looking
  * the same as a pair that has not. */
 .pair--auto {
-  border-left: 3px solid var(--accent, #2dd4bf);
+  border-left: 3px solid var(--accent);
 }
 
 .pair__head {
@@ -46,25 +46,25 @@
 
 .pair__state {
   font-size: 0.72rem;
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
 }
 
 .pair__state--auto {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .pair__kind {
   font-size: 0.7rem;
   padding: 1px 6px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .pair__score {
   margin-left: auto;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 
@@ -86,17 +86,17 @@
 }
 
 .row--credit {
-  border-top: 1px dashed var(--border, #1f4a47);
+  border-top: 1px dashed var(--border);
   padding-top: 5px;
 }
 
 .row__date {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 
 .row__account {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -127,7 +127,7 @@
   padding: 0;
   list-style: none;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .reasons--none {
@@ -140,12 +140,12 @@
 }
 
 .reason__points {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 
 .reason--negative .reason__points {
-  color: var(--danger, #e0796a);
+  color: var(--danger);
 }
 
 /* ---------------------------------------------------------------- foot --- */
@@ -155,13 +155,13 @@
   align-items: center;
   gap: 10px;
   padding-top: 6px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .effect {
   flex: 1 1 auto;
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Both buttons are the primitive's: confirming is its ordinary hover, and

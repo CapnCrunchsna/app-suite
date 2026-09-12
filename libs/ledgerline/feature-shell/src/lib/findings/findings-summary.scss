@@ -22,7 +22,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .figure__value {
@@ -34,12 +34,12 @@
 
 /* The one number §6.4 calls the justification for the app. */
 .figure--headline .figure__value {
-  color: var(--accent-2, #34d399);
+  color: var(--accent-2);
 }
 
 .figure__sub {
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 
@@ -51,7 +51,7 @@
   align-items: flex-end;
   justify-content: center;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .run__line {
@@ -61,7 +61,7 @@
 /* §7.4: a config change means the stored findings were scored under thresholds
  * that no longer apply. Saying so beats showing a number that looks current. */
 .run__stale {
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
   max-width: 260px;
   text-align: right;
 }
@@ -69,10 +69,10 @@
 .run__button {
   margin-top: 4px;
   padding: 4px 12px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 6px;
   background: transparent;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   font: inherit;
   font-size: 0.76rem;
   cursor: pointer;

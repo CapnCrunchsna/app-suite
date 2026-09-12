@@ -20,10 +20,10 @@
 
 .notice__job {
   padding: 2px 8px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   white-space: nowrap;
 }
 
@@ -36,7 +36,7 @@
   flex-wrap: wrap;
   margin-bottom: 12px;
   font-size: 0.82rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .toolbar__spacer {
@@ -44,7 +44,7 @@
 }
 
 .toolbar__status {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .toolbar__pagesize {
@@ -55,16 +55,16 @@
 
 .toolbar__page {
   padding: 5px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 
   &:disabled {
@@ -79,7 +79,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -103,13 +103,13 @@
 .txns__head {
   padding: 0 12px;
   height: 38px;
-  background: var(--surface-2, #143034);
-  border-bottom: 1px solid var(--border, #1f4a47);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .txns__sort {
@@ -124,7 +124,7 @@
   padding: 0;
 
   &:hover {
-    color: var(--text, #dcefeb);
+    color: var(--text);
   }
 }
 
@@ -168,13 +168,13 @@
 }
 
 .txns__row--expanded {
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
 }
 
 .txns__row--pending {
   /* Pending rows are stored and shown, and out of every total (§2.5). Dimmed so
      that is visible without reading the chip. */
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .txns__cell {
@@ -221,12 +221,12 @@
   text-align: left;
 
   &:hover {
-    color: var(--accent, #2dd4bf);
+    color: var(--accent);
   }
 }
 
 .txns__chevron {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-size: 0.7rem;
   width: 8px;
 }
@@ -243,7 +243,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-family: ui-monospace, Consolas, monospace;
 }
 
@@ -262,8 +262,8 @@
   text-overflow: ellipsis;
 
   &:hover {
-    color: var(--accent, #2dd4bf);
-    border-bottom-color: var(--accent, #2dd4bf);
+    color: var(--accent);
+    border-bottom-color: var(--accent);
   }
 }
 
@@ -274,7 +274,7 @@
 
   &::after {
     content: ' ·';
-    color: var(--accent, #2dd4bf);
+    color: var(--accent);
   }
 }
 
@@ -282,11 +282,11 @@
  * opened in place rather than a filter: an accent border. */
 .txns__select {
   width: 100%;
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .txns__credit {
-  color: var(--accent-2, #34d399);
+  color: var(--accent-2);
 }
 
 .txns__detail {
@@ -302,30 +302,30 @@
   padding: 28px 16px;
   text-align: center;
   font-size: 0.85rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* --------------------------------------------------------------- chips --- */
 
 .chip {
   padding: 1px 7px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.66rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   background: transparent;
 }
 
 .chip--pending {
-  border-color: var(--caution, #b08b4f);
-  color: var(--caution-soft, #d9b878);
+  border-color: var(--caution);
+  color: var(--caution-soft);
 }
 
 .chip--finding {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .chip--toggle {
@@ -334,8 +334,8 @@
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--text, #dcefeb);
-    border-color: var(--accent, #2dd4bf);
+    color: var(--text);
+    border-color: var(--accent);
   }
 
   &:disabled {
@@ -345,9 +345,9 @@
 }
 
 .chip--on {
-  background: var(--accent, #2dd4bf);
-  border-color: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -359,8 +359,8 @@
  * loses is the invitation: a dashed border and less contrast, until pointed at. */
 .chip--implausible {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--border, #1f4a47) 70%, transparent);
-  color: color-mix(in srgb, var(--text-dim, #7ea8a1) 65%, transparent);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+  color: color-mix(in srgb, var(--text-dim) 65%, transparent);
 
   &:hover:not(:disabled) {
     border-style: solid;

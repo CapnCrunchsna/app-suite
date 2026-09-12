@@ -17,9 +17,9 @@
   flex-direction: column;
   gap: 18px;
   padding: 16px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface-1, #0e2427);
+  background: var(--surface-1);
 }
 
 .drawer__head {
@@ -32,26 +32,26 @@
 .drawer__title {
   margin: 0;
   font-size: 1rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .drawer__sub {
   margin: 2px 0 0;
   font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .drawer__close {
   border: 0;
   background: none;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-size: 1.3rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .drawer__close:hover {
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .section__title {
@@ -60,7 +60,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ------------------------------------------------------------- chart --- */
@@ -72,18 +72,18 @@
 }
 
 .chart__line {
-  stroke: var(--accent, #2dd4bf);
+  stroke: var(--accent);
   stroke-width: 1.5;
 }
 
 .chart__dot {
-  fill: var(--accent, #2dd4bf);
+  fill: var(--accent);
 }
 
 /* A price step is a vertical rule through the whole plot rather than a dot on the
  * line, because it marks a moment the *series* changed, not one charge. */
 .chart__step {
-  stroke: var(--warn, #f0b429);
+  stroke: var(--warn);
   stroke-width: 1;
 }
 
@@ -97,21 +97,21 @@
 .chart__caption {
   margin: 6px 0 0;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ------------------------------------------------------------- steps --- */
 
 .steps__up {
-  color: var(--warn, #f0b429);
+  color: var(--warn);
 }
 
 .steps__down {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .steps__unconfirmed {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-style: italic;
 }
 
@@ -145,7 +145,7 @@
 .field__open {
   flex: 0 0 auto;
   font-size: 0.78rem;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .override {
@@ -158,7 +158,7 @@
 .override__note {
   margin: 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .override__buttons {
@@ -168,10 +168,10 @@
 
 .override__button {
   padding: 4px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text-dim, #7ea8a1);
+  background: var(--surface-2);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.75rem;
   text-transform: capitalize;
@@ -179,13 +179,13 @@
 }
 
 .override__button:hover:not(:disabled) {
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .override__button--on {
-  border-color: var(--accent, #2dd4bf);
-  background: var(--accent, #2dd4bf);
-  color: var(--surface-1, #0e2427);
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--surface-1);
   font-weight: 600;
 }
 

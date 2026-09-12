@@ -3,8 +3,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  background: var(--surface-2, #143034);
-  border: 1px solid var(--accent, #2dd4bf);
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
   border-radius: var(--radius, 10px);
 }
 
@@ -19,17 +19,17 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .assign__select {
   flex: 1 1 220px;
   min-width: 180px;
   padding: 6px 8px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--bg, #0a1517);
-  color: var(--text, #dcefeb);
+  background: var(--bg);
+  color: var(--text);
   font: inherit;
   font-size: 0.85rem;
 }
@@ -37,10 +37,10 @@
 .assign__descriptor {
   margin: 0;
   font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 
   code {
-    color: var(--text, #dcefeb);
+    color: var(--text);
     font-size: 0.75rem;
   }
 }
@@ -54,16 +54,16 @@
 
 .assign__apply {
   padding: 6px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface, #0f2124);
-  color: var(--text, #dcefeb);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 0.82rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 
   &:disabled {
@@ -75,9 +75,9 @@
 /* The bulk action is the one §6.3 calls the point of the page, so it is the one
  * that looks like the primary button. */
 .assign__apply--bulk {
-  border-color: var(--accent, #2dd4bf);
-  background: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -86,13 +86,13 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
 
   &:hover {
-    color: var(--text, #dcefeb);
+    color: var(--text);
   }
 }
 
@@ -101,10 +101,10 @@
   max-width: 68ch;
   font-size: 0.74rem;
   line-height: 1.5;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .assign__error {
   font-size: 0.78rem;
-  color: var(--danger, #e0796a);
+  color: var(--danger);
 }
