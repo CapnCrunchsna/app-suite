@@ -15,7 +15,7 @@
 /* A committed import is the one notice that is good news rather than a state
  * change, so it takes the positive edge instead of the primitive's accent. */
 .notice--good {
-  border-color: var(--accent-2, #34d399);
+  border-color: var(--accent-2);
 }
 
 /* --------------------------------------------------------- review head --- */
@@ -40,46 +40,46 @@
 
 .head__status {
   padding: 1px 8px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.66rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 
   &[data-status='committed'] {
-    border-color: var(--accent-2, #34d399);
-    color: var(--accent-2, #34d399);
+    border-color: var(--accent-2);
+    color: var(--accent-2);
   }
 
   &[data-status='needs_mapping'] {
-    border-color: var(--caution, #b08b4f);
-    color: var(--caution-soft, #d9b878);
+    border-color: var(--caution);
+    color: var(--caution-soft);
   }
 
   &[data-status='failed'] {
-    border-color: var(--danger, #e0796a);
-    color: var(--danger-soft, #eda596);
+    border-color: var(--danger);
+    color: var(--danger-soft);
   }
 }
 
 .head__busy {
   font-size: 0.76rem;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .head__facts {
   margin: 0;
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .refused {
   margin: 0 0 14px;
   padding: 12px 14px;
-  border: 1px solid var(--danger, #e0796a);
+  border: 1px solid var(--danger);
   border-radius: 8px;
   background: color-mix(in srgb, var(--danger) 8%, transparent);
   font-size: 0.84rem;
-  color: var(--danger-soft, #eda596);
+  color: var(--danger-soft);
 }
 
 /* ------------------------------------------------- account confirmation --- */
@@ -91,25 +91,25 @@
   gap: 10px;
   margin-bottom: 12px;
   padding: 9px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   font-size: 0.8rem;
 }
 
 /* §6.1 makes this a gate, not a field: commit refuses without it, so the
  * unconfirmed state is the one that looks unfinished. */
 .account--unconfirmed {
-  border-color: var(--caution, #b08b4f);
+  border-color: var(--caution);
   background: color-mix(in srgb, var(--caution) 10%, transparent);
 }
 
 .account__prompt {
   flex: 1 1 340px;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 
   strong {
-    color: var(--text, #dcefeb);
+    color: var(--text);
   }
 }
 
@@ -122,13 +122,13 @@
   align-items: center;
   gap: 6px;
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .account__empty {
   flex: 1 1 100%;
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* -------------------------------------------------------- warning strip --- */
@@ -148,23 +148,23 @@
   flex-wrap: wrap;
   gap: 4px 10px;
   padding: 7px 11px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-left-width: 3px;
   border-radius: 7px;
   font-size: 0.78rem;
 
   &[data-severity='bad'] {
-    border-left-color: var(--danger, #e0796a);
+    border-left-color: var(--danger);
     background: color-mix(in srgb, var(--danger) 7%, transparent);
   }
 
   &[data-severity='warn'] {
-    border-left-color: var(--caution, #b08b4f);
+    border-left-color: var(--caution);
     background: color-mix(in srgb, var(--caution) 7%, transparent);
   }
 
   &[data-severity='note'] {
-    border-left-color: var(--text-dim, #7ea8a1);
+    border-left-color: var(--text-dim);
   }
 }
 
@@ -174,14 +174,14 @@
 
 .warnings__detail {
   flex: 1 1 340px;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-size: 0.74rem;
 }
 
 .warnings__rows {
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ---------------------------------------------------------------- plan --- */
@@ -193,20 +193,20 @@
   gap: 8px 18px;
   margin-bottom: 10px;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .plan__figure strong {
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
 .plan__figure--decide strong {
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
 }
 
 .plan__figure--bad strong {
-  color: var(--danger-soft, #eda596);
+  color: var(--danger-soft);
 }
 
 .plan__figure--pending {
@@ -222,7 +222,7 @@
   gap: 12px;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .commit__optin {
@@ -231,7 +231,7 @@
   gap: 7px;
   flex: 1 1 100%;
   padding: 8px 11px;
-  border: 1px solid var(--caution, #b08b4f);
+  border: 1px solid var(--caution);
   border-radius: 7px;
   background: color-mix(in srgb, var(--caution) 8%, transparent);
   font-size: 0.78rem;
@@ -240,10 +240,10 @@
 
 .commit__button {
   padding: 7px 18px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 6px;
-  background: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  background: var(--accent);
+  color: var(--on-accent);
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
@@ -258,7 +258,7 @@
 .commit__blocked,
 .commit__done {
   font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* §6.1 calls the account a confirmation, so it is a button and not a side
@@ -266,10 +266,10 @@
    import is already filed into — there is nothing to confirm in either. */
 .account__confirm {
   padding: 4px 12px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 6px;
-  background: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  background: var(--accent);
+  color: var(--on-accent);
   font: inherit;
   font-size: 0.78rem;
   font-weight: 600;

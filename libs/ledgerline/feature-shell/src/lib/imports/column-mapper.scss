@@ -10,7 +10,7 @@
   flex-direction: column;
   gap: 14px;
   padding: 14px;
-  border: 1px solid var(--caution, #b08b4f);
+  border: 1px solid var(--caution);
   border-radius: 8px;
   background: color-mix(in srgb, var(--caution) 6%, transparent);
 }
@@ -23,15 +23,15 @@
 .mapper__detected {
   margin: 0;
   font-size: 0.76rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ---------------------------------------------------------- the grid --- */
 
 .grid {
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface, #0f2124);
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -50,8 +50,8 @@
 
 .grid__head {
   padding-block: 8px;
-  border-bottom: 1px solid var(--border, #1f4a47);
-  background: var(--surface-2, #143034);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
 
 .grid__col {
@@ -62,15 +62,15 @@
 }
 
 .grid__col--mapped .grid__select {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .grid__token {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -79,10 +79,10 @@
 .grid__select {
   width: 100%;
   padding: 3px 5px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: var(--bg, #0a1517);
-  color: var(--text, #dcefeb);
+  background: var(--bg);
+  color: var(--text);
   font: inherit;
   font-size: 0.76rem;
 }
@@ -99,14 +99,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .grid__empty {
   margin: 0;
   padding: 10px;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ------------------------------------------------------- the controls --- */
@@ -133,15 +133,15 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .controls__input {
   padding: 4px 7px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: var(--bg, #0a1517);
-  color: var(--text, #dcefeb);
+  background: var(--bg);
+  color: var(--text);
   font: inherit;
   font-size: 0.8rem;
 }
@@ -153,7 +153,7 @@
   gap: 8px 16px;
   margin: 0;
   padding: 8px 12px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
 }
 
@@ -162,7 +162,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .sign__choice {
@@ -176,7 +176,7 @@
 .sign__hint {
   flex: 1 1 320px;
   font-size: 0.73rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* -------------------------------------------------- verbatim outcome --- */
@@ -184,7 +184,7 @@
 .outcome {
   margin: 0;
   padding: 8px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.78rem;
   line-height: 1.45;
@@ -195,19 +195,19 @@ ul.outcome {
 }
 
 .outcome--busy {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .outcome--bad {
-  border-color: var(--danger, #e0796a);
+  border-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 8%, transparent);
-  color: var(--danger-soft, #eda596);
+  color: var(--danger-soft);
 }
 
 .outcome--warn {
-  border-color: var(--caution, #b08b4f);
+  border-color: var(--caution);
   background: color-mix(in srgb, var(--caution) 8%, transparent);
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
 }
 
 /* ---------------------------------------------------- the live preview --- */
@@ -231,7 +231,7 @@ ul.outcome {
 .live__empty {
   font-size: 0.73rem;
   font-weight: 400;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .live__empty {
@@ -239,9 +239,9 @@ ul.outcome {
 }
 
 .live__table {
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface, #0f2124);
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -255,12 +255,12 @@ ul.outcome {
 }
 
 .live__head {
-  background: var(--surface-2, #143034);
-  border-bottom: 1px solid var(--border, #1f4a47);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .live__row {
@@ -284,12 +284,12 @@ ul.outcome {
 }
 
 .live__credit {
-  color: var(--accent-2, #34d399);
+  color: var(--accent-2);
 }
 
 .live__status {
   font-size: 0.68rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The verbatim line under each parsed row is what makes this a preview of a
@@ -311,7 +311,7 @@ ul.outcome {
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
-  border: 1px solid var(--danger, #e0796a);
+  border: 1px solid var(--danger);
   border-radius: 7px;
   background: color-mix(in srgb, var(--danger) 6%, transparent);
 }
@@ -319,7 +319,7 @@ ul.outcome {
 .live__subheading {
   margin: 0;
   font-size: 0.76rem;
-  color: var(--danger-soft, #eda596);
+  color: var(--danger-soft);
 }
 
 .live__failure {
@@ -332,27 +332,27 @@ ul.outcome {
   margin: 0;
   padding-left: 24px;
   font-size: 0.72rem;
-  color: var(--danger-soft, #eda596);
+  color: var(--danger-soft);
 }
 
 .live__warnings {
   margin: 0;
   padding-left: 24px;
   font-size: 0.73rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .live__balance {
   margin: 0;
   font-size: 0.76rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 
   &[data-kind='reconciled'] {
-    color: var(--accent-2, #34d399);
+    color: var(--accent-2);
   }
 
   &[data-kind='mismatch'] {
-    color: var(--danger-soft, #eda596);
+    color: var(--danger-soft);
   }
 }
 
@@ -367,10 +367,10 @@ ul.outcome {
 
 .mapper__save {
   padding: 6px 14px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 6px;
-  background: var(--accent, #2dd4bf);
-  color: var(--on-accent, #06201c);
+  background: var(--accent);
+  color: var(--on-accent);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
@@ -384,21 +384,21 @@ ul.outcome {
 
 .mapper__cancel {
   padding: 6px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font: inherit;
   font-size: 0.82rem;
   cursor: pointer;
 
   &:hover {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 }
 
 .mapper__blocked {
   flex: 1 1 280px;
   font-size: 0.73rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

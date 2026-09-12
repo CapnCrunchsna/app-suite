@@ -12,7 +12,7 @@
 .note {
   margin: 10px 0 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .providers {
@@ -29,7 +29,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* One box per option, because the difference between them is a paragraph rather
@@ -38,19 +38,19 @@
   display: flex;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   cursor: pointer;
 }
 
 .provider--selected {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .provider__radio {
   margin: 3px 0 0;
-  accent-color: var(--accent, #2dd4bf);
+  accent-color: var(--accent);
 }
 
 .provider__body {
@@ -61,7 +61,7 @@
 
 .provider__label {
   font-size: 0.82rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .provider__current {
@@ -69,12 +69,12 @@
   font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .provider__detail {
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* §6.8 asks for this to be "prominent", and prominence here means an amber edge
@@ -85,20 +85,20 @@
   gap: 4px;
   margin: 12px 0 0;
   padding: 10px 12px;
-  border: 1px solid var(--warn, #d9a441);
+  border: 1px solid var(--warn);
   border-left-width: 3px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--warn, #d9a441) 8%, transparent);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
 }
 
 .warning__title {
   font-size: 0.78rem;
-  color: var(--warn, #d9a441);
+  color: var(--warn);
 }
 
 .warning__body {
   font-size: 0.74rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .model {
@@ -111,12 +111,12 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .model__note {
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .actions {
@@ -133,35 +133,35 @@
   gap: 10px;
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .test__result {
   margin: 0;
   font-size: 0.74rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 
 .test__mark {
   margin-right: 4px;
-  color: var(--accent-2, #34d399);
+  color: var(--accent-2);
 }
 
 .test__result--bad .test__mark {
-  color: var(--warn, #d9a441);
+  color: var(--warn);
 }
 
 .redaction {
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .redaction__title {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .redaction__toggle {
@@ -170,17 +170,17 @@
   gap: 8px;
   margin-top: 10px;
   font-size: 0.78rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .redaction__toggle input {
-  accent-color: var(--accent, #2dd4bf);
+  accent-color: var(--accent);
 }
 
 .redaction__toggle input:disabled + span {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .note--locked {
-  color: var(--warn, #d9a441);
+  color: var(--warn);
 }

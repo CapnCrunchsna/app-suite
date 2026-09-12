@@ -26,18 +26,18 @@
   align-items: center;
   gap: 10px;
   padding: 7px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   font-size: 0.78rem;
 }
 
 .history__row--selected {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .history__row--failed {
-  border-color: var(--danger, #e0796a);
+  border-color: var(--danger);
 }
 
 .history__name {
@@ -54,31 +54,31 @@
   cursor: pointer;
 
   &:hover {
-    color: var(--accent, #2dd4bf);
+    color: var(--accent);
   }
 }
 
 .history__status {
   padding: 1px 7px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.66rem;
   text-align: center;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 
   &[data-status='committed'] {
-    border-color: var(--accent-2, #34d399);
-    color: var(--accent-2, #34d399);
+    border-color: var(--accent-2);
+    color: var(--accent-2);
   }
 
   &[data-status='needs_mapping'] {
-    border-color: var(--caution, #b08b4f);
-    color: var(--caution-soft, #d9b878);
+    border-color: var(--caution);
+    color: var(--caution-soft);
   }
 
   &[data-status='failed'] {
-    border-color: var(--danger, #e0796a);
-    color: var(--danger-soft, #eda596);
+    border-color: var(--danger);
+    color: var(--danger-soft);
   }
 }
 
@@ -89,7 +89,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-size: 0.73rem;
 }
 
@@ -106,16 +106,16 @@
 
 .history__action {
   padding: 3px 9px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 5px;
   background: transparent;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font: inherit;
   font-size: 0.72rem;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 
   &:disabled {
@@ -125,12 +125,12 @@
 }
 
 .history__action--danger {
-  border-color: var(--danger, #e0796a);
-  color: var(--danger-soft, #eda596);
+  border-color: var(--danger);
+  color: var(--danger-soft);
 
   &:hover:not(:disabled) {
     background: color-mix(in srgb, var(--danger) 12%, transparent);
-    border-color: var(--danger, #e0796a);
+    border-color: var(--danger);
   }
 }
 
@@ -138,5 +138,5 @@
   padding: 18px;
   text-align: center;
   font-size: 0.82rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

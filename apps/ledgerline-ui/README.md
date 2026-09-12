@@ -128,5 +128,24 @@ assertion is all that stayed behind, since only this app knows what its own
 stylesheet declared.
 
 Nothing else in this app or in `libs/ledgerline/feature-shell` names a colour.
+Every rule in both used to be written `var(--token, #hex)`; those 660 fallbacks
+are gone, along with three in `@metrum/ui`'s `ui-panel`, whose docstring already
+promised it carried no palette of its own. Ten of the same kind survive in that
+lib's `mode-toggle` and `theme-switcher`, which Edgeline renders too and which
+this app therefore does not get to decide alone. None of them could ever fire —
+`ThemeService` sets every token on `:root` before the first paint, so the only gap
+they covered is the one `--bg` and `--text` above exist to cover — and they had
+drifted into exactly the second, stale palette this work removed: `--warn` stood
+at two different ambers, `--surface-1` at two different blues. Three themes in
+light and dark is six palettes, and no literal is right in more than one of them.
+
+A colour is therefore always a bare `var(--token)`, and a fallback in a colour
+position should be read as a bug. Non-colour fallbacks are a different case and
+stay: `--mono` and `--shadow` are declared nowhere, so there the fallback *is* the
+value, and `--columns` and `--fill` are per-element properties set by the
+component that owns them. `--radius` is the odd one — the service writes it like
+it writes the palette, so `var(--radius, 10px)` is as dead as the colours were,
+but it is shape rather than colour and is left for a pass of its own.
+
 The WCAG audit moved with the palette: `theming.spec.ts` runs `auditTheme` over
 every theme in `SUITE_THEMES`, because any app can now be painted in any of them.

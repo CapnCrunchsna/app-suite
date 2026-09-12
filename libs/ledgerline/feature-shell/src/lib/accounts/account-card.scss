@@ -10,9 +10,9 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: var(--radius, 10px);
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
 }
 
 /* Archived is dimmed rather than hidden: §6.2 makes archive the destructive
@@ -44,22 +44,22 @@
 
 .card__archived {
   padding: 1px 6px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.66rem;
   font-weight: 400;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .card__subtitle {
   margin: 2px 0 0;
   font-size: 0.76rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .card__count {
   font-size: 0.76rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -71,15 +71,15 @@
   flex-wrap: wrap;
   gap: 6px;
   padding-top: 8px;
-  border-top: 1px solid var(--border, #1f4a47);
+  border-top: 1px solid var(--border);
 }
 
 .action {
   padding: 4px 9px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font: inherit;
   font-size: 0.76rem;
   cursor: pointer;
@@ -90,18 +90,18 @@
   }
 
   &:not(:disabled):hover {
-    border-color: var(--accent, #2dd4bf);
+    border-color: var(--accent);
   }
 }
 
 .action--current {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .action--archive:not(:disabled):hover {
-  border-color: var(--danger, #e0796a);
-  color: var(--danger, #e0796a);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* -------------------------------------------------------------- editor --- */
@@ -112,14 +112,14 @@
   align-items: center;
   gap: 8px;
   padding: 10px;
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
   border-radius: 8px;
-  background: var(--surface, #0f2124);
+  background: var(--surface);
 }
 
 .editor__label {
   font-size: 0.74rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Box, type and focus ring are the primitive's `input`; the flex is this row's. */
@@ -138,5 +138,5 @@
   margin: 0;
   font-size: 0.76rem;
   line-height: 1.6;
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
 }

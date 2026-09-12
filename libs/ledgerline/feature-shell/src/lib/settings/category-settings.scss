@@ -13,13 +13,13 @@
 .note {
   margin: 0 0 10px;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .none {
   margin: 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .block {
@@ -34,7 +34,7 @@
   margin: 0 0 6px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 /* ---------------------------------------------------- §5.4's overlap groups --- */
@@ -54,9 +54,9 @@
   align-items: baseline;
   gap: 8px;
   padding: 6px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   font-size: 0.74rem;
 }
 
@@ -68,11 +68,11 @@
 
 .group__name {
   font-family: var(--mono, ui-monospace, Menlo, monospace);
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .group__members {
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .group__member::after {
@@ -85,7 +85,7 @@
 
 .group__state {
   margin-left: auto;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* ------------------------------------------------------------ the taxonomy --- */
@@ -151,22 +151,22 @@
 .row__parent--fixed {
   padding: 3px 7px;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .row__usage {
   margin-left: auto;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
 }
 
 .row__source {
   padding: 1px 6px;
   border-radius: 999px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   font-size: 0.65rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Deliberately not the primitive's `.button`. One of these sits on every row of
@@ -178,10 +178,10 @@
 .confirm__cancel,
 .add__go {
   padding: 3px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
+  background: var(--surface-2);
+  color: var(--text);
   font: inherit;
   font-size: 0.72rem;
   cursor: pointer;
@@ -189,11 +189,11 @@
 
 .row__delete:hover:not(:disabled),
 .confirm__cancel:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .add__go {
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 .row__delete:disabled,
@@ -212,22 +212,22 @@
   gap: 8px;
   margin-top: 6px;
   padding: 8px 10px;
-  border: 1px solid var(--danger-soft, #eda596);
+  border: 1px solid var(--danger-soft);
   border-radius: 6px;
-  background: var(--surface-2, #143034);
+  background: var(--surface-2);
   font-size: 0.73rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .confirm__note {
   flex-basis: 100%;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .confirm__go {
-  border-color: var(--danger-soft, #eda596);
-  color: var(--danger-soft, #eda596);
+  border-color: var(--danger-soft);
+  color: var(--danger-soft);
 }
 
 /* ----------------------------------------------------------------- the add --- */

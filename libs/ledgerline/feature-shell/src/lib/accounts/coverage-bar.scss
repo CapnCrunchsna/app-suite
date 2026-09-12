@@ -29,7 +29,7 @@
 }
 
 .cell--covered {
-  background: var(--accent, #2dd4bf);
+  background: var(--accent);
 }
 
 /* Hatched rather than a third flat colour, so "partial" reads as incomplete at a
@@ -38,15 +38,15 @@
 .cell--partial {
   background: repeating-linear-gradient(
     45deg,
-    var(--accent, #2dd4bf) 0 2px,
+    var(--accent) 0 2px,
     transparent 2px 4px
   );
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
 }
 
 .cell--missing {
-  background: var(--surface-2, #143034);
-  border: 1px solid var(--border, #1f4a47);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
 }
 
 .bar__legend {
@@ -55,13 +55,13 @@
   gap: 5px;
   margin: 0;
   font-size: 0.7rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The strip's range, stated once instead of on every cell. */
 .bar__span {
   margin-right: 4px;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .swatch {
@@ -76,21 +76,21 @@
 }
 
 .swatch--covered {
-  background: var(--accent, #2dd4bf);
+  background: var(--accent);
 }
 
 .swatch--partial {
   background: repeating-linear-gradient(
     45deg,
-    var(--accent, #2dd4bf) 0 2px,
+    var(--accent) 0 2px,
     transparent 2px 4px
   );
-  border: 1px solid var(--accent, #2dd4bf);
+  border: 1px solid var(--accent);
 }
 
 .swatch--missing {
-  background: var(--surface-2, #143034);
-  border: 1px solid var(--border, #1f4a47);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
 }
 
 .bar__end {
@@ -100,12 +100,12 @@
 .bar__empty {
   margin: 0;
   font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .bar__warning {
   margin: 0;
   font-size: 0.74rem;
   line-height: 1.5;
-  color: var(--caution-soft, #d9b878);
+  color: var(--caution-soft);
 }

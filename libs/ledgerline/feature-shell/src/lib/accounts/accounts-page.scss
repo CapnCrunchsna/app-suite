@@ -26,11 +26,11 @@
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.6;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .queue-head__text strong {
-  color: var(--text, #dcefeb);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -43,7 +43,7 @@
   gap: 12px;
   margin-bottom: 12px;
   font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Closed, the create control is one more button on the toolbar row and sits at
@@ -64,7 +64,7 @@
 .toolbar__toggle {
   border: 0;
   background: transparent;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
   font: inherit;
   font-size: 0.78rem;
   cursor: pointer;
@@ -73,7 +73,7 @@
 
 .toolbar__status {
   margin-left: auto;
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 /* --------------------------------------------------------------- cards --- */

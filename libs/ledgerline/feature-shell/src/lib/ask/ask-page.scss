@@ -14,21 +14,21 @@
 .note {
   margin: 10px 0 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .note--bad {
-  color: var(--warn, #d9a441);
+  color: var(--warn);
 }
 
 .note a {
-  color: var(--accent, #2dd4bf);
+  color: var(--accent);
 }
 
 .disabled__body {
   margin: 0 0 12px;
   font-size: 0.8rem;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 .asker {
@@ -60,18 +60,18 @@
 
 .example {
   padding: 4px 10px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 999px;
   background: transparent;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font: inherit;
   font-size: 0.72rem;
   cursor: pointer;
 }
 
 .example:hover {
-  border-color: var(--accent, #2dd4bf);
-  color: var(--text, #dcefeb);
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 /* §6.7: the answer "names the query it ran". Above the prose and quieter than it —
@@ -79,14 +79,14 @@
 .ran {
   margin: 0 0 8px;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 .answer {
   margin: 0 0 12px;
   font-size: 0.86rem;
   line-height: 1.55;
-  color: var(--text, #dcefeb);
+  color: var(--text);
 }
 
 /* A withheld answer is a normal outcome, not a failure — amber rather than red,
@@ -95,7 +95,7 @@
 .withheld {
   margin: 0 0 12px;
   padding: 8px 10px;
-  border-left: 2px solid var(--warn, #d9a441);
+  border-left: 2px solid var(--warn);
   font-size: 0.76rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }

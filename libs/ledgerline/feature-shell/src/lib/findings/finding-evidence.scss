@@ -7,9 +7,9 @@
 
 .evidence {
   padding: 9px 11px;
-  border: 1px solid var(--border, #1f4a47);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--bg, #0a1517);
+  background: var(--bg);
 }
 
 .evidence__caption {
@@ -21,7 +21,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* The second caption sits under a block rather than at the top of one, so it
@@ -41,7 +41,7 @@
 .evidence__count--alone {
   margin: 0;
   font-size: 0.72rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
 }
 
 /* Two columns rather than a table: the rows are label/value pairs, and a <dl>
@@ -55,7 +55,7 @@
 }
 
 .evidence__label {
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   white-space: nowrap;
 }
 
@@ -65,11 +65,11 @@
 }
 
 .evidence__value--up {
-  color: var(--danger-soft, #eda596);
+  color: var(--danger-soft);
 }
 
 .evidence__value--down {
-  color: var(--accent-2, #34d399);
+  color: var(--accent-2);
 }
 
 /* §6.4's mini-table. Three columns: date, descriptor, money.
@@ -87,7 +87,7 @@
 .charges__row + .charges__row .charges__date,
 .charges__row + .charges__row .charges__desc,
 .charges__row + .charges__row .charges__amount {
-  border-top: 1px solid color-mix(in srgb, var(--border, #1f4a47) 55%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
 }
 
 .charges__date,
@@ -99,7 +99,7 @@
 
 .charges__date {
   width: 5.6rem;
-  color: var(--text-dim, #7ea8a1);
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
