@@ -48,6 +48,7 @@ import type { Settings } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
+import { humanise } from '../../labels';
 import {
   ALL_GROUPS,
   EDITABLE_GROUPS,
@@ -261,6 +262,8 @@ export class SettingsPage {
   }
 
   protected readonly money = formatCents;
+  /** Select options are stored as engine keys and shown as words. */
+  protected readonly humanise = humanise;
 }
 
 function readValue(settings: Settings, key: SettingKey): unknown {
