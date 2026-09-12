@@ -58,6 +58,7 @@ const ICONS = {
    * paper, and the ink square holds its shape against either.
    */
   'ledgerline-ui': {
+    label: 'Ledgerline',
     background: '#0b1220',
     radius: 12,
     /**
@@ -76,6 +77,45 @@ const ICONS = {
       { rect: [24, 15, 28, 7], fill: '#94a6c2' },
       { rect: [24, 28, 20, 7], fill: '#94a6c2' },
       { rect: [24, 41, 31, 7], fill: '#46d492' },
+    ],
+  },
+
+  /**
+   * Edgeline: one price standing out of a market.
+   *
+   * The product in a square. Two books quote a market, a consensus runs across
+   * them, and one price breaks through it — which is the whole of §6.4, and the
+   * only thing this app is for. Deliberately **vertical** where Ledgerline is
+   * horizontal: the two live a tab apart and must not read as the same mark at
+   * 16px, and orientation survives that size when detail does not.
+   *
+   * Colours are `EDGELINE_THEME.dark`: the night ground, the violet accent on
+   * the outlier, magenta `accent2` for the consensus rule. Dark half for the
+   * same reason as Ledgerline's — a favicon sits on browser chrome.
+   */
+  'edgeline-ui': {
+    label: 'Edgeline',
+    background: '#151320',
+    radius: 12,
+    /**
+     * Three bars at 11 units rather than four at 8. Ledgerline's note puts the
+     * floor at 7 units — 1.75px at 16 — and four bars would have sat just above
+     * it with the gaps below. Three at 11 (2.75px) leaves the outlier obvious at
+     * tab size, which is the only thing this mark has to do there.
+     *
+     * Drawing order is load-bearing: the rule goes down before the accent bar,
+     * so the bar covers it where they cross and reads as breaking *through*
+     * rather than being cut by it. The two dim bars stop short of the rule, so
+     * nothing else touches it.
+     */
+    bars: [
+      // Two books, quoting near each other.
+      { rect: [8, 31, 11, 21], fill: '#a29cba' },
+      { rect: [46, 34, 11, 18], fill: '#a29cba' },
+      // The consensus the other prices are measured against.
+      { rect: [8, 22, 49, 5], fill: '#f472b6' },
+      // The one that is wrong, which is the one worth betting.
+      { rect: [27, 10, 11, 42], fill: '#a78bfa' },
     ],
   },
 };
@@ -100,7 +140,7 @@ function toSvg(icon) {
     })
     .join('\n');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRID} ${GRID}" role="img" aria-label="Ledgerline">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRID} ${GRID}" role="img" aria-label="${icon.label}">
   <rect width="${GRID}" height="${GRID}" rx="${icon.radius}" fill="${icon.background}"/>
 ${bars}
 </svg>

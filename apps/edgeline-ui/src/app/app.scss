@@ -19,6 +19,16 @@
   cursor: pointer;
 }
 
+/* Sized in px rather than `em`. The mark is drawn for whole pixels — it is the
+ * same file the browser tab renders at 16 — and riding the font size would land
+ * its bars on fractional ones. */
+.header__mark {
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
 .header__brand:hover .header__name {
   text-decoration: underline;
 }
