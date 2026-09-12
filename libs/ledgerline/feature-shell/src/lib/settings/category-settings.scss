@@ -1,15 +1,13 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__lede` and the `input`/`select` styling come from
+ * `libs/shared/ui/styles/_primitives.scss`. The small controls in the taxonomy
+ * rows keep their own names and sizes — see the note above them. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.lede {
-  margin: 0 0 14px;
-  font-size: 0.78rem;
-  color: var(--text, #dcefeb);
 }
 
 .note {
@@ -119,6 +117,9 @@
   gap: 6px;
 }
 
+/* Box, type and focus ring are the primitive's `input`/`select`. What is left is
+ * how each one shares the row: `min-width: 0` so a long category name shrinks
+ * instead of pushing the delete button off the edge. */
 .row__name,
 .row__group,
 .row__kind,
@@ -127,13 +128,6 @@
 .add__kind,
 .add__parent,
 .confirm__target {
-  padding: 3px 7px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface, #0f2124);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.74rem;
   min-width: 0;
 }
 
@@ -152,13 +146,6 @@
 
 .row__group {
   width: 130px;
-}
-
-.row__name:focus,
-.row__group:focus,
-.add__name:focus {
-  outline: none;
-  border-color: var(--accent, #2dd4bf);
 }
 
 .row__parent--fixed {
@@ -182,6 +169,10 @@
   color: var(--text-dim, #7ea8a1);
 }
 
+/* Deliberately not the primitive's `.button`. One of these sits on every row of
+ * a taxonomy that is as long as the reader's category list, and a 0.88rem button
+ * with 7px of padding turns a scannable list into a column of controls. The
+ * page's own buttons — the ones outside the rows — are the primitive. */
 .row__delete,
 .confirm__go,
 .confirm__cancel,

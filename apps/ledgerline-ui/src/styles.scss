@@ -19,6 +19,100 @@
  * keep in step, which is the thing this whole change exists to remove.
  */
 
+/* The suite's layout primitives — `.page`, `.table`, `.button`, `.field` and the
+ * rest — resolved through `stylePreprocessorOptions.includePaths`. Global, so a
+ * page in `@metrum/ledgerline-feature-shell` gets them without importing
+ * anything; anything genuinely one page's problem stays in that page's `.scss`. */
+@use 'primitives';
+
+/* The one place Ledgerline's structure differs from the primitive's assumption.
+ *
+ * `.page__lede` is `margin: 0` because Edgeline's sits in `.page__head`, a flex
+ * row with its own `gap`. Ledgerline opens a `ui-panel` body with its lede
+ * instead, and a panel body is plain block flow — nothing supplies the rhythm,
+ * so the lede carries it. `:not(:last-child)` keeps the primitive's zero for a
+ * lede that ends its panel. One rule, standing in for the five different
+ * `.lede` definitions this replaced across nine files. */
+.page__lede:not(:last-child) {
+  margin-bottom: 12px;
+}
+
+/* …except where the lede is a direct child of `.page`, which brings its own
+ * `gap` exactly as the primitive assumes — a margin there would space it twice.
+ *
+ * The `flex` reset is the more important half. `.page__lede` is `flex: 1 1
+ * 340px`, which is a *width* in `.page__head`'s row and a 340px-tall block in
+ * the column `.page`. Ledgerline hit exactly that on the Review page; the lede
+ * belongs in a `.page__head`, and this keeps the mistake from being silent. */
+.page > .page__lede {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+/* The other place the two apps mean different things by one name.
+ *
+ * `.failure` in the primitives is a single red sentence, which is what Edgeline
+ * shows. Ledgerline's is a panel: the API's own message, the raw detail under it
+ * in monospace, and a retry button — four pages render that exact shape, and all
+ * four had it written out. It keeps the primitive's danger colour and adds the
+ * box, defined once here instead of four times.
+ *
+ * Worth settling properly at some point: the primitives make `.notice` a box and
+ * `.failure` a bare sentence, which is an odd pair for two rules that are
+ * otherwise siblings. Changing that is a decision for both apps, so it is not
+ * made here. */
+.failure {
+  padding: 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.failure__text {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+}
+
+.failure__detail {
+  margin: 0 0 12px;
+  color: var(--text-dim);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+/* Every `.notice` in this app is dismissible, which the primitive's block box
+ * has no opinion about: the text and the × share a line. Four pages had this
+ * same three-line row written out; the primitive still supplies the box. */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notice__text {
+  flex: 1 1 auto;
+}
+
+.notice__dismiss {
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notice__dismiss:hover {
+  color: var(--text);
+}
+
+/* The primitive's `.empty` is "nothing here yet", which is a quiet, ordinary
+ * state. This is its unhappy twin — the list failed to load — and it has to read
+ * differently from an empty one. Three pages had it. */
+.empty--bad {
+  color: var(--warn);
+}
+
 :root {
   color-scheme: dark;
 

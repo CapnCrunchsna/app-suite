@@ -122,16 +122,10 @@
   color: var(--text-dim, #7ea8a1);
 }
 
+/* Box, type and focus ring are the primitive's `input`; the flex is this row's. */
 .editor__input {
   flex: 1 1 180px;
   min-width: 0;
-  padding: 5px 8px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.8rem;
 }
 
 .editor--merge {

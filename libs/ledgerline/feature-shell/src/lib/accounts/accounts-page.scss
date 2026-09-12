@@ -1,5 +1,9 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.notice`, `.empty`, `.empty--bad` and `.button` come from
+ * `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`; so does the `.failure` panel. */
 
 :host {
   display: flex;
@@ -28,58 +32,6 @@
 .queue-head__text strong {
   color: var(--text, #dcefeb);
   font-variant-numeric: tabular-nums;
-}
-
-/* -------------------------------------------------------------- notice --- */
-
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--accent, #2dd4bf);
-  border-radius: var(--radius, 10px);
-  background: var(--surface-2, #143034);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.notice__text {
-  flex: 1 1 auto;
-}
-
-.notice__dismiss {
-  border: 0;
-  background: transparent;
-  color: var(--text-dim, #7ea8a1);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text, #dcefeb);
-  }
-}
-
-/* ------------------------------------------------------------- failure --- */
-
-.failure {
-  padding: 16px;
-  border: 1px solid var(--danger, #e0796a);
-  border-radius: var(--radius, 10px);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-
-.failure__text {
-  margin: 0 0 6px;
-  font-size: 0.88rem;
-}
-
-.failure__detail {
-  margin: 0 0 12px;
-  font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
-  font-family: ui-monospace, Consolas, monospace;
 }
 
 /* ------------------------------------------------------------- toolbar --- */
@@ -132,31 +84,9 @@
   gap: 12px;
 }
 
-.empty {
-  margin: 0;
-  padding: 8px 4px;
-  font-size: 0.86rem;
-  line-height: 1.6;
-  color: var(--text-dim, #7ea8a1);
-}
-
+/* The primitive's button, plus the one thing this page needs of it: these sit on
+ * the toolbar row beside the account count, and a wrapped label there breaks the
+ * row's alignment. */
 .button {
-  padding: 5px 10px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.8rem;
-  cursor: pointer;
   white-space: nowrap;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  &:not(:disabled):hover {
-    border-color: var(--accent, #2dd4bf);
-  }
 }

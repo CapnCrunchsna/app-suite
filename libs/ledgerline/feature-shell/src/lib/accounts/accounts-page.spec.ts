@@ -502,7 +502,7 @@ describe('AccountsPage', () => {
       api.links = [];
       const { el } = await render();
 
-      expect(el.querySelector('.queue__empty')?.textContent).toContain(
+      expect(el.querySelector('.empty')?.textContent).toContain(
         'keeps counting as spending until you confirm',
       );
     });

@@ -1,45 +1,18 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__lede` and `.button` come from
+ * `libs/shared/ui/styles/_primitives.scss`. */
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.lede {
-  margin: 0 0 10px;
-  font-size: 0.78rem;
-  color: var(--text, #dcefeb);
-}
-
 .note {
   margin: 0 0 12px;
   font-size: 0.72rem;
   color: var(--text-dim, #7ea8a1);
-}
-
-.button {
-  padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.button--primary {
-  border-color: var(--accent, #2dd4bf);
 }
 
 .progress {

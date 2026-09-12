@@ -34,20 +34,10 @@
   color: var(--text-dim);
 }
 
+/* Box, type and focus ring are the primitive's `input`/`select`; only the
+ * shrink-to-fit is this form's, so a long name cannot widen the row. */
 .new__input {
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9rem;
   min-width: 0;
-}
-
-.new__input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 .new__types {

@@ -1635,6 +1635,16 @@
             "title": "Closing Capture Offset S",
             "default": 300
           },
+          "closing_capture_mode": {
+            "type": "string",
+            "enum": [
+              "off",
+              "recommended",
+              "all"
+            ],
+            "title": "Closing Capture Mode",
+            "default": "off"
+          },
           "quota_monthly_budget": {
             "type": "integer",
             "title": "Quota Monthly Budget",
@@ -1767,6 +1777,27 @@
       },
       "SummaryBucket": {
         "properties": {
+          "clv_from_closing": {
+            "type": "integer",
+            "title": "Clv From Closing",
+            "default": 0
+          },
+          "clv_from_derived": {
+            "type": "integer",
+            "title": "Clv From Derived",
+            "default": 0
+          },
+          "avg_clv_pct_closing": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Clv Pct Closing"
+          },
           "key": {
             "type": "string",
             "title": "Key"
@@ -1866,6 +1897,27 @@
       },
       "SummaryTotals": {
         "properties": {
+          "clv_from_closing": {
+            "type": "integer",
+            "title": "Clv From Closing",
+            "default": 0
+          },
+          "clv_from_derived": {
+            "type": "integer",
+            "title": "Clv From Derived",
+            "default": 0
+          },
+          "avg_clv_pct_closing": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Clv Pct Closing"
+          },
           "graded": {
             "type": "integer",
             "title": "Graded"

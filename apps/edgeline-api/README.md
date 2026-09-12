@@ -136,6 +136,14 @@ Two consequences that are not obvious from §8.4:
   grade 15 seconds in, so restarting the worker five times costs 10 credits
   before anything is polled.
 
+**The enforcement is a pace guard, not the projection.** `_check_pace` in the adapter refuses a
+request locally — nothing sent — when `x-requests-used` is past `quota_monthly_budget`, or past
+`elapsed_month_fraction + 15%` of it. It compares two facts and models nothing, so it catches a
+job nobody modelled, a second worker, or someone looping `--once`. On the failure that prompted
+it — 80% of the budget gone with 30% of the month elapsed — it trips within the first hour. Free
+endpoints are never refused, and the worker arms the guard at startup with a free `/sports` call
+so its first *paid* request is already covered.
+
 `uv run python -m edgeline.scheduler --check-budget` prints the projection.
 Actual remaining credits only come from a response header — the dashboard at
 <https://dash.the-odds-api.com/> is where the balance and the monthly reset date
@@ -342,8 +350,17 @@ Three ways out, all of them the user's call under §16.2 — do not just lower a
 **Resolved by (1), and by two books that came with it.** `us2` also surfaced `betparx` and
 `ballybet`, both confirmed Maryland-legal by the user on 2026-09-09 and now seeded — which takes
 the books actually present in an MLB response from five to **seven**, clear of the threshold
-rather than exactly on it. The first cycle at that coverage produced **14 detections and 2
-recommendations**, the first time the system found anything.
+rather than exactly on it.
+
+**The detections that followed were not real, and this section said they were.** The first cycle
+at that coverage produced 14 detections and 2 recommendations, recorded here and in `d1b411e` as
+the first time the system found anything. It was not: **every one of the 27 opportunities ever
+stored was detected after its event had already started**, by 8 to 158 minutes (measured
+2026-09-11). They were dead pre-game lines books had not taken down — betPARX showing 7.5 on the
+Marlins 3h40m after first pitch, against a market of 1.80. `detect_opportunities` now refuses an
+event that has started, so the count above is the honest one: **this system has not yet detected
+a real edge.** It has not had the chance — no cycle has run against a live pre-game market with
+the current book coverage.
 
 Not every book in the feed made it. `hardrockbet` is confirmed **not** MD-legal (user, same day);
 `fliff` is a sweepstakes product, not a licensed sportsbook; and `bovada`, `lowvig`, `mybookieag`,

@@ -215,6 +215,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month |
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
+| `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option |
 | `quota_monthly_budget` | `500` | credits; raise when paid tier starts |
 
 ---
@@ -569,6 +570,25 @@ Base URL `https://api.the-odds-api.com/v4`. Auth: `apiKey` query param.
 
 The scheduler must refuse to start a cadence whose computed monthly cost exceeds
 `quota_monthly_budget`, and must log the computed figure at startup.
+
+**That projection is a floor, not a bill, and must not be trusted as one (added 2026-09-11).**
+It counts the featured poll only. Three jobs spend credits — the featured poll, the closing
+sweep (`markets × regions` per fetch) and grading (`/v4/scores` with `daysFrom`, 2 credits, once
+per run *and* once per worker start). On 2026-09-09 the projection read a comfortable 360/500
+while the real burn was roughly 6 credits a minute, and the month's allowance was gone in 66
+minutes.
+
+So the enforcement that matters is not the projection but a **pace guard at the provider seam**,
+which compares two facts and models nothing: `x-requests-used` as the provider last reported it,
+and how far through the calendar month we are. A request is refused locally — nothing sent —
+when spend is past `quota_monthly_budget`, or past `elapsed_fraction + 15%` of it. A rule that
+models no job cannot be wrong about a job it has never heard of, which is exactly how the
+projection failed. Free endpoints (`/sports`, `/events`) are never refused, and the worker arms
+the guard at startup with a free `/sports` call so its first *paid* request is already covered.
+
+Endpoint costs, since guessing at them has been expensive: `/sports` and `/events` are free;
+`/odds` is `markets × regions`; `/scores` is 1, or 2 with `daysFrom`; historical odds is
+**10 × markets × regions**.
 
 **`regions=us` does not cover the Maryland book list (measured 2026-09-09).** For
 `baseball_mlb` it returns 9 books, of which only **4** are MD-legal — `draftkings`, `fanduel`,

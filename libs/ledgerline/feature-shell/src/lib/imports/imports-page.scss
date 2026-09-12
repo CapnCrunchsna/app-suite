@@ -1,5 +1,9 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.notice`, `.button` and the `select` styling come from
+ * `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`; so does the `.failure` panel. */
 
 :host {
   display: flex;
@@ -8,74 +12,10 @@
   min-width: 0;
 }
 
-/* -------------------------------------------------------------- notice --- */
-
-.notice {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--accent, #2dd4bf);
-  border-radius: var(--radius, 10px);
-  background: var(--surface-2, #143034);
-  font-size: 0.85rem;
-}
-
+/* A committed import is the one notice that is good news rather than a state
+ * change, so it takes the positive edge instead of the primitive's accent. */
 .notice--good {
   border-color: var(--accent-2, #34d399);
-}
-
-.notice__text {
-  flex: 1 1 auto;
-}
-
-.notice__dismiss {
-  border: 0;
-  background: transparent;
-  color: var(--text-dim, #7ea8a1);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text, #dcefeb);
-  }
-}
-
-/* ------------------------------------------------------------- failure --- */
-
-.failure {
-  padding: 16px;
-  border: 1px solid var(--danger, #e0796a);
-  border-radius: var(--radius, 10px);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
-}
-
-.failure__text {
-  margin: 0 0 6px;
-  font-size: 0.88rem;
-}
-
-.failure__detail {
-  margin: 0 0 12px;
-  font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
-  font-family: ui-monospace, Consolas, monospace;
-}
-
-.button {
-  padding: 5px 10px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.8rem;
-  cursor: pointer;
-
-  &:hover {
-    border-color: var(--accent, #2dd4bf);
-  }
 }
 
 /* --------------------------------------------------------- review head --- */
@@ -183,16 +123,6 @@
   gap: 6px;
   font-size: 0.74rem;
   color: var(--text-dim, #7ea8a1);
-}
-
-.account__select {
-  padding: 4px 7px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 5px;
-  background: var(--bg, #0a1517);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.8rem;
 }
 
 .account__empty {

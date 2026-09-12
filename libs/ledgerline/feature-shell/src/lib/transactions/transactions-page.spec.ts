@@ -321,7 +321,7 @@ describe('TransactionsPage', () => {
   it('formats money from integer cents and never sends a formatted string back', async () => {
     const { el } = await render();
 
-    const amount = el.querySelector('.table__cell--amount:not(.table__sort)');
+    const amount = el.querySelector('.txns__cell--amount:not(.txns__sort)');
     expect(amount?.textContent?.trim()).toBe('-$18.75');
     // Nothing in the query carries a rendered amount.
     expect(JSON.stringify(api.queries)).not.toContain('$');
@@ -330,14 +330,14 @@ describe('TransactionsPage', () => {
   it('shows both the raw and the normalized descriptor', async () => {
     const { el } = await render();
 
-    expect(el.querySelector('.table__raw')?.textContent).toContain('SQ *BLUE BOTTLE COFFE');
-    expect(el.querySelector('.table__normalized')?.textContent).toContain('BLUE BOTTLE COFFE');
+    expect(el.querySelector('.txns__raw')?.textContent).toContain('SQ *BLUE BOTTLE COFFE');
+    expect(el.querySelector('.txns__normalized')?.textContent).toContain('BLUE BOTTLE COFFE');
   });
 
   it('marks a provisional merchant as one worth correcting', async () => {
     const { el } = await render();
 
-    expect(el.querySelector('.table__provisional')).not.toBeNull();
+    expect(el.querySelector('.txns__provisional')).not.toBeNull();
   });
 
   it('translates a typed amount filter into integer cents', async () => {
@@ -411,7 +411,7 @@ describe('TransactionsPage', () => {
   it('expands a row into the verbatim statement line', async () => {
     const { fixture, el } = await render();
 
-    (el.querySelector('.table__expand') as HTMLButtonElement).click();
+    (el.querySelector('.txns__expand') as HTMLButtonElement).click();
     await fixture.whenStable();
 
     expect(el.querySelector('.detail__raw')?.textContent).toContain(
@@ -427,7 +427,7 @@ describe('TransactionsPage', () => {
     api.coveringImports = [statementImport({ accountId: 'a1' })];
     const { fixture, el } = await render();
 
-    (el.querySelector('.table__expand') as HTMLButtonElement).click();
+    (el.querySelector('.txns__expand') as HTMLButtonElement).click();
     await fixture.whenStable();
 
     expect(el.querySelector('.detail__filename')?.textContent?.trim()).toBe('activity.csv');
@@ -441,13 +441,13 @@ describe('TransactionsPage', () => {
     // Asserting on the expanded row rather than on the loaded detail: the row
     // opens synchronously and the verbatim line arrives from a later fetch, and
     // what this behaviour changes is which clicks open the row.
-    const expanded = (el: HTMLElement) => el.querySelectorAll('.table__row--expanded').length;
+    const expanded = (el: HTMLElement) => el.querySelectorAll('.txns__row--expanded').length;
 
     it('expands from a click anywhere that is not a control', async () => {
       const { fixture, el } = await render();
 
       // The description cell does nothing of its own, so it belongs to the row.
-      (el.querySelector('.table__row .table__cell--desc') as HTMLElement).click();
+      (el.querySelector('.txns__row .txns__cell--desc') as HTMLElement).click();
       await fixture.whenStable();
 
       expect(expanded(el)).toBe(1);
@@ -455,7 +455,7 @@ describe('TransactionsPage', () => {
 
     it('collapses again on a second click', async () => {
       const { fixture, el } = await render();
-      const cell = () => el.querySelector('.table__row .table__cell--desc') as HTMLElement;
+      const cell = () => el.querySelector('.txns__row .txns__cell--desc') as HTMLElement;
 
       cell().click();
       await fixture.whenStable();
@@ -485,7 +485,7 @@ describe('TransactionsPage', () => {
     it('counts over the descriptor, everywhere, before offering anything', async () => {
       const { fixture, el } = await render();
 
-      (el.querySelector('.table__cell--merchant.table__editable') as HTMLButtonElement).click();
+      (el.querySelector('.txns__cell--merchant.txns__editable') as HTMLButtonElement).click();
       await fixture.whenStable();
 
       // The count is a statement about identity, so it spans every account and
@@ -501,7 +501,7 @@ describe('TransactionsPage', () => {
       api.matchCount = 47;
       const { fixture, el } = await render();
 
-      (el.querySelector('.table__cell--merchant.table__editable') as HTMLButtonElement).click();
+      (el.querySelector('.txns__cell--merchant.txns__editable') as HTMLButtonElement).click();
       await fixture.whenStable();
 
       const select = el.querySelector('.assign__select') as HTMLSelectElement;
@@ -518,7 +518,7 @@ describe('TransactionsPage', () => {
     it('applies over exactly the filter the count used', async () => {
       const { fixture, el } = await render();
 
-      (el.querySelector('.table__cell--merchant.table__editable') as HTMLButtonElement).click();
+      (el.querySelector('.txns__cell--merchant.txns__editable') as HTMLButtonElement).click();
       await fixture.whenStable();
 
       const select = el.querySelector('.assign__select') as HTMLSelectElement;
@@ -537,7 +537,7 @@ describe('TransactionsPage', () => {
     it('reports what the API said it changed, and the queued job', async () => {
       const { fixture, el } = await render();
 
-      (el.querySelector('.table__cell--merchant.table__editable') as HTMLButtonElement).click();
+      (el.querySelector('.txns__cell--merchant.txns__editable') as HTMLButtonElement).click();
       await fixture.whenStable();
 
       const select = el.querySelector('.assign__select') as HTMLSelectElement;
@@ -558,7 +558,7 @@ describe('TransactionsPage', () => {
     it('applies to one row without touching the bulk endpoint', async () => {
       const { fixture, el } = await render();
 
-      (el.querySelector('.table__cell--merchant.table__editable') as HTMLButtonElement).click();
+      (el.querySelector('.txns__cell--merchant.txns__editable') as HTMLButtonElement).click();
       await fixture.whenStable();
 
       const select = el.querySelector('.assign__select') as HTMLSelectElement;
@@ -598,10 +598,10 @@ describe('TransactionsPage', () => {
     it('assigns a category', async () => {
       const { fixture, el } = await render();
 
-      (el.querySelector('.table__cell--category.table__editable') as HTMLButtonElement).click();
+      (el.querySelector('.txns__cell--category.txns__editable') as HTMLButtonElement).click();
       await fixture.whenStable();
 
-      const select = el.querySelector('.table__select') as HTMLSelectElement;
+      const select = el.querySelector('.txns__select') as HTMLSelectElement;
       select.value = 'dining';
       select.dispatchEvent(new Event('change'));
       await fixture.whenStable();
@@ -708,7 +708,7 @@ describe('TransactionsPage', () => {
     api.rows = [];
     const { el } = await render();
 
-    expect(el.querySelector('.table__empty')?.textContent).toContain('Nothing matches');
+    expect(el.querySelector('.txns__empty')?.textContent).toContain('Nothing matches');
   });
 
   it('names the API and how to start it when it cannot be reached', async () => {
@@ -734,10 +734,10 @@ describe('TransactionsPage', () => {
     async function categorize(fixture: { whenStable(): Promise<unknown> }, el: HTMLElement) {
       // `button`, because the column header is a `span` carrying the same class and
       // `querySelector` would hand back the header.
-      (el.querySelector('button.table__cell--category') as HTMLButtonElement).click();
+      (el.querySelector('button.txns__cell--category') as HTMLButtonElement).click();
       await fixture.whenStable();
 
-      const select = el.querySelector('.table__select') as HTMLSelectElement;
+      const select = el.querySelector('.txns__select') as HTMLSelectElement;
       select.value = 'dining';
       select.dispatchEvent(new Event('change'));
       await fixture.whenStable();

@@ -1,35 +1,14 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page`, `.notice`, `.empty` and `.empty--bad` come from
+ * `libs/shared/ui/styles/_primitives.scss` and the app-wide additions in
+ * `apps/ledgerline-ui/src/styles.scss`. Nothing on this page is its own
+ * any more — the sections each bring their own stylesheet. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.notice {
-  margin: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 6px;
-  background: var(--surface-2, #143034);
-  font-size: 0.8rem;
-  color: var(--text, #dcefeb);
-}
-
-.empty {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-dim, #7ea8a1);
-}
-
-.empty--bad {
-  color: var(--warn, #f0b429);
 }
 
 /* `.pending` went with §6.8's last stated absence — Categories was built in §9ad and

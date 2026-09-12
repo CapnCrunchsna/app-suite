@@ -1,23 +1,14 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__title`, `.page__lede`, `.button`, `.table-wrap` and `.table` come from
+ * `libs/shared/ui/styles/_primitives.scss`. What is left here is the asking
+ * interaction, which no other page has. */
 
 :host {
   display: grid;
   gap: 16px;
   min-width: 0;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text, #dcefeb);
-}
-
-.lede {
-  margin: 0 0 12px;
-  font-size: 0.78rem;
-  color: var(--text-dim, #7ea8a1);
 }
 
 .note {
@@ -46,51 +37,18 @@
   flex-wrap: wrap;
 }
 
+/* Only the sizing: the border, padding and focus ring are the primitive's
+ * `input[type='text']`. `flex-basis` is what makes the question box take the row
+ * and the button sit beside it until there is no room for both. */
 .asker__input {
   flex: 1 1 20rem;
   min-width: 0;
-  padding: 7px 10px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface, #0f2124);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.82rem;
-}
-
-.asker__input:focus {
-  outline: none;
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button {
-  display: inline-block;
-  padding: 6px 14px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.8rem;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.button--primary {
-  border-color: var(--accent, #2dd4bf);
 }
 
 /* Examples, because "chat over the data" gives no clue what the data is. Buttons
- * rather than static text: reading one and retyping it is a pointless step. */
+ * rather than static text: reading one and retyping it is a pointless step.
+ * Pills, not `.button`s — they are suggestions to pick from, and six primitive
+ * buttons in a row would read as six actions. */
 .examples {
   margin: 14px 0 0;
   padding: 0;
@@ -140,38 +98,4 @@
   border-left: 2px solid var(--warn, #d9a441);
   font-size: 0.76rem;
   color: var(--text-dim, #7ea8a1);
-}
-
-.table-wrap {
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.76rem;
-}
-
-.table th {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border, #1f4a47);
-  text-align: left;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-dim, #7ea8a1);
-  white-space: nowrap;
-}
-
-.table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border, #1f4a47) 45%, transparent);
-  color: var(--text, #dcefeb);
-  overflow-wrap: anywhere;
-}
-
-.table__num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }

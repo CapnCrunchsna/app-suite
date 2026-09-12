@@ -8,6 +8,7 @@ it, and they were captured by the §8 recorder, not by this suite.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 import httpx
 import pytest
@@ -15,9 +16,11 @@ import respx
 
 from edgeline.providers.base import (
     ProviderAuthError,
+    ProviderBudgetExceeded,
     ProviderQuotaExhausted,
     ProviderRateLimited,
     ProviderUnavailable,
+    QuotaStatus,
 )
 from edgeline.providers.the_odds_api import TheOddsApiProvider
 
@@ -191,6 +194,134 @@ async def test_401_kills_the_cycle_immediately_with_a_clear_message():
     assert "API key invalid" in str(excinfo.value)
     assert "ODDS_API_KEY" in str(excinfo.value)
     assert odds_route().call_count == 1
+
+
+# ---- the pace guard (§8.4, §13) --------------------------------------------
+#
+# A local refusal, not a provider response. It compares `x-requests-used` against
+# where we are in the calendar month and models nothing about what a job ought to
+# cost — because the modelled projection covered one of three spending jobs and
+# read 360/500 while the real burn was ~6 credits a minute.
+
+
+def _at(day: int, hour: int = 12):
+    return lambda: datetime(2026, 9, day, hour, tzinfo=timezone.utc)
+
+
+def _armed(used: int, *, day: int, hour: int = 12, budget: int = 500):
+    """A provider that already knows what has been spent."""
+    p = provider(monthly_budget=budget, now=_at(day, hour))
+    p.quota = QuotaStatus(used=used, remaining=budget - used)
+    return p
+
+
+@respx.mock
+async def test_spending_ahead_of_the_calendar_is_refused_before_sending():
+    """The failure this exists for: on 9 September — 30% through the month —
+    roughly 400 of 500 credits were gone. Nothing noticed for another 19 hours."""
+    route = odds_route().mock(return_value=httpx.Response(200, json=[]))
+    p = _armed(400, day=9)
+    try:
+        with pytest.raises(ProviderBudgetExceeded) as excinfo:
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    message = str(excinfo.value)
+    assert "80%" in message  # spent
+    assert "27%" in message or "28%" in message  # elapsed, 9 days into September
+    assert "Nothing was sent" in message
+    assert route.call_count == 0, "the guard must refuse before the request goes out"
+
+
+@respx.mock
+async def test_spending_in_line_with_the_calendar_is_allowed():
+    odds_route().mock(return_value=httpx.Response(200, json=[]))
+    # Three quarters through the month, three quarters spent: exactly on pace.
+    p = _armed(375, day=23)
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+
+@respx.mock
+async def test_the_headroom_tolerates_a_lumpy_day():
+    """Real usage is not smooth, and a guard that fires on a busy Saturday would
+    be turned off. 10% over pace passes; the runaway above does not."""
+    odds_route().mock(return_value=httpx.Response(200, json=[]))
+    p = _armed(250, day=15)  # 50% spent, ~47% elapsed — inside 15% headroom
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+
+@respx.mock
+async def test_a_spent_budget_is_refused_whatever_the_date():
+    """Even on the last day of the month, past the budget is past the budget."""
+    route = odds_route().mock(return_value=httpx.Response(200, json=[]))
+    p = _armed(500, day=30, hour=23)
+    try:
+        with pytest.raises(ProviderBudgetExceeded):
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+    assert route.call_count == 0
+
+
+@respx.mock
+async def test_free_endpoints_are_never_refused():
+    """Refusing a free request buys nothing back, and would block the arming
+    call that teaches the guard what has been spent."""
+    sports = respx.route(method="GET", host=HOST, path="/v4/sports").mock(
+        return_value=httpx.Response(200, json=[], headers={"x-requests-used": "500"})
+    )
+    p = _armed(500, day=2)  # far over pace
+    try:
+        await p.list_sports()
+    finally:
+        await p.aclose()
+    assert sports.call_count == 1
+
+
+@respx.mock
+async def test_an_unarmed_guard_does_not_block_the_first_request():
+    """`x-requests-used` only arrives on a response, so a fresh process has no
+    number yet. It gets one request, then the guard has truth."""
+    odds_route().mock(return_value=httpx.Response(200, json=[]))
+    p = provider(monthly_budget=500, now=_at(2))  # quota.used is None
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+
+@respx.mock
+async def test_arming_costs_nothing_and_learns_the_number():
+    sports = respx.route(method="GET", host=HOST, path="/v4/sports").mock(
+        return_value=httpx.Response(
+            200, json=[], headers={"x-requests-used": "496", "x-requests-remaining": "4"}
+        )
+    )
+    p = provider(monthly_budget=500, now=_at(10))
+    try:
+        quota = await p.arm_budget_guard()
+    finally:
+        await p.aclose()
+
+    assert quota.used == 496
+    assert sports.call_count == 1
+
+
+def test_the_month_fraction_spans_the_whole_month():
+    from edgeline.providers.the_odds_api import _month_elapsed_fraction
+
+    assert _month_elapsed_fraction(datetime(2026, 9, 1, tzinfo=timezone.utc)) == 0.0
+    mid = _month_elapsed_fraction(datetime(2026, 9, 16, tzinfo=timezone.utc))
+    assert 0.49 < mid < 0.51
+    # December has to roll the year, not the month.
+    assert _month_elapsed_fraction(datetime(2026, 12, 1, tzinfo=timezone.utc)) == 0.0
 
 
 @respx.mock

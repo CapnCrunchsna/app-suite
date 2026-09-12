@@ -64,7 +64,12 @@ def expected_es_type(field: str) -> str:
     """§4.2's field-type conventions, applied to a field name."""
     if field in BLOB_FIELDS:
         return "blob"
-    if field.endswith("_cents") or field in COUNT_FIELDS:
+    # `_s` is seconds everywhere in §3.2 — `poll_interval_s`,
+    # `alert_cooldown_s`, `closing_capture_offset_s`. Those all live in the
+    # settings document, which is `dynamic: false` and has no properties, so
+    # `clv_staleness_s` (2026-09-11) is the first duration to reach a mapping.
+    # Stating the rule here means the next one does not have to rediscover it.
+    if field.endswith(("_cents", "_s")) or field in COUNT_FIELDS:
         return "long"
     if field.endswith("_at") or field in {"@timestamp", "commence_time"}:
         return "date"
@@ -228,10 +233,40 @@ def test_sportsbook_seed_records_the_confirmed_maryland_licensure():
         assert book["md_licensed"] is True, key
 
 
-def test_sportsbook_seed_still_guesses_no_deep_links():
-    """§16.3 — a URL schema may only be filled in from a verified event URL (T4.3)."""
+def test_sportsbook_seed_guesses_no_deep_link_schema():
+    """§16.3 — a URL *schema* may only come from a verified event URL (T4.3).
+
+    `book_home` is not a schema: it is one landing page, fetched and identified
+    on 2026-09-11, with no placeholders to get wrong. The rungs that would need
+    a schema stay empty, and that is what this pins — the ladder returning
+    "no link" for a market is correct; sending someone to the wrong market on a
+    real sportsbook with money in hand is the failure worth preventing.
+    """
     for key, book in SPORTSBOOK_SEEDS.items():
-        assert book["link_templates"] == {}, key
+        templates = book["link_templates"]
+        assert "event" not in templates, key
+        assert "betslip" not in templates, key
+        assert set(templates) <= {"book_home"}, key
+
+
+def test_every_seeded_home_link_is_a_plain_verified_url():
+    """A `book_home` with a placeholder in it would be a guessed schema wearing
+    the safe rung's name, and `.format()` would fill it silently."""
+    for key, book in SPORTSBOOK_SEEDS.items():
+        home = book["link_templates"].get("book_home")
+        if home is None:
+            continue
+        assert home.startswith("https://"), key
+        assert "{" not in home and "}" not in home, key
+
+
+def test_the_two_unverifiable_books_are_recorded_as_absent_not_guessed():
+    """§16.3 cuts the same way it did for `hardrockbet`: unreachable is not the
+    same as unknown-and-therefore-invented. `espnbet` did not resolve from this
+    machine and `bet365` answered Cloudflare's bot check, so both keep `{}`
+    until a person supplies the URL."""
+    for key in ("espnbet", "bet365"):
+        assert SPORTSBOOK_SEEDS[key]["link_templates"] == {}, key
 
 
 def test_licensed_does_not_mean_enabled():

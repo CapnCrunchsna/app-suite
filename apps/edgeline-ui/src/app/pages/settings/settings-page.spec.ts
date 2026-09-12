@@ -122,10 +122,12 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       const covered = ALL_GROUPS.flatMap((group) => group.fields.map((field) => field.key));
       expect(new Set(covered).size).toBe(covered.length);
       // The count is §3.2's, and moves when §3.2 does — 26 at Phase 3, plus
-      // `regions` on 2026-09-09 and `offline_mode` on 2026-09-10.
-      expect(covered).toHaveLength(28);
+      // `regions` on 2026-09-09, `offline_mode` on 2026-09-10 and
+      // `closing_capture_mode` on 2026-09-11.
+      expect(covered).toHaveLength(29);
       expect(covered).toContain('regions');
       expect(covered).toContain('offline_mode');
+      expect(covered).toContain('closing_capture_mode');
     });
 
     it('groups them the way §11.1 names them', () => {

@@ -16,12 +16,6 @@
   border-radius: 4px;
 }
 
-.lede {
-  margin: 0 0 10px;
-  font-size: 0.78rem;
-  color: var(--text, #dcefeb);
-}
-
 .note {
   margin: 10px 0;
   font-size: 0.72rem;
@@ -133,29 +127,7 @@ kbd {
   overflow-wrap: anywhere;
 }
 
-.button {
-  padding: 4px 10px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.74rem;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 /* "Nothing special" is the primary action, which looks wrong until you have used
  * the pass: it is the true answer for most rows, and the corpus is worthless
- * without those — a set of nothing but positives scores every rule perfectly. */
-.button--primary {
-  border-color: var(--accent, #2dd4bf);
-}
+ * without those — a set of nothing but positives scores every rule perfectly.
+ * The button itself is the primitive's `.button--primary`. */

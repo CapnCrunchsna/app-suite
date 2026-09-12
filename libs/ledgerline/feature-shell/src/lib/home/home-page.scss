@@ -1,17 +1,15 @@
 /* On the host app's custom properties, like every other page in this lib. No
  * palette here — which is now load-bearing rather than tidy: the app ships two
  * themes and four palettes, and a literal written here would survive all of
- * them. */
+ * them.
+ *
+ * `.page` and `.state` come from `libs/shared/ui/styles/_primitives.scss`. The
+ * headline, the card grid and the coverage list are §9u's and are not shared
+ * with anything. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
 }
 
 // ------------------------------------------------------------------ intro ---
@@ -205,12 +203,8 @@
 
 // ----------------------------------------------------------------- states ---
 
-.state {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-dim, #7ea8a1);
-}
-
+/* Amber rather than the primitive's dim: this is the one state on the page that
+ * means something went wrong rather than "nothing here yet". */
 .state--bad {
   color: var(--warn, #f0b429);
 }

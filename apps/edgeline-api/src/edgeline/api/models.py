@@ -138,7 +138,22 @@ class BankrollResponse(BaseModel):
     entries: list[LedgerEntry] = Field(default_factory=list)
 
 
-class SummaryBucket(BaseModel):
+class ClvProvenance(BaseModel):
+    """Where a scope's CLV figures came from (§12.4, §3.2 `closing_capture_mode`).
+
+    `avg_clv_pct` above may mix a bought closing price with one derived from the
+    last poll before kickoff, which can be twelve hours old. These make the mix
+    visible rather than leaving one number to stand for two measurements.
+    """
+
+    clv_from_closing: int = 0
+    clv_from_derived: int = 0
+    #: The average over bought closing lines alone. `None` when there are none —
+    #: which is the honest answer, not the mixed figure wearing a stronger label.
+    avg_clv_pct_closing: float | None = None
+
+
+class SummaryBucket(ClvProvenance):
     key: str
     graded: int
     pnl_cents: int
@@ -154,7 +169,7 @@ class SummaryBucket(BaseModel):
     needs_manual: int
 
 
-class SummaryTotals(BaseModel):
+class SummaryTotals(ClvProvenance):
     graded: int
     pnl_cents: int
     avg_clv_pct: float | None = None

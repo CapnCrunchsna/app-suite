@@ -1,15 +1,12 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__lede`, `.button` and the `input`/`select` styling come from
+ * `libs/shared/ui/styles/_primitives.scss`. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.lede {
-  margin: 0 0 14px;
-  font-size: 0.78rem;
-  color: var(--text, #dcefeb);
 }
 
 .note {
@@ -106,30 +103,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.button {
-  padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.button--primary {
-  border-color: var(--accent, #2dd4bf);
 }
 
 .provisional {
@@ -249,20 +222,19 @@
   flex: 1 1 13rem;
 }
 
+/* Compact against the primitive's `.field__label` on purpose: this editor opens
+ * inside a list row, and a full-size label stack would push the row it belongs
+ * to off the reader's screen. */
 .editor__label {
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-dim, #7ea8a1);
 }
 
+/* The box, the focus ring and the type are the primitive's `input`/`select`.
+ * `min-width: 0` is the flex fix it cannot supply: without it a `<select>` keeps
+ * its intrinsic width and pushes the row past the panel edge. */
 .editor__input {
-  padding: 4px 7px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 5px;
-  background: var(--surface, #121b2c);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.76rem;
   min-width: 0;
 }
 

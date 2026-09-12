@@ -184,6 +184,18 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
     plan = check_budget(settings)
     scheduler = AsyncIOScheduler(timezone="UTC")
 
+    def _refresh_budget(current: Settings) -> None:
+        """Keep the provider's pace guard on the current §3.2 budget.
+
+        Set on the provider rather than passed per call, so it covers every
+        caller including ones added later — the same reasoning that made
+        `offline_mode`'s per-caller guarding fail on `grading.grade`.
+        """
+        if hasattr(provider, "monthly_budget"):
+            provider.monthly_budget = current.quota_monthly_budget
+
+    _refresh_budget(settings)
+
     async def _poll(sport_key: str) -> None:
         try:
             report = await run_once(
@@ -220,6 +232,7 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         # for polling; the due check inside `capture_closing_lines` fails closed
         # in that case anyway, so no request goes out on a sick datastore.
         current = await load_settings(client, prefix=prefix)
+        _refresh_budget(current)
         for sport_key in current.sports_enabled:
             try:
                 await capture_closing_lines(
@@ -323,6 +336,17 @@ async def _run() -> int:
     try:
         await ensure_indices(client)
         settings = await load_settings(client, prefix="edgeline-")
+
+        if not settings.offline_mode and hasattr(provider, "arm_budget_guard"):
+            # Free `/sports` call: teaches the pace guard what has already been
+            # spent, so the first *paid* request of this process is guarded
+            # rather than the second.
+            quota = await provider.arm_budget_guard()
+            log.info(
+                "budget guard armed: %s of %s credits used this month",
+                quota.used,
+                settings.quota_monthly_budget,
+            )
 
         scheduler = build_scheduler(provider, client, settings)
         scheduler.start()

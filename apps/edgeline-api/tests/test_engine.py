@@ -136,6 +136,39 @@ def test_the_arb_marks_the_stale_leg_to_bet_first():
 # ---- the gates that keep detection honest ----------------------------------
 
 
+def test_an_event_that_has_already_started_yields_nothing():
+    """§7.4 expired these *after* they were stored, alerted and staked, so the
+    gate tidied up rather than prevented.
+
+    Measured 2026-09-11 against the live index: all 27 stored opportunities were
+    detected after kickoff, by 8 to 158 minutes — including the 10.71% arb and
+    23.56% EV recorded as this system's first real finds. A book that leaves a
+    pre-game line up after first pitch is not a slow market, and §16's premise is
+    a bet a person can still place.
+    """
+    payload = [{**EVENT_HEADER, "commence_time": _hours_from_now(-1)}]
+    payload[0]["bookmakers"] = doctored_payload()[0]["bookmakers"]
+
+    assert detect_opportunities(normalize(PROVIDER, payload), settings()) == []
+
+    # The identical market an hour *before* kickoff still finds both edges, so
+    # this pins the clock rather than quietly breaking detection.
+    upcoming = [{**EVENT_HEADER, "commence_time": _hours_from_now(1)}]
+    upcoming[0]["bookmakers"] = doctored_payload()[0]["bookmakers"]
+    assert len(detect_opportunities(normalize(PROVIDER, upcoming), settings())) == 2
+
+
+def test_an_event_starting_this_instant_is_already_too_late():
+    """The boundary is inclusive: first pitch means the price is gone."""
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = [{**EVENT_HEADER, "commence_time": now}]
+    payload[0]["bookmakers"] = doctored_payload()[0]["bookmakers"]
+
+    assert detect_opportunities(
+        normalize(PROVIDER, payload), settings(), now_iso=now
+    ) == []
+
+
 def test_a_book_is_never_priced_against_its_own_number():
     """§6.4's consensus comes from the *other* books, so a lone book cannot
     manufacture an edge against itself."""
@@ -254,11 +287,29 @@ def test_spreads_detection_keeps_each_sides_signed_line():
 # ---- the recorded fixture --------------------------------------------------
 
 
+def before_first_pitch(payload) -> str:
+    """A clock an hour before the fixture's earliest event.
+
+    The fixture was recorded on 2026-09-04, so by wall-clock time every event in
+    it has finished — and detection now skips an event that has started. Without
+    an anchored clock these replays quietly find nothing and their assertions
+    pass over an empty list, which is worse than failing.
+    """
+    earliest = min(event["commence_time"] for event in payload)
+    return (
+        datetime.strptime(earliest, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        - timedelta(hours=1)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def test_recorded_fixture_replays_without_incident(mlb_odds_payload):
     """Real market data: 16 events, 9 books, three markets."""
     snapshots = normalize(PROVIDER, mlb_odds_payload)
-    found = detect_opportunities(snapshots, settings())
+    found = detect_opportunities(
+        snapshots, settings(), now_iso=before_first_pitch(mlb_odds_payload)
+    )
 
+    assert found, "an empty replay would make every assertion below vacuous"
     for detection in found:
         assert detection.type in (TYPE_EV, TYPE_ARB)
         assert detection.legs
@@ -279,7 +330,12 @@ def test_detection_documents_fit_the_strict_mapping(mlb_odds_payload):
     allowed = set(INDEX_MAPPINGS[OPPORTUNITIES_INDEX]["properties"])
     leg_fields = set(INDEX_MAPPINGS[OPPORTUNITIES_INDEX]["properties"]["legs"]["properties"])
 
-    documents = [d.to_document() for d in detect_opportunities(snapshots, settings())]
+    documents = [
+        d.to_document()
+        for d in detect_opportunities(
+            snapshots, settings(), now_iso=before_first_pitch(mlb_odds_payload)
+        )
+    ]
     assert documents  # the fixture does produce detections
     for document in documents:
         assert set(document) <= allowed
@@ -590,17 +646,27 @@ async def test_an_opportunity_whose_event_has_started_expires_rather_than_closes
 
     client = AsyncElasticsearch(hosts=[es_url])
     prefix = test_index_prefix
-    past = "2020-01-01T00:00:00Z"
+    # Detected before first pitch, reconciled after it — the only sequence that
+    # can produce an expiry now that detection refuses a started event. Both
+    # cycles get an explicit clock so the two hours pass instantly.
+    kickoff = "2026-09-04T18:00:00Z"
+    before = "2026-09-04T17:00:00Z"
+    after = "2026-09-04T19:00:00Z"
     try:
         await _fresh_cluster(client, prefix)
         payload = doctored_payload()
-        payload[0]["commence_time"] = past
+        payload[0]["commence_time"] = kickoff
         provider = _FixtureProvider(payload)
 
-        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        first = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, now_iso=before
+        )
+        assert len(first.detections) == 2, "nothing to expire unless this found them"
 
-        provider.payload = fair_only_payload(past)
-        second = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        provider.payload = fair_only_payload(kickoff)
+        second = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, now_iso=after
+        )
 
         assert len(second.expired) == 2
         assert second.closed == []
@@ -856,7 +922,7 @@ async def test_a_sweep_with_no_event_in_the_window_never_pays_the_provider(
 
         captured = await capture_closing_lines(
             provider, client, sport_key="baseball_mlb",
-            settings=settings(), prefix=prefix, now=now,
+            settings=settings(closing_capture_mode="all"), prefix=prefix, now=now,
         )
 
         assert captured == []
@@ -888,7 +954,7 @@ async def test_a_sweep_pays_once_for_an_event_inside_the_window(
 
         captured = await capture_closing_lines(
             provider, client, sport_key="baseball_mlb",
-            settings=settings(), prefix=prefix, now=now,
+            settings=settings(closing_capture_mode="all"), prefix=prefix, now=now,
         )
 
         assert len(captured) == 1
@@ -901,10 +967,83 @@ async def test_a_sweep_pays_once_for_an_event_inside_the_window(
         provider.calls.clear()
         again = await capture_closing_lines(
             provider, client, sport_key="baseball_mlb",
-            settings=settings(), prefix=prefix, now=now,
+            settings=settings(closing_capture_mode="all"), prefix=prefix, now=now,
         )
         assert again == []
         assert provider.calls == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_the_default_mode_buys_no_closing_lines_at_all(es_url, test_index_prefix):
+    """`closing_capture_mode="off"` is §3.2's default, and the only value that
+    cannot overspend. Buying one for every event measured at 1,188 credits a
+    month against a budget of 500 — CLV derives from the last stored poll
+    instead, which was already paid for."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    try:
+        await _fresh_cluster(client, prefix)
+        # Squarely inside the window: only the mode can stop this.
+        provider = _FixtureProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(), prefix=prefix, now=now,
+        )
+
+        assert captured == []
+        assert provider.calls == []
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_recommended_mode_skips_an_event_nobody_bet(es_url, test_index_prefix):
+    """The whole saving: an event with no alerted opportunity has no CLV to
+    compute, so there is nothing worth buying a closing line for."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    try:
+        await _fresh_cluster(client, prefix)
+        # `fair_only_payload` produces no detections, so nothing is ever alerted.
+        provider = _FixtureProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(closing_capture_mode="recommended"),
+            prefix=prefix, now=now,
+        )
+
+        assert captured == []
+        assert provider.calls == [], "no recommendation means no reason to spend"
+
+        # And `all` would have bought one for the same event, which is the
+        # difference the setting exists to express.
+        spent = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(closing_capture_mode="all"),
+            prefix=prefix, now=now,
+        )
+        assert len(spent) == 1
+        assert len(provider.calls) == 1
     finally:
         await client.close()
 
@@ -962,7 +1101,8 @@ async def test_offline_mode_also_stops_the_closing_sweep(es_url, test_index_pref
 
         captured = await capture_closing_lines(
             provider, client, sport_key="baseball_mlb",
-            settings=settings(offline_mode=True), prefix=prefix, now=now,
+            settings=settings(offline_mode=True, closing_capture_mode="all"),
+            prefix=prefix, now=now,
         )
 
         assert captured == []
@@ -988,7 +1128,8 @@ async def test_a_sweep_whose_datastore_is_unreadable_skips_rather_than_fetches(
         provider = _FixtureProvider(fair_only_payload())
 
         captured = await capture_closing_lines(
-            provider, client, sport_key="baseball_mlb", settings=settings(),
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(closing_capture_mode="all"),
             # No index by this name, so the due check raises and answers "not due".
             prefix="edgeline-absent-",
         )

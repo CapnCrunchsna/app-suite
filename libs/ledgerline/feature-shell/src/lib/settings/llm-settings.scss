@@ -1,15 +1,12 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__lede`, `.button` and the `input` styling come from
+ * `libs/shared/ui/styles/_primitives.scss`. */
 
 :host {
   display: block;
   min-width: 0;
-}
-
-.lede {
-  margin: 0 0 14px;
-  font-size: 0.78rem;
-  color: var(--text, #dcefeb);
 }
 
 .note {
@@ -117,16 +114,6 @@
   color: var(--text-dim, #7ea8a1);
 }
 
-.model__input {
-  padding: 5px 8px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface, #0f2124);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-}
-
 .model__note {
   font-size: 0.7rem;
   color: var(--text-dim, #7ea8a1);
@@ -137,30 +124,6 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
-}
-
-.button {
-  padding: 5px 12px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent, #2dd4bf);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.button--primary {
-  border-color: var(--accent, #2dd4bf);
 }
 
 .test {

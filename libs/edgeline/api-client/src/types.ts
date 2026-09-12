@@ -173,6 +173,7 @@ export interface Settings {
   poll_interval_dev_s?: number;
   props_poll_interval_s?: number;
   closing_capture_offset_s?: number;
+  closing_capture_mode?: "off" | "recommended" | "all";
   quota_monthly_budget?: number;
 }
 
@@ -195,6 +196,9 @@ export interface SportsbookRow {
 }
 
 export interface SummaryBucket {
+  clv_from_closing?: number;
+  clv_from_derived?: number;
+  avg_clv_pct_closing?: number | null;
   key: string;
   graded: number;
   pnl_cents: number;
@@ -215,6 +219,9 @@ export interface SummaryResponse {
 }
 
 export interface SummaryTotals {
+  clv_from_closing?: number;
+  clv_from_derived?: number;
+  avg_clv_pct_closing?: number | null;
   graded: number;
   pnl_cents: number;
   avg_clv_pct?: number | null;

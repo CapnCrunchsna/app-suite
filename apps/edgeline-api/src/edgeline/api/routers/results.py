@@ -9,6 +9,14 @@ ratio of two aggregation outputs rather than a recomputation of the rows.
 P&L is hypothetical, but CLV compares the price alerted at against where the
 market closed — it is the one figure that says whether the detector is finding
 real edges or noise, and §15's Phase 4 go-live gate rests on it.
+
+**Which is why the average is reported with its provenance.** Since 2026-09-11 a
+result's `clv_pct` may be measured against a bought closing snapshot or derived
+from the last price stored before kickoff, which at the dev cadence can be twelve
+hours old (§3.2 `closing_capture_mode`). Those are two different measurements.
+Averaging them into one number and printing it beside a go-live gate would be the
+strongest claim this system makes, resting on its weakest data — so the counts
+travel with the figure and the page is expected to show them.
 """
 
 from __future__ import annotations
@@ -47,6 +55,11 @@ async def summary(
                 "aggs": {
                     "pnl_cents": {"sum": {"field": "pnl_cents"}},
                     "avg_clv_pct": {"avg": {"field": "clv_pct"}},
+                    "clv_closing": {
+                        "filter": {"term": {"clv_source": "closing"}},
+                        "aggs": {"avg_clv_pct": {"avg": {"field": "clv_pct"}}},
+                    },
+                    "clv_derived": {"filter": {"term": {"clv_source": "derived"}}},
                     "wins": {"filter": {"term": {"outcome": "win"}}},
                     "settled": {"filter": {"terms": {"outcome": ["win", "loss"]}}},
                     "executed": {
@@ -61,6 +74,11 @@ async def summary(
                 "aggs": {
                     "pnl_cents": {"sum": {"field": "pnl_cents"}},
                     "avg_clv_pct": {"avg": {"field": "clv_pct"}},
+                    "clv_closing": {
+                        "filter": {"term": {"clv_source": "closing"}},
+                        "aggs": {"avg_clv_pct": {"avg": {"field": "clv_pct"}}},
+                    },
+                    "clv_derived": {"filter": {"term": {"clv_source": "derived"}}},
                     "wins": {"filter": {"term": {"outcome": "win"}}},
                     "settled": {"filter": {"terms": {"outcome": ["win", "loss"]}}},
                 },
@@ -90,6 +108,7 @@ def _bucket(bucket: dict[str, Any]) -> dict[str, Any]:
         "graded": bucket["doc_count"],
         "pnl_cents": int(bucket["pnl_cents"]["value"] or 0),
         "avg_clv_pct": bucket["avg_clv_pct"]["value"],
+        **_clv_provenance(bucket),
         "wins": wins,
         "settled": settled,
         "hit_rate": _hit_rate(wins, settled),
@@ -100,16 +119,43 @@ def _bucket(bucket: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _clv_provenance(scope: dict[str, Any]) -> dict[str, Any]:
+    """How many of the CLV figures in this scope came from a bought closing line.
+
+    Reported rather than folded in, because `avg_clv_pct` over a mix is one
+    number standing for two measurements. A reader who cannot see the split
+    cannot tell a result carried by real closing prices from one carried by
+    prices up to twelve hours old.
+    """
+    closing = scope["clv_closing"]
+    return {
+        "clv_from_closing": closing["doc_count"],
+        "clv_from_derived": scope["clv_derived"]["doc_count"],
+        # The same average over the strong evidence alone. `None` when there is
+        # none, which is the honest answer rather than the mixed figure.
+        "avg_clv_pct_closing": closing["avg_clv_pct"]["value"],
+    }
+
+
 def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
     totals = aggregations.get("totals")
     if not totals:
-        return {"graded": 0, "pnl_cents": 0, "avg_clv_pct": None, "hit_rate": None}
+        return {
+            "graded": 0,
+            "pnl_cents": 0,
+            "avg_clv_pct": None,
+            "hit_rate": None,
+            "clv_from_closing": 0,
+            "clv_from_derived": 0,
+            "avg_clv_pct_closing": None,
+        }
     wins = totals["wins"]["doc_count"]
     settled = totals["settled"]["doc_count"]
     return {
         "graded": totals["doc_count"],
         "pnl_cents": int(totals["pnl_cents"]["value"] or 0),
         "avg_clv_pct": totals["avg_clv_pct"]["value"],
+        **_clv_provenance(totals),
         "wins": wins,
         "settled": settled,
         "hit_rate": _hit_rate(wins, settled),

@@ -1,12 +1,15 @@
 /* Dark-first, per §6, on the host app's custom properties. This lib ships no
- * palette — same rule as @metrum/ui. */
+ * palette — same rule as @metrum/ui.
+ *
+ * `.page__lede` and the `input` styling come from
+ * `libs/shared/ui/styles/_primitives.scss`. `.field` here is deliberately not
+ * the primitive's — see the note above it. */
 
 :host {
   display: block;
   min-width: 0;
 }
 
-.lede,
 .none {
   margin: 0 0 12px;
   font-size: 0.8rem;
@@ -15,7 +18,7 @@
 
 /* Where the evidence for a change comes from. Links rather than prose alone,
  * because the point of the sentence is that both halves are somewhere else. */
-.lede--where a {
+.page__lede--where a {
   color: var(--accent, #2dd4bf);
   text-decoration: none;
 
@@ -116,6 +119,11 @@
   margin-top: 12px;
 }
 
+/* Not the primitive's `.field`, which stacks a label over its input. There are
+ * roughly ninety thresholds on this page and stacking them would double its
+ * height; here the name and the number box share a row, which is why this is a
+ * grid rather than a column. `.field__name` and `.field__hint` below belong to
+ * that grid for the same reason. */
 .field {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -129,22 +137,12 @@
   overflow-wrap: anywhere;
 }
 
+/* Box, type and focus ring are the primitive's `input[type='number']`. The width
+ * and the alignment are this page's: ninety thresholds read as a column of
+ * numbers only if they are the same width and right-aligned. */
 .field__input {
   width: 92px;
-  padding: 3px 6px;
-  border: 1px solid var(--border, #1f4a47);
-  border-radius: 4px;
-  background: var(--surface-2, #143034);
-  color: var(--text, #dcefeb);
-  font: inherit;
-  font-size: 0.76rem;
   text-align: right;
-}
-
-.field__input:focus-visible,
-.field__check:focus-visible {
-  outline: 2px solid var(--accent, #2dd4bf);
-  outline-offset: 1px;
 }
 
 /* A tuned threshold is marked, because §7.6's whole point is that the defaults are

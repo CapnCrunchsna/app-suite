@@ -36,6 +36,7 @@ from ..config import PROJECT_ROOT, get_secrets
 from ..schemas import utc_now_iso
 from .base import (
     ProviderAuthError,
+    ProviderBudgetExceeded,
     ProviderError,
     ProviderQuotaExhausted,
     ProviderRateLimited,
@@ -47,7 +48,31 @@ from .base import (
 
 log = logging.getLogger(__name__)
 
+
+def _month_elapsed_fraction(now: datetime) -> float:
+    """How far through the calendar month we are, in [0, 1].
+
+    The Odds API resets the allowance at the start of the month (verified by the
+    user, 2026-09-10), so the month boundary is the right denominator.
+    """
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if start.month == 12:
+        nxt = start.replace(year=start.year + 1, month=1)
+    else:
+        nxt = start.replace(month=start.month + 1)
+    return (now - start).total_seconds() / (nxt - start).total_seconds()
+
 BASE_URL = "https://api.the-odds-api.com/v4"
+#: How far ahead of the calendar the spend may run before requests are refused.
+#: Not zero, because real usage is lumpy — a busy Saturday is not a runaway. 15%
+#: of a 500-credit month is 75 credits of slack, which covers a heavy day and
+#: still catches the failure that prompted this: 80% of the budget gone with 30%
+#: of the month elapsed would have tripped it inside the first hour.
+DEFAULT_PACE_HEADROOM = 0.15
+#: Endpoints The Odds API documents as costing nothing. The pace guard must
+#: never refuse one: refusing a free request buys no credits back and would
+#: block `arm_budget_guard`, which is how the guard learns what has been spent.
+FREE_PATH_SUFFIXES = ("/sports", "/events")
 ODDS_FORMAT = "decimal"  # §8 — never change this without re-reading §1
 DEFAULT_REGIONS = "us"
 TIMEOUT_S = 15.0
@@ -75,6 +100,9 @@ class TheOddsApiProvider:
         record_fixtures: bool | None = None,
         fixture_dir: Path | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        monthly_budget: int | None = None,
+        pace_headroom: float = DEFAULT_PACE_HEADROOM,
+        now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     ) -> None:
         self._api_key = api_key
         self.base_url = base_url.rstrip("/")
@@ -90,11 +118,35 @@ class TheOddsApiProvider:
         self._sleep = sleep
         #: Whatever the last response's headers reported (§8).
         self.quota = QuotaStatus()
+        #: `quota_monthly_budget` (§3.2). `None` disables the pace guard, which
+        #: is what tests and the fixture recorder want. The scheduler refreshes
+        #: it from settings each tick, so changing it in the UI takes effect
+        #: without a restart.
+        self.monthly_budget = monthly_budget
+        self.pace_headroom = pace_headroom
+        self._now = now
 
     # ---- §8 endpoint table -------------------------------------------------
 
     async def list_sports(self) -> ProviderResponse:
         return await self._request("sports", "/sports", {})
+
+    async def arm_budget_guard(self) -> QuotaStatus:
+        """Learn what has been spent, for free, before spending anything.
+
+        `_check_pace` needs `x-requests-used`, which only arrives on a response —
+        so a freshly started process would get one unguarded paid request, and a
+        process that restarts often would get one each time. `/sports` costs
+        nothing and returns the quota headers, so this buys the guard its
+        starting number at no cost. Failures are swallowed: an unarmed guard is
+        the behaviour we already had, and refusing to start the worker because a
+        courtesy call failed would be worse than the problem.
+        """
+        try:
+            await self.list_sports()
+        except Exception:
+            log.warning("could not arm the budget guard; first request is unguarded")
+        return self.quota
 
     async def fetch_odds(
         self,
@@ -161,6 +213,7 @@ class TheOddsApiProvider:
         *,
         sport_key: str | None = None,
     ) -> ProviderResponse:
+        self._check_pace(path)
         url = f"{self.base_url}{path}"
         query = {"apiKey": self._resolve_key(), **params}
         backoff = self.initial_backoff_s
@@ -224,6 +277,45 @@ class TheOddsApiProvider:
 
         # Unreachable: the loop either returns or raises on its final attempt.
         raise ProviderError(f"The Odds API {path} exhausted attempts without a verdict")
+
+    def _check_pace(self, path: str) -> None:
+        """Refuse a request that would spend past this month's own pace.
+
+        Two facts, no model: `x-requests-used` as the provider last reported it,
+        and where we are in the calendar month. If a third of the month has gone
+        and four fifths of the allowance is spent, something is wrong — and this
+        says so without needing to know *what*, which is the whole point. The
+        §13 projection is a model; it knew about one of the three jobs that
+        spend, and read 360/500 while the real burn was ~6 credits a minute.
+
+        `None` budget disables it, and `quota.used` is `None` until a response
+        has been seen — so a fresh process gets one unguarded request. Call the
+        free `/sports` endpoint first to arm it (see `arm_budget_guard`).
+        """
+        budget = self.monthly_budget
+        used = self.quota.used
+        if not budget or used is None:
+            return
+        if path.endswith(FREE_PATH_SUFFIXES):
+            return
+
+        if used >= budget:
+            raise ProviderBudgetExceeded(
+                f"refusing {path}: {used} of {budget} monthly credits already "
+                f"spent. Nothing was sent. Raise `quota_monthly_budget` (T4.1) "
+                f"or set `offline_mode` to keep working without the provider."
+            )
+
+        elapsed = _month_elapsed_fraction(self._now())
+        allowed = budget * min(1.0, elapsed + self.pace_headroom)
+        if used > allowed:
+            raise ProviderBudgetExceeded(
+                f"refusing {path}: {used} of {budget} monthly credits spent "
+                f"({used / budget:.0%}) but only {elapsed:.0%} of the month has "
+                f"elapsed, which is past the {self.pace_headroom:.0%} headroom. "
+                f"Nothing was sent. Something is spending faster than the month "
+                f"can pay for — check what, rather than raising the budget."
+            )
 
     @staticmethod
     def _explain_401(path: str, response: httpx.Response) -> ProviderError:
