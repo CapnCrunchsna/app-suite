@@ -22,9 +22,10 @@ import logging
 import signal
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from .config import Settings
-from .indices import SETTINGS_INDEX, with_prefix
+from .indices import PROVIDERS_INDEX, SETTINGS_INDEX, with_prefix
 from .schemas import utc_now_iso
 
 log = logging.getLogger(__name__)
@@ -137,6 +138,35 @@ async def record_run(client, *, prefix: str, job: str) -> None:
     )
 
 
+async def record_quota(client, provider_key: str, quota, *, prefix: str) -> None:
+    """Persist what the provider's headers last reported (§8, §10).
+
+    **Nothing wrote this until 2026-09-13**, so `edgeline-providers` kept a null
+    `quota_used` forever and the dashboard rendered it as `0 / 500` — on a budget
+    where the whole allowance is 500 and a guard refuses requests near it. A
+    credit meter stuck at zero is worse than no meter: it reads as headroom.
+
+    The pace guard was never affected; it compares `x-requests-used` in memory on
+    the adapter and models nothing. This is the display catching up with what the
+    adapter already knew.
+
+    Failures are swallowed. This is a readout, and losing a cycle's worth of
+    detection because a cosmetic write failed would be the wrong trade.
+    """
+    if quota is None or quota.used is None:
+        return
+    doc: dict[str, Any] = {"quota_used": quota.used}
+    try:
+        await client.update(
+            index=with_prefix(PROVIDERS_INDEX, prefix),
+            id=provider_key,
+            doc=doc,
+            refresh=False,
+        )
+    except Exception:
+        log.debug("could not record quota for %s", provider_key, exc_info=True)
+
+
 async def poll_is_due(client, *, prefix: str, interval_s: int) -> bool:
     """True when no poll has landed inside the last ``interval_s`` seconds.
 
@@ -161,8 +191,6 @@ async def poll_is_due(client, *, prefix: str, interval_s: int) -> bool:
 
 async def reset_quota(client, *, prefix: str) -> None:
     """§13's monthly job: zero `quota_used` on every provider."""
-    from .indices import PROVIDERS_INDEX
-
     try:
         await client.update_by_query(
             index=with_prefix(PROVIDERS_INDEX, prefix),
@@ -212,12 +240,18 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
                 log.info("poll %s: skipped, offline_mode is on", sport_key)
                 return
             await record_run(client, prefix=prefix, job="poll")
+            # Right after the stamp, from the same cycle's headers — so the
+            # dashboard's credit figure moves whenever a poll actually spent
+            # something, and only then.
+            await record_quota(client, provider.key, provider.quota, prefix=prefix)
             log.info(
-                "poll %s: %d snapshots, %d detections, %d alerted",
+                "poll %s: %d snapshots, %d detections, %d alerted (quota %s/%s)",
                 sport_key,
                 report.snapshots,
                 len(report.detections),
                 len(report.alerted),
+                report.quota_used,
+                settings.quota_monthly_budget,
             )
         except Exception:
             # A failed cycle must not take the scheduler down; the next tick
