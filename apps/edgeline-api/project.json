@@ -14,7 +14,7 @@
       "continuous": true,
       "options": {
         "cwd": "{projectRoot}",
-        "command": "uv run uvicorn edgeline.api.main:app --reload --port 8000"
+        "command": "uv run uvicorn edgeline.api.main:app --port 8000"
       }
     },
     "worker": {

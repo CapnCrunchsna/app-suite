@@ -376,6 +376,12 @@ async def _run() -> int:
             # spent, so the first *paid* request of this process is guarded
             # rather than the second.
             quota = await provider.arm_budget_guard()
+            # The same free call that arms the guard also carries `x-requests-used`
+            # (measured 2026-09-13: `/sports` costs nothing and still reports
+            # `20 of 500`). So the dashboard's meter is correct from the moment
+            # the worker starts, rather than staying stale until the first paid
+            # poll — which at the dev cadence can be twelve hours away.
+            await record_quota(client, provider.key, quota, prefix="edgeline-")
             log.info(
                 "budget guard armed: %s of %s credits used this month",
                 quota.used,

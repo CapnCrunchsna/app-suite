@@ -84,7 +84,7 @@ it is the fastest way to tell a stale document from a current one.
 
 | Target | Command |
 | --- | --- |
-| `serve` | `uv run uvicorn edgeline.api.main:app --reload --port 8000` |
+| `serve` | `uv run uvicorn edgeline.api.main:app --port 8000` |
 | `worker` | `uv run python -m edgeline.scheduler` |
 | `test` | `uv run pytest` |
 | `es-up` / `es-down` | `docker compose up -d` / `down` |
@@ -260,6 +260,18 @@ which is where all three symptoms point:
    error. The types are now registered explicitly at mount time.
 
 `tests/test_ui_bundle.py` pins all three, and needs no cluster.
+
+**`serve` had `--reload` and it does not work on Windows — it kills the server (2026-09-13).**
+Not "reloads unreliably": the watcher fires, tries to restart through the npm/batch wrapper,
+and the wrapper asks `Terminate batch job (Y/N)?` of a console nobody is typing into. The
+process then exits. What you see is an app that was fine a minute ago and is now refusing
+connections, with the last log line a cheerful `WatchFiles detected changes … Reloading…`.
+Editing any file under `src/edgeline/` did it, including files the API never imports — the
+watcher covers the tree, not the import graph, so touching `scheduler.py` took down the API.
+
+The flag is gone. Reload was never delivering anything on this platform, and this is the
+process left running for weeks while paper recommendations accumulate. Restart by hand after
+a change; `nx run edgeline-api:serve` is one command.
 
 ### The generated client
 
