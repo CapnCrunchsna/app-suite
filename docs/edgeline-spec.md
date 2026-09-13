@@ -679,9 +679,26 @@ exists because the two rungs above it turned out to be further out of reach than
 assumed. It holds a plain URL with no placeholders while `sports_enabled` holds one sport; a
 second sport is what makes it per-sport, and that is the moment to revisit it rather than now.
 
-**Why `event` is out of reach, measured 2026-09-11.** It cannot be *assembled*, because the
-provider returns its own event id and no book-native one. It also cannot be *verified* from
-this machine, for two reasons no amount of care gets past:
+**Correction, 2026-09-12: the provider does supply book-native ids, and this section said
+otherwise.** The Odds API documents `includeLinks=true` and `includeSids=true` on `/odds` and
+`/events/odds`. They return `event.link`, `market.link` and `outcome.link` — betslip-level —
+plus `sid`, the bookmaker's own identifier for each event, market and outcome. The true
+statement, and the only one this section should ever have made, is narrower: **the request in
+`providers/the_odds_api.py` passes neither parameter.**
+
+Three things are unknown and may not be assumed: the credit cost of the flags, whether the
+free tier serves them, and which books are covered — the provider commits only to
+"availability of links will depend on the bookmaker". None of it is testable until the quota
+resets in October. So the rungs stay empty, `league` stays the rung a person fills, and this
+becomes T4.5 rather than a change to make on the strength of a documentation page.
+
+Everything below this paragraph remains true and is the reason `league` exists at all: even
+with provider links, coverage is per-bookmaker, and a book the provider has no link for falls
+to the rung a person filled.
+
+**Why `event` could not be reached by hand, measured 2026-09-11.** It cannot be *assembled*
+from what the current request returns, because that carries only the provider's own event id.
+It also cannot be *verified* from this machine, for two reasons no amount of care gets past:
 
 - **Bot protection.** DraftKings, FanDuel and bet365 answer any non-browser client with 403.
 - **Client-rendered shells.** The rest serve a loader with no links in the HTML, and some —
@@ -929,6 +946,11 @@ the channel that announces it. T3.1–T3.3 remain untouched and in order.*
   one league URL per enabled book, plus the two books nothing here can reach (`espnbet` serves
   ESPN's certificate rather than a sportsbook, `bet365` answers Cloudflare with 403)
 - [ ] T4.4 Run ≥ 200 paper recommendations; compute CLV distribution; report to user
+- [ ] **T4.5 — added 2026-09-12.** Try `includeLinks=true` + `includeSids=true` on one poll
+  once the quota resets (§9.4). Measure the credit cost against a cycle without them, record
+  which of the ten books actually return a link and at which level, and only then wire `sid`
+  into the ladder. If the flags are free or near-free this retires `event` and `betslip` in an
+  afternoon; if they are not, the cost goes to the user as a §16.2 decision, not to a default
 - [ ] **Exit / go-live gate:** user reviews CLV report and explicitly sets `paper_mode=false`. The implementer must NEVER flip this flag.
 
 ---

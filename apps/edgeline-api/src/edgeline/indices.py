@@ -243,8 +243,14 @@ SPORTSBOOK_SEEDS: dict[str, dict[str, Any]] = {
     "betmgm": {"display_name": "BetMGM", "md_licensed": True, "enabled": False, "priority": 3, "link_templates": _home("https://www.md.betmgm.com/en/sports")},
     "williamhill_us": {"display_name": "Caesars", "md_licensed": True, "enabled": False, "priority": 4, "link_templates": _home("https://sportsbook.caesars.com/us/md/bet")},
     "betrivers": {"display_name": "BetRivers", "md_licensed": True, "enabled": False, "priority": 5, "link_templates": _home("https://md.betrivers.com/")},
-    # Unverifiable from this machine on 2026-09-11: the host does not resolve.
-    "espnbet": {"display_name": "ESPN BET", "md_licensed": True, "enabled": False, "priority": 6, "link_templates": {}},
+    # **The key is `espnbet` and the book is theScore Bet.** Not a mismatch to
+    # tidy up: the provider's own bookmaker list reads `espnbet | theScore Bet |
+    # Formerly ESPN Bet` (checked 2026-09-12), so the key is the provider's and
+    # renaming it here would stop matching the feed entirely. The display name is
+    # ours and follows the book. That is also why `espnbet.com` served ESPN's
+    # certificate rather than a sportsbook when it was probed on 2026-09-11 — the
+    # brand was gone, not the host misconfigured.
+    "espnbet": {"display_name": "theScore Bet", "md_licensed": True, "enabled": False, "priority": 6, "link_templates": {}},
     "fanatics": {"display_name": "Fanatics", "md_licensed": True, "enabled": False, "priority": 7, "link_templates": _home("https://betfanatics.com/")},
     # Unverifiable from this machine on 2026-09-11: Cloudflare answers 403.
     "bet365": {"display_name": "bet365", "md_licensed": True, "enabled": False, "priority": 8, "link_templates": {}},

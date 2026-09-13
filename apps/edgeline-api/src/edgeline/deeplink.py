@@ -3,9 +3,21 @@
 Assembly rule: use the highest non-null level whose placeholders can all be
 filled, and record which level was chosen.
 
-**v1 reality, and it is a hard boundary rather than an omission.** The Odds API
-returns no book-native ids, so `betslip` is null for every book. The rungs below
-it have to be verified by hand, book by book — that is task T4.3.
+**Corrected 2026-09-12: "The Odds API returns no book-native ids" is false, and
+this module said it for a week.** The provider documents `includeLinks=true` and
+`includeSids=true` on `/odds` and `/events/odds`, returning `event.link`,
+`market.link`, `outcome.link` — betslip-level — and `sid`, the bookmaker's own
+identifier for each event, market and outcome. That is this whole ladder,
+supplied by the provider already in use. The request built in
+`providers/the_odds_api.py` passes neither parameter, which is the real and much
+smaller fact underneath the claim.
+
+What is **not** yet known, and must not be assumed: whether the flags cost extra
+credits, whether the free tier serves them at all, and which of the ten books are
+covered — the provider says only that "availability of links will depend on the
+bookmaker". None of it can be tested until the quota resets in October, so the
+rungs stay empty and the ladder keeps falling through to `league`. An untested
+capability is not a link.
 
 §16.3 forbids inventing a URL schema, and a plausible-looking guess is the worst
 possible failure here: it sends a person to the wrong market on a real
@@ -37,9 +49,11 @@ from typing import Any
 
 #: Highest to lowest, per §9.4. `league` was added 2026-09-11 between `event`
 #: and `book_home`: one sport's landing page at a book — the MLB page rather
-#: than the front door with a casino carousel on it. It is the highest rung a
-#: person can actually confirm today, and it carries no placeholders while
-#: `sports_enabled` holds one sport.
+#: than the front door with a casino carousel on it. It carries no placeholders
+#: while `sports_enabled` holds one sport, and it is the highest rung anyone has
+#: actually filled. It keeps earning its place even if `includeLinks` works:
+#: coverage is per-bookmaker, so some books will have no provider link and this
+#: is what they fall to.
 LINK_LEVELS = ("betslip", "event", "league", "book_home")
 
 #: Not one of §9.4's rungs — it is the honest state below all of them, for a book
