@@ -174,6 +174,7 @@ export interface Settings {
   props_poll_interval_s?: number;
   closing_capture_offset_s?: number;
   closing_capture_mode?: "off" | "recommended" | "all";
+  book_state?: string;
   quota_monthly_budget?: number;
 }
 

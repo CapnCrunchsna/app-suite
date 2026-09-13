@@ -168,6 +168,14 @@ class Settings(BaseModel):
     #: flipping to `recommended` on a paid tier is a one-setting change.
     closing_capture_mode: ClosingCaptureMode = "off"
 
+    #: Fills the literal `{state}` some provider deep links carry — BetMGM and
+    #: betPARX both return `https://sports.{state}.betmgm.com/…` style URLs
+    #: (§9.4, 2026-09-12). Lower-case two-letter code; it is the state whose
+    #: sportsbook you hold an account with, which is the Maryland this whole
+    #: project assumes. A wrong value here does not error, it sends someone to
+    #: another state's site, so it is a setting rather than a constant.
+    book_state: str = "md"
+
     # Provider budget
     quota_monthly_budget: int = 500
 

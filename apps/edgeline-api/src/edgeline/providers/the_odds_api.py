@@ -162,6 +162,15 @@ class TheOddsApiProvider:
                 "regions": regions,
                 "markets": ",".join(markets),
                 "oddsFormat": ODDS_FORMAT,
+                # §9.4's ladder, from the provider. **Measured free on
+                # 2026-09-12**: the same call reported `x-requests-last: 2` with
+                # and without it, which is the only reason it is on by default —
+                # §8.4's budget is tight enough that a silent multiplier here
+                # would be the kind of thing that empties a month in an hour.
+                # `includeSids` is deliberately *not* sent: the ids are already
+                # inside the links, and storing a field nothing reads is how §7.2
+                # stops being thin.
+                "includeLinks": "true",
             },
             sport_key=sport_key,
         )

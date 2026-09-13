@@ -47,14 +47,24 @@ from __future__ import annotations
 
 from typing import Any
 
-#: Highest to lowest, per §9.4. `league` was added 2026-09-11 between `event`
-#: and `book_home`: one sport's landing page at a book — the MLB page rather
-#: than the front door with a casino carousel on it. It carries no placeholders
-#: while `sports_enabled` holds one sport, and it is the highest rung anyone has
-#: actually filled. It keeps earning its place even if `includeLinks` works:
-#: coverage is per-bookmaker, so some books will have no provider link and this
-#: is what they fall to.
-LINK_LEVELS = ("betslip", "event", "league", "book_home")
+#: Highest to lowest, per §9.4.
+#:
+#: `league` (2026-09-11) is one sport's landing page at a book — the MLB page
+#: rather than the front door with a casino carousel on it. `market` (2026-09-12)
+#: exists because the provider returns that level for some books and it is a real
+#: rung between a betslip and a whole event page; only theScore Bet supplied one
+#: in the first sample, and inventing a name for it would have been worse than
+#: naming what arrived.
+LINK_LEVELS = ("betslip", "market", "event", "league", "book_home")
+
+#: Which provider field feeds which rung. The provider's own hierarchy is
+#: outcome → market → event, and §9.4's names for those are betslip → market →
+#: event, so this is the whole of the translation.
+PROVIDER_FIELDS = (
+    ("outcome_link", "betslip"),
+    ("market_link", "market"),
+    ("event_link", "event"),
+)
 
 #: Not one of §9.4's rungs — it is the honest state below all of them, for a book
 #: whose templates have not been verified yet. Callers must render it as
@@ -65,27 +75,51 @@ NO_LINK = "none"
 def build_deep_link(
     link_templates: dict[str, Any] | None,
     placeholders: dict[str, Any],
+    provider_links: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     """Return ``(url, link_level)`` for one leg.
 
-    Falls all the way through to ``("", "none")`` when no template survives —
-    which is every book today.
-    """
-    templates = link_templates or {}
+    **The provider is tried first, rung by rung, before any stored template.**
+    Not a preference for freshness: a provider link is keyed to *this* event and
+    outcome, while a stored template is a human's generalisation that was true
+    when they wrote it. Where both exist the provider's is the one that cannot
+    have gone stale against a book's URL scheme.
 
+    Provider links go through the same ``.format()`` as templates, because some
+    of them *are* templates — BetMGM and betPARX return a literal ``{state}``.
+
+    Falls through to ``("", "none")`` when nothing survives, which stays the
+    correct output for a book the provider does not cover and nobody has filled
+    in by hand.
+    """
+    for field, level in PROVIDER_FIELDS:
+        url = _fill((provider_links or {}).get(field), placeholders)
+        if url is not None:
+            return url, level
+
+    templates = link_templates or {}
     for level in LINK_LEVELS:
-        template = templates.get(level)
-        if not template or not isinstance(template, str):
-            continue
-        try:
-            url = template.format(**placeholders)
-        except (KeyError, IndexError):
-            # A template whose placeholders we cannot fill is not usable; drop to
-            # the next rung rather than emitting a URL with a hole in it.
-            continue
-        return url, level
+        url = _fill(templates.get(level), placeholders)
+        if url is not None:
+            return url, level
 
     return "", NO_LINK
+
+
+def _fill(template: Any, placeholders: dict[str, Any]) -> str | None:
+    """A usable URL, or `None` to drop to the next rung.
+
+    `ValueError` is in the catch list for provider links specifically: those are
+    arbitrary third-party URLs, and a stray brace in one would otherwise raise
+    out of a format string and take down the cycle. A rung we cannot fill is a
+    rung we skip — never a URL with a hole in it, and never an exception.
+    """
+    if not template or not isinstance(template, str):
+        return None
+    try:
+        return template.format(**placeholders)
+    except (KeyError, IndexError, ValueError):
+        return None
 
 
 def has_verified_link(link_level: str) -> bool:

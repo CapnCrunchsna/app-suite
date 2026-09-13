@@ -388,9 +388,30 @@ def _normalize_event(
                     line=line,
                     price_decimal=price,
                     fetched_at=fetched_at,
+                    # §9.4 links, when the provider sent them. Read with the same
+                    # suspicion as everything else here — a non-string is dropped
+                    # rather than carried, because this value ends up as an href
+                    # next to a stake.
+                    event_link=_optional_link(bookmaker.get("link")),
+                    market_link=_optional_link(market.get("link")),
+                    outcome_link=_optional_link(outcome.get("link")),
                 )
 
     return [snapshot for key, snapshot in seen.items() if key not in conflicted]
+
+
+def _optional_link(value: Any) -> str | None:
+    """A provider link, or `None` — never a half-trusted value.
+
+    Absent is the norm: the flag is only sent on featured polls, coverage is
+    per-bookmaker, and every fixture recorded before 2026-09-12 predates it. An
+    empty or non-string value is the same as absent; §9.4's ladder then falls to
+    the rung below, which is the behaviour that already existed.
+    """
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    return trimmed or None
 
 
 def _event_header(event: dict[str, Any]) -> dict[str, str]:

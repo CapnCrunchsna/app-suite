@@ -1645,6 +1645,11 @@
             "title": "Closing Capture Mode",
             "default": "off"
           },
+          "book_state": {
+            "type": "string",
+            "title": "Book State",
+            "default": "md"
+          },
           "quota_monthly_budget": {
             "type": "integer",
             "title": "Quota Monthly Budget",

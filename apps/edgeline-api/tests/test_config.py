@@ -59,6 +59,11 @@ SPEC_DEFAULTS = {
     # the last stored poll before kickoff and buys nothing; buying one for every
     # event measured at 1,188 credits/month against a budget of 500.
     "closing_capture_mode": "off",
+    # Not in §3.2's original table — added 2026-09-12 with provider deep links.
+    # Several books' own links carry a literal `{state}`, so this is what fills
+    # it. A wrong value here does not error, it routes someone to another
+    # state's sportsbook, which is why it is a setting and not a constant.
+    "book_state": "md",
     "quota_monthly_budget": 500,
 }
 

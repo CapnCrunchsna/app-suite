@@ -1,0 +1,4512 @@
+[
+  {
+    "id": "0669e72856fe5564925b33c66db5c259",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-12T23:11:00Z",
+    "home_team": "Milwaukee Brewers",
+    "away_team": "Cincinnati Reds",
+    "bookmakers": [
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/cincinnati-reds-at-milwaukee-brewers-19917204",
+        "sid": "19917204",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Cincinnati Reds",
+                "price": 34.0,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917204-1555084360-2287128097&type=Single",
+                "sid": "2287128097"
+              },
+              {
+                "name": "Milwaukee Brewers",
+                "price": 1.01,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917204-1555084360-2287128098&type=Single",
+                "sid": "2287128098"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "89a101c5567e20eb28151ba175250010",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-12T23:16:00Z",
+    "home_team": "Atlanta Braves",
+    "away_team": "Philadelphia Phillies",
+    "bookmakers": [
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/philadelphia-phillies-at-atlanta-braves-19917205",
+        "sid": "19917205",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.01,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917205-1555084436-2287128275&type=Single",
+                "sid": "2287128275"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 34.0,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917205-1555084436-2287128274&type=Single",
+                "sid": "2287128274"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "14b28cc8951c1250a20d6aa224ec3317",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-12T23:39:00Z",
+    "home_team": "St. Louis Cardinals",
+    "away_team": "Chicago White Sox",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:28:59Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/chicago-white-sox-%28s-newcomb%29-%40-st.-louis-cardinals-%28k-leahy%29-36058862",
+        "sid": "36058862",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:59Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.8,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607282234&selectionId=5408012",
+                "sid": "5408012"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.98,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607282234&selectionId=50291",
+                "sid": "50291"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "fliff",
+        "title": "Fliff",
+        "last_update": "2026-09-13T01:30:13Z",
+        "link": "https://sports.getfliff.com/markets/413178_c_p_303_inplay",
+        "sid": "413178_c_p_303_inplay",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:13Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 2.0,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.74,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29832502",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.8,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.95,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/chicago-white-sox-at-st.-louis-cardinals-19917206",
+        "sid": "19917206",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.74,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917206-1555084511-2287128449&type=Single",
+                "sid": "2287128449"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 2.05,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917206-1555084511-2287128450&type=Single",
+                "sid": "2287128450"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/e41f170f-ac96-4184-8245-a8d41bde4a37",
+        "sid": "e41f170f-ac96-4184-8245-a8d41bde4a37",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/e41f170f-ac96-4184-8245-a8d41bde4a37/section/lines",
+            "sid": "655175c9-01ad-429b-a268-7c4d62d35ce1",
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.95,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=14e0b31c-b745-4c22-ae55-d9d40a1eca1e&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "14e0b31c-b745-4c22-ae55-d9d40a1eca1e"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.8,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=4fda1f9e-3399-4fa5-ae3b-8c97c4a6517a&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "4fda1f9e-3399-4fa5-ae3b-8c97c4a6517a"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34653927",
+        "sid": "34653927",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.97,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275348_3",
+                "sid": "0ML86275348_3"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.79,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275348_1",
+                "sid": "0ML86275348_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/8210076101070946702",
+        "sid": "8210076101070946702",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "6295213526306914736",
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.95,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/4067620560618783152",
+                "sid": "4067620560618783152"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.8,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/1883374741344092592",
+                "sid": "1883374741344092592"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/chicago-white-sox-st-louis-cardinals-202609121915",
+        "sid": "30763965",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.91,
+                "link": null,
+                "sid": "2409996949"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.83,
+                "link": null,
+                "sid": "2409996950"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "ballybet",
+        "title": "Bally Bet",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://play.ballybet.com/sports#event/1024787359",
+        "sid": "1024787359",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.94,
+                "link": null,
+                "sid": "4333381276"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.77,
+                "link": null,
+                "sid": "4333381275"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betrivers",
+        "title": "BetRivers",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787359",
+        "sid": "1024787359",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.93,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787359?coupon={pickType}|4333381276|{wagerAmount}",
+                "sid": "4333381276"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.76,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787359?coupon={pickType}|4333381275|{wagerAmount}",
+                "sid": "4333381275"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betparx",
+        "title": "betPARX",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://{state}.betparx.com/kambi#event/1024787359",
+        "sid": "1024787359",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago White Sox",
+                "price": 1.97,
+                "link": null,
+                "sid": "4333381276"
+              },
+              {
+                "name": "St. Louis Cardinals",
+                "price": 1.8,
+                "link": null,
+                "sid": "4333381275"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "a5da7f95d7c671a9287dc40863b8204e",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T00:11:00Z",
+    "home_team": "Arizona Diamondbacks",
+    "away_team": "Texas Rangers",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/texas-rangers-%28k-rocker%29-%40-arizona-diamondbacks-%28b-pfaadt%29-36058857",
+        "sid": "36058857",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 10.0,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607282227&selectionId=29165",
+                "sid": "29165"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.04,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607282227&selectionId=29163",
+                "sid": "29163"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "fliff",
+        "title": "Fliff",
+        "last_update": "2026-09-13T01:25:37Z",
+        "link": "https://sports.getfliff.com/markets/410810_c_p_303_inplay",
+        "sid": "410810_c_p_303_inplay",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:25:37Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 11.35,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.05,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/texas-rangers-at-arizona-diamondbacks-19917207",
+        "sid": "19917207",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 10.5,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917207-1555084604-2287128675&type=Single",
+                "sid": "2287128675"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.04,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19917207-1555084604-2287128674&type=Single",
+                "sid": "2287128674"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:27:13Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/b591c379-802f-44af-b506-a005d7a7e0a6",
+        "sid": "b591c379-802f-44af-b506-a005d7a7e0a6",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:27:13Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/b591c379-802f-44af-b506-a005d7a7e0a6/section/lines",
+            "sid": "b9297cb6-64d4-4e97-b063-ff5ebd916127",
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 11.0,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=5033618c-ebf6-4a1e-aeb3-d19a1f8c823a&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "5033618c-ebf6-4a1e-aeb3-d19a1f8c823a"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.03,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=36ce6ea7-5fcd-4199-af6a-ed70c5a32702&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "36ce6ea7-5fcd-4199-af6a-ed70c5a32702"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34653928",
+        "sid": "34653928",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 9.1,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275347_1",
+                "sid": "0ML86275347_1"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.05,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275347_3",
+                "sid": "0ML86275347_3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:27:17Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/texas-rangers-arizona-diamondbacks-202609122010",
+        "sid": "30194364",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:27:17Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 12.0,
+                "link": null,
+                "sid": "2410033932"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.04,
+                "link": null,
+                "sid": "2410033933"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/6113087524576559533",
+        "sid": "6113087524576559533",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "1759291804722790830",
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 10.0,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/2366151854510965166",
+                "sid": "2366151854510965166"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.06,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/6486945513554969006",
+                "sid": "6486945513554969006"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29832601",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 11.0,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.03,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "ballybet",
+        "title": "Bally Bet",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://play.ballybet.com/sports#event/1024787388",
+        "sid": "1024787388",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 9.0,
+                "link": null,
+                "sid": "4333414819"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.04,
+                "link": null,
+                "sid": "4333414820"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betparx",
+        "title": "betPARX",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://{state}.betparx.com/kambi#event/1024787388",
+        "sid": "1024787388",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 9.5,
+                "link": null,
+                "sid": "4333414819"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.05,
+                "link": null,
+                "sid": "4333414820"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betrivers",
+        "title": "BetRivers",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787388",
+        "sid": "1024787388",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Arizona Diamondbacks",
+                "price": 9.0,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787388?coupon={pickType}|4333414819|{wagerAmount}",
+                "sid": "4333414819"
+              },
+              {
+                "name": "Texas Rangers",
+                "price": 1.03,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787388?coupon={pickType}|4333414820|{wagerAmount}",
+                "sid": "4333414820"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "5829b429dfb2b487aaca727451b8c55c",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T01:41:00Z",
+    "home_team": "Athletics",
+    "away_team": "Seattle Mariners",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/seattle-mariners-%28b-woo%29-%40-athletics-%28g-jump%29-36058860",
+        "sid": "36058860",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.36,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607282232&selectionId=75117758",
+                "sid": "75117758"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.62,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607282232&selectionId=7100968",
+                "sid": "7100968"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29832504",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.31,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "fliff",
+        "title": "Fliff",
+        "last_update": "2026-09-13T01:30:13Z",
+        "link": "https://sports.getfliff.com/markets/413285_c_p_203_prematch",
+        "sid": "413285_c_p_203_prematch",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:13Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.35,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.59,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491126571",
+        "sid": "491126571",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.33,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.68,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491126571",
+        "sid": "491126571",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.33,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.68,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/seattle-mariners-at-athletics-19916787",
+        "sid": "19916787",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.25,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916787-1555059519-2287069349&type=Single",
+                "sid": "2287069349"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.65,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916787-1555059519-2287069348&type=Single",
+                "sid": "2287069348"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34653930",
+        "sid": "34653930",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.28,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86262650_1",
+                "sid": "0ML86262650_1"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.65,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86262650_3",
+                "sid": "0ML86262650_3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/5085864250841366929",
+        "sid": "5085864250841366929",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "4263097097923985800",
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.3,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/7346936942765932936",
+                "sid": "7346936942765932936"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.65,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/5099640728708055432",
+                "sid": "5099640728708055432"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/seattle-mariners-athletics-202609122140",
+        "sid": "30832777",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.28,
+                "link": null,
+                "sid": "2408577290"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.65,
+                "link": null,
+                "sid": "2408577289"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/a1531224-3f7d-497e-ae00-7c53af949240",
+        "sid": "a1531224-3f7d-497e-ae00-7c53af949240",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/a1531224-3f7d-497e-ae00-7c53af949240/section/lines",
+            "sid": "8e0f5228-8a64-460e-8fa6-cca85fe6ba65",
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.35,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=699f3e2a-5706-452c-b150-98883272304d&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "699f3e2a-5706-452c-b150-98883272304d"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.65,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=5231cf4f-53fa-4857-8aa3-ce7817473388&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "5231cf4f-53fa-4857-8aa3-ce7817473388"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.33,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.68,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "ballybet",
+        "title": "Bally Bet",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://play.ballybet.com/sports#event/1024787362",
+        "sid": "1024787362",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.23,
+                "link": null,
+                "sid": "4333414832"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.66,
+                "link": null,
+                "sid": "4333414833"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betparx",
+        "title": "betPARX",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://{state}.betparx.com/kambi#event/1024787362",
+        "sid": "1024787362",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.23,
+                "link": null,
+                "sid": "4333414832"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.66,
+                "link": null,
+                "sid": "4333414833"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betrivers",
+        "title": "BetRivers",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787362",
+        "sid": "1024787362",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.25,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787362?coupon={pickType}|4333414832|{wagerAmount}",
+                "sid": "4333414832"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.67,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787362?coupon={pickType}|4333414833|{wagerAmount}",
+                "sid": "4333414833"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betanysports",
+        "title": "BetAnything",
+        "last_update": "2026-09-13T01:30:15Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:15Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.33,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.67,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "83d0a9d067e7d1abba253a527eb4257f",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T16:11:00Z",
+    "home_team": "Detroit Tigers",
+    "away_team": "Colorado Rockies",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/colorado-rockies-%28g-hughes%29-%40-detroit-tigers-%28j-jobe%29-36062582",
+        "sid": "36062582",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537274&selectionId=29168",
+                "sid": "29168"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.65,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537274&selectionId=29159",
+                "sid": "29159"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127245",
+        "sid": "491127245",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.31,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.69,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127245",
+        "sid": "491127245",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.31,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.69,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/679bc4fa-9b75-493f-8db7-e57ef9693eeb",
+        "sid": "679bc4fa-9b75-493f-8db7-e57ef9693eeb",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/679bc4fa-9b75-493f-8db7-e57ef9693eeb/section/lines",
+            "sid": "75cb2892-185d-47bb-9a72-c64236ec5a49",
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=17e4513a-d050-4c58-978d-5848b249a862&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "17e4513a-d050-4c58-978d-5848b249a862"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.67,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=94b5c909-b1d7-483f-b7b4-9e1cb6071244&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "94b5c909-b1d7-483f-b7b4-9e1cb6071244"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836169",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658470",
+        "sid": "34658470",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.29,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275260_3",
+                "sid": "0ML86275260_3"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.64,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275260_1",
+                "sid": "0ML86275260_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/colorado-rockies-detroit-tigers-202609131210",
+        "sid": "30197180",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": null,
+                "sid": "2392137403"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.65,
+                "link": null,
+                "sid": "2392137404"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/colorado-rockies-at-detroit-tigers-19916788",
+        "sid": "19916788",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.25,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916788-1555059616-2287069558&type=Single",
+                "sid": "2287069558"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.65,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916788-1555059616-2287069559&type=Single",
+                "sid": "2287069559"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.69,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "ballybet",
+        "title": "Bally Bet",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://play.ballybet.com/sports#event/1024787380",
+        "sid": "1024787380",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": null,
+                "sid": "4334678556"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.64,
+                "link": null,
+                "sid": "4334678555"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betrivers",
+        "title": "BetRivers",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787380",
+        "sid": "1024787380",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787380?coupon={pickType}|4334678556|{wagerAmount}",
+                "sid": "4334678556"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.64,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787380?coupon={pickType}|4334678555|{wagerAmount}",
+                "sid": "4334678555"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betparx",
+        "title": "betPARX",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://{state}.betparx.com/kambi#event/1024787380",
+        "sid": "1024787380",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": null,
+                "sid": "4334678556"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.64,
+                "link": null,
+                "sid": "4334678555"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/1515418630672744848",
+        "sid": "1515418630672744848",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "6357643221543289254",
+            "outcomes": [
+              {
+                "name": "Colorado Rockies",
+                "price": 2.3,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/9148749090606154150",
+                "sid": "9148749090606154150"
+              },
+              {
+                "name": "Detroit Tigers",
+                "price": 1.62,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/8477712746127950246",
+                "sid": "8477712746127950246"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "712095bfc2d808a30b170139a010a1d4",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T17:36:00Z",
+    "home_team": "Atlanta Braves",
+    "away_team": "Philadelphia Phillies",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/philadelphia-phillies-%28a-painter%29-%40-atlanta-braves-%28g-holmes%29-36062581",
+        "sid": "36062581",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.77,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537273&selectionId=7100960",
+                "sid": "7100960"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.1,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537273&selectionId=29175",
+                "sid": "29175"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836047",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.78,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.09,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127251",
+        "sid": "491127251",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.8,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.13,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127251",
+        "sid": "491127251",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.8,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.13,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/philadelphia-phillies-at-atlanta-braves-19916792",
+        "sid": "19916792",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.74,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916792-1555060020-2287070441&type=Single",
+                "sid": "2287070441"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.1,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916792-1555060020-2287070440&type=Single",
+                "sid": "2287070440"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/philadelphia-phillies-atlanta-braves-202609131335",
+        "sid": "30794769",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.76,
+                "link": null,
+                "sid": "2407541717"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.09,
+                "link": null,
+                "sid": "2407541316"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/4616e210-9726-4386-b604-55f3dc8fa93f",
+        "sid": "4616e210-9726-4386-b604-55f3dc8fa93f",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/4616e210-9726-4386-b604-55f3dc8fa93f/section/lines",
+            "sid": "bcc86316-b806-48de-91fa-031c1a1393b4",
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.77,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=b870aa0c-4aea-40ab-afca-fc751fadb296&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "b870aa0c-4aea-40ab-afca-fc751fadb296"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.1,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=c14c9578-b75b-4230-9217-6a5c041d4eef&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "c14c9578-b75b-4230-9217-6a5c041d4eef"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/1622165679128052124",
+        "sid": "1622165679128052124",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "8390588965161402788",
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.77,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/2100186185631662500",
+                "sid": "2100186185631662500"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.1,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/2204894876968026532",
+                "sid": "2204894876968026532"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658471",
+        "sid": "34658471",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.77,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275261_1",
+                "sid": "0ML86275261_1"
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.08,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275261_3",
+                "sid": "0ML86275261_3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Atlanta Braves",
+                "price": 1.8,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Philadelphia Phillies",
+                "price": 2.14,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "56927216de1b9cc394e6c83b75d6926b",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T17:36:00Z",
+    "home_team": "Washington Nationals",
+    "away_team": "Los Angeles Angels",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/los-angeles-angels-%28g-rodriguez%29-%40-washington-nationals-%28j-irvin%29-36062586",
+        "sid": "36062586",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.0,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537278&selectionId=1093236",
+                "sid": "1093236"
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.85,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537278&selectionId=1033687",
+                "sid": "1033687"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127243",
+        "sid": "491127243",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.09,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.83,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127243",
+        "sid": "491127243",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.09,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.83,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/los-angeles-angels-washington-nationals-202609131335",
+        "sid": "30195842",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 1.99,
+                "link": null,
+                "sid": "2392147013"
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.84,
+                "link": null,
+                "sid": "2392147014"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/854328b0-d4b0-41de-a11d-07d570e0762f",
+        "sid": "854328b0-d4b0-41de-a11d-07d570e0762f",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/854328b0-d4b0-41de-a11d-07d570e0762f/section/lines",
+            "sid": "0b25afea-9bfb-4149-a625-5700ee243b92",
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.05,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=c46b18a5-a918-4e0b-a363-eaa984b98721&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "c46b18a5-a918-4e0b-a363-eaa984b98721"
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.8,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=ceb59bce-bbf5-442a-b8e8-5e49140650e1&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "ceb59bce-bbf5-442a-b8e8-5e49140650e1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836146",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.03,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.83,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/los-angeles-angels-at-washington-nationals-19916789",
+        "sid": "19916789",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.05,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916789-1555059721-2287069788&type=Single",
+                "sid": "2287069788"
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.8,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916789-1555059721-2287069789&type=Single",
+                "sid": "2287069789"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/2156968134878298535",
+        "sid": "2156968134878298535",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "269116343150838191",
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.0,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/1930381655697129903",
+                "sid": "1930381655697129903"
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.83,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/7102765827732144559",
+                "sid": "7102765827732144559"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658474",
+        "sid": "34658474",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.02,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275264_3",
+                "sid": "0ML86275264_3"
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.81,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275264_1",
+                "sid": "0ML86275264_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Angels",
+                "price": 2.09,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Washington Nationals",
+                "price": 1.83,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "25ea35d9e1cfed80a2bef6c8e21f0786",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T17:36:00Z",
+    "home_team": "New York Yankees",
+    "away_team": "New York Mets",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/new-york-mets-%28c-scott%29-%40-new-york-yankees-%28c-schlittler%29-36062580",
+        "sid": "36062580",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.54,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537249&selectionId=29174",
+                "sid": "29174"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.54,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537249&selectionId=29161",
+                "sid": "29161"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836029",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.54,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.55,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127249",
+        "sid": "491127249",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.6,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.56,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127249",
+        "sid": "491127249",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.6,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.56,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/new-york-mets-at-new-york-yankees-19916791",
+        "sid": "19916791",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.55,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916791-1555059922-2287070226&type=Single",
+                "sid": "2287070226"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.53,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916791-1555059922-2287070227&type=Single",
+                "sid": "2287070227"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/new-york-mets-new-york-yankees-202609131335",
+        "sid": "30794168",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.53,
+                "link": null,
+                "sid": "2407542119"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.54,
+                "link": null,
+                "sid": "2407542120"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/045924e4-fb31-4436-803d-c1a047df8efa",
+        "sid": "045924e4-fb31-4436-803d-c1a047df8efa",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/045924e4-fb31-4436-803d-c1a047df8efa/section/lines",
+            "sid": "9120c0ec-768b-4683-8717-bb7b2a36a1fb",
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.55,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=104be6b4-fe7d-429d-be75-9208c5a616f2&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "104be6b4-fe7d-429d-be75-9208c5a616f2"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.54,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=fe4d7129-5a6a-4a30-99a2-944602ebd829&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "fe4d7129-5a6a-4a30-99a2-944602ebd829"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/7333152219098907039",
+        "sid": "7333152219098907039",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "6923950061273612707",
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.55,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/3769178522300580259",
+                "sid": "3769178522300580259"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.54,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/738255973080236451",
+                "sid": "738255973080236451"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658473",
+        "sid": "34658473",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.53,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275263_3",
+                "sid": "0ML86275263_3"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.54,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275263_1",
+                "sid": "0ML86275263_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.56,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.56,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betparx",
+        "title": "betPARX",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://{state}.betparx.com/kambi#event/1024787338",
+        "sid": "1024787338",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.43,
+                "link": null,
+                "sid": "4334679090"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.57,
+                "link": null,
+                "sid": "4334679089"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "ballybet",
+        "title": "Bally Bet",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://play.ballybet.com/sports#event/1024787338",
+        "sid": "1024787338",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.43,
+                "link": null,
+                "sid": "4334679090"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.57,
+                "link": null,
+                "sid": "4334679089"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betrivers",
+        "title": "BetRivers",
+        "last_update": "2026-09-13T01:30:14Z",
+        "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787338",
+        "sid": "1024787338",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:30:14Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "New York Mets",
+                "price": 2.43,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787338?coupon={pickType}|4334679090|{wagerAmount}",
+                "sid": "4334679090"
+              },
+              {
+                "name": "New York Yankees",
+                "price": 1.57,
+                "link": "https://{state}.betrivers.com/?page=sportsbook#event/1024787338?coupon={pickType}|4334679089|{wagerAmount}",
+                "sid": "4334679089"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "e11cab546e55ee3d1f8dbb787a7d7fee",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T17:38:00Z",
+    "home_team": "Toronto Blue Jays",
+    "away_team": "Baltimore Orioles",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/baltimore-orioles-%28t-rogers%29-%40-toronto-blue-jays-%28d-cease%29-36062587",
+        "sid": "36062587",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.34,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537279&selectionId=29157",
+                "sid": "29157"
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.63,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537279&selectionId=29164",
+                "sid": "29164"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127253",
+        "sid": "491127253",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.39,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127253",
+        "sid": "491127253",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.39,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836162",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.29,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.66,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/e8b7fe74-4cd8-46b2-b477-5ecfcdbf671b",
+        "sid": "e8b7fe74-4cd8-46b2-b477-5ecfcdbf671b",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/e8b7fe74-4cd8-46b2-b477-5ecfcdbf671b/section/lines",
+            "sid": "32262e9f-f718-416d-8ed6-4f4f27fd3fc4",
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.3,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=4cf58756-24f8-406b-8ffc-27ac0455e09c&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "4cf58756-24f8-406b-8ffc-27ac0455e09c"
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.67,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=5b56c6a0-2391-4161-ae9d-feeee4d12ab3&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "5b56c6a0-2391-4161-ae9d-feeee4d12ab3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/baltimore-orioles-at-toronto-blue-jays-19916793",
+        "sid": "19916793",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.35,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916793-1555060124-2287070666&type=Single",
+                "sid": "2287070666"
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.62,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916793-1555060124-2287070667&type=Single",
+                "sid": "2287070667"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658475",
+        "sid": "34658475",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.28,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275265_3",
+                "sid": "0ML86275265_3"
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.65,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275265_1",
+                "sid": "0ML86275265_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.38,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/baltimore-orioles-toronto-blue-jays-202609131337",
+        "sid": "30793991",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.34,
+                "link": null,
+                "sid": "2407541780"
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.62,
+                "link": null,
+                "sid": "2407541949"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/4092249337252413854",
+        "sid": "4092249337252413854",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "3677994846188077480",
+            "outcomes": [
+              {
+                "name": "Baltimore Orioles",
+                "price": 2.35,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/7518439428428267944",
+                "sid": "7518439428428267944"
+              },
+              {
+                "name": "Toronto Blue Jays",
+                "price": 1.65,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/6321607827454558632",
+                "sid": "6321607827454558632"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "bb473dec1856e220c392f73ee51cb98a",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T17:40:00Z",
+    "home_team": "Miami Marlins",
+    "away_team": "Los Angeles Dodgers",
+    "bookmakers": [
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658476",
+        "sid": "34658476",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.65,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275266_3",
+                "sid": "0ML86275266_3"
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.28,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275266_1",
+                "sid": "0ML86275266_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127248",
+        "sid": "491127248",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.68,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.34,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127248",
+        "sid": "491127248",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.68,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.34,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836622",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.66,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.28,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/57ef9a3c-a2a8-4836-b376-d775e63e03da",
+        "sid": "57ef9a3c-a2a8-4836-b376-d775e63e03da",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/57ef9a3c-a2a8-4836-b376-d775e63e03da/section/lines",
+            "sid": "40a12b31-54f2-45bb-b68c-1c7696a137c8",
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.67,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=3228fd47-f588-4d34-bfd1-6b6ddd2cfcb6&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "3228fd47-f588-4d34-bfd1-6b6ddd2cfcb6"
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.3,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=72c56426-6a82-4160-b446-55d7e587aa2b&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "72c56426-6a82-4160-b446-55d7e587aa2b"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.68,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.33,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/los-angeles-dodgers-%28e-sheehan%29-%40-miami-marlins-%28e-perez%29-36062573",
+        "sid": "36062573",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.68,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537240&selectionId=29171",
+                "sid": "29171"
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.24,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537240&selectionId=6266193",
+                "sid": "6266193"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/los-angeles-dodgers-miami-marlins-202609131340",
+        "sid": "30197967",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Los Angeles Dodgers",
+                "price": 1.68,
+                "link": null,
+                "sid": "2392171484"
+              },
+              {
+                "name": "Miami Marlins",
+                "price": 2.23,
+                "link": null,
+                "sid": "2392171485"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "c8c288fb5f290ac3cb4c91c056e01cdc",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T17:41:00Z",
+    "home_team": "Tampa Bay Rays",
+    "away_team": "Houston Astros",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/houston-astros-%28h-wesneski%29-%40-tampa-bay-rays-%28f-peralta%29-36062574",
+        "sid": "36062574",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.16,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537242&selectionId=29170",
+                "sid": "29170"
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.74,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537242&selectionId=29162",
+                "sid": "29162"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127252",
+        "sid": "491127252",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.22,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.74,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127252",
+        "sid": "491127252",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.22,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.74,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836174",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.19,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.71,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/houston-astros-at-tampa-bay-rays-19916329",
+        "sid": "19916329",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.18,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916329-1555010408-2286944861&type=Single",
+                "sid": "2286944861"
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.69,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916329-1555010408-2286944862&type=Single",
+                "sid": "2286944862"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/5419efee-946c-4d18-984e-d94d4234f1d1",
+        "sid": "5419efee-946c-4d18-984e-d94d4234f1d1",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/5419efee-946c-4d18-984e-d94d4234f1d1/section/lines",
+            "sid": "4de60637-ecfd-4cea-87ec-635b075c1eb0",
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.2,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=c31ed65c-3f95-4e42-acb5-7fe5ece3f696&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "c31ed65c-3f95-4e42-acb5-7fe5ece3f696"
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.71,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=8337d2e3-c78e-4620-8f97-dcb0d2ca7be5&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "8337d2e3-c78e-4620-8f97-dcb0d2ca7be5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658477",
+        "sid": "34658477",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.19,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275267_3",
+                "sid": "0ML86275267_3"
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.69,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275267_1",
+                "sid": "0ML86275267_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/houston-astros-tampa-bay-rays-202609131340",
+        "sid": "30195012",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.15,
+                "link": null,
+                "sid": "2392108521"
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.72,
+                "link": null,
+                "sid": "2392108522"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.22,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.74,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/1766494309898650011",
+        "sid": "1766494309898650011",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "2203330538209673613",
+            "outcomes": [
+              {
+                "name": "Houston Astros",
+                "price": 2.15,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/4912245714073026957",
+                "sid": "4912245714073026957"
+              },
+              {
+                "name": "Tampa Bay Rays",
+                "price": 1.71,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/683365663972131213",
+                "sid": "683365663972131213"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "07ac61b68b123cfa71662bb8a948366e",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T18:21:00Z",
+    "home_team": "Chicago Cubs",
+    "away_team": "Pittsburgh Pirates",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/pittsburgh-pirates-%28b-chandler%29-%40-chicago-cubs-%28m-boyd%29-36062588",
+        "sid": "36062588",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.69,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537280&selectionId=29166",
+                "sid": "29166"
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.22,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537280&selectionId=29176",
+                "sid": "29176"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127247",
+        "sid": "491127247",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.71,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.27,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127247",
+        "sid": "491127247",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.71,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.27,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/aa0bfe4f-51cb-4d20-8537-b98291a7663d",
+        "sid": "aa0bfe4f-51cb-4d20-8537-b98291a7663d",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/aa0bfe4f-51cb-4d20-8537-b98291a7663d/section/lines",
+            "sid": "20e7f4b2-de3f-4eb7-ba17-c0507afd5b48",
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.71,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=d4c56f25-027b-4a80-9868-760b7bb3f296&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "d4c56f25-027b-4a80-9868-760b7bb3f296"
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.2,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=bb7c0154-acf8-44b9-b83d-5396518e3468&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "bb7c0154-acf8-44b9-b83d-5396518e3468"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/2564194393896649119",
+        "sid": "2564194393896649119",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "9067919798960259475",
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.69,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/972699468761792915",
+                "sid": "972699468761792915"
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.2,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/2355304554364535187",
+                "sid": "2355304554364535187"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658481",
+        "sid": "34658481",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.67,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275271_1",
+                "sid": "0ML86275271_1"
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.23,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275271_3",
+                "sid": "0ML86275271_3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.71,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.26,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/pittsburgh-pirates-at-chicago-cubs-19916334",
+        "sid": "19916334",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.67,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916334-1555010902-2286945958&type=Single",
+                "sid": "2286945958"
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.25,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916334-1555010902-2286945957&type=Single",
+                "sid": "2286945957"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/pittsburgh-pirates-chicago-cubs-202609131420",
+        "sid": "30795384",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Chicago Cubs",
+                "price": 1.69,
+                "link": null,
+                "sid": "2407573490"
+              },
+              {
+                "name": "Pittsburgh Pirates",
+                "price": 2.21,
+                "link": null,
+                "sid": "2407573489"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "119261d49b81854e942bebf7f44afa6b",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T19:06:00Z",
+    "home_team": "Boston Red Sox",
+    "away_team": "Kansas City Royals",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/kansas-city-royals-%28n-cameron%29-%40-boston-red-sox-%28p-tolle%29-36062584",
+        "sid": "36062584",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.54,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537276&selectionId=29158",
+                "sid": "29158"
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.54,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537276&selectionId=29179",
+                "sid": "29179"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836074",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.55,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.55,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127244",
+        "sid": "491127244",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.55,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127244",
+        "sid": "491127244",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.55,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.65,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/kansas-city-royals-at-boston-red-sox-19916790",
+        "sid": "19916790",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.53,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916790-1555059818-2287070001&type=Single",
+                "sid": "2287070001"
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.54,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916790-1555059818-2287070000&type=Single",
+                "sid": "2287070000"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/kansas-city-royals-boston-red-sox-202609131335",
+        "sid": "30794768",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.54,
+                "link": null,
+                "sid": "2407541017"
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.53,
+                "link": null,
+                "sid": "2407541016"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/d39d5623-7cd2-43a7-98fe-acb83b3e72fd",
+        "sid": "d39d5623-7cd2-43a7-98fe-acb83b3e72fd",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/d39d5623-7cd2-43a7-98fe-acb83b3e72fd/section/lines",
+            "sid": "ad065f28-3108-4d73-9eec-d8bd10981818",
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.54,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=90d5b7a2-3580-4d98-a39b-ad04752ab4c7&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "90d5b7a2-3580-4d98-a39b-ad04752ab4c7"
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.55,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=9c76dc79-0fd3-44ed-bfbb-c1ad46d781e4&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "9c76dc79-0fd3-44ed-bfbb-c1ad46d781e4"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/7774859162764312965",
+        "sid": "7774859162764312965",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "6876579423857017230",
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.54,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/7071078632764080526",
+                "sid": "7071078632764080526"
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.55,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/4319379260440707470",
+                "sid": "4319379260440707470"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658472",
+        "sid": "34658472",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.52,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275262_1",
+                "sid": "0ML86275262_1"
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.58,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275262_3",
+                "sid": "0ML86275262_3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Boston Red Sox",
+                "price": 1.55,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Kansas City Royals",
+                "price": 2.61,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "24dff06b7aac0693e5e299af47f50290",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T20:06:00Z",
+    "home_team": "Athletics",
+    "away_team": "Seattle Mariners",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/seattle-mariners-%28b-miller%29-%40-athletics-%28j-lopez%29-36062576",
+        "sid": "36062576",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.2,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537247&selectionId=75117758",
+                "sid": "75117758"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.7,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537247&selectionId=7100968",
+                "sid": "7100968"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127250",
+        "sid": "491127250",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.27,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.71,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127250",
+        "sid": "491127250",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.27,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.71,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836178",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.23,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.69,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/f62a9df0-a2a9-4634-a871-7f32092a22ff",
+        "sid": "f62a9df0-a2a9-4634-a871-7f32092a22ff",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/f62a9df0-a2a9-4634-a871-7f32092a22ff/section/lines",
+            "sid": "492fa8e2-e63e-4a92-be5b-08aadbe9ded1",
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.2,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=f068b162-2f79-46ce-b53c-0af26d87f59e&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "f068b162-2f79-46ce-b53c-0af26d87f59e"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.71,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=5614e23b-caaf-4baa-a71f-9cecb1bfeafa&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "5614e23b-caaf-4baa-a71f-9cecb1bfeafa"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/seattle-mariners-at-athletics-19916335",
+        "sid": "19916335",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.2,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916335-1555011062-2286946326&type=Single",
+                "sid": "2286946326"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.69,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916335-1555011062-2286946325&type=Single",
+                "sid": "2286946325"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658486",
+        "sid": "34658486",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.23,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275316_1",
+                "sid": "0ML86275316_1"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.68,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275316_3",
+                "sid": "0ML86275316_3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/seattle-mariners-athletics-202609131605",
+        "sid": "30882765",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "Athletics",
+                "price": 2.19,
+                "link": null,
+                "sid": "2409794422"
+              },
+              {
+                "name": "Seattle Mariners",
+                "price": 1.7,
+                "link": null,
+                "sid": "2409794421"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "6f96adeb30e87f1372ad951bf3404d21",
+    "sport_key": "baseball_mlb",
+    "sport_title": "MLB",
+    "commence_time": "2026-09-13T23:21:00Z",
+    "home_team": "San Francisco Giants",
+    "away_team": "San Diego Padres",
+    "bookmakers": [
+      {
+        "key": "fanduel",
+        "title": "FanDuel",
+        "last_update": "2026-09-13T01:29:52Z",
+        "link": "https://sportsbook.fanduel.com/baseball/mlb/san-diego-padres-%28n-pivetta%29-%40-san-francisco-giants-%28l-webb%29-36062578",
+        "sid": "36062578",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:52Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537248&selectionId=29177",
+                "sid": "29177"
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.1,
+                "link": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.607537248&selectionId=29178",
+                "sid": "29178"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betonlineag",
+        "title": "BetOnline.ag",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sports.betonline.ag/sportsbook/baseball/mlb/game/491127240",
+        "sid": "491127240",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.18,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "lowvig",
+        "title": "LowVig.ag",
+        "last_update": "2026-09-13T01:29:53Z",
+        "link": "https://sports.lowvig.ag/sportsbook/baseball/mlb/game/491127240",
+        "sid": "491127240",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:53Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.18,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mybookieag",
+        "title": "MyBookie.ag",
+        "last_update": "2026-09-13T01:28:35Z",
+        "link": null,
+        "sid": "29836141",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:28:35Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.78,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.09,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "espnbet",
+        "title": "theScore Bet",
+        "last_update": "2026-09-13T01:29:50Z",
+        "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/f719fadc-a45f-4d4a-9a4b-1295b407b259",
+        "sid": "f719fadc-a45f-4d4a-9a4b-1295b407b259",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:50Z",
+            "link": "https://sportsbook.thescore.bet/sport/baseball/organization/united-states/competition/mlb/event/f719fadc-a45f-4d4a-9a4b-1295b407b259/section/lines",
+            "sid": "f75fb6d7-e9af-451e-a735-77ec2d8aa925",
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=2fb75146-269c-47ac-979a-675274b7ac31&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "2fb75146-269c-47ac-979a-675274b7ac31"
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.1,
+                "link": "https://sportsbook.thescore.bet/?market_selection_id[0]=5761a358-c3e2-4c7d-943f-db065589ed0e&odds_numerator[0]=2&odds_denominator[0]=1",
+                "sid": "5761a358-c3e2-4c7d-943f-db065589ed0e"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betmgm",
+        "title": "BetMGM",
+        "last_update": "2026-09-13T01:29:25Z",
+        "link": "https://sports.{state}.betmgm.com/en/sports/events/san-diego-padres-at-san-francisco-giants-19916337",
+        "sid": "19916337",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:25Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.74,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916337-1555011287-2286946859&type=Single",
+                "sid": "2286946859"
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.1,
+                "link": "https://sports.{state}.betmgm.com/en/sports?options=19916337-1555011287-2286946860&type=Single",
+                "sid": "2286946860"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "hardrockbet",
+        "title": "Hard Rock Bet",
+        "last_update": "2026-09-13T01:29:26Z",
+        "link": "https://app.hardrock.bet/home/competition/mlb/5971730461955850627",
+        "sid": "5971730461955850627",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:26Z",
+            "link": null,
+            "sid": "5628198139338031521",
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/6417453974034710945",
+                "sid": "6417453974034710945"
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.1,
+                "link": "https://app.hardrock.bet/?deep_link_value=betslip/5631575839058559393",
+                "sid": "5631575839058559393"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-09-13T01:29:49Z",
+        "link": "https://sportsbook.draftkings.com/event/34658488",
+        "sid": "34658488",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:49Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275318_3",
+                "sid": "0ML86275318_3"
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.08,
+                "link": "https://sportsbook.draftkings.com/?outcomes=0ML86275318_1",
+                "sid": "0ML86275318_1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "betus",
+        "title": "BetUS",
+        "last_update": "2026-09-13T01:29:28Z",
+        "link": null,
+        "sid": null,
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:28Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.77,
+                "link": null,
+                "sid": null
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.18,
+                "link": null,
+                "sid": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "bovada",
+        "title": "Bovada",
+        "last_update": "2026-09-13T01:29:54Z",
+        "link": "https://www.bovada.lv/sports/baseball/mlb/san-diego-padres-san-francisco-giants-202609131920",
+        "sid": "30881372",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-09-13T01:29:54Z",
+            "link": null,
+            "sid": null,
+            "outcomes": [
+              {
+                "name": "San Diego Padres",
+                "price": 1.76,
+                "link": null,
+                "sid": "2409783407"
+              },
+              {
+                "name": "San Francisco Giants",
+                "price": 2.09,
+                "link": null,
+                "sid": "2409783408"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

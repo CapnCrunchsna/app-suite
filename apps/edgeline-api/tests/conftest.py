@@ -71,8 +71,14 @@ def test_index_prefix() -> str:
 
 @pytest.fixture(scope="session")
 def mlb_odds_payload() -> Any:
-    """Recorded featured-markets response (h2h + spreads + totals, 9 books)."""
-    return load_fixture("baseball_mlb_odds_*.json")
+    """Recorded featured-markets response (h2h + spreads + totals, 9 books).
+
+    The `2*` is the recorder's timestamp, and it is load-bearing: a plain
+    `_odds_*` matched a hand-made h2h-only probe recording on 2026-09-12, which
+    sorted last and silently became "the featured response" for the whole suite.
+    The failure named spreads and totals, not the file that displaced them.
+    """
+    return load_fixture("baseball_mlb_odds_2*.json")
 
 
 @pytest.fixture(scope="session")

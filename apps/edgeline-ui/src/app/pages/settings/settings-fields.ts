@@ -26,7 +26,11 @@ export type SettingKey = keyof Settings & string;
  * - `list` is a `string[]` edited as comma-separated text; `json` is
  *   `consensus_weights`, the one setting with real structure.
  */
-export type FieldKind = 'number' | 'cents' | 'select' | 'list' | 'json' | 'bool';
+/** `text` is a plain string setting, added 2026-09-12 for `book_state`. It needs
+ *  no case anywhere: the template's `@default` already renders a text input and
+ *  both converters fall through to `String`. It exists so a scalar string is
+ *  declared rather than arriving as an unlabelled default. */
+export type FieldKind = 'number' | 'cents' | 'select' | 'list' | 'json' | 'bool' | 'text';
 
 export interface FieldSpec {
   readonly key: SettingKey;
@@ -203,6 +207,12 @@ export const POLLING = {
       label: 'Provider regions',
       kind: 'list',
       hint: 'The Odds API region buckets to request, comma-separated. Each one multiplies the credit cost of every poll and the §13 budget guard counts them — `us` alone returns only four MD-legal books, one short of what a consensus needs, which is why the default is `us, us2` (§8.4).',
+    },
+    {
+      key: 'book_state',
+      label: 'Book state',
+      kind: 'text',
+      hint: 'Two-letter state code, lower case. Several books return deep links containing a literal {state} — BetMGM and betPARX both do — and this is what fills it. Getting it wrong does not fail loudly; it sends you to another state’s version of the same sportsbook.',
     },
     {
       key: 'poll_interval_s',

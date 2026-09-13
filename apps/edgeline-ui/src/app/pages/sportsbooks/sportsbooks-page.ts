@@ -10,13 +10,18 @@
  *
  * ## What "test link" can honestly do
  *
- * §16.3: never guess a deep-link URL schema. Eight books carry a verified
- * `book_home` and nothing above it, so every stake leg still carries
- * `deep_link: ""` and `link_level: "none"` — that is T4.3's work, and it is work
- * a *person* does, because nothing else can. A fetch from this machine gets a
- * 403 from the books with bot protection and an empty shell from the rest, and
- * some of those answer 200 for a mistyped path as readily as a real one. Your
- * browser renders the page; that is the whole difference.
+ * §16.3: never guess a deep-link URL schema. **What is typed here is now the
+ * fallback, not the source.** Since 2026-09-12 the provider returns betslip,
+ * market and event links per price and those win over anything stored on a book,
+ * so this editor matters for exactly the books the MLB feed does not carry —
+ * Caesars, Fanatics and bet365 — plus any sport or book the provider covers
+ * without links.
+ *
+ * That is still worth a careful form, because those books get whatever is typed
+ * here and nothing else. A fetch from this machine cannot check it: books with
+ * bot protection answer 403 and the rest serve an empty shell, some answering
+ * 200 for a mistyped path as readily as a real one. Your browser renders the
+ * page; that is the whole difference.
  *
  * So the button tests what the user pasted, and only when it is testable. A
  * template with an unfilled `{event_id}` in it is not a URL, and opening it
@@ -43,7 +48,7 @@ import { EdgelineApiService } from '../../edgeline-api.service';
 
 /** §9.4's ladder, highest first. `none` is the honest state below all of them
  *  and is not editable — it is what you have when none of these are filled. */
-const LINK_LEVELS = ['betslip', 'event', 'league', 'book_home'] as const;
+const LINK_LEVELS = ['betslip', 'market', 'event', 'league', 'book_home'] as const;
 type LinkLevel = (typeof LINK_LEVELS)[number];
 
 type Draft = Record<LinkLevel, string>;
@@ -61,19 +66,24 @@ type Draft = Record<LinkLevel, string>;
  * `league` and `book_home` are the opposite: the same URL every time, so a
  * placeholder in one of them is equally wrong.
  */
-const PER_EVENT: readonly LinkLevel[] = ['betslip', 'event'];
+const PER_EVENT: readonly LinkLevel[] = ['betslip', 'market', 'event'];
 
 /**
- * The placeholders the engine can actually fill — `engine.py`'s `_stake_leg`
- * passes exactly this one, and `build_deep_link` skips any template naming
- * something else rather than emitting a URL with a hole in it.
+ * The placeholders the engine can fill — `engine.py`'s `build_stake_plan` passes
+ * these two, and `build_deep_link` skips any template naming something else
+ * rather than emitting a URL with a hole in it.
  *
- * Worth stating where a reader will meet it: `provider_event_id` is *The Odds
- * API's* id, and no sportsbook puts it in a URL. So a correctly-formed `event`
- * template is still one the engine cannot use, which is why that rung is empty
- * for every book and not merely unfinished.
+ * `provider_event_id` is *The Odds API's* id and no sportsbook uses it in a URL,
+ * so it remains near-useless for a hand-written template. `state` is the one
+ * that earns its place: several books' own links carry a literal `{state}`, and
+ * the engine fills it from the `book_state` setting.
+ *
+ * These rungs matter much less than they did. Since 2026-09-12 the provider
+ * supplies betslip, market and event links directly and they win over anything
+ * typed here — a hand-written template is now the fallback for the three books
+ * the MLB feed does not carry at all.
  */
-const FILLABLE: readonly string[] = ['provider_event_id'];
+const FILLABLE: readonly string[] = ['provider_event_id', 'state'];
 
 /** Built from `LINK_LEVELS` rather than written out, so adding a rung to the
  *  ladder cannot leave a field the editor silently never shows. Adding `league`
@@ -171,6 +181,8 @@ export class SportsbooksPage {
     switch (level) {
       case 'betslip':
         return 'The selection already loaded into a betslip — one tap from placing it. Needs the book’s own market and selection ids.';
+      case 'market':
+        return 'One market within a game — the moneyline block rather than the whole page. Needs the book’s own market id.';
       case 'event':
         return 'One game’s page at the book. Needs the book’s own event id — the number on the end of a real event URL.';
       case 'league':
@@ -185,6 +197,8 @@ export class SportsbooksPage {
     switch (level) {
       case 'betslip':
         return 'https://sportsbook.example.com/bet?event={event_id}&selection={selection_id}';
+      case 'market':
+        return 'https://sportsbook.example.com/event/{event_id}/market/{market_id}';
       case 'event':
         return 'https://sportsbook.example.com/event/{event_id}';
       case 'league':

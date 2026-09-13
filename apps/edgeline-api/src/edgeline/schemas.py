@@ -42,6 +42,23 @@ class BookOddsSnapshot(BaseModel):
     price_decimal: float
     fetched_at: str
 
+    #: §9.4's ladder as the **provider** supplies it (`includeLinks=true`, added
+    #: 2026-09-12). Optional on all three counts: coverage is per-bookmaker, the
+    #: flag is recent, and every fixture recorded before that date has none.
+    #:
+    #: These ride the snapshot rather than `OpportunityLeg` deliberately. A link
+    #: is a property of *a price at a book*, which is what a snapshot is; a leg
+    #: is the detector's output and §5 fixes its shape. `run_once` builds a
+    #: `(book, market, selection)` lookup from the batch and hands it to staking,
+    #: so nothing in §6's math has to carry a URL through it.
+    #:
+    #: Some are themselves templates — BetMGM and betPARX return a literal
+    #: `{state}` — which is why they go through the same `.format()` the manual
+    #: rungs do rather than being used verbatim.
+    event_link: str | None = None
+    market_link: str | None = None
+    outcome_link: str | None = None
+
 
 class OpportunityLeg(BaseModel):
     """One side of a detected opportunity, priced and de-vigged."""

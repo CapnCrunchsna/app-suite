@@ -402,6 +402,8 @@ def build_stake_plan(
     daily_loss_stop_tripped: bool = False,
     link_templates: dict[str, dict[str, Any]] | None = None,
     provider_event_id: str = "",
+    provider_links: dict[tuple[str, str, str], dict[str, str | None]] | None = None,
+    book_state: str = "md",
 ) -> tuple[StakePlan | None, list[str], bool]:
     """Turn a detection into a `StakePlan` (§6.7, §6.5, §9.4).
 
@@ -410,6 +412,8 @@ def build_stake_plan(
     "store the opportunity, send nothing" (§6.7 steps 5 and 6).
     """
     templates = link_templates or {}
+    links = provider_links or {}
+    placeholders = {"provider_event_id": provider_event_id, "state": book_state}
 
     if detection.type == TYPE_EV:
         leg = detection.legs[0]
@@ -426,7 +430,7 @@ def build_stake_plan(
             return None, decision.guardrails_applied, False
         stake_legs = [
             _stake_leg(
-                leg, decision.stake_cents, templates, provider_event_id
+                leg, decision.stake_cents, templates, placeholders, links, detection.market_key
             )
         ]
         return (
@@ -464,7 +468,7 @@ def build_stake_plan(
         return None, decision.guardrails_applied, False
 
     stake_legs = [
-        _stake_leg(leg, stake, templates, provider_event_id)
+        _stake_leg(leg, stake, templates, placeholders, links, detection.market_key)
         for leg, stake in zip(detection.legs, split.stakes_cents)
     ]
     return (
@@ -483,10 +487,14 @@ def _stake_leg(
     leg: OpportunityLeg,
     stake_cents: int,
     templates: dict[str, dict[str, Any]],
-    provider_event_id: str,
+    placeholders: dict[str, Any],
+    provider_links: dict[tuple[str, str, str], dict[str, str | None]],
+    market_key: str,
 ) -> StakeLeg:
     deep_link, link_level = build_deep_link(
-        templates.get(leg.book_key), {"provider_event_id": provider_event_id}
+        templates.get(leg.book_key),
+        placeholders,
+        provider_links.get((leg.book_key, market_key, leg.selection)),
     )
     return StakeLeg(
         book_key=leg.book_key,
@@ -531,6 +539,33 @@ def event_documents(snapshots: list[BookOddsSnapshot]) -> dict[str, dict[str, An
 
 
 # ---- the cycle (§7.1) ------------------------------------------------------
+
+
+def provider_link_index(
+    snapshots: list[BookOddsSnapshot],
+) -> dict[tuple[str, str, str], dict[str, str | None]]:
+    """`(book, market, selection)` → the provider's links for that price.
+
+    Built from the in-memory batch, per §4.4 rule 2 — the links arrived on the
+    same response the prices did, and reading them back out of Elasticsearch
+    would be both slower and a different question, since a snapshot index is a
+    time series and a leg needs *this* cycle's link.
+
+    Entries with no links at all are left out, so a lookup miss and "the provider
+    covers this book but sent nothing" are the same thing to the ladder, which is
+    correct: both mean fall through.
+    """
+    index: dict[tuple[str, str, str], dict[str, str | None]] = {}
+    for snapshot in snapshots:
+        links = {
+            "event_link": snapshot.event_link,
+            "market_link": snapshot.market_link,
+            "outcome_link": snapshot.outcome_link,
+        }
+        if not any(links.values()):
+            continue
+        index[(snapshot.book_key, snapshot.market_key, snapshot.selection)] = links
+    return index
 
 
 @dataclass(frozen=True)
@@ -747,6 +782,7 @@ async def run_once(
     )
 
     bankroll = await current_bankroll_cents(client, settings, prefix=prefix)
+    links = provider_link_index(snapshots)
     for detection in winners:
         plan, _guardrails, alert = build_stake_plan(
             detection,
@@ -754,6 +790,8 @@ async def run_once(
             bankroll_cents=bankroll,
             link_templates={k: v.get("link_templates", {}) for k, v in books.items()},
             provider_event_id=detection.event_id.split(":", 1)[-1],
+            provider_links=links,
+            book_state=settings.book_state,
         )
         if plan is None or not alert:
             continue

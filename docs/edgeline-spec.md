@@ -216,6 +216,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
 | `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option |
+| `book_state` | `"md"` | **added 2026-09-12.** Fills the literal `{state}` some provider deep links carry (§9.4) — BetMGM and betPARX both return one. Lower-case two-letter code: the state whose sportsbooks you hold accounts with. A wrong value does not error, it sends someone to another state's site |
 | `quota_monthly_budget` | `500` | credits; raise when paid tier starts |
 
 ---
@@ -678,6 +679,23 @@ page at a book — the MLB page rather than the front door with a casino carouse
 exists because the two rungs above it turned out to be further out of reach than this section
 assumed. It holds a plain URL with no placeholders while `sports_enabled` holds one sport; a
 second sport is what makes it per-sport, and that is the moment to revisit it rather than now.
+
+**Landed 2026-09-12, and it reverses this section's premise.** `includeLinks=true` is now
+sent on every featured poll and **it is free** — the same call reported `x-requests-last: 2`
+with and without it, measured rather than assumed, which is the only reason it is on by
+default. Every one of the seven books the MLB feed carries returned an `event` link, and five
+of them a betslip-level `outcome.link`. The ladder gained a `market` rung because the provider
+returns that level too.
+
+**Provider links beat stored templates**, rung for rung. Not a preference for freshness: a
+provider link is keyed to *this* event and outcome, while a template is a person's
+generalisation that was true when they wrote it. Some provider links are themselves templates
+— BetMGM and betPARX return a literal `{state}` — so they go through the same `.format()`,
+filled from the `book_state` setting (§3.2).
+
+What a person types is now the **fallback**, and it still matters: Caesars, Fanatics and
+bet365 appear in no MLB response at all, so a hand-entered `league` URL is the only link
+those three will ever have.
 
 **Correction, 2026-09-12: the provider does supply book-native ids, and this section said
 otherwise.** The Odds API documents `includeLinks=true` and `includeSids=true` on `/odds` and
