@@ -189,6 +189,50 @@ def test_a_startup_poll_is_registered_because_the_interval_fires_late():
     assert "poll_startup" in {job.id for job in scheduler.get_jobs()}
 
 
+def test_a_slot_missed_while_the_laptop_slept_runs_on_wake_instead_of_being_dropped():
+    """APScheduler's default `misfire_grace_time` is one second: a run that fires
+    later than that is discarded with a warning and rescheduled a full interval
+    away. This worker runs on a laptop that sleeps for hours, so that default
+    silently converts "twice a day" into "whenever the process is restarted".
+
+    Measured 2026-09-15 — the machine slept 03:36–19:35 UTC, the 14:01 poll slot
+    fell inside it, and the worker then sat up for 21 hours on a 12-hour cadence
+    without polling once. It looked healthy the whole time: the heartbeat is a
+    separate 60-second job, and its missed beat is replaced a minute later, so
+    `/health` stayed fresh while nothing was being fetched. The nightly grade
+    lands at 06:00 UTC, which on this machine is almost always inside a sleep,
+    and a `quota_reset` skipped for being late is skipped for a month — after
+    which the pace guard refuses every paid request against last month's spend.
+
+    `coalesce` is asserted with it: without it, a sixteen-hour sleep would fire
+    one cycle per missed slot on wake and bill §8.4's budget for the uptime
+    rather than the cadence.
+    """
+    from edgeline.scheduler import build_scheduler
+
+    scheduler = build_scheduler(provider=None, client=None, settings=settings())
+    must_catch_up = {
+        "poll_featured:baseball_mlb",
+        "closing_capture",
+        "grade",
+        "quota_reset",
+    }
+    jobs = {job.id: job for job in scheduler.get_jobs()}
+    assert must_catch_up <= set(jobs), "a job that must catch up is not registered"
+
+    for job_id in must_catch_up:
+        job = jobs[job_id]
+        # The scheduler is unstarted, so these attributes exist only where the
+        # job set them — APScheduler fills its own defaults in at start, which is
+        # exactly what must not happen here.
+        assert getattr(job, "misfire_grace_time", 1) is None, (
+            f"{job_id} would be dropped when it fires late"
+        )
+        assert getattr(job, "coalesce", False) is True, (
+            f"{job_id} would fire once per slot missed during a sleep"
+        )
+
+
 # ---- when that catch-up poll is due (§8.4's budget) -------------------------
 
 

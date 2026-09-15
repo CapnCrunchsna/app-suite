@@ -177,6 +177,28 @@ cycle three seconds in, but only when one is actually due: §8.4's budget pays f
 for how often the process is restarted, so it stands down if a poll already landed inside the
 current interval.
 
+**A slot that landed inside a sleep used to be dropped rather than delayed, and the worker looked
+perfectly healthy while it happened (2026-09-15).** APScheduler's default `misfire_grace_time` is
+*one second*: a run that fires later than that is discarded with a warning and rescheduled a full
+interval away. This laptop sleeps for hours at a time — measured that day, 03:36–19:35 UTC — so the
+14:01 poll slot fell inside the sleep and the worker then sat up for **21 hours on a 12-hour cadence
+without polling once**. Nothing in `/health` said so, because the heartbeat is a separate 60-second
+job whose missed beat is replaced a minute later: the stamp stayed fresh while the job that fetches
+odds never ran. The nightly 06:00 UTC grade is inside a sleep most nights for the same reason, and a
+`quota_reset` skipped for lateness is skipped for a *month*, after which the pace guard refuses every
+paid request against last month's spend. Those four jobs now pass `misfire_grace_time=None`
+(`RUN_WHEN_LATE`), so a missed slot runs on wake, with `coalesce=True` so a long sleep costs one
+cycle rather than one per slot. The heartbeat deliberately keeps the default — it stamps *now*, not
+its slot, so a late beat says nothing the next one won't.
+
+**The same sleep breaks whatever Elasticsearch request is in flight**, because the cluster is in a
+container: a 21-second suspend timed out the heartbeat and the settings read beside it, ten seconds
+apart, on a cluster that was up the whole time. The client now sets `retry_on_timeout`, and
+`load_settings` treats **only** a `NotFoundError` as "not seeded" — anything else raises. It used to
+answer §3.2 defaults for any exception, which is worse than an error: `kill_switch` and
+`offline_mode` both default to off, so a blocked read could quietly resume a system someone had
+paused, and it logged "no seeded settings" against a datastore that was fully seeded.
+
 **`test-py` was renamed to `test` in Phase 0 T0.5**, which is the moment the previous note in
 this file reserved for it: the target now has 151 tests behind it rather than a smoke test.
 The consequence is deliberate and worth stating plainly — `npm run check` runs

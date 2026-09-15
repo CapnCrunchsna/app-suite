@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from elasticsearch import NotFoundError
+
 from .config import Settings, settings_from_document
 from .dedup import (
     STATUS_ALERTED,
@@ -611,14 +613,26 @@ class CycleReport:
 
 
 async def load_settings(client, *, prefix: str) -> Settings:
-    """Settings from the `"global"` document, falling back to §3.2 defaults."""
+    """Settings from the `"global"` document, falling back to §3.2 defaults.
+
+    **Only an absent document is a fallback.** Any other failure raises, because
+    §3.2's defaults are not a safe guess at what the user configured: both
+    `kill_switch` and `offline_mode` default to *off*, so a read that fails for
+    ten seconds would quietly resume a system someone had paused, and a stored
+    `quota_monthly_budget` would revert to the free tier's while the pace guard
+    was reading it.
+
+    Measured 2026-09-15: every sleep/resume on this laptop drops the connection
+    to the containerised cluster for one tick, and each one logged "no seeded
+    settings … using §3.2 defaults" over a datastore that was fully seeded.
+    """
     index = with_prefix(SETTINGS_INDEX, prefix)
     try:
         found = await client.get(index=index, id="global")
-        return settings_from_document(found["_source"])
-    except Exception:  # index or document absent — defaults are a valid answer
+    except NotFoundError:  # index or document absent — defaults are a valid answer
         log.info("no seeded settings at %s/global; using §3.2 defaults", index)
         return settings_from_document(None)
+    return settings_from_document(found["_source"])
 
 
 async def load_enabled_books(client, *, prefix: str) -> dict[str, dict[str, Any]]:

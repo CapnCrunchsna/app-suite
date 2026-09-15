@@ -40,6 +40,21 @@ CLOSING_SWEEP_INTERVAL_S = 60
 STARTUP_GRADE_DELAY_S = 15
 #: Just past startup logging, so the catch-up poll's output is not interleaved with it.
 STARTUP_POLL_DELAY_S = 3
+#: `misfire_grace_time`: how late a run may be and still happen. APScheduler's
+#: default is **one second** — anything later is discarded with a warning and
+#: rescheduled a full interval away. On a laptop that sleeps, that is the normal
+#: case rather than an edge case, so every job whose slot matters passes this.
+#:
+#: Measured 2026-09-15: this machine slept 03:36–19:35 UTC, the 14:01 poll slot
+#: fell inside the sleep, and the worker then sat up for 21 hours on a 12-hour
+#: cadence without polling once. Nothing looked wrong, because the heartbeat is a
+#: separate 60-second job whose own missed run is replaced a minute later — so
+#: `/health` stayed fresh while the job that spends the credits never ran.
+#:
+#: Paired with `coalesce=True`, which collapses every slot missed during one
+#: sleep into a single run: a wake costs one cycle, not one per slot, so §8.4's
+#: budget still buys the cadence rather than the uptime.
+RUN_WHEN_LATE = None
 
 
 class BudgetExceeded(RuntimeError):
@@ -321,6 +336,7 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             id=f"poll_featured:{sport_key}",
             max_instances=1,
             coalesce=True,
+            misfire_grace_time=RUN_WHEN_LATE,
         )
 
     scheduler.add_job(
@@ -337,8 +353,12 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         id="closing_capture",
         max_instances=1,
         coalesce=True,
+        misfire_grace_time=RUN_WHEN_LATE,
     )
-    scheduler.add_job(_grade, "cron", hour=6, minute=0, id="grade")
+    scheduler.add_job(
+        _grade, "cron", hour=6, minute=0, id="grade",
+        coalesce=True, misfire_grace_time=RUN_WHEN_LATE,
+    )
     # A catch-up grade shortly after startup. §13's cron alone assumes a worker
     # that is up at 06:00 UTC; this one is expected to run in short bursts, so
     # without this a run that never spans 06:00 would never settle anything and
@@ -349,10 +369,16 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         run_date=datetime.now(timezone.utc) + timedelta(seconds=STARTUP_GRADE_DELAY_S),
         id="grade_startup",
     )
+    # A reset that is skipped for being late is skipped for a month, and the pace
+    # guard then refuses every paid request against last month's spend.
     scheduler.add_job(
         reset_quota, "cron", day=1, hour=0, minute=5, id="quota_reset",
         kwargs={"client": client, "prefix": prefix},
+        coalesce=True, misfire_grace_time=RUN_WHEN_LATE,
     )
+    # The one job that keeps APScheduler's default: it stamps `utc_now_iso()`
+    # rather than its slot, so a missed beat is not worth catching up on — the
+    # next one, a minute later, says everything a late one would have.
     scheduler.add_job(
         heartbeat, "interval", seconds=HEARTBEAT_INTERVAL_S, id="heartbeat",
         kwargs={"client": client, "prefix": prefix},

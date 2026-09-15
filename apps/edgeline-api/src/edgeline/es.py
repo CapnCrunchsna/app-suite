@@ -44,8 +44,16 @@ class BootstrapReport:
 
 @lru_cache(maxsize=1)
 def get_client() -> AsyncElasticsearch:
-    """The process-wide async client, pointed at ``ES_URL`` (§3.1)."""
-    return AsyncElasticsearch(hosts=[es_url()])
+    """The process-wide async client, pointed at ``ES_URL`` (§3.1).
+
+    ``retry_on_timeout`` is on because the cluster runs in a container on a
+    laptop that sleeps: a suspend drops whatever request is in flight, and the
+    client's default is to treat a timeout as final rather than retry it.
+    Measured 2026-09-15 — a 21-second sleep timed out the worker's heartbeat and
+    the settings read beside it, ten seconds apart, on a cluster that was up the
+    whole time.
+    """
+    return AsyncElasticsearch(hosts=[es_url()], retry_on_timeout=True)
 
 
 async def close_client() -> None:

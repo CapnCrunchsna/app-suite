@@ -88,6 +88,49 @@ def test_unseeded_datastore_falls_back_to_defaults():
     assert settings_from_document({}) == Settings()
 
 
+class _Meta:
+    """Just enough of `ApiResponseMeta` for `NotFoundError.__str__`."""
+
+    status = 404
+
+
+async def test_a_missing_settings_document_answers_defaults_through_the_datastore():
+    """The fallback above, reached the way the engine reaches it."""
+    from elasticsearch import NotFoundError
+
+    from edgeline.engine import load_settings
+
+    class _Missing:
+        async def get(self, **_kwargs):
+            raise NotFoundError("index_not_found_exception", _Meta(), None)
+
+    assert await load_settings(_Missing(), prefix="edgeline-") == Settings()
+
+
+async def test_a_settings_read_that_fails_is_not_an_unseeded_datastore():
+    """§4.4 rule 1 writes the document once, so *absent* means a new install.
+    `load_settings` used to answer defaults for **any** exception, which meant a
+    ten-second timeout against a fully seeded cluster silently became a full set
+    of §3.2 defaults — and those are not a safe guess at what the user
+    configured. `kill_switch` and `offline_mode` both default to off, so a
+    blocked read could resume a system someone had deliberately paused.
+
+    Measured 2026-09-15: every sleep/resume on this laptop drops the connection
+    to the containerised cluster for a tick, and each one logged "no seeded
+    settings … using §3.2 defaults" against a datastore that was fully seeded.
+    """
+    from elastic_transport import ConnectionTimeout
+
+    from edgeline.engine import load_settings
+
+    class _Timeout:
+        async def get(self, **_kwargs):
+            raise ConnectionTimeout("Connection timed out")
+
+    with pytest.raises(ConnectionTimeout):
+        await load_settings(_Timeout(), prefix="edgeline-")
+
+
 def test_stored_document_overrides_only_the_keys_it_carries():
     settings = settings_from_document({"kelly_fraction": 0.1, "kill_switch": True})
     assert settings.kelly_fraction == 0.1
