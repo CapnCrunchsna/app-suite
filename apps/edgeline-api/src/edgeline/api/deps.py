@@ -7,6 +7,7 @@ through FastAPI's dependency system so tests can point the whole API at the
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -32,6 +33,24 @@ def get_context() -> Context:
     from ..es import get_client
 
     return Context(client=get_client(), prefix=INDEX_PREFIX)
+
+
+async def get_provider() -> AsyncIterator[Any]:
+    """One odds provider per request, closed when the request ends.
+
+    A dependency rather than a module-level instance for the same reason
+    `get_context` is one: a test overrides it with a recorder and never reaches
+    the live API. Only the manual poll route uses it — every other route in §10
+    answers from the datastore, and this one is the seam where a request can
+    spend credits.
+    """
+    from ..providers.the_odds_api import TheOddsApiProvider
+
+    provider = TheOddsApiProvider()
+    try:
+        yield provider
+    finally:
+        await provider.aclose()
 
 
 async def load_settings_doc(context: Context) -> Settings:

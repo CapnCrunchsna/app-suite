@@ -254,6 +254,16 @@ Two things worth knowing before using it:
   grading move the bankroll ledger.
 - **`PUT /api/settings` rejects unknown keys** rather than storing them. The settings index is
   `dynamic: false`, so a typo would be saved, ignored by every reader, and look like it worked.
+- **`POST /api/system/poll` runs one cycle now** — §8.4's manual trigger, added 2026-09-16, and
+  the dashboard's "Poll now" button calls it. It exists because §13's cadence lands wherever the
+  worker was last restarted: the interval is anchored to process start, a slot inside a sleep
+  runs on wake, and §7.4 refuses an event that has already started — so "before first pitch" is
+  a time only a person can pick. It spends `markets × regions` credits per enabled sport through
+  the usual pace guard, stamps `last_poll_at` like any poll (a manual cycle *is* a poll, or
+  `poll_is_due` pays for another at the next restart), answers 409 while one is already running,
+  and 409 with the guard's own message when the guard refuses. The API process makes the provider
+  request, so **the API has to be restarted to pick this up** — the button is in the UI bundle,
+  the route is in the server.
 
 When a UI bundle has been built, it is served at `/`; set `EDGELINE_UI_DIST` to point elsewhere.
 So the whole app is two commands:

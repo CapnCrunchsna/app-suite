@@ -143,6 +143,45 @@
               <span class="dim">· no poll recorded yet</span>
             }
           }
+
+          <!-- §8.4's manual trigger, on this row because this is where the
+               reader finds out how old the prices are. §13's cadence is anchored
+               to worker start and a slot inside a laptop sleep runs on wake, so
+               "before first pitch" is a time only a person can pick. -->
+          <button
+            type="button"
+            class="button poll__button"
+            [disabled]="polling() || status.offlineMode()"
+            [title]="
+              status.offlineMode()
+                ? 'offline_mode is on — no job makes a provider request'
+                : 'Fetch one cycle now. Spends credits; places nothing.'
+            "
+            (click)="pollNow()"
+          >
+            @if (polling()) {
+              polling…
+            } @else {
+              Poll now (~{{ pollCostCredits() }} credits)
+            }
+          </button>
+
+          @if (pollError()) {
+            <span class="poll__result neg">{{ pollError() }}</span>
+          } @else if (pollResult(); as result) {
+            <span class="poll__result">
+              @if (result.offline) {
+                nothing fetched — <code>offline_mode</code> is on
+              } @else {
+                {{ result.snapshots ?? 0 }} prices ·
+                {{ result.detections ?? 0 }}
+                {{ result.detections === 1 ? 'detection' : 'detections' }}
+                @if (result.quota_used !== null && result.quota_used !== undefined) {
+                  <span class="dim">· {{ result.quota_used }} credits used this month</span>
+                }
+              }
+            </span>
+          }
         </span>
       </div>
 

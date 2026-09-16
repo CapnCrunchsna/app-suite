@@ -9,6 +9,7 @@
 
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { EdgelineApiError } from '@metrum/edgeline-api-client';
 import type {
   BankrollResponse,
   HealthResponse,
@@ -25,7 +26,13 @@ function book(id: string, enabled: boolean): SportsbookRow {
 }
 
 class ApiStub {
-  settings: Settings = { min_books_for_consensus: 4, paper_mode: true };
+  settings: Settings = {
+    min_books_for_consensus: 4,
+    paper_mode: true,
+    // §8.4's cost arithmetic reads these: 3 × 2 × one enabled sport = 6.
+    markets_featured: ['h2h', 'spreads', 'totals'],
+    regions: ['us', 'us2'],
+  };
   books: SportsbookRow[] = [book('draftkings', false), book('fanduel', false)];
   recommendations: RecommendationRow[] = [];
   bankroll: BankrollResponse = { total_cents: 100000 };
@@ -38,6 +45,10 @@ class ApiStub {
   };
 
   readonly killCalls: boolean[] = [];
+  pollCalls = 0;
+  healthCalls = 0;
+  /** Set to make the poll reject, standing in for the pace guard's 409. */
+  pollFailure: Error | null = null;
 
   getSettings() {
     return Promise.resolve(this.settings);
@@ -52,7 +63,25 @@ class ApiStub {
     return Promise.resolve(this.bankroll);
   }
   getHealth() {
+    this.healthCalls += 1;
     return Promise.resolve(this.health);
+  }
+  pollNow() {
+    this.pollCalls += 1;
+    if (this.pollFailure) return Promise.reject(this.pollFailure);
+    this.health = {
+      ...this.health,
+      runtime: { ...this.health.runtime, last_poll_at: '2026-09-16T01:22:00Z' },
+    };
+    return Promise.resolve({
+      offline: false,
+      cycles: [{ sport_key: 'baseball_mlb', snapshots: 784, detections: 0 }],
+      snapshots: 784,
+      detections: 0,
+      alerted: 0,
+      quota_used: 46,
+      quota_remaining: 454,
+    });
   }
   engageKillSwitch() {
     this.killCalls.push(true);
@@ -291,6 +320,71 @@ describe('DashboardPage (§11.1)', () => {
 
       expect(api.killCalls).toEqual([]);
       expect(el.querySelector('.kill__confirm')).toBeNull();
+    });
+  });
+
+  describe('the POLL NOW button (§8.4 manual trigger, §10)', () => {
+    /**
+     * The figure is `markets × regions × sports` read from §3.2, not a written
+     * constant — the same arithmetic §8.4 projects the monthly bill from. A
+     * control that spends from a 500-credit month should not make anyone guess,
+     * and a hard-coded 6 would start lying the day a region or a market changed.
+     */
+    it('says what a press costs, computed from settings', async () => {
+      const { el } = await render();
+      const button = el.querySelector('.poll__button') as HTMLButtonElement;
+      expect(button.textContent).toContain('~6 credits');
+      expect(button.disabled).toBe(false);
+    });
+
+    it('runs a cycle and reports what it found', async () => {
+      const { fixture, el, api } = await render();
+
+      (el.querySelector('.poll__button') as HTMLButtonElement).click();
+      await settle(fixture);
+
+      expect(api.pollCalls).toBe(1);
+      const result = el.querySelector('.poll__result')?.textContent ?? '';
+      expect(result).toContain('784 prices');
+      expect(result).toContain('0 detections');
+      expect(result).toContain('46 credits used this month');
+      // `last_poll_at` and the quota both moved, so the page re-reads health
+      // rather than patching one figure in place.
+      expect(api.healthCalls).toBeGreaterThan(1);
+    });
+
+    /**
+     * The pace guard refuses locally and nothing is sent, and its message
+     * carries the numbers and the remedy. Replacing that with "poll failed"
+     * would throw away the only useful thing in the response.
+     */
+    it("shows the engine's own refusal rather than a generic failure", async () => {
+      const { fixture, el, api } = await render((stub) => {
+        stub.pollFailure = new EdgelineApiError(409, '/api/system/poll', {
+          detail: 'refusing /odds: 480 of 500 monthly credits spent',
+        });
+      });
+
+      (el.querySelector('.poll__button') as HTMLButtonElement).click();
+      await settle(fixture);
+
+      expect(api.pollCalls).toBe(1);
+      expect(el.querySelector('.poll__result')?.textContent).toContain('480 of 500');
+    });
+
+    /**
+     * §3.2: `offline_mode` stops every provider request, so the press would be a
+     * no-op. Disabled with the reason on it beats a button that looks live and
+     * answers "nothing fetched".
+     */
+    it('is disabled while offline_mode is on, and says why', async () => {
+      const { el } = await render((stub) => {
+        stub.health = { ...stub.health, offline_mode: true };
+      });
+
+      const button = el.querySelector('.poll__button') as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      expect(button.title).toContain('offline_mode');
     });
   });
 });

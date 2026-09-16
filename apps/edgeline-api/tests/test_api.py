@@ -527,3 +527,168 @@ async def test_health_surfaces_the_workers_heartbeat(api):
     )
     body = (await http.get("/api/system/health")).json()
     assert body["runtime"]["last_heartbeat_at"] == "2026-09-08T12:00:00Z"
+
+
+# ---- the manual poll (§10, §8.4's "manual trigger") ------------------------
+
+
+class _EmptyProvider:
+    """The adapter answering "no games", which is all this route's own work needs.
+
+    A payload with events in it is `test_engine`'s job; what is under test here is
+    the route: arming the guard, stamping `last_poll_at`, recording the quota, and
+    refusing a second press.
+    """
+
+    key = "the_odds_api"
+
+    def __init__(self, *, raises: Exception | None = None):
+        from edgeline.providers.base import QuotaStatus
+
+        self.calls: list[str] = []
+        self.quota = QuotaStatus(used=3, remaining=497)
+        self.monthly_budget: int | None = None
+        self.armed = False
+        self._raises = raises
+
+    async def arm_budget_guard(self):
+        self.armed = True
+        return self.quota
+
+    async def fetch_odds(self, sport_key, markets, *, regions="us"):
+        from edgeline.providers.base import ProviderResponse
+
+        if self._raises is not None:
+            raise self._raises
+        self.calls.append(sport_key)
+        return ProviderResponse(
+            provider_key=self.key,
+            endpoint="odds",
+            payload=[],
+            quota=self.quota,
+            fetched_at=utc_now_iso(),
+            sport_key=sport_key,
+        )
+
+    async def aclose(self):
+        return None
+
+
+def _poll_client(client, prefix, provider):
+    """The app with both seams overridden: this file's indices, a fake provider."""
+    from edgeline.api.deps import Context, get_context, get_provider
+    from edgeline.api.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[get_context] = lambda: Context(client=client, prefix=prefix)
+    app.dependency_overrides[get_provider] = lambda: provider
+    return httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    )
+
+
+async def _runtime(client, prefix) -> dict:
+    from edgeline.indices import SETTINGS_INDEX, with_prefix
+
+    found = await client.get(index=with_prefix(SETTINGS_INDEX, prefix), id="runtime")
+    return found["_source"]
+
+
+async def test_a_manual_poll_runs_a_cycle_and_stamps_it_like_any_other(api):
+    """The stamp is the part that is easy to leave out and expensive to miss: a
+    manual cycle *is* a poll, so `poll_is_due` has to see it or the next worker
+    restart pays for another one on top of it."""
+    _http, client, prefix = api
+    provider = _EmptyProvider()
+
+    async with _poll_client(client, prefix, provider) as http:
+        response = await http.post("/api/system/poll")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [row["sport_key"] for row in body["cycles"]] == ["baseball_mlb"]
+    assert body["offline"] is False
+    assert body["quota_used"] == 3
+    assert provider.calls == ["baseball_mlb"]
+    # The free `/sports` call the worker makes at startup, for the same reason:
+    # the pace guard needs a starting number before anything is spent.
+    assert provider.armed is True
+    assert provider.monthly_budget == DEFAULT_SETTINGS["quota_monthly_budget"]
+
+    runtime = await _runtime(client, prefix)
+    assert runtime["last_poll_at"], "a manual poll must stamp last_poll_at"
+
+
+async def test_a_manual_poll_records_the_credits_it_spent(api):
+    """Same reasoning as the worker's own `record_quota`: a meter stuck at zero
+    reads as headroom on a budget where the whole allowance is 500."""
+    _http, client, prefix = api
+
+    async with _poll_client(client, prefix, _EmptyProvider()) as http:
+        await http.post("/api/system/poll")
+
+    from edgeline.indices import PROVIDERS_INDEX, with_prefix
+
+    found = await client.get(
+        index=with_prefix(PROVIDERS_INDEX, prefix), id="the_odds_api"
+    )
+    assert found["_source"]["quota_used"] == 3
+
+
+async def test_a_manual_poll_makes_no_provider_request_while_offline(api):
+    """§3.2: `offline_mode` stops every provider request, and a button is not an
+    exception to it. It also must not stamp `last_poll_at` — a fresh stamp over
+    stale data is what `test_an_offline_cycle_does_not_stamp_last_poll_at` was
+    written about."""
+    _http, client, prefix = api
+    from edgeline.indices import SETTINGS_INDEX, with_prefix
+
+    await client.update(
+        index=with_prefix(SETTINGS_INDEX, prefix),
+        id="global",
+        doc={"offline_mode": True},
+        refresh="wait_for",
+    )
+    before = (await _runtime(client, prefix)).get("last_poll_at")
+    provider = _EmptyProvider()
+
+    async with _poll_client(client, prefix, provider) as http:
+        body = (await http.post("/api/system/poll")).json()
+
+    assert body["offline"] is True
+    assert provider.calls == []
+    assert provider.armed is False
+    assert (await _runtime(client, prefix)).get("last_poll_at") == before
+
+
+async def test_a_manual_poll_surfaces_the_pace_guards_refusal_rather_than_a_500(api):
+    """The guard refuses locally and nothing is sent (§8.4). That is a sentence
+    worth putting in front of the person who pressed the button, since the remedy
+    — and whether there is one — is in the message."""
+    _http, client, prefix = api
+    from edgeline.providers.base import ProviderBudgetExceeded
+
+    refusal = ProviderBudgetExceeded("refusing /odds: 480 of 500 monthly credits spent")
+    before = (await _runtime(client, prefix)).get("last_poll_at")
+
+    async with _poll_client(client, prefix, _EmptyProvider(raises=refusal)) as http:
+        response = await http.post("/api/system/poll")
+
+    assert response.status_code == 409
+    assert "480 of 500" in response.json()["detail"]
+    # Nothing was fetched, so nothing may claim a poll happened.
+    assert (await _runtime(client, prefix)).get("last_poll_at") == before
+
+
+async def test_a_second_manual_poll_while_one_is_running_is_refused(api):
+    """§8.4's budget pays for the cadence, not for how often a button is pressed,
+    and two presses would buy the same market twice."""
+    _http, client, prefix = api
+    from edgeline.api.routers.system import _poll_in_flight
+
+    async with _poll_in_flight:  # stands in for a cycle still fetching
+        async with _poll_client(client, prefix, _EmptyProvider()) as http:
+            response = await http.post("/api/system/poll")
+
+    assert response.status_code == 409
+    assert "already running" in response.json()["detail"]

@@ -99,6 +99,30 @@ export interface OpportunityRow {
   closing_edge_pct?: number | null;
 }
 
+/** One sport's cycle inside a manual poll — §7.1's `CycleReport`, narrowed. */
+export interface PollCycleRow {
+  sport_key: string;
+  snapshots?: number;
+  events?: number;
+  quarantined?: number;
+  detections?: number;
+  alerted?: number;
+  enabled_books?: number;
+  offline?: boolean;
+  skipped_reason?: string | null;
+}
+
+/** What the manual trigger did, totalled across the enabled sports. */
+export interface PollNowResponse {
+  offline?: boolean;
+  cycles?: PollCycleRow[];
+  snapshots?: number;
+  detections?: number;
+  alerted?: number;
+  quota_used?: number | null;
+  quota_remaining?: number | null;
+}
+
 export interface ProviderPatch {
   display_name?: string | null;
   enabled?: boolean | null;

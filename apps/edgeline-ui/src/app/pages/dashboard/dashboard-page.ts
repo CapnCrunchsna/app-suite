@@ -38,8 +38,10 @@ import {
 import { RouterLink } from '@angular/router';
 import { Panel } from '@metrum/ui';
 import { formatAge, formatCents, formatLocalClock, formatPercent, isFresh, startOfLocalDayIso } from '@metrum/format';
+import { EdgelineApiError } from '@metrum/edgeline-api-client';
 import type {
   BankrollResponse,
+  PollNowResponse,
   RecommendationRow,
   Settings,
   SportsbookRow,
@@ -69,6 +71,10 @@ export class DashboardPage {
   protected readonly status = inject(SystemStatus);
 
   protected readonly confirmingResume = signal(false);
+
+  protected readonly polling = signal(false);
+  protected readonly pollResult = signal<PollNowResponse | null>(null);
+  protected readonly pollError = signal<string | null>(null);
 
   private readonly settingsResource = resource({
     params: () => 0,
@@ -188,6 +194,43 @@ export class DashboardPage {
     this.confirmingResume.set(false);
   }
 
+  /**
+   * §8.4's manual trigger.
+   *
+   * The button sits on the polling row because that is where the reader learns
+   * how old the prices are, and the answer to "too old" is a cycle rather than a
+   * note. It says its own price: §13's cadence spends `markets × regions` per
+   * sport whether a scheduler or a person asks for it, and a control that spends
+   * from a 500-credit month should not make anyone guess.
+   */
+  protected async pollNow(): Promise<void> {
+    if (this.polling()) return;
+    this.polling.set(true);
+    this.pollError.set(null);
+    this.pollResult.set(null);
+    try {
+      this.pollResult.set(await this.api.pollNow());
+      // `last_poll_at` and the quota both moved, and this page renders both from
+      // health — so re-read it rather than patching one figure in place.
+      await this.status.refresh();
+    } catch (cause) {
+      this.pollError.set(pollFailureMessage(cause));
+    } finally {
+      this.polling.set(false);
+    }
+  }
+
+  /**
+   * What one press costs, computed from §3.2 rather than written down: the same
+   * `markets × regions × sports` arithmetic §8.4 projects the monthly bill from.
+   */
+  protected readonly pollCostCredits = computed(() => {
+    const markets = this.settings().markets_featured?.length ?? 0;
+    const regions = this.settings().regions?.length ?? 0;
+    const sports = Math.max(this.status.sportsEnabled().length, 1);
+    return markets * regions * sports;
+  });
+
   /** A recommendation's total stake, from §5's stored `StakePlan`. The plan is
    *  an open blob on the wire, so the read is defensive by necessity. */
   protected stakeCents(row: RecommendationRow): number | null {
@@ -202,4 +245,21 @@ export class DashboardPage {
   protected statusLabel = statusLabel;
   protected typeLabel = typeLabel;
   protected matchup = matchup;
+}
+
+/**
+ * The engine's own sentence wherever it has one.
+ *
+ * A 409 from the pace guard explains what is wrong, how much has been spent and
+ * what the remedy is — or that there is none this month. No wording here could
+ * do better, and a generic "poll failed" would hide the one useful thing the
+ * response carried.
+ */
+function pollFailureMessage(cause: unknown): string {
+  if (cause instanceof EdgelineApiError) {
+    const detail = (cause.body as { detail?: unknown } | undefined)?.detail;
+    if (typeof detail === 'string' && detail.length > 0) return detail;
+    return `The engine answered ${cause.status}.`;
+  }
+  return 'The engine could not be reached — is the API still running?';
 }

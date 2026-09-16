@@ -754,6 +754,22 @@ All routes under `/api`. Auto-generated OpenAPI at `/api/openapi.json` (feeds §
 | `GET /api/matching` / `POST /api/matching/{id}/resolve` | quarantine queue |
 | `GET /api/system/health` | scheduler last-run, quota, kill_switch, paper_mode |
 | `POST /api/system/kill` / `POST /api/system/resume` | flip kill_switch |
+| `POST /api/system/poll` | run one featured cycle now — §8.4's manual trigger (added 2026-09-16) |
+
+**`POST /api/system/poll` — added 2026-09-16.** §8.4's dev row already reserves "manual
+trigger only" for props; this is the same idea for the featured cycle, and it exists because
+§13's cadence cannot be relied on to land anywhere useful. The interval is anchored to worker
+start, so two polls a day happen at whatever times the process was last restarted, and a slot
+that falls inside a laptop sleep runs on wake rather than while the games are still pre-game —
+and §7.4 refuses an event that has already started, so a late cycle can detect nothing. This is
+the control that puts a cycle where the person watching wants one.
+
+It is an ordinary poll otherwise: one `run_once` per enabled sport, `markets × regions` credits
+each, through the same pace guard as every other request, and it stamps `last_poll_at` exactly
+as a scheduled poll does — a manual cycle *is* a poll, so `poll_is_due` must see it or the next
+worker restart pays for another one. 409 while a cycle is already running, and 409 carrying the
+guard's own message when the guard refuses to spend. §16.1 is untouched: it fetches prices and
+writes documents.
 
 FastAPI serves the built Angular bundle as static files at `/` in production mode.
 Summary and bankroll endpoints are thin wrappers over ES aggregations (`date_histogram` +
@@ -767,7 +783,7 @@ Summary and bankroll endpoints are thin wrappers over ES aggregations (`date_his
 
 | Route | Contents |
 |---|---|
-| `/dashboard` | health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button |
+| `/dashboard` | health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button, POLL NOW on the polling row (added 2026-09-16, §10) |
 | `/opportunities` | live table (poll `GET /api/opportunities` every 15 s), filters status/type |
 | `/recommendations` | history table; row action "confirm bet" dialog → confirm endpoint |
 | `/results` | summary tiles (P&L, hit rate, avg CLV) + per-day table; rec-vs-executed toggle |

@@ -444,13 +444,16 @@ for each detection: dedup (§7.4) → staking (§6.7) → deep links (§9.4)
 <tr><td><code>GET /api/matching</code> / <code>POST /api/matching/{id}/resolve</code></td><td>quarantine queue</td></tr>
 <tr><td><code>GET /api/system/health</code></td><td>scheduler last-run, quota, kill_switch, paper_mode</td></tr>
 <tr><td><code>POST /api/system/kill</code> / <code>POST /api/system/resume</code></td><td>flip kill_switch</td></tr>
+<tr><td><code>POST /api/system/poll</code></td><td>run one featured cycle now — <a href="#s8">§8.4</a>'s manual trigger (added 2026-09-16)</td></tr>
 </table></div>
+<p><strong><code>POST /api/system/poll</code> — added 2026-09-16.</strong> <a href="#s8">§8.4</a>'s dev row already reserves "manual trigger only" for props; this is the same idea for the featured cycle, and it exists because <a href="#s13">§13</a>'s cadence cannot be relied on to land anywhere useful. The interval is anchored to worker start, so two polls a day happen at whatever times the process was last restarted, and a slot that falls inside a laptop sleep runs on wake rather than while the games are still pre-game — and <a href="#s7">§7.4</a> refuses an event that has already started, so a late cycle can detect nothing. This is the control that puts a cycle where the person watching wants one.</p>
+<p>It is an ordinary poll otherwise: one <code>run_once</code> per enabled sport, <code>markets × regions</code> credits each, through the same pace guard as every other request, and it stamps <code>last_poll_at</code> exactly as a scheduled poll does — a manual cycle <em>is</em> a poll, so <code>poll_is_due</code> must see it or the next worker restart pays for another one. 409 while a cycle is already running, and 409 carrying the guard's own message when the guard refuses to spend. <a href="#s16">§16.1</a> is untouched: it fetches prices and writes documents.</p>
 <p>FastAPI serves the built Angular bundle as static files at <code>/</code> in production mode. Summary and bankroll endpoints are thin wrappers over ES aggregations (<code>date_histogram</code> + <code>sum</code> on <code>pnl_cents</code> / <code>delta_cents</code>) — do not recompute those in Python.</p>
 <h2 id="s11">11. Angular <code>config-ui</code></h2>
 <h3 id="s11-1">11.1 Routes/pages</h3>
 <div style="overflow-x:auto;margin:1em 0"><table>
 <tr><th>Route</th><th>Contents</th></tr>
-<tr><td><code>/dashboard</code></td><td>health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button</td></tr>
+<tr><td><code>/dashboard</code></td><td>health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button, POLL NOW on the polling row (added 2026-09-16, <a href="#s10">§10</a>)</td></tr>
 <tr><td><code>/opportunities</code></td><td>live table (poll <code>GET /api/opportunities</code> every 15 s), filters status/type</td></tr>
 <tr><td><code>/recommendations</code></td><td>history table; row action "confirm bet" dialog → confirm endpoint</td></tr>
 <tr><td><code>/results</code></td><td>summary tiles (P&amp;L, hit rate, avg CLV) + per-day table; rec-vs-executed toggle</td></tr>

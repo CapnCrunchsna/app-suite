@@ -77,6 +77,18 @@
   color: var(--text-dim);
 }
 
+/* §8.4's manual trigger. Deliberately not a big button: §11.1 reserves that
+ * weight for KILL/RESUME, and this one spends six credits rather than stopping
+ * the system. */
+.poll__button {
+  font-size: 0.78rem;
+  padding: 2px 10px;
+}
+
+.poll__result {
+  font-size: 0.85rem;
+}
+
 .quota {
   display: flex;
   align-items: center;

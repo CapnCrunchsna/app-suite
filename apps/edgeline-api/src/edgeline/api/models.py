@@ -209,6 +209,42 @@ class KillSwitchResponse(BaseModel):
     kill_switch: bool
 
 
+class PollCycleRow(BaseModel):
+    """One sport's cycle inside a manual poll — §7.1's `CycleReport`, narrowed.
+
+    The engine's report carries the detections themselves; this carries their
+    counts. A button needs a number, and the rows are already on
+    `/api/opportunities` for anyone who wants the detail.
+    """
+
+    sport_key: str
+    snapshots: int = 0
+    events: int = 0
+    quarantined: int = 0
+    detections: int = 0
+    alerted: int = 0
+    enabled_books: int = 0
+    #: `offline_mode` stopped this cycle before any provider request (§3.2).
+    offline: bool = False
+    #: Polled, but did not alert — `kill_switch`, today (§7.1). Distinct from
+    #: `offline`, which means nothing was fetched at all.
+    skipped_reason: str | None = None
+
+
+class PollNowResponse(BaseModel):
+    """What the manual trigger did, totalled across the enabled sports."""
+
+    offline: bool = False
+    cycles: list[PollCycleRow] = Field(default_factory=list)
+    snapshots: int = 0
+    detections: int = 0
+    alerted: int = 0
+    #: From the last cycle's response headers, which are the only truth about
+    #: credits (§8.3). `None` when nothing was fetched.
+    quota_used: int | None = None
+    quota_remaining: int | None = None
+
+
 class UnmatchedRowResponse(BaseModel):
     id: str
     provider_key: str

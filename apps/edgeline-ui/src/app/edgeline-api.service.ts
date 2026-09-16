@@ -49,6 +49,7 @@ import type {
   KillSwitchResponse,
   LedgerEntry,
   OpportunityRow,
+  PollNowResponse,
   ProviderPatch,
   ProviderRow,
   RecommendationRow,
@@ -136,6 +137,16 @@ export class EdgelineApiService {
 
   getHealth(): Promise<HealthResponse> {
     return this.api.getHealth();
+  }
+
+  /**
+   * §8.4's manual trigger: one featured cycle, now, because §13's cadence lands
+   * wherever the worker was last restarted and a slot inside a laptop sleep runs
+   * on wake. Spends `markets × regions` credits per enabled sport and places
+   * nothing (§16.1).
+   */
+  pollNow(): Promise<PollNowResponse> {
+    return this.api.pollNow();
   }
   engageKillSwitch(): Promise<KillSwitchResponse> {
     return this.api.engageKillSwitch();

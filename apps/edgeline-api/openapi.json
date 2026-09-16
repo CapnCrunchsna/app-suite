@@ -723,6 +723,28 @@
         }
       }
     },
+    "/api/system/poll": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Poll Now",
+        "description": "Run one featured cycle now — §8.4's \"manual trigger\", from the UI.\n\n**Why a button exists at all.** §13's cadence is an interval anchored to\nworker start, so the two daily polls land at whatever times the process\nhappened to be restarted, and a slot inside a laptop sleep runs on wake\nrather than while the games are still pre-game. A cycle is only worth\nanything before first pitch (§7.4 refuses an event that has started), so the\nperson watching needs a way to put one where they want it.\n\nIt is an ordinary poll in every other respect: `markets × regions` credits\nper enabled sport, through the same pace guard as every other request, and\nit stamps `last_poll_at` the way a scheduled poll does. That stamp matters —\na manual cycle *is* a poll, so `poll_is_due` must see it or the next worker\nrestart pays for another one.\n\nSettings come from the engine's strict loader rather than\n`load_settings_doc`: this is the one route that spends money, and a read that\nfails must not become a set of §3.2 defaults — that would hand the pace guard\nthe free tier's budget, or turn off an `offline_mode` someone set on purpose.\n\n§16.1 is untouched. This fetches prices and writes documents.",
+        "operationId": "pollNow",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollNowResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/system/kill": {
       "post": {
         "tags": [
@@ -1190,6 +1212,122 @@
           "detected_at"
         ],
         "title": "OpportunityRow"
+      },
+      "PollCycleRow": {
+        "properties": {
+          "sport_key": {
+            "type": "string",
+            "title": "Sport Key"
+          },
+          "snapshots": {
+            "type": "integer",
+            "title": "Snapshots",
+            "default": 0
+          },
+          "events": {
+            "type": "integer",
+            "title": "Events",
+            "default": 0
+          },
+          "quarantined": {
+            "type": "integer",
+            "title": "Quarantined",
+            "default": 0
+          },
+          "detections": {
+            "type": "integer",
+            "title": "Detections",
+            "default": 0
+          },
+          "alerted": {
+            "type": "integer",
+            "title": "Alerted",
+            "default": 0
+          },
+          "enabled_books": {
+            "type": "integer",
+            "title": "Enabled Books",
+            "default": 0
+          },
+          "offline": {
+            "type": "boolean",
+            "title": "Offline",
+            "default": false
+          },
+          "skipped_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport_key"
+        ],
+        "title": "PollCycleRow",
+        "description": "One sport's cycle inside a manual poll — §7.1's `CycleReport`, narrowed.\n\nThe engine's report carries the detections themselves; this carries their\ncounts. A button needs a number, and the rows are already on\n`/api/opportunities` for anyone who wants the detail."
+      },
+      "PollNowResponse": {
+        "properties": {
+          "offline": {
+            "type": "boolean",
+            "title": "Offline",
+            "default": false
+          },
+          "cycles": {
+            "items": {
+              "$ref": "#/components/schemas/PollCycleRow"
+            },
+            "type": "array",
+            "title": "Cycles"
+          },
+          "snapshots": {
+            "type": "integer",
+            "title": "Snapshots",
+            "default": 0
+          },
+          "detections": {
+            "type": "integer",
+            "title": "Detections",
+            "default": 0
+          },
+          "alerted": {
+            "type": "integer",
+            "title": "Alerted",
+            "default": 0
+          },
+          "quota_used": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Used"
+          },
+          "quota_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Remaining"
+          }
+        },
+        "type": "object",
+        "title": "PollNowResponse",
+        "description": "What the manual trigger did, totalled across the enabled sports."
       },
       "ProviderPatch": {
         "properties": {

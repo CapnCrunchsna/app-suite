@@ -17,6 +17,7 @@ import type {
   KillSwitchResponse,
   LedgerEntry,
   OpportunityRow,
+  PollNowResponse,
   ProviderPatch,
   ProviderRow,
   RecommendationRow,
@@ -231,6 +232,15 @@ export class EdgelineApiClient {
     return this.request<HealthResponse>(
       "GET",
       `/api/system/health`,
+      { ...options },
+    );
+  }
+
+  /** Poll Now */
+  async pollNow(options?: RequestOptions): Promise<PollNowResponse> {
+    return this.request<PollNowResponse>(
+      "POST",
+      `/api/system/poll`,
       { ...options },
     );
   }
