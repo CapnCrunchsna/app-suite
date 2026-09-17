@@ -40,6 +40,12 @@ CLOSING_SWEEP_INTERVAL_S = 60
 STARTUP_GRADE_DELAY_S = 15
 #: Just past startup logging, so the catch-up poll's output is not interleaved with it.
 STARTUP_POLL_DELAY_S = 3
+#: How often the cadence is checked against the last poll that actually landed.
+REALIGN_INTERVAL_S = 60
+#: How far the next fire may sit from the cadence before it is re-anchored. This
+#: scheduler's own poll stamps `last_poll_at` a few seconds *after* it fires, so
+#: without a tolerance every cycle would look like a poll from outside.
+REALIGN_TOLERANCE_S = 120
 #: `misfire_grace_time`: how late a run may be and still happen. APScheduler's
 #: default is **one second** — anything later is discarded with a warning and
 #: rescheduled a full interval away. On a laptop that sleeps, that is the normal
@@ -204,6 +210,26 @@ async def poll_is_due(client, *, prefix: str, interval_s: int) -> bool:
     return datetime.now(timezone.utc) - last >= timedelta(seconds=interval_s)
 
 
+def realign_target(
+    stamp: str | None, *, interval_s: int, now: datetime
+) -> datetime | None:
+    """When the next featured poll should fire, given the last one that landed.
+
+    One interval after that poll — the whole rule. `None` means "leave the job
+    alone": there is no readable stamp, or the target has already passed, which
+    makes the poll overdue rather than early and is the misfire path's business
+    (`RUN_WHEN_LATE`) rather than this one's.
+    """
+    if not stamp:
+        return None
+    try:
+        last = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    target = last + timedelta(seconds=interval_s)
+    return target if target > now else None
+
+
 async def reset_quota(client, *, prefix: str) -> None:
     """§13's monthly job: zero `quota_used` on every provider."""
     try:
@@ -327,6 +353,58 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         for sport_key in settings.sports_enabled:
             await _poll(sport_key)
 
+    async def _realign_polls() -> None:
+        """Re-anchor the cadence on the last poll that actually landed.
+
+        A poll can land from outside this scheduler: the dashboard's button
+        (§10's `POST /api/system/poll`), `engine --once`, a second process. The
+        interval job knows nothing about any of them, so a press two hours before
+        a scheduled slot would buy the same market twice — and §8.4's budget pays
+        for the cadence, not for how often a person presses a button.
+
+        So the cadence is measured from the stamp rather than from process start,
+        which is also the honest reading of "every twelve hours". Inside
+        `REALIGN_TOLERANCE_S` the stamp is this scheduler's own poll and nothing
+        moves.
+        """
+        if not scheduler.running:
+            # Called against an unstarted scheduler (the §16 offline sweep does
+            # exactly that). There is nothing to re-anchor and `modify_job` would
+            # be reaching into a pending job.
+            return
+        try:
+            doc = await client.get(
+                index=with_prefix(SETTINGS_INDEX, prefix), id="runtime"
+            )
+            stamp = doc["_source"].get("last_poll_at")
+        except Exception:
+            # A readout, not a guardrail: the next tick is sixty seconds away.
+            log.debug("could not read last_poll_at to re-anchor", exc_info=True)
+            return
+
+        target = realign_target(
+            stamp, interval_s=plan.featured_interval_s, now=datetime.now(timezone.utc)
+        )
+        if target is None:
+            return
+
+        for job in scheduler.get_jobs():
+            if not job.id.startswith("poll_featured:"):
+                continue
+            current = getattr(job, "next_run_time", None)
+            if (
+                current is not None
+                and abs((target - current).total_seconds()) <= REALIGN_TOLERANCE_S
+            ):
+                continue
+            scheduler.modify_job(job.id, next_run_time=target)
+            log.info(
+                "cadence re-anchored on the last poll: %s fires %s (was %s)",
+                job.id,
+                target.isoformat(timespec="seconds"),
+                current.isoformat(timespec="seconds") if current else "unscheduled",
+            )
+
     for sport_key in settings.sports_enabled:
         scheduler.add_job(
             _poll,
@@ -376,12 +454,17 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         kwargs={"client": client, "prefix": prefix},
         coalesce=True, misfire_grace_time=RUN_WHEN_LATE,
     )
-    # The one job that keeps APScheduler's default: it stamps `utc_now_iso()`
-    # rather than its slot, so a missed beat is not worth catching up on — the
-    # next one, a minute later, says everything a late one would have.
+    # The two jobs that keep APScheduler's default grace, both because they
+    # replace themselves a minute later: the heartbeat stamps `utc_now_iso()`
+    # rather than its slot, and a re-anchoring that is skipped is simply redone
+    # on the next tick against the same stamp.
     scheduler.add_job(
         heartbeat, "interval", seconds=HEARTBEAT_INTERVAL_S, id="heartbeat",
         kwargs={"client": client, "prefix": prefix},
+    )
+    scheduler.add_job(
+        _realign_polls, "interval", seconds=REALIGN_INTERVAL_S, id="poll_realign",
+        max_instances=1, coalesce=True,
     )
     return scheduler
 

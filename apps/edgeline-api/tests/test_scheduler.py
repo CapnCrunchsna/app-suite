@@ -20,6 +20,7 @@ from edgeline.scheduler import (
     featured_interval_s,
     plan_budget,
     poll_is_due,
+    realign_target,
 )
 
 
@@ -149,6 +150,7 @@ def test_scheduler_registers_every_job_the_spec_lists():
     assert "grade" in ids
     assert "quota_reset" in ids
     assert "heartbeat" in ids
+    assert "poll_realign" in ids
 
 
 def test_one_poll_job_per_enabled_sport():
@@ -387,3 +389,111 @@ async def test_a_poll_older_than_the_interval_is_due_again():
 async def test_an_unreadable_stamp_answers_due(doc):
     """Failing towards one wasted cycle rather than towards a silent worker."""
     assert await poll_is_due(doc, prefix="edgeline-", interval_s=43_200)
+
+
+# ---- re-anchoring the cadence on the poll that actually landed -------------
+
+
+def test_the_cadence_is_measured_from_the_last_poll_not_from_process_start():
+    """§10's button, `engine --once` and a second process can all land a poll
+    this scheduler never fired. Pressing the button two hours before a scheduled
+    slot used to buy the same market twice — §8.4's budget pays for the cadence,
+    not for how often someone presses a button."""
+    now = datetime.now(timezone.utc)
+    manual = now - timedelta(hours=2)
+
+    target = realign_target(
+        manual.strftime("%Y-%m-%dT%H:%M:%SZ"), interval_s=43_200, now=now
+    )
+
+    assert target is not None
+    # Twelve hours after the poll that landed, not after the process started.
+    assert abs((target - (manual + timedelta(seconds=43_200))).total_seconds()) < 1
+
+
+def test_a_poll_older_than_the_interval_is_left_to_the_misfire_path():
+    """The target has passed, so the poll is *overdue* rather than early —
+    `RUN_WHEN_LATE` fires it on the next wake and pulling it earlier here would
+    only race that."""
+    now = datetime.now(timezone.utc)
+    stamp = (now - timedelta(hours=20)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    assert realign_target(stamp, interval_s=43_200, now=now) is None
+
+
+@pytest.mark.parametrize("stamp", [None, "", "whenever"], ids=["none", "empty", "junk"])
+def test_an_unreadable_stamp_re_anchors_nothing(stamp):
+    """Opposite direction to `poll_is_due`, deliberately: there, an unreadable
+    stamp means poll anyway, because one wasted cycle beats a silent worker.
+    Here it means leave the schedule alone, because moving a fire time on a
+    guess is how a cadence stops meaning anything."""
+    assert realign_target(stamp, interval_s=43_200, now=datetime.now(timezone.utc)) is None
+
+
+async def test_a_manual_poll_pushes_the_next_scheduled_one_a_full_interval_out():
+    """The job that does it, against a running scheduler.
+
+    `poll_realign` reads the same `last_poll_at` the button stamps and moves the
+    interval job's next fire to one interval past it. Without this the button is
+    a second poll rather than a rescheduled one.
+    """
+    from edgeline.scheduler import build_scheduler
+
+    now = datetime.now(timezone.utc)
+    manual = now - timedelta(hours=1)
+
+    class _Client:
+        async def get(self, **_kwargs):
+            return {"_source": {"last_poll_at": manual.strftime("%Y-%m-%dT%H:%M:%SZ")}}
+
+    scheduler = build_scheduler(provider=None, client=_Client(), settings=settings())
+    scheduler.start()
+    try:
+        # The catch-up jobs would fire against a `None` provider a few seconds
+        # in; this test is about the schedule, not about them.
+        scheduler.remove_job("poll_startup")
+        scheduler.remove_job("grade_startup")
+
+        poll = scheduler.get_job("poll_featured:baseball_mlb")
+        # Where an interval anchored to process start would have put it.
+        stale = now + timedelta(minutes=10)
+        scheduler.modify_job(poll.id, next_run_time=stale)
+
+        await scheduler.get_job("poll_realign").func()
+
+        moved = scheduler.get_job(poll.id).next_run_time
+        assert abs((moved - (manual + timedelta(seconds=43_200))).total_seconds()) < 2
+        assert moved > stale, "the next poll must move out, not stay where it was"
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+async def test_re_anchoring_leaves_the_schedulers_own_poll_alone():
+    """A poll this scheduler fired stamps `last_poll_at` seconds after the fire,
+    so without a tolerance every cycle would look like an outside poll and the
+    schedule would drift by those few seconds every minute."""
+    from edgeline.scheduler import build_scheduler
+
+    now = datetime.now(timezone.utc)
+    # Fired 12 h ago by this scheduler, stamped 4 s later: the next fire is
+    # already where it should be, give or take those four seconds.
+    own_poll = now - timedelta(seconds=43_200) + timedelta(seconds=4)
+
+    class _Client:
+        async def get(self, **_kwargs):
+            return {"_source": {"last_poll_at": own_poll.strftime("%Y-%m-%dT%H:%M:%SZ")}}
+
+    scheduler = build_scheduler(provider=None, client=_Client(), settings=settings())
+    scheduler.start()
+    try:
+        scheduler.remove_job("poll_startup")
+        scheduler.remove_job("grade_startup")
+        poll = scheduler.get_job("poll_featured:baseball_mlb")
+        untouched = now + timedelta(seconds=10)
+        scheduler.modify_job(poll.id, next_run_time=untouched)
+
+        await scheduler.get_job("poll_realign").func()
+
+        assert scheduler.get_job(poll.id).next_run_time == untouched
+    finally:
+        scheduler.shutdown(wait=False)

@@ -264,6 +264,14 @@ Two things worth knowing before using it:
   and 409 with the guard's own message when the guard refuses. The API process makes the provider
   request, so **the API has to be restarted to pick this up** — the button is in the UI bundle,
   the route is in the server.
+- **A manual poll pushes the next scheduled one a full interval out**, within a minute
+  (`poll_realign`, §13, added 2026-09-16). APScheduler anchors an interval job's grid to when the
+  *scheduler* started and cannot see a poll it did not fire, so pressing the button two hours
+  before a slot would otherwise buy the same market twice. The worker now re-reads `last_poll_at`
+  every 60 s and moves each `poll_featured` job to one interval past it — which means
+  `engine --once` re-anchors the cadence too, since it stamps the same field. **That job is in the
+  worker**, so the worker needs restarting to get it, and it costs 2 credits for the startup
+  grade.
 
 When a UI bundle has been built, it is served at `/`; set `EDGELINE_UI_DIST` to point elsewhere.
 So the whole app is two commands:

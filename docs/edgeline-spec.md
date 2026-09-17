@@ -866,6 +866,7 @@ APScheduler with asyncio. Jobs:
 | `grade` | daily 06:00 UTC |
 | `quota_reset` | monthly, day 1: zero `quota_used` |
 | `heartbeat` | 60 s: update the `runtime` doc in `edgeline-settings` (read by `/api/system/health`) |
+| `poll_realign` | 60 s: re-anchor `poll_featured` one interval past `last_poll_at` (added 2026-09-16) |
 
 Startup sequence: compute projected monthly credit cost (§8.4) → refuse to schedule if over
 budget → log the number → register jobs → start Discord bot in the same loop.
@@ -876,6 +877,26 @@ observable behaviour is identical — a closing snapshot is taken once per event
 in-process one-shot is lost on restart, and losing it loses that event's CLV permanently. The
 closing price is the one number in this system that cannot be re-fetched after the fact, so the
 restart-safe form wins.
+
+**The featured cadence is measured from the last poll that landed, not from process start
+(`poll_realign`, added 2026-09-16).** An APScheduler interval job anchors its grid to when the
+scheduler started, and knows nothing about a poll that came from anywhere else — §10's manual
+trigger, `engine --once`, a second process. So pressing the button two hours before a scheduled
+slot used to buy the same market twice, and §8.4's budget pays for the cadence rather than for
+how often someone presses a button. Every 60 seconds this job moves each `poll_featured` job's
+next fire to one interval past `last_poll_at`, which is also the honest reading of "every twelve
+hours". A stamp inside a two-minute tolerance is this scheduler's own poll and moves nothing; a
+target already in the past is an *overdue* poll and is left to the misfire path below.
+
+**A job whose slot falls inside a laptop sleep runs on wake (2026-09-15).** APScheduler's default
+`misfire_grace_time` is one second, so a late run is discarded and rescheduled a full interval
+away — which on a machine that sleeps for hours silently turned "twice a day" into "whenever the
+process was restarted". Measured that day: a 16-hour sleep swallowed the 14:01 poll and the
+worker sat up for 21 hours on a 12-hour cadence without polling, heartbeating throughout.
+`poll_featured`, `closing_capture`, `grade` and `quota_reset` therefore pass
+`misfire_grace_time=None` with `coalesce=True`: a missed slot runs once on wake rather than once
+per slot. `heartbeat` and `poll_realign` keep the default, since each replaces itself a minute
+later.
 
 The Discord bot is not started here yet (§9.1 has no token). `build_scheduler` takes the
 `AlertSink` the rest of the pipeline uses, so a channel drops in without touching the jobs.
