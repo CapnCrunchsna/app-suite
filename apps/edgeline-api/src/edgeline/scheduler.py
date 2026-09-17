@@ -40,6 +40,17 @@ CLOSING_SWEEP_INTERVAL_S = 60
 STARTUP_GRADE_DELAY_S = 15
 #: Just past startup logging, so the catch-up poll's output is not interleaved with it.
 STARTUP_POLL_DELAY_S = 3
+#: When a cycle fails, how long to wait before trying again — and how many times.
+#:
+#: A job that fires the moment the machine wakes fires into a network that is not
+#: ready yet. Measured 2026-09-17: the catch-up poll resolved
+#: `api.the-odds-api.com` to `[Errno 11001] getaddrinfo failed` seconds after
+#: resume, `_poll` logged it, and APScheduler's next attempt was **ten hours
+#: away** — a whole cycle lost to a DNS lookup that would have worked a minute
+#: later. The delays grow so the window covers a slow resume (a VPN, a captive
+#: portal) rather than only a fast one, and they stop, because a provider that is
+#: still unreachable twenty minutes later is not a transient.
+RETRY_DELAYS_S = (60, 300, 900)
 #: How often the cadence is checked against the last poll that actually landed.
 REALIGN_INTERVAL_S = 60
 #: How far the next fire may sit from the cadence before it is re-anchored. This
@@ -249,6 +260,7 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
 
     from .engine import capture_closing_lines, load_settings, run_once
     from .grading import grade
+    from .providers.base import ProviderBudgetExceeded
 
     plan = check_budget(settings)
     scheduler = AsyncIOScheduler(timezone="UTC")
@@ -265,7 +277,47 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
 
     _refresh_budget(settings)
 
-    async def _poll(sport_key: str) -> None:
+    def _retry_soon(func, args: list, *, kind: str, attempt: int) -> None:
+        """Book one more attempt at `func`, or stop and say why.
+
+        `attempt` is 1-based and counts the run that just failed, so the first
+        retry is attempt 2 and reads `RETRY_DELAYS_S[0]`.
+
+        The retry is a one-shot `date` job rather than a loop inside the failing
+        job: the job hands control back, the scheduler keeps running everything
+        else, and a retry whose own slot lands inside a sleep still runs on wake
+        (`RUN_WHEN_LATE`) instead of being dropped, which is the failure this
+        whole mechanism exists to answer.
+        """
+        index = attempt - 2
+        if index >= len(RETRY_DELAYS_S):
+            log.error(
+                "%s failed %d times over %d minutes; leaving it to the next "
+                "scheduled run",
+                kind,
+                attempt - 1,
+                sum(RETRY_DELAYS_S) // 60,
+            )
+            return
+        delay = RETRY_DELAYS_S[index]
+        scheduler.add_job(
+            func,
+            "date",
+            args=args,
+            run_date=datetime.now(timezone.utc) + timedelta(seconds=delay),
+            id=f"retry:{kind}:{attempt}",
+            replace_existing=True,
+            misfire_grace_time=RUN_WHEN_LATE,
+        )
+        log.info(
+            "%s failed; retrying in %ds (attempt %d of %d)",
+            kind,
+            delay,
+            attempt,
+            len(RETRY_DELAYS_S) + 1,
+        )
+
+    async def _poll(sport_key: str, attempt: int = 1) -> None:
         try:
             report = await run_once(
                 provider, client, sport_key=sport_key, prefix=prefix, sink=sink
@@ -294,19 +346,36 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
                 report.quota_used,
                 settings.quota_monthly_budget,
             )
+        except ProviderBudgetExceeded as refused:
+            # A deliberate local refusal, not a failure: nothing was sent, and
+            # nothing about it will be different in a minute. One line, no
+            # traceback, no retry.
+            log.warning("poll %s refused: %s", sport_key, refused)
         except Exception:
-            # A failed cycle must not take the scheduler down; the next tick
-            # retries and the datastore keeps whatever the last one wrote.
+            # A failed cycle must not take the scheduler down, and it must not
+            # wait a full interval either — see RETRY_DELAYS_S. The datastore
+            # keeps whatever the cycle managed to write.
             log.exception("poll cycle failed for %s", sport_key)
+            _retry_soon(
+                _poll,
+                [sport_key, attempt + 1],
+                kind=f"poll {sport_key}",
+                attempt=attempt + 1,
+            )
 
     async def _closing_sweep() -> None:
         # Re-read §3.2 each tick, the way `run_once` already does for `_poll`,
         # so flipping `offline_mode` (or any other setting) in the UI takes
-        # effect on the next sweep instead of on the next restart. An unreadable
-        # settings document falls back to §3.2 defaults here exactly as it does
-        # for polling; the due check inside `capture_closing_lines` fails closed
-        # in that case anyway, so no request goes out on a sick datastore.
-        current = await load_settings(client, prefix=prefix)
+        # effect on the next sweep instead of on the next restart.
+        try:
+            current = await load_settings(client, prefix=prefix)
+        except Exception as unreadable:
+            # Since 2026-09-15 an unreadable settings document raises rather than
+            # becoming §3.2 defaults, and every sleep/resume makes one tick
+            # unreadable. This sweep runs every 60 s, so the next one has it —
+            # one line, not a traceback that would arrive twice a day forever.
+            log.warning("closing sweep: settings unreadable (%s); skipping a tick", unreadable)
+            return
         _refresh_budget(current)
         for sport_key in current.sports_enabled:
             try:
@@ -316,8 +385,20 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             except Exception:
                 log.exception("closing capture failed for %s", sport_key)
 
-    async def _grade() -> None:
-        current = await load_settings(client, prefix=prefix)
+    async def _grade(attempt: int = 1) -> None:
+        # Grading runs once a day, so "failed, try again tomorrow" leaves the
+        # ledger a day behind over a blip — and it fires at 06:00 UTC or on wake,
+        # which is exactly when a resume breaks the first request. Same retry as
+        # the poll, including for the settings read: a raise there would
+        # otherwise end the run before the loop can book one.
+        try:
+            current = await load_settings(client, prefix=prefix)
+        except Exception:
+            log.exception("grading: settings unreadable")
+            _retry_soon(_grade, [attempt + 1], kind="grade", attempt=attempt + 1)
+            return
+
+        failed = False
         for sport_key in current.sports_enabled:
             try:
                 report = await grade(
@@ -329,8 +410,18 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
                     # were fetched and settlement was attempted against them.
                     continue
                 await record_run(client, prefix=prefix, job="grade")
+            except ProviderBudgetExceeded as refused:
+                log.warning("grading %s refused: %s", sport_key, refused)
             except Exception:
+                failed = True
                 log.exception("grading failed for %s", sport_key)
+
+        if failed:
+            # The whole job, not the one sport that failed: settlement re-reads
+            # what is still ungraded, so a sport that succeeded costs its 2
+            # credits again and nothing else. Per-sport retry state would be the
+            # more expensive mistake to get wrong.
+            _retry_soon(_grade, [attempt + 1], kind="grade", attempt=attempt + 1)
 
     async def _poll_startup() -> None:
         """A catch-up poll at startup, when one is actually due.

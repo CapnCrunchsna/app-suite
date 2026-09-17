@@ -191,6 +191,15 @@ paid request against last month's spend. Those four jobs now pass `misfire_grace
 cycle rather than one per slot. The heartbeat deliberately keeps the default — it stamps *now*, not
 its slot, so a late beat says nothing the next one won't.
 
+**A cycle that fires on wake fires into a network that is not up yet, and used to lose the day for
+it (2026-09-17).** The catch-up poll ran seconds after a resume and got `[Errno 11001] getaddrinfo
+failed` from DNS — not a provider outage, just a lookup a minute too early. `_poll` logged the
+traceback and APScheduler's next attempt was **ten hours away**, which on a 12-hour cadence is the
+whole day's second cycle gone. `_poll` and `_grade` now book a one-shot retry at 60 s, 300 s and
+900 s before giving up, and a retry whose own slot lands inside another sleep still runs on wake.
+A pace-guard refusal is never retried: nothing was sent, and the guard will not answer differently
+in a minute — it gets one warning line now instead of a traceback.
+
 **The same sleep breaks whatever Elasticsearch request is in flight**, because the cluster is in a
 container: a 21-second suspend timed out the heartbeat and the settings read beside it, ten seconds
 apart, on a cluster that was up the whole time. The client now sets `retry_on_timeout`, and

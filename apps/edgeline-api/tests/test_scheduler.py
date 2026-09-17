@@ -391,6 +391,145 @@ async def test_an_unreadable_stamp_answers_due(doc):
     assert await poll_is_due(doc, prefix="edgeline-", interval_s=43_200)
 
 
+# ---- when a cycle fails (2026-09-17) ---------------------------------------
+
+
+def _scheduler_with(run_once=None, grade=None, load_settings=None, client=None):
+    """A started scheduler whose engine calls are stubs.
+
+    `build_scheduler` imports `run_once`, `grade` and `load_settings` into its
+    own closure, so the stubs have to be in place *before* it is called — the
+    same ordering `test_an_offline_cycle_does_not_stamp_last_poll_at` relies on.
+    The two startup catch-up jobs are removed: they would fire against these
+    stubs seconds later and this is a test about scheduling, not about them.
+    """
+    import edgeline.engine as engine_module
+    import edgeline.grading as grading_module
+
+    from edgeline.scheduler import build_scheduler
+
+    originals = (engine_module.run_once, engine_module.load_settings, grading_module.grade)
+    if run_once is not None:
+        engine_module.run_once = run_once
+    if load_settings is not None:
+        engine_module.load_settings = load_settings
+    if grade is not None:
+        grading_module.grade = grade
+    try:
+        scheduler = build_scheduler(provider=None, client=client, settings=settings())
+    finally:
+        (engine_module.run_once, engine_module.load_settings, grading_module.grade) = originals
+
+    scheduler.start()
+    scheduler.remove_job("poll_startup")
+    scheduler.remove_job("grade_startup")
+    return scheduler
+
+
+async def test_a_failed_poll_retries_in_a_minute_rather_than_in_ten_hours():
+    """Measured 2026-09-17, in the worker's own log: the catch-up poll fired
+    seconds after the machine woke, resolved `api.the-odds-api.com` to
+    `[Errno 11001] getaddrinfo failed`, logged the traceback — and APScheduler's
+    next attempt was **ten hours away**. A whole cycle lost to a DNS lookup that
+    would have worked a minute later, on a system whose whole job is to look at
+    a market before it starts.
+    """
+    from edgeline.providers.base import ProviderUnavailable
+
+    async def _unreachable(*_args, **_kwargs):
+        raise ProviderUnavailable("The Odds API /odds unreachable: ConnectError")
+
+    scheduler = _scheduler_with(run_once=_unreachable)
+    try:
+        await scheduler.get_job("poll_featured:baseball_mlb").func("baseball_mlb")
+
+        retry = scheduler.get_job("retry:poll baseball_mlb:2")
+        assert retry is not None, "a failed cycle must book another attempt"
+        seconds = (retry.next_run_time - datetime.now(timezone.utc)).total_seconds()
+        assert 30 < seconds <= 60, f"first retry should be a minute out, was {seconds}s"
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+async def test_the_retry_stops_instead_of_hammering_an_unreachable_provider(caplog):
+    """Three delays and done. A provider still unreachable twenty minutes later
+    is not a transient, and the next scheduled run is the right place to wait."""
+    import logging
+
+    from edgeline.providers.base import ProviderUnavailable
+
+    async def _unreachable(*_args, **_kwargs):
+        raise ProviderUnavailable("still down")
+
+    scheduler = _scheduler_with(run_once=_unreachable)
+    try:
+        with caplog.at_level(logging.ERROR, logger="edgeline.scheduler"):
+            # The attempt after the last delay in RETRY_DELAYS_S.
+            await scheduler.get_job("poll_featured:baseball_mlb").func("baseball_mlb", 4)
+
+        assert scheduler.get_job("retry:poll baseball_mlb:5") is None
+        assert "leaving it to the next scheduled run" in caplog.text
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+async def test_the_pace_guards_refusal_is_not_retried():
+    """Nothing was sent, and nothing will be different in a minute: the guard is
+    comparing spend against the month, not reporting an outage. Retrying it would
+    turn one honest refusal into four log lines and no poll."""
+    from edgeline.providers.base import ProviderBudgetExceeded
+
+    async def _refused(*_args, **_kwargs):
+        raise ProviderBudgetExceeded("refusing /odds: 480 of 500 monthly credits spent")
+
+    scheduler = _scheduler_with(run_once=_refused)
+    try:
+        await scheduler.get_job("poll_featured:baseball_mlb").func("baseball_mlb")
+        assert scheduler.get_job("retry:poll baseball_mlb:2") is None
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+async def test_a_failed_grading_run_retries_because_it_only_comes_round_once_a_day():
+    """`grade` is a daily cron that also fires on wake, so "try again tomorrow"
+    leaves the ledger a day behind over a blip that lasted seconds."""
+
+    async def _grade_fails(*_args, **_kwargs):
+        raise RuntimeError("scores unreachable")
+
+    class _Client:
+        async def get(self, **_kwargs):
+            return {"_source": {}}  # §3.2 defaults, one sport enabled
+
+    scheduler = _scheduler_with(grade=_grade_fails, client=_Client())
+    try:
+        await scheduler.get_job("grade").func()
+        assert scheduler.get_job("retry:grade:2") is not None
+    finally:
+        scheduler.shutdown(wait=False)
+
+
+async def test_the_closing_sweep_skips_a_tick_when_settings_are_unreadable(caplog):
+    """It runs every 60 s, so the next tick has them. What it must not do is
+    raise: since 2026-09-15 an unreadable document raises rather than becoming
+    §3.2 defaults, and every sleep/resume makes one read unreadable — which would
+    otherwise put a traceback in the log twice a day forever."""
+    import logging
+
+    from elastic_transport import ConnectionTimeout
+
+    async def _unreadable(*_args, **_kwargs):
+        raise ConnectionTimeout("Connection timed out")
+
+    scheduler = _scheduler_with(load_settings=_unreadable)
+    try:
+        with caplog.at_level(logging.WARNING, logger="edgeline.scheduler"):
+            await scheduler.get_job("closing_capture").func()
+        assert "skipping a tick" in caplog.text
+    finally:
+        scheduler.shutdown(wait=False)
+
+
 # ---- re-anchoring the cadence on the poll that actually landed -------------
 
 

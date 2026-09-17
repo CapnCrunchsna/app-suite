@@ -888,6 +888,18 @@ next fire to one interval past `last_poll_at`, which is also the honest reading 
 hours". A stamp inside a two-minute tolerance is this scheduler's own poll and moves nothing; a
 target already in the past is an *overdue* poll and is left to the misfire path below.
 
+**A failed cycle retries in a minute, not at its next slot (added 2026-09-17).** The job that
+fires the moment the machine wakes fires into a network that is not ready yet. Measured that day
+in the worker's log: the catch-up poll resolved `api.the-odds-api.com` to `[Errno 11001]
+getaddrinfo failed` seconds after resume, logged it, and APScheduler's next attempt was **ten
+hours away** — a whole cycle lost to a DNS lookup that would have worked a minute later. `_poll`
+and `_grade` now book a one-shot retry at 60 s, then 300 s, then 900 s, and then stop: a provider
+still unreachable twenty minutes later is not a transient, and the next scheduled run is the
+right place to wait. Grading retries the whole job rather than the one sport that failed, because
+settlement re-reads what is still ungraded. This sits *on top of* §8.3's in-request handling and
+changes none of it. A `ProviderBudgetExceeded` is never retried — nothing was sent, and the
+guard's comparison will not read differently in a minute.
+
 **A job whose slot falls inside a laptop sleep runs on wake (2026-09-15).** APScheduler's default
 `misfire_grace_time` is one second, so a late run is discarded and rescheduled a full interval
 away — which on a machine that sleeps for hours silently turned "twice a day" into "whenever the
