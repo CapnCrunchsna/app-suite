@@ -450,6 +450,18 @@ event that has started, so the count above is the honest one: **this system has 
 a real edge.** It has not had the chance — no cycle has run against a live pre-game market with
 the current book coverage.
 
+**It has now, and the first one won (2026-09-18).** A catch-up poll fired **70 seconds after the
+laptop woke** — precisely the cycle the pre-2026-09-15 scheduler dropped — and priced Minnesota
+Twins -1.5 at 2.63 across betrivers, ballybet and betPARX, **4h10m before first pitch**: +EV
+2.39% against a de-vigged fair value of 0.363. §7.4's cooldown picked one book of the three,
+staking put $4.00 on it at quarter-Kelly with no guardrail triggered, and §9.4's ladder produced
+an `event`-level deep link rather than a bare homepage. It settled a **win** on 2026-09-20,
++$6.52, at **CLV +2.71%** — `derived`, measured against a price 4.2 hours old, because
+`closing_capture_mode` is `off`; §12.4 is why that provenance travels with the figure rather than
+being averaged into it. One bet is not evidence of an edge. What it is evidence of is that the
+whole path — poll, normalize, de-vig, detect, stake, link, alert, settle, CLV — works end to end
+against a live pre-game market.
+
 Not every book in the feed made it. `hardrockbet` is confirmed **not** MD-legal (user, same day);
 `fliff` is a sweepstakes product, not a licensed sportsbook; and `bovada`, `lowvig`, `mybookieag`,
 `betonlineag`, `betus` are offshore. §6.4/§6.5 filter all of them out, and `EXCLUDED_BOOKS` in
