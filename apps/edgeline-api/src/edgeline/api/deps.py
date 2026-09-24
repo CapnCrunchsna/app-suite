@@ -54,7 +54,15 @@ async def get_provider() -> AsyncIterator[Any]:
 
 
 async def load_settings_doc(context: Context) -> Settings:
-    """Current settings, falling back to the §3.2 defaults when unseeded."""
+    """Current settings for display, falling back to the §3.2 defaults when
+    unseeded — **or when the read fails for any reason at all.**
+
+    Right for a page that only shows them, where rendering beats an error. Never
+    for a route that writes or spends on them: defaults are not a safe guess at
+    what the user configured (`kill_switch` and `offline_mode` both default to
+    off), so `PUT /api/settings` and `POST /api/system/poll` read through
+    `engine.load_settings`, which raises on anything but an absent document.
+    """
     try:
         found = await context.client.get(index=context.index(SETTINGS_INDEX), id="global")
     except Exception:

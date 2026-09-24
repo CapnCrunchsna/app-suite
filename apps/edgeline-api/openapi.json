@@ -32,6 +32,7 @@
           "settings"
         ],
         "summary": "Update Settings",
+        "description": "Merge a patch of §3.2 keys into the stored map and write the result whole.\n\n503, with nothing written, when the stored map cannot be read: the merge\nneeds it, and §3.2's defaults in its place would reset every key the patch\ndid not name.",
         "operationId": "updateSettings",
         "requestBody": {
           "content": {

@@ -803,7 +803,7 @@ All routes under `/api`. Auto-generated OpenAPI at `/api/openapi.json` (feeds §
 
 | Method & path | Purpose |
 |---|---|
-| `GET /api/settings` / `PUT /api/settings` | read/patch settings map (validate against §3.2 keys) |
+| `GET /api/settings` / `PUT /api/settings` | read/patch settings map (validate against §3.2 keys); a patch whose read fails writes nothing (amended 2026-09-23) |
 | `GET /api/providers` / `PATCH /api/providers/{key}` | enable/disable, budget, quota status |
 | `GET /api/sportsbooks` / `PATCH /api/sportsbooks/{key}` | enable, priority, link templates |
 | `GET /api/opportunities?status=&type=&limit=` | opportunity table |
@@ -815,6 +815,19 @@ All routes under `/api`. Auto-generated OpenAPI at `/api/openapi.json` (feeds §
 | `GET /api/system/health` | scheduler last-run, quota, kill_switch, paper_mode; `poll_plan` (added 2026-09-23) |
 | `POST /api/system/kill` / `POST /api/system/resume` | flip kill_switch |
 | `POST /api/system/poll` | run one featured cycle now — §8.4's manual trigger (added 2026-09-16); today's sports in the weekly plan (amended 2026-09-23) |
+
+**A settings patch whose read fails writes nothing — amended 2026-09-23.** `PUT /api/settings`
+merges its patch into the stored map and writes the result whole, so the stored document is always
+complete — which makes the read it merges into part of the write. That read went through the API's
+display loader, which answers §3.2's defaults for *any* failed read, and every sleep/resume on this
+laptop drops one Elasticsearch request (measured 2026-09-15). A save whose read was that request
+would have written the defaults over every key it did not name: `kill_switch` and `offline_mode`
+back off, `quota_monthly_budget` back to 500, `poll_schedule` back to the default plan — so saving
+one tunable could quietly resume a system someone had paused. It now reads through the engine's
+`load_settings`, as `POST /api/system/poll` already did: only an absent document counts as
+unseeded, so a fresh install is still configurable, and any other datastore failure answers
+**503** with nothing written. `GET /api/settings` and `GET /api/system/health` keep the lenient
+loader; they only display, and there a page that renders beats an error.
 
 **`POST /api/system/poll` — added 2026-09-16.** §8.4's dev row already reserves "manual
 trigger only" for props; this is the same idea for the featured cycle, and it exists because

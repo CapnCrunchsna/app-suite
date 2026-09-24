@@ -143,6 +143,69 @@ async def test_a_settings_read_that_fails_is_not_an_unseeded_datastore():
         await load_settings(_Timeout(), prefix="edgeline-")
 
 
+class _SettingsStore:
+    """A client whose settings read fails as it is told to, and which records
+    any write instead of making it."""
+
+    def __init__(self, raises: Exception):
+        self.raises = raises
+        self.updates: list[dict] = []
+
+    async def get(self, **_kwargs):
+        raise self.raises
+
+    async def update(self, **kwargs):
+        self.updates.append(kwargs)
+
+
+async def _put_settings(client, patch: dict):
+    """`PUT /api/settings` through the real app, with `client` as its datastore.
+    No cluster: httpx's ASGI transport sends no lifespan events."""
+    import httpx
+
+    from edgeline.api.deps import Context, get_context
+    from edgeline.api.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[get_context] = lambda: Context(client=client, prefix="edgeline-")
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as http:
+        return await http.put("/api/settings", json=patch)
+
+
+async def test_a_settings_save_whose_read_fails_writes_nothing():
+    """The same failure one layer up, where it did more harm (2026-09-23).
+    `PUT /api/settings` merges its patch into the stored map and writes the
+    result whole, and it read that map through the API's display loader, which
+    answers defaults for any failure — so a timed-out read turned a save of one
+    key into a reset of every other, `kill_switch` and `offline_mode` back off
+    among them."""
+    from elastic_transport import ConnectionTimeout
+
+    store = _SettingsStore(raises=ConnectionTimeout("Connection timed out"))
+
+    response = await _put_settings(store, {"kelly_fraction": 0.1})
+
+    assert response.status_code == 503
+    assert "nothing was saved" in response.json()["detail"]
+    assert store.updates == []
+
+
+async def test_a_settings_save_on_an_unseeded_install_still_writes():
+    """The one failed read that is an answer: no document is a new install, and
+    that has to be configurable before anything has seeded it."""
+    from elasticsearch import NotFoundError
+
+    store = _SettingsStore(raises=NotFoundError("index_not_found_exception", _Meta(), None))
+
+    response = await _put_settings(store, {"kelly_fraction": 0.1})
+
+    assert response.status_code == 200
+    [write] = store.updates
+    assert write["doc"] == {**DEFAULT_SETTINGS, "kelly_fraction": 0.1}
+
+
 def test_stored_document_overrides_only_the_keys_it_carries():
     settings = settings_from_document({"kelly_fraction": 0.1, "kill_switch": True})
     assert settings.kelly_fraction == 0.1

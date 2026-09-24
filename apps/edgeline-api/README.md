@@ -235,6 +235,10 @@ apart, on a cluster that was up the whole time. The client now sets `retry_on_ti
 answer §3.2 defaults for any exception, which is worse than an error: `kill_switch` and
 `offline_mode` both default to off, so a blocked read could quietly resume a system someone had
 paused, and it logged "no seeded settings" against a datastore that was fully seeded.
+`PUT /api/settings` stayed on the API's own lenient loader until 2026-09-23, where it did more harm:
+a save merges into the stored map and writes it whole, so a dropped read would have stored the
+defaults over every key the patch did not name. It reads through `load_settings` now and answers
+503 with nothing written; `GET /api/settings` and `/health` still fall back, since they only display.
 
 **`test-py` was renamed to `test` in Phase 0 T0.5**, which is the moment the previous note in
 this file reserved for it: the target now has 151 tests behind it rather than a smoke test.
