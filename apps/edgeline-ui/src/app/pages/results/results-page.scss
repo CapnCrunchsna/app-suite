@@ -13,6 +13,16 @@
   font-size: 0.8rem;
 }
 
+/* Rows set aside by audit.py. A note, not an alarm: the exclusion is the page
+ * being honest, not something having gone wrong. */
+.excluded {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
 .segmented {
   display: flex;
   overflow: hidden;

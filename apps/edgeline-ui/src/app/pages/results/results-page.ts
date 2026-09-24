@@ -119,6 +119,16 @@ export class ResultsPage {
     this.buckets().reduce((sum, bucket) => sum + bucket.executed_pnl_cents, 0),
   );
 
+  /**
+   * Results set aside by `audit.py` and left out of every figure on this page.
+   *
+   * Said out loud rather than dropped silently. Until 2026-09-23 five bets
+   * detected after their games had started were most of this page — −$39.03 and
+   * a 33% hit rate over a real record of one win — and a page that quietly shows
+   * fewer rows would be the same failure one level down.
+   */
+  protected readonly excluded = computed(() => this.totals().excluded ?? 0);
+
   /** Nothing has been graded at all — a different sentence from "graded, but
    *  none of it settled". */
   protected readonly nothingGraded = computed(() => this.totals().graded === 0);

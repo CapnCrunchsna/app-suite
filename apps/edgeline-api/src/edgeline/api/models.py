@@ -176,6 +176,10 @@ class SummaryTotals(ClvProvenance):
     wins: int = 0
     settled: int = 0
     hit_rate: float | None = None
+    #: Results marked `excluded_reason` and left out of every figure above —
+    #: reported so the page can say rows were set aside rather than silently
+    #: showing fewer of them (`audit.py`).
+    excluded: int = 0
 
 
 class SummaryResponse(BaseModel):

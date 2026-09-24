@@ -168,6 +168,11 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             "clv_staleness_s": _LONG,
             "needs_manual": _BOOLEAN,
             "graded_at": _DATE,
+            #: Set when a settled row must not count as evidence, naming why —
+            #: `detected_after_start` today (`audit.py`). The row is kept: the
+            #: record of what the system did is not edited away, it is marked, and
+            #: §12's summary and the go-live CLV report leave it out.
+            "excluded_reason": _KEYWORD,
         },
     },
     # No stored balance field, by design: balances are sum aggregations (§4.4 rule 3).

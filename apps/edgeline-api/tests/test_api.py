@@ -432,6 +432,141 @@ async def test_the_clv_average_travels_with_where_it_came_from(api):
     assert bucket["clv_from_derived"] == 2
 
 
+async def test_an_excluded_result_is_left_out_of_every_figure_and_counted(api):
+    """The shape of 2026-09-23: five dead-line bets detected after first pitch were
+    most of this page, −$39.03 and a 33% hit rate over a real record of one win.
+    Marked rows drop out of every figure — and `excluded` says so, because a page
+    that quietly shows fewer rows is the same failure as one that mixes them in."""
+    http, client, prefix = api
+    from edgeline.indices import RESULTS_INDEX, with_prefix
+
+    for doc_id, outcome, pnl, reason in (
+        ("r-dead-line", "loss", -2000, "detected_after_start"),
+        ("r-real", "win", 652, None),
+    ):
+        document = {
+            "bet_id": "",
+            "outcome": outcome,
+            "pnl_cents": pnl,
+            "clv_pct": 2.7 if reason is None else None,
+            "needs_manual": False,
+            "graded_at": utc_now_iso(),
+        }
+        if reason:
+            document["excluded_reason"] = reason
+        await client.index(
+            index=with_prefix(RESULTS_INDEX, prefix),
+            id=doc_id,
+            document=document,
+            refresh="wait_for",
+        )
+
+    body = (await http.get("/api/results/summary")).json()
+    totals = body["totals"]
+    assert totals["graded"] == 1
+    assert totals["pnl_cents"] == 652
+    assert totals["hit_rate"] == pytest.approx(1.0)
+    assert totals["excluded"] == 1
+    assert body["buckets"][0]["graded"] == 1
+
+
+async def test_the_audit_excludes_a_bet_detected_after_first_pitch_and_nothing_else(api):
+    """`audit.py` decides from the data, not from a list of ids: a result counts
+    only if the opportunity behind it was detected before its game started — the
+    rule `detect_opportunities` has enforced since 2026-09-11. A result whose trail
+    cannot be followed stays counted; excluding evidence needs a reason that can be
+    shown, not the absence of one."""
+    _http, client, prefix = api
+    from edgeline.audit import (
+        DETECTED_AFTER_START,
+        exclude_results_detected_after_start,
+    )
+    from edgeline.indices import (
+        EVENTS_INDEX,
+        OPPORTUNITIES_INDEX,
+        RECOMMENDATIONS_INDEX,
+        RESULTS_INDEX,
+        with_prefix,
+    )
+
+    first_pitch = "2026-09-09T23:05:00Z"
+    await client.index(
+        index=with_prefix(EVENTS_INDEX, prefix),
+        id=EVENT_ID,
+        document={
+            "sport_key": "baseball_mlb",
+            "commence_time": first_pitch,
+            "home_team": "Miami Marlins",
+            "away_team": "Atlanta Braves",
+            "completed": True,
+        },
+        refresh="wait_for",
+    )
+
+    async def settled_bet(rec_id: str, opp_id: str | None, detected_at: str) -> None:
+        if opp_id:
+            await client.index(
+                index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+                id=opp_id,
+                document={
+                    "type": "ev",
+                    "event_id": EVENT_ID,
+                    "market_key": "h2h",
+                    "legs": [],
+                    "edge_pct": 3.0,
+                    "status": "expired",
+                    "detected_at": detected_at,
+                    "expires_at": first_pitch,
+                },
+                refresh="wait_for",
+            )
+        await client.index(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+            id=rec_id,
+            document={
+                "opportunity_id": opp_id or "gone",
+                "stakes": {"total_cents": 400, "legs": [], "method": "kelly",
+                           "guardrails_applied": []},
+                "paper": True,
+                "channel": "log",
+                "sent_at": detected_at,
+            },
+            refresh="wait_for",
+        )
+        await client.index(
+            index=with_prefix(RESULTS_INDEX, prefix),
+            id=rec_id,  # §12 step 2: a result's id is its recommendation's
+            document={
+                "bet_id": "",
+                "outcome": "win",
+                "pnl_cents": 100,
+                "clv_pct": None,
+                "needs_manual": False,
+                "graded_at": utc_now_iso(),
+            },
+            refresh="wait_for",
+        )
+
+    # 3h40m after first pitch — the betPARX-on-the-Marlins shape.
+    await settled_bet("rec-dead", "c" * 64, "2026-09-10T02:45:00Z")
+    # Four hours before it — a real pre-game detection.
+    await settled_bet("rec-real", "d" * 64, "2026-09-09T19:05:00Z")
+    # A trail that cannot be followed: the opportunity is missing.
+    await settled_bet("rec-orphan", None, "2026-09-10T02:45:00Z")
+
+    marked = await exclude_results_detected_after_start(client, prefix=prefix)
+    assert marked == ["rec-dead"]
+
+    results = with_prefix(RESULTS_INDEX, prefix)
+    dead = await client.get(index=results, id="rec-dead")
+    assert dead["_source"]["excluded_reason"] == DETECTED_AFTER_START
+    for kept in ("rec-real", "rec-orphan"):
+        assert "excluded_reason" not in (await client.get(index=results, id=kept))["_source"]
+
+    # Idempotent: a second run finds nothing left to mark.
+    assert await exclude_results_detected_after_start(client, prefix=prefix) == []
+
+
 # ---- bankroll (§10, §4.4 rule 3) -------------------------------------------
 
 

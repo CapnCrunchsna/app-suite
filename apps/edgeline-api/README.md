@@ -450,6 +450,14 @@ event that has started, so the count above is the honest one: **this system has 
 a real edge.** It has not had the chance — no cycle has run against a live pre-game market with
 the current book coverage.
 
+**Those five settled results are now excluded from every figure, and say so (2026-09-23).**
+They were still most of the Results page — −$39.03 and a 33% hit rate over a real record of one
+win — and that is the page the go-live report is read from. `python -m edgeline.audit` lists
+results whose bet was detected after first pitch; `--apply` marks them `excluded_reason:
+detected_after_start`. It decides from the data (opportunity `detected_at` against the event's
+`commence_time`), never from a list of ids, and it marks rather than deletes: the rows stay, the
+summary leaves them out, and `totals.excluded` lets the page say how many were set aside.
+
 **It has now, and the first one won (2026-09-18).** A catch-up poll fired **70 seconds after the
 laptop woke** — precisely the cycle the pre-2026-09-15 scheduler dropped — and priced Minnesota
 Twins -1.5 at 2.63 across betrivers, ballybet and betPARX, **4h10m before first pitch**: +EV

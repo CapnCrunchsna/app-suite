@@ -253,6 +253,7 @@ export interface SummaryTotals {
   wins?: number;
   settled?: number;
   hit_rate?: number | null;
+  excluded?: number;
 }
 
 export interface UnmatchedRowResponse {

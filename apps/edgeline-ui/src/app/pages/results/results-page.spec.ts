@@ -225,4 +225,28 @@ describe('ResultsPage (§11.1, §12)', () => {
       expect(el.textContent).toContain('Week of');
     });
   });
+
+  /**
+   * `audit.py` sets rows aside and the API leaves them out of every figure. The
+   * page has to *say* so: a page that silently shows fewer rows than were graded
+   * is the same failure as one that mixes dead-line bets into the evidence.
+   */
+  describe('rows set aside by the audit', () => {
+    it('says how many were left out and why', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = { ...POPULATED, totals: { ...POPULATED.totals, excluded: 5 } };
+      });
+      const note = el.querySelector('.excluded')?.textContent ?? '';
+      expect(note).toContain('5 recommendations are');
+      expect(note).toContain('already started');
+      expect(note).toContain('not deleted');
+    });
+
+    it('says nothing when nothing was set aside', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = POPULATED;
+      });
+      expect(el.querySelector('.excluded')).toBeNull();
+    });
+  });
 });

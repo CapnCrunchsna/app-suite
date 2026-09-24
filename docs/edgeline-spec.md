@@ -280,7 +280,7 @@ Kibana at `http://localhost:5601` is the ops window into every index — no extr
 | `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double |
 | `edgeline-recommendations` | auto | opportunity_id kw (= opp_hash) · stakes obj(enabled:false, the §5 StakePlan) · paper bool · channel kw · sent_at date · message_ref kw |
 | `edgeline-bets` | auto | recommendation_id kw · confirmed_via kw(button\|reaction\|ui) · stake_actual_cents long · odds_actual_decimal double · placed_at date |
-| `edgeline-results` | **recommendation id** | bet_id kw · outcome kw(win\|loss\|push\|void) · pnl_cents long · clv_pct double · needs_manual bool · graded_at date |
+| `edgeline-results` | **recommendation id** | bet_id kw · outcome kw(win\|loss\|push\|void) · pnl_cents long · clv_pct double · clv_source kw(closing\|derived) · clv_staleness_s long · needs_manual bool · graded_at date · excluded_reason kw (§12, added 2026-09-23) |
 | `edgeline-bankroll-ledger` | auto | book_key kw · delta_cents long · reason kw(deposit\|withdrawal\|bet_won\|bet_lost\|manual_adjust) · ref_result_id kw · @timestamp date — **no stored balance field** |
 | `edgeline-unmatched` | auto | provider_key kw · raw obj(enabled:false) · reason kw · resolved bool · created_at date |
 
@@ -851,6 +851,19 @@ target). UI code imports ONLY from `libs/api-client` — no hand-written `HttpCl
 6. If today's graded executed losses ≥ `daily_loss_stop_cents` (a filtered `sum` aggregation
    over today's executed `pnl_cents`) → set `kill_switch=true`, send a Discord notice
    `🛑 Daily loss stop hit — alerting paused`.
+
+**A result counts as evidence only if its bet was detected before first pitch (added
+2026-09-23).** Every opportunity stored before 2026-09-11 was detected after its event had
+started — dead lines a book had not taken down — and five of them were settled as paper
+results. On 2026-09-23 they were most of the Results page: −$39.03 and a 33% hit rate over a
+real record of one win at +$6.52, on the page T4.4's go-live report is read from. Such rows
+carry `excluded_reason` (`detected_after_start` today) and every figure in `GET
+/api/results/summary` leaves them out; `totals.excluded` counts them so the page can say
+rows were set aside rather than silently showing fewer. They are **marked, never deleted** —
+the record of what the system did is not edited away. `python -m edgeline.audit --apply`
+sets the flag, deciding from the data rather than from a list of ids: opportunity
+`detected_at` against the event's `commence_time`, the rule `detect_opportunities` has
+enforced since 2026-09-11. A trail that cannot be followed stays counted.
 
 ---
 

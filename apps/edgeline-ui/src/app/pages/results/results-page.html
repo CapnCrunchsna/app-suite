@@ -38,6 +38,14 @@
     </div>
   </div>
 
+  @if (excluded() > 0) {
+    <p class="excluded">
+      {{ excluded() }} {{ excluded() === 1 ? 'recommendation is' : 'recommendations are' }}
+      left out of every figure below: detected after the game had already started — dead
+      lines a book had not taken down, not edges. Kept on record, not deleted.
+    </p>
+  }
+
   <div class="tiles">
     <!-- CLV first, deliberately. It is the figure §15's go-live gate rests on,
          and the only one that means anything while nothing is placed. -->

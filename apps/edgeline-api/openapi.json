@@ -2100,6 +2100,11 @@
               }
             ],
             "title": "Hit Rate"
+          },
+          "excluded": {
+            "type": "integer",
+            "title": "Excluded",
+            "default": 0
           }
         },
         "type": "object",

@@ -17,6 +17,14 @@ hours old (§3.2 `closing_capture_mode`). Those are two different measurements.
 Averaging them into one number and printing it beside a go-live gate would be the
 strongest claim this system makes, resting on its weakest data — so the counts
 travel with the figure and the page is expected to show them.
+
+**Rows marked `excluded_reason` are left out of every figure, and counted.** Five
+paper recommendations from 2026-09-09/10 were detected after their games had
+started (`audit.py`), and until 2026-09-23 they were most of this page: −$39.03
+and a 33% hit rate over a real record of one bet at +$6.52. They are marked, not
+deleted, and `totals.excluded` says how many were set aside so the page can say
+so — a figure that quietly drops rows is the same failure as one that quietly
+mixes evidence.
 """
 
 from __future__ import annotations
@@ -44,8 +52,15 @@ async def summary(
         context,
         RESULTS_INDEX,
         size=0,
-        query={"match_all": {}},
+        query={"bool": {"must_not": [{"exists": {"field": "excluded_reason"}}]}},
         aggs={
+            # `global` ignores the query above, so this counts exactly the rows it
+            # filtered out — one request, and the count cannot drift from the
+            # filter it describes.
+            "excluded": {
+                "global": {},
+                "aggs": {"marked": {"filter": {"exists": {"field": "excluded_reason"}}}},
+            },
             "buckets": {
                 "date_histogram": {
                     "field": "graded_at",
@@ -138,6 +153,7 @@ def _clv_provenance(scope: dict[str, Any]) -> dict[str, Any]:
 
 
 def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
+    excluded = aggregations.get("excluded", {}).get("marked", {}).get("doc_count", 0)
     totals = aggregations.get("totals")
     if not totals:
         return {
@@ -148,6 +164,7 @@ def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
             "clv_from_closing": 0,
             "clv_from_derived": 0,
             "avg_clv_pct_closing": None,
+            "excluded": excluded,
         }
     wins = totals["wins"]["doc_count"]
     settled = totals["settled"]["doc_count"]
@@ -159,4 +176,5 @@ def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
         "wins": wins,
         "settled": settled,
         "hit_rate": _hit_rate(wins, settled),
+        "excluded": excluded,
     }
