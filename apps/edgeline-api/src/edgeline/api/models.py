@@ -14,7 +14,7 @@ those as required would make the API lie about data that is honestly absent.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -195,6 +195,28 @@ class QuotaRow(BaseModel):
     quota_reset_at: str | None = None
 
 
+class PollPlanStatus(BaseModel):
+    """What sets the featured cadence — §3.2's `poll_schedule`, §13.
+
+    Read from the stored settings, so it is what the next worker start will
+    run. When the worker is up, `runtime.next_poll_at` says what the running
+    process has actually registered.
+    """
+
+    #: `schedule` while the weekly plan is in effect (it has a slot and the
+    #: budget is the free tier's); `interval` otherwise.
+    mode: Literal["schedule", "interval"]
+    #: Polls a week the plan makes, which §8.4 projects from. `None` on the interval.
+    polls_per_week: int | None = None
+    #: The plan's sports, in plan order. Empty on the interval.
+    sports: list[str] = Field(default_factory=list)
+    #: What `POST /api/system/poll` would poll right now: today's plan sports by
+    #: the plan's Eastern calendar, else `sports_enabled`.
+    poll_now_sports: list[str] = Field(default_factory=list)
+    #: The clock the plan's times are written in.
+    timezone: str
+
+
 class HealthResponse(BaseModel):
     paper_mode: bool
     kill_switch: bool
@@ -207,6 +229,7 @@ class HealthResponse(BaseModel):
     runtime: dict[str, Any] = Field(default_factory=dict)
     quota: list[QuotaRow] = Field(default_factory=list)
     sports_enabled: list[str] = Field(default_factory=list)
+    poll_plan: PollPlanStatus | None = None
 
 
 class KillSwitchResponse(BaseModel):
@@ -236,7 +259,7 @@ class PollCycleRow(BaseModel):
 
 
 class PollNowResponse(BaseModel):
-    """What the manual trigger did, totalled across the enabled sports."""
+    """What the manual trigger did, totalled across the sports it polled."""
 
     offline: bool = False
     cycles: list[PollCycleRow] = Field(default_factory=list)

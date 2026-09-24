@@ -22,9 +22,10 @@ import logging
 import signal
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, NamedTuple
+from zoneinfo import ZoneInfo
 
-from .config import Settings
+from .config import WEEKDAYS, PollSlot, Settings
 from .indices import PROVIDERS_INDEX, SETTINGS_INDEX, with_prefix
 from .schemas import utc_now_iso
 
@@ -32,6 +33,7 @@ log = logging.getLogger(__name__)
 
 SECONDS_PER_DAY = 86_400
 DAYS_PER_MONTH = 30
+DAYS_PER_WEEK = 7
 #: §13: the free tier's budget is what selects the dev cadence.
 FREE_TIER_BUDGET = 500
 HEARTBEAT_INTERVAL_S = 60
@@ -72,6 +74,36 @@ REALIGN_TOLERANCE_S = 120
 #: sleep into a single run: a wake costs one cycle, not one per slot, so §8.4's
 #: budget still buys the cadence rather than the uptime.
 RUN_WHEN_LATE = None
+#: The clock `poll_schedule` is written in (§3.2). The games are scheduled in
+#: Eastern time and so is the plan; APScheduler's cron follows DST from here, so
+#: a 17:30 slot is 21:30 UTC in October and 22:30 UTC in December.
+PLAN_TIMEZONE = "America/New_York"
+#: How late a slot of the weekly plan may still run — bounded, where the interval
+#: uses `RUN_WHEN_LATE`. A fixed-time poll is placed for the games about to
+#: start, so once they have started it buys nothing (§7.4 refuses a started
+#: event): a 17:30 slot noticed at 23:00 is skipped, not bought.
+#:
+#: Ninety minutes is the lead the default plan's slots were placed with, and the
+#: Monday/Thursday 18:45 NFL slot shows why it is the ceiling: its one game
+#: kicks off at 20:15, so any later and the poll prices a game already under way.
+SCHEDULED_POLL_GRACE_S = 90 * 60
+#: A slot of the plan stands down when a poll from *outside* the plan — §10's
+#: button, `engine --once`, a second process — bought the same sport this
+#: recently. That poll already spent what the slot was budgeted for (§8.4).
+#: Three hours is under the tightest gap between two same-sport slots in the
+#: default plan (Sunday's NFL, three and a half), so one press can stand in for
+#: one slot and never reach the next.
+STAND_DOWN_S = 3 * 3600
+#: The `last_poll_source_by_sport` value of a poll the plan made. Every other
+#: source counts as outside the plan.
+SOURCE_SCHEDULE = "schedule"
+SOURCE_INTERVAL = "interval"
+#: Version conflicts to retry on the `runtime` document. Two slots due in the
+#: same minute (the default plan's 17:30 NHL and NBA) finish seconds apart and
+#: both stamp it, and the heartbeat writes it every minute besides.
+RUNTIME_WRITE_RETRIES = 3
+#: The job ids that buy featured odds, for `next_poll`.
+POLL_JOB_PREFIXES = ("poll_featured:", "poll_scheduled:")
 
 
 class BudgetExceeded(RuntimeError):
@@ -88,10 +120,193 @@ class BudgetPlan:
     sports: int
     projected_monthly_credits: int
     budget: int
+    #: How many polls a week `poll_schedule` makes when it sets the cadence;
+    #: `None` when the interval does.
+    scheduled_polls_per_week: int | None = None
 
     @property
     def affordable(self) -> bool:
         return self.projected_monthly_credits <= self.budget
+
+    @property
+    def scheduled(self) -> bool:
+        return self.scheduled_polls_per_week is not None
+
+
+class ScheduledPoll(NamedTuple):
+    """One weekly fire of the plan: poll `sport` at `time` (ET) every `day`."""
+
+    day: str
+    time: str
+    sport: str
+
+    @property
+    def job_id(self) -> str:
+        return f"poll_scheduled:{self.day}:{self.time.replace(':', '')}:{self.sport}"
+
+    @property
+    def hour(self) -> int:
+        return int(self.time[:2])
+
+    @property
+    def minute(self) -> int:
+        return int(self.time[3:])
+
+
+def schedule_in_effect(settings: Settings) -> bool:
+    """§13: the weekly plan is the free tier's cadence.
+
+    So it sets the pace only while the budget is still the free tier's — the rule
+    that already chose `poll_interval_dev_s` over `poll_interval_s` — and only
+    when it has a slot. An empty plan is how the interval comes back.
+    """
+    return bool(settings.poll_schedule) and settings.quota_monthly_budget <= FREE_TIER_BUDGET
+
+
+def scheduled_polls(settings: Settings) -> list[ScheduledPoll]:
+    """The plan expanded to one entry per weekly fire, each fire once.
+
+    Empty whenever the plan is not what sets the cadence. Two rows naming the
+    same day, time and sport are one poll rather than two — the scheduler
+    registers them as one job, so the budget must count them as one.
+    """
+    if not schedule_in_effect(settings):
+        return []
+    polls: dict[str, ScheduledPoll] = {}
+    for row in settings.poll_schedule:
+        slot = row if isinstance(row, PollSlot) else PollSlot.model_validate(row)
+        for day in slot.days:
+            poll = ScheduledPoll(day, slot.time, slot.sport)
+            polls.setdefault(poll.job_id, poll)
+    return sorted(polls.values(), key=lambda p: (WEEKDAYS.index(p.day), p.time, p.sport))
+
+
+def active_sports(settings: Settings) -> list[str]:
+    """Every sport a poll can reach: `sports_enabled`, then the plan's own.
+
+    What the closing sweep covers, and what grading falls back to when it cannot
+    tell which sports have something to settle. A union, rather than a rule that
+    the plan may only name enabled sports: `sports_enabled` is also what the
+    interval polls when the plan is emptied, so requiring NFL there would double
+    that fallback's bill (§8.4) for a sport it was never asked to poll.
+    """
+    sports = list(settings.sports_enabled)
+    for poll in scheduled_polls(settings):
+        if poll.sport not in sports:
+            sports.append(poll.sport)
+    return sports
+
+
+def plan_clock(now: datetime | None = None) -> datetime:
+    """`now` on the plan's own (Eastern) clock."""
+    return (now or datetime.now(timezone.utc)).astimezone(ZoneInfo(PLAN_TIMEZONE))
+
+
+def sports_for_poll_now(settings: Settings, now: datetime | None = None) -> list[str]:
+    """What a cycle run *now* covers — §10's button and `engine --once`.
+
+    Today's sports in the plan, by the plan's Eastern calendar, so a press on a
+    Tuesday buys Tuesday's slate and not Sunday's. `sports_enabled` when the plan
+    is empty, not in effect, or has nothing today.
+    """
+    polls = scheduled_polls(settings)
+    if polls:
+        today = WEEKDAYS[plan_clock(now).weekday()]
+        todays = list(dict.fromkeys(poll.sport for poll in polls if poll.day == today))
+        if todays:
+            return todays
+    return list(settings.sports_enabled)
+
+
+def slot_due_at(poll: ScheduledPoll, now: datetime) -> datetime:
+    """The latest time this slot came due, at or before `now` (returned in UTC)."""
+    zone = ZoneInfo(PLAN_TIMEZONE)
+    local = now.astimezone(zone)
+    for back in range(DAYS_PER_WEEK + 1):
+        day = (local - timedelta(days=back)).date()
+        if WEEKDAYS[day.weekday()] != poll.day:
+            continue
+        due = datetime(day.year, day.month, day.day, poll.hour, poll.minute, tzinfo=zone)
+        if due <= local:
+            return due.astimezone(timezone.utc)
+    raise AssertionError(f"{poll.job_id} did not recur within a week")  # unreachable
+
+
+def missed_slots(
+    polls: list[ScheduledPoll], now: datetime, *, grace_s: int = SCHEDULED_POLL_GRACE_S
+) -> list[ScheduledPoll]:
+    """Slots that came due inside the grace window — what a worker that was down
+    for them still owes when it starts, on the same terms a sleep would get."""
+    grace = timedelta(seconds=grace_s)
+    return [poll for poll in polls if now - slot_due_at(poll, now) <= grace]
+
+
+def _parse_stamp(stamp: Any) -> datetime | None:
+    """A `utc_now_iso` stamp as an aware datetime; `None` for anything else."""
+    if not stamp or not isinstance(stamp, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def stand_down_reason(
+    runtime: dict[str, Any], sport_key: str, *, due: datetime, now: datetime
+) -> str | None:
+    """Why a slot of the plan should not buy its poll, or `None` when it should.
+
+    Read off the per-sport stamps every poll writes (`record_poll`):
+
+    * **The slot is already served** — this sport was polled at or after the
+      time the slot came due. A worker restarted inside the grace window, or a
+      second worker, would otherwise buy the same slot twice.
+    * **A poll from outside the plan landed within `STAND_DOWN_S`** — that poll
+      already spent what the slot was budgeted for, which is the button's whole
+      bargain with §8.4.
+
+    The plan's own earlier polls never stand a slot down. If they did, a plan
+    with two slots close together, or a slot that fired late inside its grace,
+    would quietly lose the next slot while `--check-budget` went on counting it.
+
+    Anything unreadable answers "poll", for `poll_is_due`'s reason: one wasted
+    cycle is cheaper than a plan that silently stops.
+    """
+    stamps = runtime.get("last_poll_at_by_sport")
+    last = _parse_stamp(stamps.get(sport_key)) if isinstance(stamps, dict) else None
+    if last is None:
+        return None
+    if last >= due - timedelta(seconds=REALIGN_TOLERANCE_S):
+        return f"already polled at {last:%H:%M} UTC, as this slot came due or since"
+    sources = runtime.get("last_poll_source_by_sport")
+    source = sources.get(sport_key) if isinstance(sources, dict) else None
+    age = now - last
+    if source != SOURCE_SCHEDULE and age < timedelta(seconds=STAND_DOWN_S):
+        return f"a {source or 'recorded'} poll landed {int(age.total_seconds() // 60)} min ago"
+    return None
+
+
+def next_poll(jobs) -> dict[str, Any]:
+    """When the running worker next buys featured odds, and for which sports.
+
+    Written onto the `runtime` document by the heartbeat, so `/health` reports
+    what *this process* has registered — which a plan edited since it started
+    would not tell you.
+    """
+    upcoming = [
+        (job.next_run_time, job.args[-1])
+        for job in jobs
+        if job.id.startswith(POLL_JOB_PREFIXES) and getattr(job, "next_run_time", None)
+    ]
+    if not upcoming:
+        return {"next_poll_at": None, "next_poll_sports": []}
+    first = min(when for when, _ in upcoming)
+    sports = list(dict.fromkeys(sport for when, sport in upcoming if when == first))
+    return {
+        "next_poll_at": first.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "next_poll_sports": sports,
+    }
 
 
 def featured_interval_s(settings: Settings) -> int:
@@ -102,61 +317,102 @@ def featured_interval_s(settings: Settings) -> int:
 
 
 def plan_budget(settings: Settings) -> BudgetPlan:
-    """§8.4: `(86400/interval) x markets x regions x 30`, per enabled sport.
+    """§8.4: what the featured cadence costs a month.
+
+    On the interval, `(86400/interval) x markets x regions x 30` per enabled
+    sport. On the weekly plan, `polls a week x markets x regions x 30/7` — each
+    slot buys one sport, so the plan's sports are already in the count.
+
+    Every slot is counted at full price, including a slot for a sport that is
+    out of season. An empty response costs nothing (measured 2026-09-23,
+    `x-requests-last: 0`), so such a slot really is free until its season
+    starts — but the projection cannot know when that is, and under-reporting is
+    the one direction this calculation must never fail in, since its whole job
+    is refusing to start. For the same reason the weekly figure rounds up.
 
     `regions` is counted from the setting rather than assumed. It used to be a
     hardcoded 1, which would have under-reported the cost by half the moment a
-    second region was added — and under-reporting is the one direction this
-    calculation must never fail in, since its whole job is refusing to start.
+    second region was added.
     """
     interval = featured_interval_s(settings)
     markets = len(settings.markets_featured)
     regions = max(len(settings.regions), 1)
-    sports = max(len(settings.sports_enabled), 1)
-    per_sport = (SECONDS_PER_DAY / interval) * markets * regions * DAYS_PER_MONTH
-    # `offline_mode` makes every provider request a no-op (§3.2), so the cadence
-    # costs nothing and no cadence can be unaffordable. Without this the guard
-    # would refuse to start an offline worker over a bill it will never incur.
-    projected = 0 if settings.offline_mode else int(per_sport * sports)
+    polls = scheduled_polls(settings)
+    if polls:
+        sports = len({poll.sport for poll in polls})
+        weekly = len(polls) * markets * regions
+        # Integer ceiling of weekly x 30/7.
+        projected = -(-weekly * DAYS_PER_MONTH // DAYS_PER_WEEK)
+    else:
+        sports = max(len(settings.sports_enabled), 1)
+        per_sport = (SECONDS_PER_DAY / interval) * markets * regions * DAYS_PER_MONTH
+        projected = int(per_sport * sports)
     return BudgetPlan(
         featured_interval_s=interval,
         markets=markets,
         regions=regions,
         sports=sports,
-        projected_monthly_credits=projected,
+        # `offline_mode` makes every provider request a no-op (§3.2), so the
+        # cadence costs nothing and no cadence can be unaffordable. Without this
+        # the guard would refuse to start an offline worker over a bill it will
+        # never incur.
+        projected_monthly_credits=0 if settings.offline_mode else projected,
         budget=settings.quota_monthly_budget,
+        scheduled_polls_per_week=len(polls) if polls else None,
     )
 
 
 def check_budget(settings: Settings) -> BudgetPlan:
     """Log the projected cost and refuse an unaffordable cadence (§13, §8.4)."""
     plan = plan_budget(settings)
-    log.info(
-        "projected monthly credits: %d (interval %ds x %d markets x %d region(s) "
-        "x %d sport(s)); budget %d",
-        plan.projected_monthly_credits,
-        plan.featured_interval_s,
-        plan.markets,
-        plan.regions,
-        plan.sports,
-        plan.budget,
-    )
+    if plan.scheduled:
+        log.info(
+            "projected monthly credits: %d (%d scheduled polls a week x %d markets "
+            "x %d region(s) x 30/7, across %d sport(s)); budget %d",
+            plan.projected_monthly_credits,
+            plan.scheduled_polls_per_week,
+            plan.markets,
+            plan.regions,
+            plan.sports,
+            plan.budget,
+        )
+    else:
+        log.info(
+            "projected monthly credits: %d (interval %ds x %d markets x %d region(s) "
+            "x %d sport(s)); budget %d",
+            plan.projected_monthly_credits,
+            plan.featured_interval_s,
+            plan.markets,
+            plan.regions,
+            plan.sports,
+            plan.budget,
+        )
     if not plan.affordable:
+        remedy = (
+            "Remove slots from poll_schedule (§3.2)"
+            if plan.scheduled
+            else "Raise the budget (T4.1, needs the paid tier) or lengthen poll_interval_s"
+        )
         raise BudgetExceeded(
             f"cadence would cost ~{plan.projected_monthly_credits} credits/month, "
-            f"over the quota_monthly_budget of {plan.budget}. Raise the budget "
-            f"(T4.1, needs the paid tier) or lengthen poll_interval_s."
+            f"over the quota_monthly_budget of {plan.budget}. {remedy}."
         )
     return plan
 
 
-async def heartbeat(client, *, prefix: str) -> None:
-    """§13: keep the `runtime` settings document current for `/api/system/health`."""
+async def heartbeat(
+    client, *, prefix: str, upcoming: dict[str, Any] | None = None
+) -> None:
+    """§13: keep the `runtime` settings document current for `/api/system/health`.
+
+    `upcoming` is `next_poll`'s answer, when the caller has a scheduler to ask.
+    """
     await client.update(
         index=with_prefix(SETTINGS_INDEX, prefix),
         id="runtime",
-        doc={"last_heartbeat_at": utc_now_iso()},
+        doc={"last_heartbeat_at": utc_now_iso(), **(upcoming or {})},
         refresh=False,
+        retry_on_conflict=RUNTIME_WRITE_RETRIES,
     )
 
 
@@ -167,6 +423,30 @@ async def record_run(client, *, prefix: str, job: str) -> None:
         id="runtime",
         doc={f"last_{job}_at": utc_now_iso()},
         refresh=False,
+        retry_on_conflict=RUNTIME_WRITE_RETRIES,
+    )
+
+
+async def record_poll(client, *, prefix: str, sport_key: str, source: str) -> None:
+    """Stamp a poll that fetched odds: globally, and for its sport and source.
+
+    `last_poll_at` is still what `/health`, `poll_is_due` and `poll_realign`
+    read. The per-sport pair is what a slot of the plan stands down on: once
+    several sports are polled, "something was polled an hour ago" no longer says
+    whether *this* sport was, and the source says whether the plan made it.
+    A partial update merges objects, so stamping one sport leaves the others.
+    """
+    now = utc_now_iso()
+    await client.update(
+        index=with_prefix(SETTINGS_INDEX, prefix),
+        id="runtime",
+        doc={
+            "last_poll_at": now,
+            "last_poll_at_by_sport": {sport_key: now},
+            "last_poll_source_by_sport": {sport_key: source},
+        },
+        refresh=False,
+        retry_on_conflict=RUNTIME_WRITE_RETRIES,
     )
 
 
@@ -255,14 +535,22 @@ async def reset_quota(client, *, prefix: str) -> None:
 
 
 def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edgeline-", sink=None):
-    """Register §13's jobs. Returns the scheduler, not started."""
+    """Register §13's jobs. Returns the scheduler, not started.
+
+    The featured cadence is one of two shapes, chosen once here: the weekly plan
+    (`poll_schedule`) while it is in effect, one cron job per slot; otherwise the
+    interval, one job per enabled sport. A plan edited in the UI therefore takes
+    effect at the next worker start, like every other cadence setting.
+    """
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
 
     from .engine import capture_closing_lines, load_settings, run_once
-    from .grading import grade
+    from .grading import grade, sports_awaiting_settlement
     from .providers.base import ProviderBudgetExceeded
 
     plan = check_budget(settings)
+    polls = scheduled_polls(settings)
     scheduler = AsyncIOScheduler(timezone="UTC")
 
     def _refresh_budget(current: Settings) -> None:
@@ -317,40 +605,17 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             len(RETRY_DELAYS_S) + 1,
         )
 
-    async def _poll(sport_key: str, attempt: int = 1) -> None:
+    async def _poll(sport_key: str, attempt: int = 1, source: str = SOURCE_INTERVAL) -> None:
         try:
             report = await run_once(
                 provider, client, sport_key=sport_key, prefix=prefix, sink=sink
-            )
-            if report.offline:
-                # Deliberately *not* stamped. `last_poll_at` means "odds were
-                # fetched at", and two things read it that way: `/health`, where
-                # a fresh stamp over stale data reads as working, and
-                # `poll_is_due`, which would then skip the startup catch-up poll
-                # on the first run after coming back online — leaving a real
-                # poll up to a full interval away, which is the exact failure
-                # `poll_startup` exists to prevent.
-                log.info("poll %s: skipped, offline_mode is on", sport_key)
-                return
-            await record_run(client, prefix=prefix, job="poll")
-            # Right after the stamp, from the same cycle's headers — so the
-            # dashboard's credit figure moves whenever a poll actually spent
-            # something, and only then.
-            await record_quota(client, provider.key, provider.quota, prefix=prefix)
-            log.info(
-                "poll %s: %d snapshots, %d detections, %d alerted (quota %s/%s)",
-                sport_key,
-                report.snapshots,
-                len(report.detections),
-                len(report.alerted),
-                report.quota_used,
-                settings.quota_monthly_budget,
             )
         except ProviderBudgetExceeded as refused:
             # A deliberate local refusal, not a failure: nothing was sent, and
             # nothing about it will be different in a minute. One line, no
             # traceback, no retry.
             log.warning("poll %s refused: %s", sport_key, refused)
+            return
         except Exception:
             # A failed cycle must not take the scheduler down, and it must not
             # wait a full interval either — see RETRY_DELAYS_S. The datastore
@@ -358,10 +623,63 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             log.exception("poll cycle failed for %s", sport_key)
             _retry_soon(
                 _poll,
-                [sport_key, attempt + 1],
+                [sport_key, attempt + 1, source],
                 kind=f"poll {sport_key}",
                 attempt=attempt + 1,
             )
+            return
+
+        if report.offline:
+            # Deliberately *not* stamped. `last_poll_at` means "odds were
+            # fetched at", and two things read it that way: `/health`, where a
+            # fresh stamp over stale data reads as working, and `poll_is_due`,
+            # which would then skip the startup catch-up poll on the first run
+            # after coming back online — leaving a real poll up to a full
+            # interval away, which is the exact failure `poll_startup` exists
+            # to prevent.
+            log.info("poll %s: skipped, offline_mode is on", sport_key)
+            return
+        try:
+            await record_poll(client, prefix=prefix, sport_key=sport_key, source=source)
+        except Exception:
+            # Outside the retry on purpose: the odds are bought and stored, and
+            # only the readout failed. Retrying would buy the same market again
+            # to repair a timestamp.
+            log.warning("poll %s landed but could not be stamped", sport_key, exc_info=True)
+        # Right after the stamp, from the same cycle's headers — so the
+        # dashboard's credit figure moves whenever a poll actually spent
+        # something, and only then.
+        await record_quota(client, provider.key, provider.quota, prefix=prefix)
+        log.info(
+            "poll %s: %d snapshots, %d detections, %d alerted (quota %s/%s)",
+            sport_key,
+            report.snapshots,
+            len(report.detections),
+            len(report.alerted),
+            report.quota_used,
+            settings.quota_monthly_budget,
+        )
+
+    async def _poll_slot(day: str, time: str, sport_key: str) -> None:
+        """One slot of the weekly plan (§3.2 `poll_schedule`, §13).
+
+        Asks `stand_down_reason` first, so a poll from outside the plan — the
+        dashboard's button above all — substitutes for the slot instead of
+        doubling it, and a slot already served is not bought twice.
+        """
+        poll = ScheduledPoll(day, time, sport_key)
+        now = datetime.now(timezone.utc)
+        runtime: dict[str, Any] = {}
+        try:
+            found = await client.get(index=with_prefix(SETTINGS_INDEX, prefix), id="runtime")
+            runtime = found["_source"]
+        except Exception:
+            log.debug("could not read the per-sport poll stamps; polling anyway", exc_info=True)
+        reason = stand_down_reason(runtime, sport_key, due=slot_due_at(poll, now), now=now)
+        if reason:
+            log.info("scheduled poll %s (%s %s ET) stands down: %s", sport_key, day, time, reason)
+            return
+        await _poll(sport_key, source=SOURCE_SCHEDULE)
 
     async def _closing_sweep() -> None:
         # Re-read §3.2 each tick, the way `run_once` already does for `_poll`,
@@ -377,7 +695,10 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             log.warning("closing sweep: settings unreadable (%s); skipping a tick", unreadable)
             return
         _refresh_budget(current)
-        for sport_key in current.sports_enabled:
+        # Every sport a poll can reach, plan included: a closing line is the one
+        # price that cannot be fetched afterwards (§12), so a sport the plan
+        # polls but `sports_enabled` omits must not lose it.
+        for sport_key in active_sports(current):
             try:
                 await capture_closing_lines(
                     provider, client, sport_key=sport_key, settings=current, prefix=prefix
@@ -398,8 +719,28 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
             _retry_soon(_grade, [attempt + 1], kind="grade", attempt=attempt + 1)
             return
 
+        # Only the sports with a recommendation whose game has started and has
+        # no result yet (added 2026-09-23). A scores fetch costs 2 credits per
+        # sport whether or not anything settles, and once the plan polls four
+        # sports that is ~240 credits a month on a 500 budget — nearly as much
+        # as the polls themselves, spent mostly on days with nothing to grade.
+        try:
+            sports = await sports_awaiting_settlement(client, prefix=prefix)
+        except Exception as unreadable:
+            # Not knowing is not a reason to leave a bet unsettled: grade every
+            # sport a poll can reach, which is what this job did before.
+            log.warning(
+                "grading: could not tell which sports have bets to settle (%s); "
+                "grading every active sport",
+                unreadable,
+            )
+            sports = active_sports(current)
+        if not sports:
+            log.info("grading: no recommendation is waiting on a started game; no scores fetched")
+            return
+
         failed = False
-        for sport_key in current.sports_enabled:
+        for sport_key in sports:
             try:
                 report = await grade(
                     provider, client, sport_key=sport_key, settings=current,
@@ -437,7 +778,26 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
         *cadence*, not the number of times the process is restarted, and each
         cycle costs markets × regions credits. If a poll already landed inside
         the current interval the cadence is being met, so this stands down.
+
+        On the weekly plan there is no interval to be due against, and a cron
+        slot fires at its own time whenever the worker started. What a start can
+        still miss is a slot that came due while the process was down, so this
+        runs exactly those — the ones inside `SCHEDULED_POLL_GRACE_S`, which is
+        the lateness a sleep is allowed too — and each still asks the stand-down
+        rule, so a restart just after a slot that ran buys nothing.
         """
+        if polls:
+            missed = missed_slots(polls, datetime.now(timezone.utc))
+            if not missed:
+                log.info(
+                    "startup poll skipped: no slot of the weekly plan came due in the "
+                    "last %d minutes",
+                    SCHEDULED_POLL_GRACE_S // 60,
+                )
+                return
+            for poll in missed:
+                await _poll_slot(poll.day, poll.time, poll.sport)
+            return
         if not await poll_is_due(client, prefix=prefix, interval_s=plan.featured_interval_s):
             log.info("startup poll skipped: a cycle already landed inside the interval")
             return
@@ -496,17 +856,42 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
                 current.isoformat(timespec="seconds") if current else "unscheduled",
             )
 
-    for sport_key in settings.sports_enabled:
-        scheduler.add_job(
-            _poll,
-            "interval",
-            seconds=plan.featured_interval_s,
-            args=[sport_key],
-            id=f"poll_featured:{sport_key}",
-            max_instances=1,
-            coalesce=True,
-            misfire_grace_time=RUN_WHEN_LATE,
-        )
+    if polls:
+        # The weekly plan: one cron job per slot, on the plan's Eastern clock so
+        # DST moves the UTC fire time rather than the slot. Bounded lateness
+        # (`SCHEDULED_POLL_GRACE_S`) instead of `RUN_WHEN_LATE`, since a slot's
+        # games do not wait for it; `coalesce` so a sleep across a slot still
+        # costs one poll.
+        for poll in polls:
+            scheduler.add_job(
+                _poll_slot,
+                CronTrigger(
+                    day_of_week=poll.day,
+                    hour=poll.hour,
+                    minute=poll.minute,
+                    timezone=PLAN_TIMEZONE,
+                ),
+                args=[poll.day, poll.time, poll.sport],
+                id=poll.job_id,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=SCHEDULED_POLL_GRACE_S,
+            )
+    else:
+        for sport_key in settings.sports_enabled:
+            scheduler.add_job(
+                _poll,
+                "interval",
+                seconds=plan.featured_interval_s,
+                args=[sport_key],
+                id=f"poll_featured:{sport_key}",
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=RUN_WHEN_LATE,
+            )
+
+    async def _heartbeat() -> None:
+        await heartbeat(client, prefix=prefix, upcoming=next_poll(scheduler.get_jobs()))
 
     scheduler.add_job(
         _poll_startup,
@@ -550,13 +935,16 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
     # rather than its slot, and a re-anchoring that is skipped is simply redone
     # on the next tick against the same stamp.
     scheduler.add_job(
-        heartbeat, "interval", seconds=HEARTBEAT_INTERVAL_S, id="heartbeat",
-        kwargs={"client": client, "prefix": prefix},
+        _heartbeat, "interval", seconds=HEARTBEAT_INTERVAL_S, id="heartbeat",
     )
-    scheduler.add_job(
-        _realign_polls, "interval", seconds=REALIGN_INTERVAL_S, id="poll_realign",
-        max_instances=1, coalesce=True,
-    )
+    if not polls:
+        # The interval's alone: a slot of the plan is a clock time, and there is
+        # nothing to re-anchor on a poll that landed elsewhere — the plan's
+        # stand-down rule answers that question instead.
+        scheduler.add_job(
+            _realign_polls, "interval", seconds=REALIGN_INTERVAL_S, id="poll_realign",
+            max_instances=1, coalesce=True,
+        )
     return scheduler
 
 
@@ -590,6 +978,24 @@ async def _run() -> int:
 
         scheduler = build_scheduler(provider, client, settings)
         scheduler.start()
+        polls = scheduled_polls(settings)
+        upcoming = next_poll(scheduler.get_jobs())
+        if polls:
+            log.info(
+                "poll plan: %d polls a week at fixed %s times (%s); next %s %s",
+                len(polls),
+                PLAN_TIMEZONE,
+                ", ".join(dict.fromkeys(poll.sport for poll in polls)),
+                upcoming["next_poll_at"],
+                ", ".join(upcoming["next_poll_sports"]),
+            )
+        else:
+            log.info(
+                "poll cadence: every %ds (poll_schedule %s); next %s",
+                featured_interval_s(settings),
+                "empty" if not settings.poll_schedule else "not in effect above the free tier",
+                upcoming["next_poll_at"],
+            )
         log.info(
             "worker started: %d job(s). PAPER MODE=%s. This process recommends "
             "bets and never places them.",
@@ -650,10 +1056,21 @@ async def _check_budget_only() -> int:
     try:
         settings = await load_settings(client, prefix="edgeline-")
         plan = plan_budget(settings)
+        if plan.scheduled:
+            sports = ", ".join(dict.fromkeys(poll.sport for poll in scheduled_polls(settings)))
+            cadence = (
+                f"poll plan          {plan.scheduled_polls_per_week} polls/week at fixed "
+                f"{PLAN_TIMEZONE} times\n"
+                f"sports             {plan.sports} ({sports})\n"
+            )
+        else:
+            cadence = (
+                f"featured interval  {plan.featured_interval_s}s\n"
+                f"sports             {plan.sports}\n"
+            )
         print(
-            f"featured interval  {plan.featured_interval_s}s\n"
+            f"{cadence}"
             f"markets x regions  {plan.markets} x {plan.regions}\n"
-            f"sports             {plan.sports}\n"
             f"projected credits  {plan.projected_monthly_credits}/month\n"
             f"budget             {plan.budget}\n"
             f"verdict            {'OK' if plan.affordable else 'OVER BUDGET'}"

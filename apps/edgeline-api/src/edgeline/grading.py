@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .config import Settings
@@ -297,6 +297,79 @@ async def _ungraded_recommendations(
     )
     graded = {doc["_id"] for doc in existing["docs"] if doc.get("found")}
     return [hit for hit in hits if hit["_id"] not in graded]
+
+
+#: How far back a started game still counts as settleable. `grade` asks the
+#: scores feed for `daysFrom=2`, so a game older than that is not in the answer
+#: and paying 2 credits a day to ask again would buy nothing; the extra day keeps
+#: a game on the boundary in rather than out.
+SETTLEMENT_LOOKBACK = timedelta(days=3)
+
+
+async def sports_awaiting_settlement(
+    client, *, prefix: str, now: datetime | None = None
+) -> list[str]:
+    """Sports with a recommendation whose game has started and has no result.
+
+    What decides which sports `grade` runs for (§13, added 2026-09-23). Every
+    run costs 2 credits per sport for the scores fetch whether or not anything
+    settles, and most days nothing does — so asking the datastore first, which
+    is free, is the difference between grading costing ~60 credits a month per
+    sport and costing roughly nothing until there is a bet to settle.
+
+    Driven by the data rather than by the settings on purpose: a recommendation
+    on a sport since dropped from the plan still gets settled.
+
+    Raises when the datastore cannot answer; the caller decides what not knowing
+    means.
+    """
+    now = now or datetime.now(timezone.utc)
+    found = await client.search(
+        index=with_prefix(RECOMMENDATIONS_INDEX, prefix), size=1000, query={"match_all": {}}
+    )
+    hits = found["hits"]["hits"]
+    if not hits:
+        return []
+    existing = await client.mget(
+        index=with_prefix(RESULTS_INDEX, prefix), ids=[hit["_id"] for hit in hits]
+    )
+    graded = {doc["_id"] for doc in existing["docs"] if doc.get("found")}
+    opportunity_ids = sorted(
+        {
+            hit["_source"].get("opportunity_id")
+            for hit in hits
+            if hit["_id"] not in graded and hit["_source"].get("opportunity_id")
+        }
+    )
+    if not opportunity_ids:
+        return []
+
+    opportunities = await client.mget(
+        index=with_prefix(OPPORTUNITIES_INDEX, prefix), ids=opportunity_ids
+    )
+    event_ids = sorted(
+        {
+            doc["_source"].get("event_id")
+            for doc in opportunities["docs"]
+            if doc.get("found") and doc["_source"].get("event_id")
+        }
+    )
+    if not event_ids:
+        return []
+
+    events = await client.mget(index=with_prefix(EVENTS_INDEX, prefix), ids=event_ids)
+    sports: set[str] = set()
+    for doc in events["docs"]:
+        if not doc.get("found"):
+            continue
+        source = doc["_source"]
+        try:
+            started = parse_iso(source["commence_time"])
+        except (KeyError, TypeError, AttributeError, ValueError):
+            continue
+        if now - SETTLEMENT_LOOKBACK <= started <= now:
+            sports.add(source.get("sport_key") or doc["_id"].split(":", 1)[0])
+    return sorted(sports)
 
 
 async def _grade_one(

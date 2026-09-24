@@ -71,6 +71,25 @@ export class SystemStatus {
   readonly quota = computed(() => this.state()?.quota ?? []);
   readonly sportsEnabled = computed(() => this.state()?.sports_enabled ?? []);
 
+  /** §13's cadence as the stored settings define it: the weekly plan or the
+   *  interval, added with `poll_schedule` on 2026-09-23. */
+  readonly pollPlan = computed(() => this.state()?.poll_plan ?? null);
+  /** What Poll now buys right now — today's sports in the plan (Eastern
+   *  calendar), else `sports_enabled`. The engine decides; this only reads it. */
+  readonly pollNowSports = computed(
+    () => this.state()?.poll_plan?.poll_now_sports ?? this.sportsEnabled(),
+  );
+  /**
+   * When the *running* worker next buys odds, and which sports — stamped by its
+   * heartbeat from the jobs it actually registered, so a plan edited since it
+   * started does not make this lie. Only meaningful while the heartbeat is.
+   */
+  readonly nextPollAt = computed(() => readIsoField(this.state(), 'next_poll_at'));
+  readonly nextPollSports = computed(() => {
+    const value = this.state()?.runtime?.['next_poll_sports'];
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  });
+
   /**
    * §13 stamps `last_heartbeat_at` on the `runtime` document every 60 seconds,
    * so its age — not its existence — is what says the worker is alive.

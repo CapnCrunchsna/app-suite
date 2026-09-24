@@ -1,6 +1,6 @@
 /**
  * §3.2's keys as data, grouped the way §11.1 asks for them: Staking,
- * Thresholds, Polling, Safety. Twenty-nine of them as of 2026-09-11.
+ * Thresholds, Polling, Safety. Thirty-one of them as of 2026-09-23.
  *
  * A table rather than twenty-seven hand-written form rows, for one reason worth
  * more than the brevity: §3.2 is the list, Phase 3's exit is "every §3.2 setting
@@ -29,8 +29,19 @@ export type SettingKey = keyof Settings & string;
 /** `text` is a plain string setting, added 2026-09-12 for `book_state`. It needs
  *  no case anywhere: the template's `@default` already renders a text input and
  *  both converters fall through to `String`. It exists so a scalar string is
- *  declared rather than arriving as an unlabelled default. */
-export type FieldKind = 'number' | 'cents' | 'select' | 'list' | 'json' | 'bool' | 'text';
+ *  declared rather than arriving as an unlabelled default.
+ *
+ *  `schedule` is `poll_schedule`, added 2026-09-23: rows of sport, weekdays and
+ *  an Eastern time, edited by `PollScheduleEditor` rather than as text. */
+export type FieldKind =
+  | 'number'
+  | 'cents'
+  | 'select'
+  | 'list'
+  | 'json'
+  | 'bool'
+  | 'text'
+  | 'schedule';
 
 export interface FieldSpec {
   readonly key: SettingKey;
@@ -185,10 +196,16 @@ export const POLLING = {
     'credits — §8.4 checks the projected monthly cost against the budget below at startup.',
   fields: [
     {
+      key: 'poll_schedule',
+      label: 'Weekly poll plan',
+      kind: 'schedule',
+      hint: 'When the worker buys odds on the free tier: fixed US Eastern times, per sport and weekday, whatever this computer’s zone. Each poll costs one sport’s markets × regions credits, and the worker refuses to start a plan projected over the monthly budget. A sport with nothing listed — out of season — costs nothing. Empty, the dev poll interval takes over. Takes effect when the worker restarts.',
+    },
+    {
       key: 'sports_enabled',
       label: 'Sports enabled',
       kind: 'list',
-      hint: 'The Odds API sport keys, comma-separated. NFL and NBA are configuration, not code.',
+      hint: 'The Odds API sport keys, comma-separated. What the dev interval polls when the weekly plan is empty, and what Poll now buys on a day the plan has nothing. NFL and NBA are configuration, not code.',
     },
     {
       key: 'markets_featured',
@@ -230,7 +247,7 @@ export const POLLING = {
       step: 1,
       min: 1,
       unit: 's',
-      hint: 'Free-tier cadence — the default of 43200 is two polls a day, halved from four on 2026-09-09 to pay for the second provider region.',
+      hint: 'Free-tier fallback, used only when the weekly plan is empty — the default of 43200 is two polls a day at whatever times the worker started, which is what the plan replaced on 2026-09-23.',
     },
     {
       key: 'props_poll_interval_s',

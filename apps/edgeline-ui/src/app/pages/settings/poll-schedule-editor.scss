@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.plan__table {
+  width: auto;
+}
+
+.plan__table th,
+.plan__table td {
+  padding: 4px 8px;
+  vertical-align: middle;
+}
+
+.plan__day {
+  text-align: center;
+}
+
+.plan__sport {
+  width: 190px;
+}
+
+.plan__league {
+  margin-left: 6px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.plan__time {
+  width: 110px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A row the engine would refuse, marked where it sits rather than only in the
+ * error line under the table. */
+.plan__row--bad td:first-child {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+.plan__empty {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.plan__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.plan__cost {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__cost.neg {
+  color: var(--danger-soft);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

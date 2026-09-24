@@ -144,10 +144,17 @@
             }
           }
 
+          <!-- The worker's own next slot, from its heartbeat: what it registered,
+               not what the stored plan says, which can differ until a restart. -->
+          @if (!status.offlineMode() && nextPoll(); as next) {
+            <span class="dim poll__next">· next scheduled {{ next.when }} {{ next.leagues }}</span>
+          }
+
           <!-- §8.4's manual trigger, on this row because this is where the
-               reader finds out how old the prices are. §13's cadence is anchored
-               to worker start and a slot inside a laptop sleep runs on wake, so
-               "before first pitch" is a time only a person can pick. -->
+               reader finds out how old the prices are. The weekly plan puts
+               polls at fixed times; news that makes a cycle worth buying now is
+               something only a person watching can see. It buys today's sports
+               in the plan, and names them, because that is what it spends on. -->
           <button
             type="button"
             class="button poll__button"
@@ -155,14 +162,14 @@
             [title]="
               status.offlineMode()
                 ? 'offline_mode is on — no job makes a provider request'
-                : 'Fetch one cycle now. Spends credits; places nothing.'
+                : 'Fetch one cycle now for ' + pollNowLeagues() + '. Spends credits; places nothing.'
             "
             (click)="pollNow()"
           >
             @if (polling()) {
               polling…
             } @else {
-              Poll now (~{{ pollCostCredits() }} credits)
+              Poll {{ pollNowLeagues() }} now (~{{ pollCostCredits() }} credits)
             }
           </button>
 
@@ -188,7 +195,16 @@
       <div class="health__row">
         <span class="health__key">Sports</span>
         <span class="health__value">
-          {{ status.sportsEnabled().length ? status.sportsEnabled().join(', ') : 'none enabled' }}
+          @if (status.pollPlan()?.mode === 'schedule') {
+            Weekly plan: {{ planLeagues() }}
+            <span class="dim">
+              · {{ status.pollPlan()?.polls_per_week }} polls a week at fixed Eastern times ·
+              <a routerLink="/settings" fragment="field-poll_schedule">edit</a>
+            </span>
+          } @else {
+            {{ status.sportsEnabled().length ? status.sportsEnabled().join(', ') : 'none enabled' }}
+            <span class="dim">· on the dev poll interval</span>
+          }
         </span>
       </div>
 

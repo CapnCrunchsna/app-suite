@@ -729,11 +729,22 @@ async def _runtime(client, prefix) -> dict:
     return found["_source"]
 
 
+async def _store_settings(client, prefix, **values) -> None:
+    from edgeline.indices import SETTINGS_INDEX, with_prefix
+
+    await client.update(
+        index=with_prefix(SETTINGS_INDEX, prefix), id="global", doc=values, refresh="wait_for"
+    )
+
+
 async def test_a_manual_poll_runs_a_cycle_and_stamps_it_like_any_other(api):
     """The stamp is the part that is easy to leave out and expensive to miss: a
     manual cycle *is* a poll, so `poll_is_due` has to see it or the next worker
     restart pays for another one on top of it."""
     _http, client, prefix = api
+    # The interval: with the weekly plan in effect, what a press polls depends
+    # on the day this runs. That case has its own test below.
+    await _store_settings(client, prefix, poll_schedule=[])
     provider = _EmptyProvider()
 
     async with _poll_client(client, prefix, provider) as http:
@@ -827,3 +838,107 @@ async def test_a_second_manual_poll_while_one_is_running_is_refused(api):
 
     assert response.status_code == 409
     assert "already running" in response.json()["detail"]
+
+
+# ---- the weekly plan through the API (§3.2 `poll_schedule`, 2026-09-23) -----
+
+_EVERY_DAY = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+async def test_a_manual_poll_buys_todays_sports_in_the_plan_and_stamps_each(api):
+    """Every day is a plan day here, so the answer does not depend on when the
+    suite runs. Both sports get their own stamp in the one runtime document —
+    which is also the check that a partial update merges the per-sport maps
+    rather than replacing them, since the second stamp would otherwise erase
+    the first and a slot would never stand down on it."""
+    _http, client, prefix = api
+    await _store_settings(
+        client,
+        prefix,
+        poll_schedule=[
+            {"days": _EVERY_DAY, "time": "12:00", "sport": "icehockey_nhl"},
+            {"days": _EVERY_DAY, "time": "13:00", "sport": "basketball_nba"},
+        ],
+    )
+    provider = _EmptyProvider()
+
+    async with _poll_client(client, prefix, provider) as http:
+        response = await http.post("/api/system/poll")
+
+    assert response.status_code == 200
+    assert provider.calls == ["icehockey_nhl", "basketball_nba"]
+    runtime = await _runtime(client, prefix)
+    assert set(runtime["last_poll_at_by_sport"]) == {"icehockey_nhl", "basketball_nba"}
+    assert runtime["last_poll_source_by_sport"] == {
+        "icehockey_nhl": "manual",
+        "basketball_nba": "manual",
+    }
+
+
+async def test_health_says_what_sets_the_cadence_and_what_a_press_would_buy(api):
+    http, _client, _prefix = api
+    body = (await http.get("/api/system/health")).json()
+
+    plan = body["poll_plan"]
+    assert plan["mode"] == "schedule"
+    assert plan["polls_per_week"] == 14
+    assert set(plan["sports"]) == {
+        "americanfootball_nfl",
+        "americanfootball_ncaaf",
+        "icehockey_nhl",
+        "basketball_nba",
+    }
+    # Every day of the default plan has a slot, so a press always buys that day's.
+    assert plan["poll_now_sports"] and set(plan["poll_now_sports"]) <= set(plan["sports"])
+    assert plan["timezone"] == "America/New_York"
+
+
+async def test_health_reports_the_interval_when_the_plan_is_empty(api):
+    http, client, prefix = api
+    await _store_settings(client, prefix, poll_schedule=[])
+
+    plan = (await http.get("/api/system/health")).json()["poll_plan"]
+    assert plan["mode"] == "interval"
+    assert plan["polls_per_week"] is None
+    assert plan["poll_now_sports"] == ["baseball_mlb"]
+
+
+async def test_the_plan_is_edited_through_settings_like_any_other_key(api):
+    http, _client, _prefix = api
+    slots = [{"days": ["sat"], "time": "10:30", "sport": "americanfootball_ncaaf"}]
+
+    response = await http.put("/api/settings", json={"poll_schedule": slots})
+
+    assert response.status_code == 200
+    assert (await http.get("/api/settings")).json()["poll_schedule"] == slots
+
+
+async def test_an_empty_patch_writes_the_plan_into_a_document_that_predates_it(api):
+    """The live install's upgrade path, which the README gives: its document was
+    seeded before `poll_schedule` existed, reads the key as its default, and an
+    empty `PUT` stores that default so the plan lives in the document rather
+    than in the code."""
+    http, client, prefix = api
+    from edgeline.indices import SETTINGS_INDEX, with_prefix
+
+    index = with_prefix(SETTINGS_INDEX, prefix)
+    older = {key: value for key, value in DEFAULT_SETTINGS.items() if key != "poll_schedule"}
+    await client.index(index=index, id="global", document=older, refresh="wait_for")
+
+    response = await http.put("/api/settings", json={})
+
+    assert response.status_code == 200
+    stored = (await client.get(index=index, id="global"))["_source"]
+    assert stored["poll_schedule"] == DEFAULT_SETTINGS["poll_schedule"]
+    assert stored["kelly_fraction"] == DEFAULT_SETTINGS["kelly_fraction"]
+
+
+async def test_a_malformed_slot_is_refused_by_the_settings_route(api):
+    http, _client, _prefix = api
+    bad = [{"days": ["sat"], "time": "10:30", "sport": "NFL"}]
+
+    response = await http.put("/api/settings", json={"poll_schedule": bad})
+
+    assert response.status_code == 422
+    stored = (await http.get("/api/settings")).json()["poll_schedule"]
+    assert stored == DEFAULT_SETTINGS["poll_schedule"]

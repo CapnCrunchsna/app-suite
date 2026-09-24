@@ -55,6 +55,15 @@ const SPEC_DEFAULTS: Settings = {
   regions: ['us', 'us2'],
   poll_interval_s: 120,
   poll_interval_dev_s: 43200,
+  poll_schedule: [
+    { days: ['sun'], time: '11:30', sport: 'americanfootball_nfl' },
+    { days: ['sun'], time: '15:00', sport: 'americanfootball_nfl' },
+    { days: ['mon', 'thu'], time: '18:45', sport: 'americanfootball_nfl' },
+    { days: ['sat'], time: '10:30', sport: 'americanfootball_ncaaf' },
+    { days: ['sat'], time: '17:30', sport: 'americanfootball_ncaaf' },
+    { days: ['tue', 'wed', 'thu', 'fri'], time: '17:30', sport: 'icehockey_nhl' },
+    { days: ['mon', 'tue', 'wed', 'fri'], time: '17:30', sport: 'basketball_nba' },
+  ],
   props_poll_interval_s: 600,
   closing_capture_offset_s: 300,
   quota_monthly_budget: 500,
@@ -123,12 +132,14 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       expect(new Set(covered).size).toBe(covered.length);
       // The count is §3.2's, and moves when §3.2 does — 26 at Phase 3, plus
       // `regions` on 2026-09-09, `offline_mode` on 2026-09-10,
-      // `closing_capture_mode` on 2026-09-11 and `book_state` on 2026-09-12.
-      expect(covered).toHaveLength(30);
+      // `closing_capture_mode` on 2026-09-11, `book_state` on 2026-09-12 and
+      // `poll_schedule` on 2026-09-23.
+      expect(covered).toHaveLength(31);
       expect(covered).toContain('regions');
       expect(covered).toContain('offline_mode');
       expect(covered).toContain('closing_capture_mode');
       expect(covered).toContain('book_state');
+      expect(covered).toContain('poll_schedule');
     });
 
     it('groups them the way §11.1 names them', () => {
@@ -233,6 +244,89 @@ describe('SettingsPage (§11.1, §3.2)', () => {
 
       expect(el.textContent).toContain('The engine refused the change');
       expect(api.patches).toEqual([]);
+    });
+  });
+
+  describe('the weekly poll plan (§3.2 `poll_schedule`, 2026-09-23)', () => {
+    function planRows(el: HTMLElement) {
+      return [...el.querySelectorAll('#set-poll_schedule tbody tr.plan__row')];
+    }
+
+    function dayBox(row: Element, day: string) {
+      return row.querySelector(`input[aria-label^="${day} for poll"]`) as HTMLInputElement;
+    }
+
+    it('shows each slot as a row of sport, days and Eastern time', async () => {
+      const { el } = await render();
+      const rows = planRows(el);
+      expect(rows).toHaveLength(7);
+
+      const nhl = rows[5];
+      expect((nhl.querySelector('.plan__sport') as HTMLInputElement).value).toBe('icehockey_nhl');
+      expect(nhl.textContent).toContain('NHL');
+      expect((nhl.querySelector('input[type="time"]') as HTMLInputElement).value).toBe('17:30');
+      expect(dayBox(nhl, 'Tue').checked).toBe(true);
+      expect(dayBox(nhl, 'Mon').checked).toBe(false);
+    });
+
+    it('prices the plan the way the worker will: 14 polls, 360 credits of 500', async () => {
+      const { el } = await render();
+      const cost = el.querySelector('#set-poll_schedule .plan__cost')?.textContent ?? '';
+      expect(cost).toContain('14 polls a week');
+      expect(cost).toContain('~360 credits');
+      expect(cost).toContain('500 budget');
+    });
+
+    it('sends the whole plan, days in week order, when a day is ticked', async () => {
+      const { fixture, el, api } = await render();
+      // Add Saturday to the NHL row: Sat is ticked last, saved in its place.
+      dayBox(planRows(el)[5], 'Sat').click();
+      await settle(fixture);
+      (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+      await settle(fixture);
+
+      expect(api.patches).toHaveLength(1);
+      const plan = api.patches[0]['poll_schedule'] as { days: string[]; sport: string }[];
+      expect(plan).toHaveLength(7);
+      expect(plan[5]).toEqual({
+        days: ['tue', 'wed', 'thu', 'fri', 'sat'],
+        time: '17:30',
+        sport: 'icehockey_nhl',
+      });
+      expect(Object.keys(api.patches[0])).toEqual(['poll_schedule']);
+    });
+
+    it('refuses a new row until it names a sport and a day, rather than sending a 422', async () => {
+      const { fixture, el, api } = await render();
+      (
+        [...el.querySelectorAll('button')].find(
+          (b) => b.textContent?.trim() === 'Add a poll',
+        ) as HTMLButtonElement
+      ).click();
+      await settle(fixture);
+      (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+      await settle(fixture);
+
+      expect(api.patches).toEqual([]);
+      expect(el.textContent).toContain('Every poll needs a sport key');
+    });
+
+    it('removes a row and prices what is left', async () => {
+      const { fixture, el, api } = await render();
+      const sundayLate = planRows(el)[1];
+      (
+        [...sundayLate.querySelectorAll('button')].find(
+          (b) => b.textContent?.trim() === 'Remove',
+        ) as HTMLButtonElement
+      ).click();
+      await settle(fixture);
+
+      expect(el.querySelector('#set-poll_schedule .plan__cost')?.textContent).toContain(
+        '13 polls a week',
+      );
+      (el.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+      await settle(fixture);
+      expect((api.patches[0]['poll_schedule'] as unknown[]).length).toBe(6);
     });
   });
 

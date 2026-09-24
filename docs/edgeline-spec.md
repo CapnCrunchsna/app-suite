@@ -207,12 +207,13 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `staleness_sigma_floor` | `0.002` | σ floor to avoid divide-by-near-zero |
 | `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this |
 | `alert_cooldown_s` | `300` | per market key |
-| `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys |
+| `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys. **Since 2026-09-23** what the interval polls when `poll_schedule` is empty, and what §10's manual trigger buys on a day the plan has nothing |
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
 | `markets_props` | `["batter_home_runs","pitcher_strikeouts"]` | polled per §8.4 |
 | `regions` | `["us","us2"]` | **added 2026-09-09.** The Odds API region buckets to request. `us` alone returns only 4 MD-legal books, one short of what §6.4's consensus needs — see §8.4. Each region multiplies the credit cost |
 | `poll_interval_s` | `120` | featured-markets cycle (production) |
-| `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month |
+| `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month. **Since 2026-09-23 only the fallback:** it applies when `poll_schedule` is empty |
+| `poll_schedule` | 14 slots — §8.4's table | **added 2026-09-23.** The free tier's featured cadence as fixed **America/New_York** times: a list of `{days, time, sport}` — `days` from `mon`…`sun`, `time` a 24-hour `HH:MM`, `sport` a The Odds API key. Each slot is one poll of one sport. Empty restores `poll_interval_dev_s`; a budget above the free tier's selects `poll_interval_s` and ignores it (§13). Takes effect at the next worker start |
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
 | `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option |
@@ -566,8 +567,10 @@ Base URL `https://api.the-odds-api.com/v4`. Auth: `apiKey` query param.
 
 | Mode | Featured markets | Props | Approx credits |
 |---|---|---|---|
-| Dev (free, 500/mo) | every 6 h (4×/day → ~360/mo) | manual trigger only | ≤ 500/mo |
+| Dev (free, 500/mo) | `poll_schedule`: 14 fixed Eastern-time polls a week (→ ~360/mo, amended 2026-09-23); `poll_interval_dev_s` when the plan is empty | manual trigger only | ≤ 500/mo |
 | Production (~$59–100 tier) | every 120 s | every 600 s, only events starting < 6 h | compute before enabling: `(86400/interval) × markets × regions × 30` and per-event prop cost; must fit `quota_monthly_budget` |
+
+The weekly plan projects as `polls a week × markets × regions × 30/7`, rounded up.
 
 The scheduler must refuse to start a cadence whose computed monthly cost exceeds
 `quota_monthly_budget`, and must log the computed figure at startup.
@@ -618,6 +621,63 @@ sportsbook and is a separate question. The remaining feed entries —
 `bovada`, `betonlineag`, `betus`, `lowvig`, `mybookieag` — are offshore and unlicensed in the
 US; note that **all five of those live in the `us` bucket**, which is why that bucket alone
 yielded no usable additions.
+
+**Fixed Eastern-time polls, placed from data (added 2026-09-23, by user decision).** A 12-hour
+interval anchored to worker start landed its two polls wherever the process was last restarted,
+and the only polls that ever found anything were late-afternoon catch-up polls after the laptop
+woke. With an always-on host coming, the user asked whether fixed clock times would do better; the
+answer was yes — two fixed Eastern-time polls a day, placed from data — with NFL on Sunday, Monday
+and Thursday (the user's proposal). The same day the user widened it: MLB was the sport of the
+moment, not a requirement. The paid tier is not happening, so the plan fits the same 500 credits.
+
+The evidence behind placement, from the live datastore: of 180 MLB events, weekday first pitches
+were 84% at 18:00 ET or later and weekend ones 59%; books quoting per event were ~14 on morning
+polls, ~12.5 afternoon and ~10.5 evening (evening polls also carry tomorrow's thinly quoted games),
+so an early poll has no coverage problem. Both real detections came in the late afternoon —
+2026-09-18 17:28 ET (Twins −1.5 @ 2.63, 4h10m before first pitch, settled a win) and 2026-09-23
+16:55 ET (Cubs −1.5 @ 2.38 at FanDuel, 2h45m before). Two points are anecdote; the placement
+argument is structural: news — NFL inactives 90 minutes before kickoff, goalies, injury reports —
+moves the market, books re-price at different speeds, and that stale-line window is what §6.4 and
+§6.6 catch.
+
+The other sports, measured the same day with the free `/sports` and `/events` endpoints: MLB lists
+only the next day's games and its regular season ends 2026-09-27; NCAAF has **65 games** on
+Saturday 2026-09-26 (windows 12:00 ×11, 15:30 ×12, 19:00–19:30 ×13); NHL plays nightly from
+2026-09-29, first puck drops 19:00–19:40; NBA opens 2026-10-20, tip-offs 19:00–22:30. Maryland
+coverage was checked with one `h2h` poll per sport over both regions (2 credits each): NCAAF has 56
+of 85 events quoted by at least five MD books (54 by all seven); NHL and NBA have all seven on
+their nearest games, with games further out quoted by DraftKings alone until they come closer.
+NFL, NCAAF, NHL and NBA are approved by the user as of 2026-09-23 (§16.7).
+
+Each poll sits about ninety minutes before its sport's first big window of starts: late enough
+for the news, early enough that the slate is still pre-game.
+
+| Day | Poll 1 (ET) | Poll 2 (ET) |
+|---|---|---|
+| Sun | NFL 11:30 (13:00 kickoffs) | NFL 15:00 (16:05/16:25) |
+| Mon | NBA 17:30 (19:00+) | NFL 18:45 (20:15) |
+| Tue, Wed, Fri | NHL 17:30 (19:00+) | NBA 17:30 (19:00+) |
+| Thu | NHL 17:30 (19:00+) | NFL 18:45 (20:15) |
+| Sat | NCAAF 10:30 (noon window) | NCAAF 17:30 (19:00–19:30 window) |
+
+14 polls × 6 credits × 30/7 = **360 credits/month**, what the interval cost.
+
+**An empty poll is free (measured 2026-09-23).** `/odds` for an inactive sport
+(`baseball_mlb_preseason`) returned `[]` with `x-requests-last: 0`. So a slot for a sport with
+nothing listed costs nothing: the NBA slots are free until 2026-10-20, and MLB slots left in a plan
+after the World Series would be too. The projection still counts every slot at full price — it
+cannot know when a season starts, and under-reporting is the direction it must never fail in. (The
+first attempt used `basketball_wnba`, whose response carried three live games and cost 1 credit;
+the day's diagnostics cost 7 credits in all.)
+
+**Grading had to change for the plan to fit.** The projection counts polls only (above), and
+grading's scores fetch is 2 credits per sport per run whether or not anything settles: at four
+sports a day that is ~240 credits a month on a 500 budget, nearly as much as the polls. Since
+2026-09-23 grading fetches scores only for sports with a bet waiting to settle (§12, §13) — on most
+days, none.
+
+The plan is a setting (§3.2), edited in the UI (§11.1): seasons are handled by editing it —
+MLB's postseason is one row away — and an edit takes effect at the next worker start.
 
 ---
 
@@ -752,9 +812,9 @@ All routes under `/api`. Auto-generated OpenAPI at `/api/openapi.json` (feeds §
 | `GET /api/results/summary?group=day\|week` | pnl, hit rate, avg CLV, rec vs executed split |
 | `GET /api/bankroll` / `POST /api/bankroll/adjust` | ledger view / manual deposit-withdraw rows |
 | `GET /api/matching` / `POST /api/matching/{id}/resolve` | quarantine queue |
-| `GET /api/system/health` | scheduler last-run, quota, kill_switch, paper_mode |
+| `GET /api/system/health` | scheduler last-run, quota, kill_switch, paper_mode; `poll_plan` (added 2026-09-23) |
 | `POST /api/system/kill` / `POST /api/system/resume` | flip kill_switch |
-| `POST /api/system/poll` | run one featured cycle now — §8.4's manual trigger (added 2026-09-16) |
+| `POST /api/system/poll` | run one featured cycle now — §8.4's manual trigger (added 2026-09-16); today's sports in the weekly plan (amended 2026-09-23) |
 
 **`POST /api/system/poll` — added 2026-09-16.** §8.4's dev row already reserves "manual
 trigger only" for props; this is the same idea for the featured cycle, and it exists because
@@ -764,12 +824,21 @@ that falls inside a laptop sleep runs on wake rather than while the games are st
 and §7.4 refuses an event that has already started, so a late cycle can detect nothing. This is
 the control that puts a cycle where the person watching wants one.
 
-It is an ordinary poll otherwise: one `run_once` per enabled sport, `markets × regions` credits
-each, through the same pace guard as every other request, and it stamps `last_poll_at` exactly
-as a scheduled poll does — a manual cycle *is* a poll, so `poll_is_due` must see it or the next
-worker restart pays for another one. 409 while a cycle is already running, and 409 carrying the
-guard's own message when the guard refuses to spend. §16.1 is untouched: it fetches prices and
+It is an ordinary poll otherwise: one `run_once` per sport it buys (below), `markets × regions`
+credits each, through the same pace guard as every other request, and it stamps `last_poll_at`
+exactly as a scheduled poll does — a manual cycle *is* a poll, so `poll_is_due` must see it or the
+next worker restart pays for another one. 409 while a cycle is already running, and 409 carrying
+the guard's own message when the guard refuses to spend. §16.1 is untouched: it fetches prices and
 writes documents.
+
+**What a press buys — amended 2026-09-23.** With §3.2's weekly plan in effect, a press buys
+*today's* sports in the plan, by its Eastern calendar — a Tuesday press buys Tuesday's NHL and NBA
+slates, not Sunday's NFL — and `sports_enabled` when the plan is empty, not in effect, or has
+nothing today. Each sport that lands is also stamped per sport, with `manual` as its source, and a
+slot of the plan due within three hours stands down on it (§13): the press already spent what the
+slot was budgeted for. `GET /api/system/health` gains `poll_plan` — the mode, the plan's sports
+and polls a week, and `poll_now_sports`, what a press would buy right now — so the button can
+name its leagues and price itself.
 
 FastAPI serves the built Angular bundle as static files at `/` in production mode.
 Summary and bankroll endpoints are thin wrappers over ES aggregations (`date_histogram` +
@@ -783,11 +852,11 @@ Summary and bankroll endpoints are thin wrappers over ES aggregations (`date_his
 
 | Route | Contents |
 |---|---|
-| `/dashboard` | health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button, POLL NOW on the polling row (added 2026-09-16, §10) |
+| `/dashboard` | health card (scheduler, quota, kill switch, paper badge), today's recommendations, bankroll figure, big KILL/RESUME button, POLL NOW on the polling row (added 2026-09-16, §10); the running worker's next scheduled poll, and POLL NOW naming the leagues it buys (2026-09-23) |
 | `/opportunities` | live table (poll `GET /api/opportunities` every 15 s), filters status/type |
 | `/recommendations` | history table; row action "confirm bet" dialog → confirm endpoint |
 | `/results` | summary tiles (P&L, hit rate, avg CLV) + per-day table; rec-vs-executed toggle |
-| `/settings` | reactive form over §3.2 (grouped: Staking, Thresholds, Polling, Safety) |
+| `/settings` | reactive form over §3.2 (grouped: Staking, Thresholds, Polling, Safety); `poll_schedule` edited as rows of sport, weekdays and Eastern time, priced against the budget as it is edited (2026-09-23) |
 | `/sportsbooks` | table with enable toggles, priority, link-template editor + "test link" button |
 | `/providers` | enable toggles, quota bar (used vs budget) |
 | `/matching` | quarantine queue with raw JSON viewer and resolve action |
@@ -865,6 +934,16 @@ sets the flag, deciding from the data rather than from a list of ids: opportunit
 `detected_at` against the event's `commence_time`, the rule `detect_opportunities` has
 enforced since 2026-09-11. A trail that cannot be followed stays counted.
 
+**Scores are fetched only for sports with a bet to settle (added 2026-09-23).** Step 1 used to run
+for every enabled sport on every run, at 2 credits a sport whether or not anything settled; once
+§8.4's weekly plan polls four sports that is ~240 credits a month on a 500 budget. The job now asks
+the datastore first, which is free: recommendations with no result whose event started within the
+last three days (the feed's `daysFrom=2`, plus a day for the boundary). Steps 1–6 run only for
+those sports — on most days, none. It follows the data rather than the settings, so a bet on a
+sport since dropped from the plan still settles, and when the datastore cannot answer, every sport
+a poll can reach is graded as before. One consequence: a sport with nothing to settle no longer
+has its events' final scores written, which nothing but this job reads.
+
 ---
 
 ## 13. Scheduler (`scheduler.py`, separate process: `nx run engine:worker`)
@@ -873,13 +952,14 @@ APScheduler with asyncio. Jobs:
 
 | Job | Cadence |
 |---|---|
-| `poll_featured(sport)` | `poll_interval_s` (or `poll_interval_dev_s` while quota_budget ≤ 500) |
+| `poll_featured(sport)` | `poll_interval_s` (or `poll_interval_dev_s` while quota_budget ≤ 500 **and `poll_schedule` is empty** — amended 2026-09-23) |
+| `poll_scheduled(day, time, sport)` | cron at each `poll_schedule` slot, America/New_York, while quota_budget ≤ 500 (added 2026-09-23) |
 | `poll_props(sport)` | `props_poll_interval_s`, only events with `commence_time − now < 6 h` |
 | `closing_capture` | one-shot per event at `commence_time − closing_capture_offset_s` |
-| `grade` | daily 06:00 UTC |
+| `grade` | daily 06:00 UTC, for the sports with a bet to settle (§12, amended 2026-09-23) |
 | `quota_reset` | monthly, day 1: zero `quota_used` |
-| `heartbeat` | 60 s: update the `runtime` doc in `edgeline-settings` (read by `/api/system/health`) |
-| `poll_realign` | 60 s: re-anchor `poll_featured` one interval past `last_poll_at` (added 2026-09-16) |
+| `heartbeat` | 60 s: update the `runtime` doc in `edgeline-settings` (read by `/api/system/health`); since 2026-09-23 also `next_poll_at` |
+| `poll_realign` | 60 s: re-anchor `poll_featured` one interval past `last_poll_at` (added 2026-09-16; interval only since 2026-09-23) |
 
 Startup sequence: compute projected monthly credit cost (§8.4) → refuse to schedule if over
 budget → log the number → register jobs → start Discord bot in the same loop.
@@ -921,7 +1001,46 @@ worker sat up for 21 hours on a 12-hour cadence without polling, heartbeating th
 `poll_featured`, `closing_capture`, `grade` and `quota_reset` therefore pass
 `misfire_grace_time=None` with `coalesce=True`: a missed slot runs once on wake rather than once
 per slot. `heartbeat` and `poll_realign` keep the default, since each replaces itself a minute
-later.
+later. (A slot of the weekly plan is bounded instead — below.)
+
+**On the free tier the featured cadence is a weekly plan of fixed Eastern times (added
+2026-09-23).** §8.4 has the why and the plan. One cron job per slot,
+`poll_scheduled:<day>:<HHMM>:<sport>`, on America/New_York, so DST moves the UTC fire time and not
+the slot. The shape is chosen once at startup: the plan while it has a slot and the budget is the
+free tier's, the interval above otherwise — so emptying `poll_schedule` restores the 12-hour
+interval, T4.1's raised budget selects the production cadence exactly as before, and a plan edited
+in the UI takes effect at the next worker start, like every other cadence setting. `--check-budget`
+and the startup log print the plan's projection, and the heartbeat stamps `next_poll_at` and
+`next_poll_sports` from the jobs actually registered, which a plan edited since the start would not
+tell you.
+
+*Bounded lateness.* A slot is placed for games about to start, so it passes a
+`misfire_grace_time` of **90 minutes** rather than `RUN_WHEN_LATE`: a 17:30 slot noticed at 23:00
+is skipped, not bought. Ninety minutes is the lead the plan's slots were placed with, and the
+Monday/Thursday 18:45 NFL slot is why it is the ceiling rather than the two hours first proposed:
+its one game kicks off at 20:15. `coalesce=True` still makes a sleep across a slot cost one poll,
+the failure retries above still apply, and a worker that *starts* inside a slot's grace window —
+down for it rather than asleep — runs it from `poll_startup` on the same terms.
+
+*Standing down.* Every poll now stamps `last_poll_at_by_sport.<sport>` and
+`last_poll_source_by_sport.<sport>` (`schedule`, `interval`, `manual`, `cli`) beside
+`last_poll_at`, which `/health` and `poll_is_due` still read. A slot stands down when its sport was
+polled at or after the slot came due — already served, by a worker restarted inside the grace
+window or a second worker — or when a poll from *outside* the plan landed within three hours: that
+poll spent what the slot was budgeted for. The plan's own polls never stand a slot down, or a plan
+with two slots close together, or a slot that ran late inside its grace, would lose the next one
+while `--check-budget` went on counting it. Three hours is under the tightest same-sport gap in the
+default plan (Sunday's NFL, three and a half). Unreadable stamps answer "poll", `poll_is_due`'s
+direction. `engine --once` stamps too, and it had never stamped anything before this: the
+re-anchoring above could not see it, whatever this section said. `poll_realign` is registered only
+on the interval — a slot is a clock time, with nothing to re-anchor. And a stamp that fails to
+write after a poll landed is logged rather than retried, since the retry would buy the market again
+to repair a timestamp.
+
+*Which sports.* The closing sweep covers every sport a poll can reach — `sports_enabled` plus the
+plan's. A union rather than a rule that the plan may only name enabled sports: `sports_enabled` is
+also what the interval polls when the plan is emptied, so requiring NFL there would double that
+fallback's bill for a sport it was never asked to poll. Grading follows the data instead (§12).
 
 The Discord bot is not started here yet (§9.1 has no token). `build_scheduler` takes the
 `AlertSink` the rest of the pipeline uses, so a channel drops in without touching the jobs.

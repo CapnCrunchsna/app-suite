@@ -53,6 +53,18 @@ SPEC_DEFAULTS = {
     # 12 h, not §3.2's original 6 h: two regions double the per-poll cost, so the
     # halved rate keeps the dev cadence at the same 360 credits/month.
     "poll_interval_dev_s": 43200,
+    # Not in §3.2's original table — added 2026-09-23. The free tier's cadence
+    # as fixed Eastern-time polls, placed from data: each ~90 min before its
+    # sport's first big window of starts. 14 a week, the interval's 360/month.
+    "poll_schedule": [
+        {"days": ["sun"], "time": "11:30", "sport": "americanfootball_nfl"},
+        {"days": ["sun"], "time": "15:00", "sport": "americanfootball_nfl"},
+        {"days": ["mon", "thu"], "time": "18:45", "sport": "americanfootball_nfl"},
+        {"days": ["sat"], "time": "10:30", "sport": "americanfootball_ncaaf"},
+        {"days": ["sat"], "time": "17:30", "sport": "americanfootball_ncaaf"},
+        {"days": ["tue", "wed", "thu", "fri"], "time": "17:30", "sport": "icehockey_nhl"},
+        {"days": ["mon", "tue", "wed", "fri"], "time": "17:30", "sport": "basketball_nba"},
+    ],
     "props_poll_interval_s": 600,
     "closing_capture_offset_s": 300,
     # Not in §3.2's original table — added 2026-09-11. `off` derives CLV from
@@ -156,6 +168,47 @@ def test_paper_mode_defaults_true():
 def test_devig_method_is_constrained_to_the_four_named_methods():
     with pytest.raises(Exception):
         Settings(devig_method="vibes")
+
+
+# ---- poll_schedule (§3.2, added 2026-09-23) --------------------------------
+
+
+def _slot(**overrides):
+    return {"days": ["sat"], "time": "10:30", "sport": "americanfootball_ncaaf", **overrides}
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        _slot(time="25:00"),
+        _slot(time="9:30"),  # the cron needs HH:MM, and so does anyone reading it
+        _slot(time="10:30pm"),
+        _slot(days=[]),
+        _slot(days=["saturday"]),
+        _slot(sport="NFL"),  # the likeliest thing to type, and not a sport key
+        _slot(sport=""),
+    ],
+    ids=["hour 25", "one-digit hour", "12-hour clock", "no days", "long day name",
+         "display name", "empty sport"],
+)
+def test_a_malformed_slot_is_refused_rather_than_scheduled(bad):
+    """A slot that validated but meant nothing would register a job that polls
+    the wrong thing, or never fires — both silently. `PUT /api/settings`
+    validates through this model, so a refusal here is a 422 there."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Settings.model_validate({"poll_schedule": [bad]})
+
+
+def test_a_day_named_twice_in_one_slot_is_one_day():
+    settings = Settings.model_validate({"poll_schedule": [_slot(days=["sat", "sun", "sat"])]})
+    assert settings.poll_schedule[0].days == ["sat", "sun"]
+
+
+def test_an_empty_plan_is_valid_and_means_the_interval():
+    """§13: the empty list is how the interval comes back, so it must validate."""
+    assert Settings.model_validate({"poll_schedule": []}).poll_schedule == []
 
 
 def test_secrets_and_settings_do_not_overlap():

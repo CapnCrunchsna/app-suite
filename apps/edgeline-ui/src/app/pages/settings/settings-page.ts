@@ -44,11 +44,12 @@ import { FormControl, FormRecord, ReactiveFormsModule, Validators } from '@angul
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { Panel } from '@metrum/ui';
 import { centsFromDollars, dollarsFromCents, formatCents } from '@metrum/format';
-import type { Settings } from '@metrum/edgeline-api-client';
+import type { PollSlot, Settings } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
 import { humanise } from '../../labels';
+import { PollScheduleEditor, WEEKDAYS, slotIsValid } from './poll-schedule-editor';
 import {
   ALL_GROUPS,
   EDITABLE_GROUPS,
@@ -57,7 +58,7 @@ import {
   type SettingKey,
 } from './settings-fields';
 
-type FieldValue = string | number | boolean | null;
+type FieldValue = string | number | boolean | null | PollSlot[];
 
 /** What a `bool` field is staged at, versus what the server says it is. */
 interface SafetyChange {
@@ -71,7 +72,7 @@ interface SafetyChange {
 
 @Component({
   selector: 'el-settings-page',
-  imports: [ReactiveFormsModule, Panel],
+  imports: [ReactiveFormsModule, Panel, PollScheduleEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
@@ -136,6 +137,30 @@ export class SettingsPage {
     return Object.keys(this.buildPatch()).length;
   });
 
+  /**
+   * What one poll costs — `markets × regions`, §8.4's per-poll figure — from the
+   * form as it stands, so the plan editor's projection moves when a region is
+   * added in the field above it rather than after a save.
+   */
+  protected readonly creditsPerPoll = computed(() => {
+    // Form values are not signals: `revision` covers edits, `current` covers
+    // the load and every save, which refill the form before they land.
+    this.revision();
+    this.current();
+    const count = (key: SettingKey) =>
+      String(this.form.controls[key]?.value ?? '')
+        .split(',')
+        .filter((part) => part.trim().length > 0).length;
+    return count('markets_featured') * Math.max(count('regions'), 1);
+  });
+
+  protected readonly budgetInForm = computed(() => {
+    this.revision();
+    this.current();
+    const value = Number(this.form.controls['quota_monthly_budget']?.value);
+    return Number.isFinite(value) ? value : null;
+  });
+
   constructor() {
     for (const group of ALL_GROUPS) {
       const target = group.id === 'safety' ? this.safetyForm : this.form;
@@ -153,6 +178,9 @@ export class SettingsPage {
     const control = this.controlFor(key);
     if (!control || control.valid || !control.touched) return null;
     if (control.hasError('json')) return 'Not valid JSON, or not a flat map of numbers.';
+    if (control.hasError('plan')) {
+      return 'Every poll needs a sport key (lower case, like icehockey_nhl), at least one day and a time.';
+    }
     if (control.hasError('min')) return 'Below the smallest value this setting allows.';
     return 'This setting needs a value.';
   }
@@ -284,6 +312,8 @@ function toControl(field: FieldSpec, value: unknown): FieldValue {
       return value === true;
     case 'number':
       return Number(value);
+    case 'schedule':
+      return Array.isArray(value) ? (value as PollSlot[]).map((slot) => ({ ...slot })) : [];
     default:
       return String(value);
   }
@@ -318,6 +348,16 @@ function fromControl(field: FieldSpec, value: FieldValue): unknown {
     }
     case 'bool':
       return value === true;
+    case 'schedule':
+      // In the engine's own shape — days in week order, keys in `PollSlot`'s
+      // order — so an untouched plan compares equal to what the server sent.
+      return Array.isArray(value)
+        ? (value as PollSlot[]).map((slot) => ({
+            days: WEEKDAYS.filter((day) => slot.days.includes(day)),
+            time: slot.time,
+            sport: slot.sport,
+          }))
+        : undefined;
     default:
       return value === null || value === '' ? undefined : String(value);
   }
@@ -330,7 +370,16 @@ function validatorsFor(field: FieldSpec) {
     if (field.min !== undefined) validators.push(Validators.min(field.min));
   }
   if (field.kind === 'json') validators.push(flatNumberMap);
+  if (field.kind === 'schedule') validators.push(everySlotValid);
   return validators;
+}
+
+/** The three rules `PollSlot` enforces, checked before the engine has to say
+ *  so with a 422. An empty plan is valid: it is how the interval comes back. */
+function everySlotValid(control: AbstractControl): ValidationErrors | null {
+  const rows = control.value;
+  if (!Array.isArray(rows)) return null;
+  return (rows as PollSlot[]).every(slotIsValid) ? null : { plan: true };
 }
 
 /** `consensus_weights` is a flat map of book key to integer weight. Anything

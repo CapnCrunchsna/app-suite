@@ -20,7 +20,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # apps/edgeline-api/ — .env sits beside pyproject.toml, not inside the package.
@@ -29,6 +29,9 @@ ENV_FILE = PROJECT_ROOT / ".env"
 
 DevigMethod = Literal["multiplicative", "additive", "power", "shin"]
 ClosingCaptureMode = Literal["off", "recommended", "all"]
+Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+#: `datetime.weekday()` order, so `WEEKDAYS[d.weekday()]` names a date's day.
+WEEKDAYS: tuple[Weekday, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 
 class MissingSecretError(RuntimeError):
@@ -66,6 +69,49 @@ class Secrets(BaseSettings):
                 f"{ENV_FILE} and fill it in (spec §3.1, §17)."
             )
         return value
+
+
+class PollSlot(BaseModel):
+    """One row of §3.2's `poll_schedule`: poll `sport` at `time` on each of `days`.
+
+    `time` is a 24-hour ``HH:MM`` in **America/New_York**, not this machine's
+    zone: the games are scheduled in Eastern time, so the plan is written in it,
+    and the scheduler's cron follows DST from there (§13).
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    days: list[Weekday] = Field(min_length=1)
+    time: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    #: A The Odds API sport key. Lower-case by construction, so "NFL" — the
+    #: likeliest thing to type — is refused rather than polled as a sport that
+    #: does not exist and answered with nothing.
+    sport: str = Field(pattern=r"^[a-z0-9_]+$")
+
+    @field_validator("days")
+    @classmethod
+    def _each_day_once(cls, days: list[str]) -> list[str]:
+        return list(dict.fromkeys(days))
+
+
+def _default_poll_schedule() -> list[PollSlot]:
+    """§3.2's weekly plan, placed from data on 2026-09-23 — see §8.4.
+
+    Each poll sits about ninety minutes before its sport's first big window of
+    starts that day: late enough that inactives, goalies and injury news are out
+    and books are re-pricing at different speeds, early enough that the whole
+    slate is still pre-game. 14 polls a week at markets x regions each is the same
+    ~360 credits a month the 12-hour interval cost.
+    """
+    return [
+        PollSlot(days=["sun"], time="11:30", sport="americanfootball_nfl"),
+        PollSlot(days=["sun"], time="15:00", sport="americanfootball_nfl"),
+        PollSlot(days=["mon", "thu"], time="18:45", sport="americanfootball_nfl"),
+        PollSlot(days=["sat"], time="10:30", sport="americanfootball_ncaaf"),
+        PollSlot(days=["sat"], time="17:30", sport="americanfootball_ncaaf"),
+        PollSlot(days=["tue", "wed", "thu", "fri"], time="17:30", sport="icehockey_nhl"),
+        PollSlot(days=["mon", "tue", "wed", "fri"], time="17:30", sport="basketball_nba"),
+    ]
 
 
 class Settings(BaseModel):
@@ -147,7 +193,17 @@ class Settings(BaseModel):
     #: 12 h, not §3.2's original 6 h. Requesting two regions doubles the per-poll
     #: credit cost, so halving the poll rate keeps the dev cadence at the same
     #: 360 credits/month it always cost — inside the free tier's 500 (§8.4).
+    #:
+    #: Since 2026-09-23 only the fallback: it applies on the free tier when
+    #: `poll_schedule` is empty.
     poll_interval_dev_s: int = 43_200
+    #: The free tier's cadence as fixed Eastern-time polls, per sport, by weekday
+    #: (§8.4, §13). Added 2026-09-23: an interval anchored to worker start landed
+    #: its two daily polls wherever the process was last restarted, and the only
+    #: polls that ever found anything were ones that happened to land in the
+    #: afternoon. An empty list restores `poll_interval_dev_s`; a budget above the
+    #: free tier's selects `poll_interval_s` and ignores this.
+    poll_schedule: list[PollSlot] = Field(default_factory=_default_poll_schedule)
     props_poll_interval_s: int = 600
     closing_capture_offset_s: int = 300
     #: Whether to **buy** closing lines, and for which events (§12.4). Added

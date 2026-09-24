@@ -73,6 +73,20 @@
                          implied by a field name the reader cannot see. -->
                     <span class="row__unit">{{ centsEcho(field.key) }}</span>
                   }
+                  @case ('schedule') {
+                    <!-- Rows rather than text: a checkbox cannot misspell a day
+                         and a time input cannot say "5pm". It prices itself
+                         from the markets, regions and budget fields as they
+                         stand, so an over-budget plan shows here, not in a
+                         worker that refuses to start. -->
+                    <el-poll-schedule-editor
+                      [id]="'set-' + field.key"
+                      [formControlName]="field.key"
+                      [creditsPerPoll]="creditsPerPoll()"
+                      [budget]="budgetInForm()"
+                      (edited)="onInput()"
+                    />
+                  }
                   @case ('number') {
                     <input
                       [id]="'set-' + field.key"

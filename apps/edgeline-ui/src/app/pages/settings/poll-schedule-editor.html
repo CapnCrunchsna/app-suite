@@ -1,0 +1,85 @@
+<div class="plan">
+  <div class="table-wrap">
+    <table class="table plan__table">
+      <thead>
+        <tr>
+          <th scope="col">Sport</th>
+          @for (day of days; track day) {
+            <th scope="col" class="plan__day">{{ dayLabel(day) }}</th>
+          }
+          <th scope="col">Time (ET)</th>
+          <th scope="col"><span class="visually-hidden">Remove</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track $index; let i = $index) {
+          <tr class="plan__row" [class.plan__row--bad]="!rowIsValid(row)">
+            <td>
+              <input
+                type="text"
+                class="plan__sport"
+                list="plan-sports"
+                placeholder="sport key"
+                [value]="row.sport"
+                [disabled]="disabled()"
+                [attr.aria-label]="'Sport for poll ' + (i + 1)"
+                (input)="setSport(i, $event)"
+              />
+              <span class="plan__league">{{ sportName(row.sport) }}</span>
+            </td>
+            @for (day of days; track day) {
+              <td class="plan__day">
+                <input
+                  type="checkbox"
+                  [checked]="row.days.includes(day)"
+                  [disabled]="disabled()"
+                  [attr.aria-label]="dayLabel(day) + ' for poll ' + (i + 1)"
+                  (change)="toggleDay(i, day)"
+                />
+              </td>
+            }
+            <td>
+              <input
+                type="time"
+                step="60"
+                class="plan__time"
+                [value]="row.time"
+                [disabled]="disabled()"
+                [attr.aria-label]="'Eastern time for poll ' + (i + 1)"
+                (input)="setTime(i, $event)"
+              />
+            </td>
+            <td>
+              <button type="button" class="button" [disabled]="disabled()" (click)="remove(i)">
+                Remove
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td [attr.colspan]="days.length + 3" class="plan__empty">
+              No polls planned — the worker falls back to the dev poll interval below.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <datalist id="plan-sports">
+    @for (key of knownSports; track key) {
+      <option [value]="key">{{ sportName(key) }}</option>
+    }
+  </datalist>
+
+  <div class="plan__foot">
+    <button type="button" class="button" [disabled]="disabled()" (click)="add()">Add a poll</button>
+    <span class="plan__cost" [class.neg]="overBudget()">
+      {{ weekly() }} poll{{ weekly() === 1 ? '' : 's' }} a week · ~{{ projected() }} credits a
+      month at {{ creditsPerPoll() }} a poll
+      @if (budget() !== null) {
+        of a {{ budget() }} budget{{ overBudget() ? ' — the worker will refuse to start' : '' }}
+      }
+    </span>
+  </div>
+</div>

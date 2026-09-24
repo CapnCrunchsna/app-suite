@@ -80,6 +80,21 @@ curl -X PUT http://127.0.0.1:8000/api/settings -H "Content-Type: application/jso
 `uv run python -m edgeline.scheduler --check-budget` prints what the **stored** settings cost, so
 it is the fastest way to tell a stale document from a current one.
 
+**A key the stored document does not carry at all is the exception** — it reads as its default.
+That is how `poll_schedule` (2026-09-23) reaches an install seeded before it existed: the worker
+runs the default weekly plan from its first start on the new code. Write it once through the API
+anyway, so the plan is in the document rather than in the code and a later change to the default
+cannot move it silently. An **empty patch** does exactly that — it changes nothing, and the route
+stores the merged document whole, filling in every key the document lacked:
+
+```bash
+curl -X PUT http://127.0.0.1:8000/api/settings -H "Content-Type: application/json" -d "{}"
+curl http://127.0.0.1:8000/api/settings
+```
+
+The second command should show `poll_schedule` with the plan's seven rows. Edit it from
+Settings → Polling afterwards, not by hand.
+
 ## Nx targets
 
 | Target | Command |
@@ -123,18 +138,29 @@ session, each of which cost real credits or real time.
 | Endpoint | Cost | Who calls it |
 | --- | --- | --- |
 | `/v4/sports` | **0** — free, and `x-requests-last: 0` confirms it | diagnostics only |
-| `/v4/sports/{sport}/odds` | **markets × regions** (6 at current settings) | `run_once`, `capture_closing_lines` |
+| `/v4/sports/{sport}/events` | **0** — every listed game with its start time | diagnostics only |
+| `/v4/sports/{sport}/odds` | **markets × regions** (6 at current settings); **0 when the answer is empty** | `run_once`, `capture_closing_lines` |
 | `/v4/sports/{sport}/scores?daysFrom=` | **2** | `grading.grade` |
+
+**An empty `/odds` answer is free** (measured 2026-09-23: `baseball_mlb_preseason`, inactive,
+returned `[]` with `x-requests-last: 0`). So a weekly-plan slot for a sport out of season costs
+nothing — the NBA slots until its 2026-10-20 opener, or MLB slots left in after the World Series.
+Careful what "empty" means: `basketball_wnba` had no games *upcoming* but three in play, returned
+them, and cost 1.
 
 Two consequences that are not obvious from §8.4:
 
 - **The §13 budget guard counts only the featured poll.** `plan_budget` projects
-  `(86400/interval) × markets × regions × 30` and knows nothing about the closing
+  `(86400/interval) × markets × regions × 30`, or on the weekly plan
+  `polls a week × markets × regions × 30/7`, and knows nothing about the closing
   sweep or grading. It reported a comfortable 360/500 while the real spend was
   about 6 credits a minute. Treat its number as a floor, not a bill.
-- **Grading costs 2 credits every time the worker starts.** §13 runs a catch-up
-  grade 15 seconds in, so restarting the worker five times costs 10 credits
-  before anything is polled.
+- **Grading costs 2 credits a sport, but only when there is a bet to settle.** Until
+  2026-09-23 every run fetched scores for every enabled sport — including the catch-up
+  grade 15 seconds after each worker start — whatever there was to grade. With the
+  weekly plan's four sports that would have been ~240 credits a month, so `_grade`
+  now asks the datastore which sports have a recommendation on a started game with no
+  result (`sports_awaiting_settlement`, free) and fetches scores for those alone.
 
 **The enforcement is a pace guard, not the projection.** `_check_pace` in the adapter refuses a
 request locally — nothing sent — when `x-requests-used` is past `quota_monthly_budget`, or past
@@ -175,7 +201,9 @@ time.
 run in short bursts on a laptop that sleeps would poll on the way to never. `poll_startup` runs a
 cycle three seconds in, but only when one is actually due: §8.4's budget pays for the cadence, not
 for how often the process is restarted, so it stands down if a poll already landed inside the
-current interval.
+current interval. On the weekly plan (below) it runs only a slot that came due in the last ninety
+minutes — the grace a slot gets for a sleep, extended to a restart — so starting the worker at
+14:00 buys nothing, and starting it at 17:45 on a Tuesday still buys the 17:30 slate.
 
 **A slot that landed inside a sleep used to be dropped rather than delayed, and the worker looked
 perfectly healthy while it happened (2026-09-15).** APScheduler's default `misfire_grace_time` is
@@ -264,23 +292,23 @@ Two things worth knowing before using it:
 - **`PUT /api/settings` rejects unknown keys** rather than storing them. The settings index is
   `dynamic: false`, so a typo would be saved, ignored by every reader, and look like it worked.
 - **`POST /api/system/poll` runs one cycle now** — §8.4's manual trigger, added 2026-09-16, and
-  the dashboard's "Poll now" button calls it. It exists because §13's cadence lands wherever the
-  worker was last restarted: the interval is anchored to process start, a slot inside a sleep
-  runs on wake, and §7.4 refuses an event that has already started — so "before first pitch" is
-  a time only a person can pick. It spends `markets × regions` credits per enabled sport through
-  the usual pace guard, stamps `last_poll_at` like any poll (a manual cycle *is* a poll, or
-  `poll_is_due` pays for another at the next restart), answers 409 while one is already running,
-  and 409 with the guard's own message when the guard refuses. The API process makes the provider
-  request, so **the API has to be restarted to pick this up** — the button is in the UI bundle,
-  the route is in the server.
-- **A manual poll pushes the next scheduled one a full interval out**, within a minute
-  (`poll_realign`, §13, added 2026-09-16). APScheduler anchors an interval job's grid to when the
-  *scheduler* started and cannot see a poll it did not fire, so pressing the button two hours
-  before a slot would otherwise buy the same market twice. The worker now re-reads `last_poll_at`
-  every 60 s and moves each `poll_featured` job to one interval past it — which means
-  `engine --once` re-anchors the cadence too, since it stamps the same field. **That job is in the
-  worker**, so the worker needs restarting to get it, and it costs 2 credits for the startup
-  grade.
+  the dashboard's "Poll now" button calls it. It exists because no cadence knows about the news
+  that makes a cycle worth buying *now*, and §7.4 refuses an event that has already started. On
+  the weekly plan it buys **today's sports in the plan** (Eastern calendar) — a Tuesday press
+  buys NHL and NBA — and `sports_enabled` on a day the plan has nothing; the button names the
+  leagues and prices them from `GET /api/system/health`'s `poll_plan`. It spends `markets ×
+  regions` credits per sport through the usual pace guard, stamps `last_poll_at` and the
+  per-sport stamps like any poll (a manual cycle *is* a poll, or `poll_is_due` pays for another
+  at the next restart), answers 409 while one is already running, and 409 with the guard's own
+  message when the guard refuses. The API process makes the provider request, so **the API has
+  to be restarted to pick up a change here** — the button is in the UI bundle, the route is in
+  the server.
+- **A manual poll stands in for the next scheduled one of the same sport.** On the weekly plan, a
+  slot stands down when a poll from outside the plan — this button, `engine --once` — bought its
+  sport in the last three hours (§13, 2026-09-23). On the interval, `poll_realign` (added
+  2026-09-16) moves each `poll_featured` job to one interval past `last_poll_at` instead.
+  `engine --once` is seen by both since 2026-09-23; before that it stamped nothing, whatever this
+  file said. **Both live in the worker**, so the worker needs restarting to get them.
 
 When a UI bundle has been built, it is served at `/`; set `EDGELINE_UI_DIST` to point elsewhere.
 So the whole app is two commands:
@@ -355,9 +383,57 @@ a monthly quota reset, and a heartbeat onto the `runtime` settings document.
 point rather than a nicety. §8.4's production cadence costs ~64,800 credits a month against a
 free tier of 500 — a worker started on the wrong interval exhausts the month in about four hours
 and takes the system dark silently. `--check-budget` prints the §8.4 arithmetic and exits, so the
-number can be seen before anything runs. The dev cadence (every 6 h, ~360/month) is selected
-automatically while `quota_monthly_budget` is still the free tier's 500; raising it is T4.1 and
-needs the paid tier approved.
+number can be seen before anything runs. The dev cadence is selected automatically while
+`quota_monthly_budget` is still the free tier's 500; raising it is T4.1 and needs the paid tier
+approved.
+
+### The weekly poll plan (2026-09-23)
+
+On the free tier the featured cadence is `poll_schedule` (§3.2): fixed **Eastern** times per sport
+and weekday, one cron job each (`poll_scheduled:<day>:<HHMM>:<sport>`), replacing the 12-hour
+interval that landed its two polls wherever the worker last started. The default, placed from
+data in §8.4 — each poll about ninety minutes before its sport's first big window of starts:
+
+| Day | Polls (ET) |
+| --- | --- |
+| Sun | NFL 11:30, NFL 15:00 |
+| Mon | NBA 17:30, NFL 18:45 |
+| Tue, Wed, Fri | NHL 17:30, NBA 17:30 |
+| Thu | NHL 17:30, NFL 18:45 |
+| Sat | NCAAF 10:30, NCAAF 17:30 |
+
+14 polls a week at 6 credits is **360 credits a month**, what the interval cost, and
+`--check-budget` prints it:
+
+```
+poll plan          14 polls/week at fixed America/New_York times
+sports             4 (basketball_nba, americanfootball_nfl, icehockey_nhl, americanfootball_ncaaf)
+markets x regions  3 x 2
+projected credits  360/month
+budget             500
+verdict            OK
+```
+
+What to know before changing it:
+
+- **It is a setting, and seasons are edits.** Settings → Polling edits it as rows and prices the
+  result against the budget as you type. MLB is not in the default because its regular season
+  ends 2026-09-27; its postseason is one row. An edit takes effect **when the worker restarts**.
+- **Empty restores the interval** (`poll_interval_dev_s`, over `sports_enabled`); a budget above
+  the free tier's selects the production interval and ignores the plan.
+- **A slot runs up to ninety minutes late and no later.** A sleep across 17:30 still buys the
+  slot on a 18:45 wake; a wake at 23:00 does not, because the games it was placed for have
+  started. The Monday/Thursday 18:45 NFL slot, ninety minutes before its one kickoff, is why the
+  ceiling is not two hours.
+- **The button stands in for a slot, the plan never does.** A slot stands down when its sport was
+  polled from outside the plan in the last three hours, or was already polled since the slot came
+  due. Every poll stamps `last_poll_at_by_sport` and `last_poll_source_by_sport` on the runtime
+  document for this.
+- **The heartbeat stamps `next_poll_at` / `next_poll_sports`** from the jobs the running worker
+  registered, and the dashboard shows it while the heartbeat is fresh — the stored plan and the
+  running one differ until a restart, and this is the one that will actually fire.
+- **Grading and the closing sweep follow along.** The sweep covers `sports_enabled` plus the
+  plan's sports; grading covers whatever has a bet to settle.
 
 ## Alerting: the channel is not decided yet
 

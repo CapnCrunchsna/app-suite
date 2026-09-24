@@ -45,6 +45,10 @@ const SPORT_LABELS: Readonly<Record<string, string>> = {
   soccer_epl: 'EPL',
 };
 
+/** The sport keys this app has a name for — offered as suggestions wherever a
+ *  key is typed, so the likeliest one is picked rather than spelled. */
+export const KNOWN_SPORTS: readonly string[] = Object.keys(SPORT_LABELS);
+
 /** §4.3's opportunity `type`. Both are initialisms and both stay upper-case;
  *  "Ev" would read as a word. */
 const TYPE_LABELS: Readonly<Record<string, string>> = {

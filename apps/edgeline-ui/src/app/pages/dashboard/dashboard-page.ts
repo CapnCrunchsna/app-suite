@@ -49,7 +49,7 @@ import type {
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
-import { marketLabel, matchup, statusLabel, typeLabel } from '../../labels';
+import { marketLabel, matchup, sportLabel, statusLabel, typeLabel } from '../../labels';
 
 /** §13 stamps the heartbeat every 60 s, so three missed ones is a stopped
  *  worker rather than a slow one. */
@@ -223,13 +223,47 @@ export class DashboardPage {
   /**
    * What one press costs, computed from §3.2 rather than written down: the same
    * `markets × regions × sports` arithmetic §8.4 projects the monthly bill from.
+   * The sports are the ones a press would actually buy — today's in the weekly
+   * plan, which the engine reports — not every sport the app knows about.
    */
   protected readonly pollCostCredits = computed(() => {
     const markets = this.settings().markets_featured?.length ?? 0;
     const regions = this.settings().regions?.length ?? 0;
-    const sports = Math.max(this.status.sportsEnabled().length, 1);
+    const sports = Math.max(this.status.pollNowSports().length, 1);
     return markets * regions * sports;
   });
+
+  /** Which sports a press buys, as their leagues' names. */
+  protected readonly pollNowLeagues = computed(() =>
+    this.status.pollNowSports().map((key) => sportLabel(key)).join(', '),
+  );
+
+  /**
+   * The running worker's next scheduled poll, on the plan's own clock — "Thu
+   * 17:30 ET" — since that is how the plan is written and how games are listed.
+   * Only while the heartbeat is fresh: a stopped worker's last word about its
+   * next poll is a promise nobody is keeping.
+   */
+  protected readonly nextPoll = computed(() => {
+    const at = this.status.nextPollAt();
+    if (!at || !this.workerAlive()) return null;
+    const zone = this.status.pollPlan()?.timezone ?? 'America/New_York';
+    const when = new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone: zone,
+    }).format(new Date(at));
+    const leagues = this.status.nextPollSports().map((key) => sportLabel(key)).join(', ');
+    return { when: `${when.replace(',', '')} ET`, leagues };
+  });
+
+  /** The plan's sports, for the Sports row — the enabled list alone stopped
+   *  describing what is polled once the plan took over the cadence. */
+  protected readonly planLeagues = computed(() =>
+    (this.status.pollPlan()?.sports ?? []).map((key) => sportLabel(key)).join(', '),
+  );
 
   /** A recommendation's total stake, from §5's stored `StakePlan`. The plan is
    *  an open blob on the wire, so the read is defensive by necessity. */

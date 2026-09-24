@@ -59,6 +59,7 @@ export interface HealthResponse {
   runtime?: Record<string, unknown>;
   quota?: QuotaRow[];
   sports_enabled?: string[];
+  poll_plan?: PollPlanStatus | null;
 }
 
 export interface KillSwitchResponse {
@@ -112,7 +113,7 @@ export interface PollCycleRow {
   skipped_reason?: string | null;
 }
 
-/** What the manual trigger did, totalled across the enabled sports. */
+/** What the manual trigger did, totalled across the sports it polled. */
 export interface PollNowResponse {
   offline?: boolean;
   cycles?: PollCycleRow[];
@@ -121,6 +122,22 @@ export interface PollNowResponse {
   alerted?: number;
   quota_used?: number | null;
   quota_remaining?: number | null;
+}
+
+/** What sets the featured cadence — §3.2's `poll_schedule`, §13. */
+export interface PollPlanStatus {
+  mode: "schedule" | "interval";
+  polls_per_week?: number | null;
+  sports?: string[];
+  poll_now_sports?: string[];
+  timezone: string;
+}
+
+/** One row of §3.2's `poll_schedule`: poll `sport` at `time` on each of `days`. */
+export interface PollSlot {
+  days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
+  time: string;
+  sport: string;
 }
 
 export interface ProviderPatch {
@@ -195,6 +212,7 @@ export interface Settings {
   regions?: string[];
   poll_interval_s?: number;
   poll_interval_dev_s?: number;
+  poll_schedule?: PollSlot[];
   props_poll_interval_s?: number;
   closing_capture_offset_s?: number;
   closing_capture_mode?: "off" | "recommended" | "all";

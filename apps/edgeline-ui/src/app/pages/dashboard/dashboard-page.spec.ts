@@ -386,5 +386,74 @@ describe('DashboardPage (§11.1)', () => {
       expect(button.disabled).toBe(true);
       expect(button.title).toContain('offline_mode');
     });
+
+    /**
+     * With the weekly plan in effect a press buys *today's* sports (2026-09-23),
+     * which the engine names — so the price is those sports', and the button
+     * says which leagues it is about to spend on.
+     */
+    it('names and prices the sports a press buys today under the weekly plan', async () => {
+      const { el } = await render((stub) => {
+        stub.health = { ...stub.health, poll_plan: planStatus(['icehockey_nhl', 'basketball_nba']) };
+      });
+
+      const button = el.querySelector('.poll__button') as HTMLButtonElement;
+      expect(button.textContent).toContain('Poll NHL, NBA now');
+      expect(button.textContent).toContain('~12 credits');
+    });
+  });
+
+  describe('the weekly poll plan (§13, 2026-09-23)', () => {
+    it("shows the running worker's next scheduled poll on the plan's Eastern clock", async () => {
+      const { el } = await render((stub) => {
+        stub.health = {
+          ...stub.health,
+          poll_plan: planStatus(['icehockey_nhl', 'basketball_nba']),
+          runtime: {
+            last_heartbeat_at: new Date().toISOString(),
+            // Thursday 2026-10-01, 17:30 EDT.
+            next_poll_at: '2026-10-01T21:30:00Z',
+            next_poll_sports: ['icehockey_nhl', 'basketball_nba'],
+          },
+        };
+      });
+
+      expect(el.querySelector('.poll__next')?.textContent).toContain('Thu 17:30 ET NHL, NBA');
+    });
+
+    it('says nothing about a next poll once the worker has stopped', async () => {
+      const { el } = await render((stub) => {
+        stub.health = {
+          ...stub.health,
+          poll_plan: planStatus(['icehockey_nhl']),
+          runtime: {
+            last_heartbeat_at: '2020-01-01T00:00:00Z',
+            next_poll_at: '2026-10-01T21:30:00Z',
+            next_poll_sports: ['icehockey_nhl'],
+          },
+        };
+      });
+
+      expect(el.querySelector('.poll__next')).toBeNull();
+    });
+
+    it("names the plan's leagues on the Sports row rather than the enabled list", async () => {
+      const { el } = await render((stub) => {
+        stub.health = { ...stub.health, poll_plan: planStatus(['americanfootball_nfl']) };
+      });
+
+      expect(el.textContent).toContain('Weekly plan: NFL, NCAAF, NHL, NBA');
+      expect(el.textContent).toContain('14 polls a week');
+    });
   });
 });
+
+function planStatus(pollNowSports: string[]): NonNullable<HealthResponse['poll_plan']> {
+  return {
+    mode: 'schedule',
+    polls_per_week: 14,
+    sports: ['americanfootball_nfl', 'americanfootball_ncaaf', 'icehockey_nhl', 'basketball_nba'],
+    poll_now_sports: pollNowSports,
+    timezone: 'America/New_York',
+  };
+}

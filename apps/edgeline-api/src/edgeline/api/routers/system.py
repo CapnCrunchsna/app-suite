@@ -24,6 +24,7 @@ from ..models import (
     KillSwitchResponse,
     PollCycleRow,
     PollNowResponse,
+    PollPlanStatus,
 )
 
 log = logging.getLogger(__name__)
@@ -65,7 +66,22 @@ async def health(context: Context = Depends(get_context)) -> HealthResponse:
             for provider in providers
         ],
         "sports_enabled": settings.sports_enabled,
+        "poll_plan": _poll_plan(settings),
     }
+
+
+def _poll_plan(settings) -> PollPlanStatus:
+    """§13's cadence as the stored settings define it."""
+    from ...scheduler import PLAN_TIMEZONE, scheduled_polls, sports_for_poll_now
+
+    polls = scheduled_polls(settings)
+    return PollPlanStatus(
+        mode="schedule" if polls else "interval",
+        polls_per_week=len(polls) if polls else None,
+        sports=list(dict.fromkeys(poll.sport for poll in polls)),
+        poll_now_sports=sports_for_poll_now(settings),
+        timezone=PLAN_TIMEZONE,
+    )
 
 
 @router.post("/poll", operation_id="pollNow")
@@ -75,18 +91,24 @@ async def poll_now(
 ) -> PollNowResponse:
     """Run one featured cycle now — §8.4's "manual trigger", from the UI.
 
-    **Why a button exists at all.** §13's cadence is an interval anchored to
-    worker start, so the two daily polls land at whatever times the process
-    happened to be restarted, and a slot inside a laptop sleep runs on wake
-    rather than while the games are still pre-game. A cycle is only worth
-    anything before first pitch (§7.4 refuses an event that has started), so the
-    person watching needs a way to put one where they want it.
+    **Why a button exists at all.** A cycle is only worth anything before the
+    games start (§7.4 refuses an event that has), and no cadence knows about
+    the news that makes one worth buying *now*. The interval §13 started with
+    landed wherever the worker was last restarted; the weekly plan that replaced
+    it on 2026-09-23 lands at fixed times, which is better and still not this.
+
+    **What it polls.** Today's sports in the weekly plan, by the plan's Eastern
+    calendar — a press on a Tuesday buys Tuesday's slate — or `sports_enabled`
+    when the plan is empty, not in effect, or has nothing today
+    (`sports_for_poll_now`).
 
     It is an ordinary poll in every other respect: `markets × regions` credits
-    per enabled sport, through the same pace guard as every other request, and
-    it stamps `last_poll_at` the way a scheduled poll does. That stamp matters —
-    a manual cycle *is* a poll, so `poll_is_due` must see it or the next worker
-    restart pays for another one.
+    per sport, through the same pace guard as every other request, and it
+    stamps the poll the way a scheduled one does — globally and per sport, with
+    `manual` as its source. That stamp matters: a manual cycle *is* a poll, so
+    `poll_is_due` must see it or the next worker restart pays for another, and a
+    slot of the plan due within three hours stands down on it rather than buying
+    the same sport twice.
 
     Settings come from the engine's strict loader rather than
     `load_settings_doc`: this is the one route that spends money, and a read that
@@ -97,17 +119,21 @@ async def poll_now(
     """
     from ...engine import load_settings, run_once
     from ...providers.base import ProviderBudgetExceeded
-    from ...scheduler import record_quota, record_run
+    from ...scheduler import record_poll, record_quota, sports_for_poll_now
 
     if _poll_in_flight.locked():
         raise HTTPException(status_code=409, detail="a manual poll is already running")
 
     async with _poll_in_flight:
         settings = await load_settings(context.client, prefix=context.prefix)
-        if not settings.sports_enabled:
+        sports = sports_for_poll_now(settings)
+        if not sports:
             raise HTTPException(
                 status_code=409,
-                detail="no sport is enabled; set sports_enabled (§3.2) first",
+                detail=(
+                    "nothing to poll: the weekly plan has no sport today and none "
+                    "is enabled; set poll_schedule or sports_enabled (§3.2) first"
+                ),
             )
 
         if not settings.offline_mode:
@@ -123,7 +149,7 @@ async def poll_now(
         polled = False
         refusal: ProviderBudgetExceeded | None = None
 
-        for sport_key in settings.sports_enabled:
+        for sport_key in sports:
             try:
                 report = await run_once(
                     provider,
@@ -154,6 +180,11 @@ async def poll_now(
             if report.offline:
                 continue
             polled = True
+            # Per sport, as each lands, so a refusal for a later sport leaves the
+            # earlier ones stamped: the poll that happened happened.
+            await record_poll(
+                context.client, prefix=context.prefix, sport_key=sport_key, source="manual"
+            )
             response.snapshots += report.snapshots
             response.detections += len(report.detections)
             response.alerted += len(report.alerted)
@@ -165,9 +196,6 @@ async def poll_now(
         )
 
         if polled:
-            # Stamped for what actually landed, even when a later sport was
-            # refused: the poll that happened happened.
-            await record_run(context.client, prefix=context.prefix, job="poll")
             await record_quota(
                 context.client, provider.key, provider.quota, prefix=context.prefix
             )

@@ -1263,16 +1263,23 @@ def _format(report: CycleReport) -> str:
 async def _main_async(args: argparse.Namespace) -> int:
     from .es import close_client, ensure_indices, get_client
     from .providers.the_odds_api import TheOddsApiProvider
+    from .scheduler import record_poll, sports_for_poll_now
 
     client = get_client()
     provider = TheOddsApiProvider()
     try:
         await ensure_indices(client)
         settings = await load_settings(client, prefix="edgeline-")
-        for sport_key in args.sports or settings.sports_enabled:
+        # What the dashboard's button would poll right now, unless told.
+        for sport_key in args.sports or sports_for_poll_now(settings):
             report = await run_once(
                 provider, client, sport_key=sport_key, settings=settings
             )
+            if not report.offline:
+                # A cycle from here is a poll like any other, so the worker's
+                # plan must see it: stamped, a slot due within three hours
+                # stands down instead of buying the same sport again (§13).
+                await record_poll(client, prefix="edgeline-", sport_key=sport_key, source="cli")
             print(_format(report))
             print(
                 "\nPAPER MODE — these are recommendations only. "
@@ -1295,7 +1302,9 @@ def main(argv: list[str] | None = None) -> int:
         "--once", action="store_true", help="run a single poll cycle and print it"
     )
     parser.add_argument(
-        "--sports", nargs="*", help="sport keys to poll (default: settings.sports_enabled)"
+        "--sports",
+        nargs="*",
+        help="sport keys to poll (default: today's sports in poll_schedule, else sports_enabled)",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)

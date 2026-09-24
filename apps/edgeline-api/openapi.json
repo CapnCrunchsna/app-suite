@@ -729,7 +729,7 @@
           "system"
         ],
         "summary": "Poll Now",
-        "description": "Run one featured cycle now — §8.4's \"manual trigger\", from the UI.\n\n**Why a button exists at all.** §13's cadence is an interval anchored to\nworker start, so the two daily polls land at whatever times the process\nhappened to be restarted, and a slot inside a laptop sleep runs on wake\nrather than while the games are still pre-game. A cycle is only worth\nanything before first pitch (§7.4 refuses an event that has started), so the\nperson watching needs a way to put one where they want it.\n\nIt is an ordinary poll in every other respect: `markets × regions` credits\nper enabled sport, through the same pace guard as every other request, and\nit stamps `last_poll_at` the way a scheduled poll does. That stamp matters —\na manual cycle *is* a poll, so `poll_is_due` must see it or the next worker\nrestart pays for another one.\n\nSettings come from the engine's strict loader rather than\n`load_settings_doc`: this is the one route that spends money, and a read that\nfails must not become a set of §3.2 defaults — that would hand the pace guard\nthe free tier's budget, or turn off an `offline_mode` someone set on purpose.\n\n§16.1 is untouched. This fetches prices and writes documents.",
+        "description": "Run one featured cycle now — §8.4's \"manual trigger\", from the UI.\n\n**Why a button exists at all.** A cycle is only worth anything before the\ngames start (§7.4 refuses an event that has), and no cadence knows about\nthe news that makes one worth buying *now*. The interval §13 started with\nlanded wherever the worker was last restarted; the weekly plan that replaced\nit on 2026-09-23 lands at fixed times, which is better and still not this.\n\n**What it polls.** Today's sports in the weekly plan, by the plan's Eastern\ncalendar — a press on a Tuesday buys Tuesday's slate — or `sports_enabled`\nwhen the plan is empty, not in effect, or has nothing today\n(`sports_for_poll_now`).\n\nIt is an ordinary poll in every other respect: `markets × regions` credits\nper sport, through the same pace guard as every other request, and it\nstamps the poll the way a scheduled one does — globally and per sport, with\n`manual` as its source. That stamp matters: a manual cycle *is* a poll, so\n`poll_is_due` must see it or the next worker restart pays for another, and a\nslot of the plan due within three hours stands down on it rather than buying\nthe same sport twice.\n\nSettings come from the engine's strict loader rather than\n`load_settings_doc`: this is the one route that spends money, and a read that\nfails must not become a set of §3.2 defaults — that would hand the pace guard\nthe free tier's budget, or turn off an `offline_mode` someone set on purpose.\n\n§16.1 is untouched. This fetches prices and writes documents.",
         "operationId": "pollNow",
         "responses": {
           "200": {
@@ -999,6 +999,16 @@
             },
             "type": "array",
             "title": "Sports Enabled"
+          },
+          "poll_plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PollPlanStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1327,7 +1337,94 @@
         },
         "type": "object",
         "title": "PollNowResponse",
-        "description": "What the manual trigger did, totalled across the enabled sports."
+        "description": "What the manual trigger did, totalled across the sports it polled."
+      },
+      "PollPlanStatus": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "schedule",
+              "interval"
+            ],
+            "title": "Mode"
+          },
+          "polls_per_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polls Per Week"
+          },
+          "sports": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sports"
+          },
+          "poll_now_sports": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Poll Now Sports"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "timezone"
+        ],
+        "title": "PollPlanStatus",
+        "description": "What sets the featured cadence — §3.2's `poll_schedule`, §13.\n\nRead from the stored settings, so it is what the next worker start will\nrun. When the worker is up, `runtime.next_poll_at` says what the running\nprocess has actually registered."
+      },
+      "PollSlot": {
+        "properties": {
+          "days": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ]
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Days"
+          },
+          "time": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Time"
+          },
+          "sport": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Sport"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "time",
+          "sport"
+        ],
+        "title": "PollSlot",
+        "description": "One row of §3.2's `poll_schedule`: poll `sport` at `time` on each of `days`.\n\n`time` is a 24-hour ``HH:MM`` in **America/New_York**, not this machine's\nzone: the games are scheduled in Eastern time, so the plan is written in it,\nand the scheduler's cron follows DST from there (§13)."
       },
       "ProviderPatch": {
         "properties": {
@@ -1762,6 +1859,13 @@
             "type": "integer",
             "title": "Poll Interval Dev S",
             "default": 43200
+          },
+          "poll_schedule": {
+            "items": {
+              "$ref": "#/components/schemas/PollSlot"
+            },
+            "type": "array",
+            "title": "Poll Schedule"
           },
           "props_poll_interval_s": {
             "type": "integer",
