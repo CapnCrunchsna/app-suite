@@ -43,7 +43,21 @@
       "executor": "nx:run-commands",
       "options": {
         "cwd": "{projectRoot}",
-        "command": "docker compose down"
+        "command": "docker compose --profile kibana down"
+      }
+    },
+    "kibana-up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "docker compose --profile kibana up -d kibana"
+      }
+    },
+    "kibana-down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "docker compose stop kibana"
       }
     }
   }

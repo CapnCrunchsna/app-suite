@@ -242,6 +242,7 @@ services:
       - esdata:/usr/share/elasticsearch/data
   kibana:
     image: docker.elastic.co/kibana/kibana:9.0.3
+    profiles: ["kibana"]                # opt-in: nx run edgeline-api:kibana-up
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
@@ -253,6 +254,7 @@ volumes:
 Security is disabled only because both ports bind to `127.0.0.1`. If ES ever moves off this
 machine (e.g. to the home server), enable auth + TLS **first** and move credentials to `.env`.
 Kibana at `http://localhost:5601` is the ops window into every index — no extra tooling needed.
+It is opt-in (a compose profile), because it costs about a gigabyte on the laptop and is rarely open.
 
 ### 4.2 Bootstrap rules (`es.py` + `indices.py`)
 

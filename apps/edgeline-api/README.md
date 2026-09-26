@@ -55,15 +55,16 @@ then fails with "Missing expected target directory for Python minor version link
 ```bash
 uv sync                        # creates .venv, resolves and writes uv.lock
 cp .env.example .env           # then fill in ODDS_API_KEY (spec §17)
-nx run edgeline-api:es-up      # single-node Elasticsearch + Kibana on 127.0.0.1
+nx run edgeline-api:es-up      # single-node Elasticsearch on 127.0.0.1
 nx run edgeline-api:test       # ES-backed tests skip themselves if ES is down
 ```
 
 `.env` is gitignored, so a **git worktree does not inherit it** — copy it in from the main
 checkout before running anything that needs the Odds API key.
 
-Kibana lands on <http://localhost:5601> and is the intended window into every index — there is no
-other admin UI, by design.
+Kibana is the window into every index — there is no other admin UI, by design — but it is
+**opt-in**: it costs about a gigabyte in the WSL VM and is rarely open, so `es-up` leaves it down.
+`nx run edgeline-api:kibana-up` brings it up on <http://localhost:5601>, `kibana-down` stops it.
 
 **A §3.2 default only applies to a datastore that has never been seeded.** §4.4 rule 1 writes the
 settings document once at bootstrap and never overwrites it, so changing a default in `config.py`

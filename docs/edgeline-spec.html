@@ -256,13 +256,14 @@ ES_URL=http://localhost:9200</code></pre>
       - esdata:/usr/share/elasticsearch/data
   kibana:
     image: docker.elastic.co/kibana/kibana:9.0.3
+    profiles: ["kibana"]                # opt-in: nx run edgeline-api:kibana-up
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "127.0.0.1:5601:5601"
 volumes:
   esdata:</code></pre>
-<p>Security is disabled only because both ports bind to <code>127.0.0.1</code>. If ES ever moves off this machine (e.g. to the home server), enable auth + TLS <strong>first</strong> and move credentials to <code>.env</code>. Kibana at <code>http://localhost:5601</code> is the ops window into every index — no extra tooling needed.</p>
+<p>Security is disabled only because both ports bind to <code>127.0.0.1</code>. If ES ever moves off this machine (e.g. to the home server), enable auth + TLS <strong>first</strong> and move credentials to <code>.env</code>. Kibana at <code>http://localhost:5601</code> is the ops window into every index — no extra tooling needed. It is opt-in (a compose profile), because it costs about a gigabyte on the laptop and is rarely open.</p>
 <h3 id="s4-2">4.2 Bootstrap rules (<code>es.py</code> + <code>indices.py</code>)</h3>
 <ul><li><code>es.py</code> exposes <code>get_client()</code> (an <code>AsyncElasticsearch</code> from the official <code>elasticsearch</code> package, pointed at <code>ES_URL</code>) and <code>ensure_indices()</code>, called at both engine and worker startup.</li><li><code>ensure_indices()</code> creates each missing index with the exact mapping derived from <a href="#s4">§4.3</a> and <code>"dynamic": "strict"</code> — unknown fields must fail loudly, never be silently indexed. Exception: <code>edgeline-settings</code> uses <code>"dynamic": false</code> (docs are read/written whole by <code>_id</code>; nothing needs indexing).</li><li>Field-type conventions (apply mechanically to <a href="#s4">§4.3</a>): ids/keys/enums → <code>keyword</code>; timestamps → <code>date</code>; money → <code>long</code> (cents); probabilities &amp; decimal odds → <code>double</code>; flags → <code>boolean</code>; opaque JSON blobs → <code>object</code> with <code>"enabled": false</code> (stored in <code>_source</code>, not indexed).</li><li>Every index name is prefixed <code>edgeline-</code>. Tests use the prefix <code>edgeline-test-</code> (<a href="#s14">§14</a>).</li></ul>
 <h3 id="s4-3">4.3 Index catalog</h3>
