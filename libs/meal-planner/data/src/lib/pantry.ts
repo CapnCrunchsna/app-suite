@@ -133,17 +133,7 @@ export class PantryRepo {
   }
 
   async restore(undo: PantryUndo): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      const now = this.clock.now();
-      for (const row of undo.rows) {
-        await tx.run('UPDATE pantry_items SET quantity = ?, deleted_at = ?, updated_at = ? WHERE id = ?', [
-          row.quantity,
-          row.deletedAt,
-          now,
-          row.id,
-        ]);
-      }
-    });
+    await this.db.transaction((tx) => restoreRows(tx, this.clock.now(), undo));
   }
 
   /**
@@ -213,6 +203,13 @@ export async function consumeNeeds(tx: SqlExecutor, clock: Clock, needs: Readonl
     if (plan.shortBy > 0) shortfalls.push({ productId, shortBy: plan.shortBy });
   }
   return { undo: { rows: touched }, shortfalls };
+}
+
+/** `PantryRepo.restore` inside a caller's transaction — uncooking also clears the slot. */
+export async function restoreRows(tx: SqlExecutor, now: string, undo: PantryUndo): Promise<void> {
+  for (const row of undo.rows) {
+    await tx.run('UPDATE pantry_items SET quantity = ?, deleted_at = ?, updated_at = ? WHERE id = ?', [row.quantity, row.deletedAt, now, row.id]);
+  }
 }
 
 export async function snapshot(tx: SqlExecutor, ids: readonly string[]): Promise<PantryUndo> {

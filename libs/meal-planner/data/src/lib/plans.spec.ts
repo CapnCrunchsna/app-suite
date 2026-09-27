@@ -1,6 +1,19 @@
 import { nodeSqliteDb, testClock } from '../testing/node-sqlite-db.js';
 import { migrate } from './migrations.js';
+import { PantryRepo } from './pantry.js';
 import { PlansRepo, type SlotAssignment } from './plans.js';
+import { ProductsRepo } from './products.js';
+
+const EGGS = {
+  barcode: null,
+  name: 'Eggs',
+  brand: null,
+  packageUnit: 'COUNT',
+  packageAmount: 12,
+  kcal: 70,
+  proteinG: 6,
+  source: 'manual',
+} as const;
 
 const TARGETS = { kcalBudget: 2000, proteinTarget: 100 };
 const DAY: SlotAssignment[] = [
@@ -75,6 +88,30 @@ describe('PlansRepo', () => {
     await plans.setPinned(slots[0].id, true);
     await plans.setPinned(slots[1].id, false);
     expect((await plans.forDate('2026-09-27'))?.slots.map((s) => s.pinned)).toEqual([true, false, false]);
+  });
+
+  it('cooks a slot once: decrements the pantry, stamps the slot, and undoes exactly', async () => {
+    const { db, plans } = await setup();
+    const clock = testClock();
+    const products = new ProductsRepo(db, clock);
+    const pantry = new PantryRepo(db, clock);
+    const eggs = await products.create({ ...EGGS });
+    const carton = await pantry.add({ productId: eggs.id, packages: 1, expiresOn: null });
+    const { slots } = await plans.create('2026-09-27', TARGETS, DAY);
+    const needs = new Map([[eggs.id, 14]]);
+
+    const cooked = await plans.cook(slots[0].id, needs);
+    expect(cooked?.shortfalls).toEqual([{ productId: eggs.id, shortBy: 2 }]);
+    expect((await pantry.get(carton.id))?.quantity).toBe(0);
+    expect((await plans.forDate('2026-09-27'))?.slots[0].cookedAt).not.toBeNull();
+
+    // A second tap on a cooked slot is a no-op, not a second decrement.
+    expect(await plans.cook(slots[0].id, needs)).toBeNull();
+
+    if (!cooked) throw new Error('expected the first cook to happen');
+    await plans.uncook(slots[0].id, cooked.undo);
+    expect(await pantry.get(carton.id)).toMatchObject({ quantity: 12, deletedAt: null });
+    expect((await plans.forDate('2026-09-27'))?.slots[0].cookedAt).toBeNull();
   });
 
   it('updates targets and soft-deletes on remove', async () => {

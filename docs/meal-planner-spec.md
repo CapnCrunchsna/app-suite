@@ -10,7 +10,9 @@ request header, §8.1 reorders a regex whose fraction branch could never match, 
 level 3 exactly, §10 caps the meal stepper at the three meal types that exist, and §14 T7
 gets numbers. Building Phase 2 against live recipe pages then added: migration 2 (§3),
 `@capacitor/app` (§2), nested parentheticals and "to serve" in the parser (§8.1), a
-plural rule in the matcher (§8.2), and where the seed files live (§15).
+plural rule in the matcher (§8.2), and where the seed files live (§15). Phase 4 added
+`@capacitor/share` and `@capacitor/filesystem` (§2): §10's "share a JSON dump" has no other
+way out of an Android WebView, which lacks the Web Share API.
 
 ## 0. How to use this document
 
@@ -75,6 +77,7 @@ Key dependencies:
 | Barcode scanning | `@capacitor-mlkit/barcode-scanning` |
 | Storage | `@capacitor-community/sqlite` (+ `jeep-sqlite` for the web build) |
 | HTTP that bypasses CORS on device | `CapacitorHttp` from `@capacitor/core` |
+| Export data (§10) | `@capacitor/filesystem` (write the file to the cache) + `@capacitor/share` (the share sheet) |
 | Unit tests | Vitest via Nx defaults (`better-sqlite3` for the `data` lib's port) |
 
 Rules:

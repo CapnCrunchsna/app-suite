@@ -116,6 +116,32 @@ was fixed in place instead, and its revision note says what changed.
   library on the laptop; a worker would add a message boundary and nothing you could feel.
   Re-measure on a mid-range phone before moving it (Phase 3's < 1 s criterion).
 
+- **Mark cooked is a third row button**, beside Pin and Swap. It uses
+  `PlansRepo.cook`, which checks the slot is still uncooked inside the same transaction as
+  the decrement, so a double tap cannot take two servings. Undo lasts 10 s (§10); the
+  pantry's Remove keeps its 5 s.
+- **Today refills its inputs when their source changes**: a new date, a plan appearing or
+  going, or new Settings defaults. Otherwise, going back to the tab keeps what was typed.
+
+## Settings and your data
+
+- **Settings save as you change them**, with no Save button. A blank or out-of-range
+  number keeps the stored value and says so.
+- **The export is every row of every table, soft-deleted rows included**, as
+  `meal-planner-YYYY-MM-DD.json` with a format tag and the schema version. It is a dump,
+  so nothing the app knows is missing. **The USDA API key is left out**: it is a
+  credential, and the file exists to be shared. On the phone it goes through the share
+  sheet; the browser build shares it where it can and downloads it where it cannot.
+- **Delete all data soft-deletes** every row (§2), and puts settings back to their
+  defaults, which also forgets the USDA key. The starter library does **not** come back
+  on the next launch: its version stays recorded, and the person asked for an empty app.
+- **USDA search runs on a tap** ("Search USDA for …"), never per keystroke: every query
+  spends the person's own API quota. Energy is nutrient 1008 as §7 says, falling back to
+  the Atwater figures (2048, then 2047) that Foundation Foods carry instead. A picked
+  food opens the product form with no package size, since USDA describes foods, not
+  packages. The item that §7 describes as the product picker is the catalog search, which
+  both the pantry and the Meal Builder use.
+
 ## Look and navigation
 
 - **Ionic's palette with the MetrumDigital teal as primary**, not `@metrum/ui` theming:

@@ -1,7 +1,7 @@
 /**
  * The Today tab (meal-planner-spec.md §10): targets and slots for a date, Generate → up
- * to three cards, the chosen card as the day's plan, and per-row Pin and Swap. Mark
- * cooked is Phase 4.
+ * to three cards, the chosen card as the day's plan, and per-row Pin, Swap and Mark
+ * cooked.
  *
  * The planner runs on the UI thread: it is synchronous, deterministic, and measured at
  * about 130 ms on a 200-meal library (planner-performance.spec.ts), so a worker would buy
@@ -46,6 +46,8 @@ import { slotsFor, type PlanWithSlots, type SlotCounts } from '@metrum/meal-plan
 import { addIcons } from 'ionicons';
 import {
   addOutline,
+  checkmarkCircle,
+  checkmarkCircleOutline,
   chevronBackOutline,
   chevronForwardOutline,
   lockClosed,
@@ -119,8 +121,12 @@ export class TodayPage implements ViewWillEnter {
   protected readonly kcalText = signal('');
   protected readonly proteinText = signal('');
   protected readonly counts = signal<SlotCounts>({ meals: 3, snacks: 1 });
-  /** The date the inputs were filled for; re-entering the tab keeps what was typed. */
-  private inputsFor: string | null = null;
+  /**
+   * What the inputs were last filled from: the date plus its saved plan, or the Settings
+   * defaults when it has none. Re-entering the tab keeps what was typed unless that
+   * changed — a new date, a plan appearing or going, or new defaults.
+   */
+  private inputsFrom: string | null = null;
 
   /** Cards on offer, and which slot they swap (null: a whole Generate). */
   protected readonly options = signal<readonly DayOption[] | null>(null);
@@ -150,7 +156,17 @@ export class TodayPage implements ViewWillEnter {
   });
 
   constructor() {
-    addIcons({ chevronBackOutline, chevronForwardOutline, lockClosed, lockOpenOutline, swapHorizontalOutline, addOutline, removeOutline });
+    addIcons({
+      chevronBackOutline,
+      chevronForwardOutline,
+      lockClosed,
+      lockOpenOutline,
+      swapHorizontalOutline,
+      checkmarkCircle,
+      checkmarkCircleOutline,
+      addOutline,
+      removeOutline,
+    });
   }
 
   ionViewWillEnter(): void {
@@ -247,6 +263,44 @@ export class TodayPage implements ViewWillEnter {
     }
   }
 
+  /**
+   * §11: one serving out of the pantry, then 10 seconds to take it back exactly. The
+   * shortfall names come from the catalog because the pantry rows may now be deleted.
+   */
+  protected async cook(slot: PlanSlot): Promise<void> {
+    const meal = this.plannerMeals.find((m) => m.id === slot.mealId);
+    if (!meal || this.busy()) return;
+    this.busy.set(true);
+    let undo: (() => Promise<void>) | null = null;
+    let message = 'Pantry updated';
+    try {
+      const { plans, products } = await this.store.ready();
+      const result = await plans.cook(slot.id, meal.needs);
+      await this.refreshAfterPantryChange();
+      if (!result) return;
+      const names = await products.getMany(result.shortfalls.map((s) => s.productId));
+      const short = result.shortfalls.map((s) => `${names.get(s.productId)?.name ?? 'Something'} ran short`);
+      if (short.length > 0) message += ` · ${short.join(', ')}`;
+      undo = async () => {
+        await plans.uncook(slot.id, result.undo);
+        await this.refreshAfterPantryChange();
+      };
+    } catch (error) {
+      message = `Marking it cooked failed: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      this.busy.set(false);
+    }
+    await this.notify.toast(message, undo ? { undo, seconds: 10 } : { seconds: 4 });
+  }
+
+  /** Cooking changes what is makeable, so the stock and the plan are re-read together. */
+  private async refreshAfterPantryChange(): Promise<void> {
+    const { pantry, plans } = await this.store.ready();
+    const [stock, saved] = await Promise.all([pantry.stock(), plans.forDate(this.date())]);
+    this.stock = stock;
+    this.saved.set(saved);
+  }
+
   protected async togglePin(slot: PlanSlot): Promise<void> {
     this.busy.set(true);
     try {
@@ -281,8 +335,9 @@ export class TodayPage implements ViewWillEnter {
       this.plannerMeals = planned;
       this.stock = stock;
       this.saved.set(saved);
-      if (this.inputsFor !== date) {
-        this.inputsFor = date;
+      const source = `${date}|${saved ? saved.plan.id : JSON.stringify(defaults)}`;
+      if (this.inputsFrom !== source) {
+        this.inputsFrom = source;
         this.kcalText.set(String(saved?.plan.kcalBudget ?? defaults.defaultKcalBudget));
         this.proteinText.set(String(saved?.plan.proteinTarget ?? defaults.defaultProteinTarget));
         this.counts.set(saved ? countsOf(saved) : defaults.defaultSlots);

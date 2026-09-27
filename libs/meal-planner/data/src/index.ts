@@ -7,3 +7,4 @@ export * from './lib/settings.js';
 export * from './lib/meals.js';
 export * from './lib/seed.js';
 export * from './lib/plans.js';
+export * from './lib/backup.js';

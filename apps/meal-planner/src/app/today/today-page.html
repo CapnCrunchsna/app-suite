@@ -101,6 +101,16 @@
               >
                 <ion-icon slot="icon-only" name="swap-horizontal-outline" />
               </ion-button>
+              <ion-button
+                slot="end"
+                fill="clear"
+                [color]="slot.cookedAt ? 'success' : 'medium'"
+                [attr.aria-label]="slot.cookedAt ? 'Cooked' : 'Mark cooked'"
+                [disabled]="!!slot.cookedAt || !slot.mealId || busy()"
+                (click)="cook(slot)"
+              >
+                <ion-icon slot="icon-only" [name]="slot.cookedAt ? 'checkmark-circle' : 'checkmark-circle-outline'" />
+              </ion-button>
             </ion-item>
           }
         </ion-list>

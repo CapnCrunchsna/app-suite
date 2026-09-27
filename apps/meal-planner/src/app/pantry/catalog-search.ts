@@ -5,7 +5,10 @@
  * pantry — because groceries are overwhelmingly repeat purchases, and after the first
  * weeks most entry should be one tap here rather than a scan (design doc, food entry).
  *
- * Dismisses with the picked `Product`, with role `new` to create one, or `cancel`.
+ * With a USDA key in Settings, a typed search can also be sent to USDA FoodData Central.
+ *
+ * Dismisses with the picked `Product` (role `pick`), a USDA `ProductPrefill` for the
+ * product form (role `usda`), role `new` to create one, or `cancel`.
  */
 
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
@@ -20,13 +23,16 @@ import {
   IonListHeader,
   IonNote,
   IonSearchbar,
+  IonSpinner,
   IonTitle,
   IonToolbar,
   ModalController,
   type ViewDidEnter,
 } from '@ionic/angular';
 import { distinctBrand, formatAmount, type Product } from '@metrum/meal-planner-domain';
+import { searchUsda, type ProductPrefill } from '@metrum/meal-planner-import';
 import { Store } from '../data/store';
+import { httpGet } from '../platform/http';
 import { eventValue } from '../shared/events';
 
 @Component({
@@ -44,6 +50,7 @@ import { eventValue } from '../shared/events';
     IonItem,
     IonLabel,
     IonNote,
+    IonSpinner,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -83,6 +90,37 @@ import { eventValue } from '../shared/events';
           </div>
         }
       </ion-list>
+      @if (usdaKey() && query() !== '') {
+        <ion-list>
+          <ion-list-header>USDA</ion-list-header>
+          @if (usda(); as found) {
+            @if (found.query !== query()) {
+              <ion-item button [detail]="false" (click)="searchUsda()">
+                <ion-label color="primary">Search USDA for “{{ query() }}”</ion-label>
+              </ion-item>
+            } @else if (found.error) {
+              <ion-item lines="none"><ion-label class="ion-text-wrap error">{{ found.error }}</ion-label></ion-item>
+            } @else {
+              @for (food of found.foods; track $index) {
+                <ion-item button (click)="pickUsda(food)">
+                  <ion-label class="ion-text-wrap">{{ food.name }}@if (food.brand) {<p>{{ food.brand }}</p>}</ion-label>
+                  @if (food.kcal !== null) {
+                    <ion-note slot="end" class="numbers">{{ food.kcal }} kcal/100 g</ion-note>
+                  }
+                </ion-item>
+              } @empty {
+                <ion-item lines="none"><ion-label>USDA has nothing for “{{ query() }}”.</ion-label></ion-item>
+              }
+            }
+          } @else if (usdaBusy()) {
+            <ion-item lines="none"><ion-spinner slot="start" /><ion-label>Searching USDA…</ion-label></ion-item>
+          } @else {
+            <ion-item button [detail]="false" (click)="searchUsda()">
+              <ion-label color="primary">Search USDA for “{{ query() }}”</ion-label>
+            </ion-item>
+          }
+        </ion-list>
+      }
     </ion-content>
   `,
 })
@@ -95,10 +133,36 @@ export class CatalogSearch implements ViewDidEnter {
   protected readonly recents = signal<Product[]>([]);
   protected readonly value = eventValue;
 
+  /** Set only when the person has entered a key in Settings; without one USDA is not offered (§7). */
+  protected readonly usdaKey = signal<string | null>(null);
+  protected readonly usda = signal<{ query: string; foods: readonly ProductPrefill[]; error: string | null } | null>(null);
+  protected readonly usdaBusy = signal(false);
+
   async ionViewDidEnter(): Promise<void> {
-    const { products } = await this.store.ready();
+    const { products, settings } = await this.store.ready();
+    this.usdaKey.set((await settings.read()).usdaApiKey);
     this.recents.set(await products.recentlyBought());
-    await this.search('');
+    // Whatever was typed while the modal animated in, not a reset to empty.
+    await this.search(this.query());
+  }
+
+  /** On a tap, not per keystroke: every search spends the person's own API quota. */
+  protected async searchUsda(): Promise<void> {
+    const key = this.usdaKey();
+    const query = this.query();
+    if (!key || query === '') return;
+    this.usda.set(null);
+    this.usdaBusy.set(true);
+    const result = await searchUsda(httpGet, key, query).finally(() => this.usdaBusy.set(false));
+    this.usda.set(
+      result.kind === 'found'
+        ? { query, foods: result.foods, error: null }
+        : { query, foods: [], error: `Couldn’t search USDA: ${result.reason}` },
+    );
+  }
+
+  protected pickUsda(food: ProductPrefill): void {
+    void this.modals.dismiss(food, 'usda');
   }
 
   protected async search(text: string): Promise<void> {

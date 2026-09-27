@@ -22,6 +22,9 @@ import { CatalogSearch } from './catalog-search';
 import { PantryEdit } from './pantry-edit';
 import { ScanModal } from './scan-modal';
 
+/** USDA describes foods, not packages: its prefill never has a package size. */
+export const USDA_NOTICE = 'From USDA, per 100 g. Add the package size from the label.';
+
 interface Dismissed<T> {
   readonly data?: T;
   readonly role?: string;
@@ -71,9 +74,13 @@ export class PantryFlows {
   }
 
   async fromCatalog(): Promise<boolean> {
-    const picked = await this.present<Product>(CatalogSearch, {});
+    const picked = await this.present<Product | ProductPrefill>(CatalogSearch, {});
     if (picked.role === 'new') return this.addManually();
-    return picked.role === 'pick' && picked.data ? this.addToPantry(picked.data) : false;
+    if (picked.role === 'usda' && picked.data) {
+      const product = await this.productForm({ prefill: picked.data as ProductPrefill, notice: USDA_NOTICE });
+      return product ? this.addToPantry(product) : false;
+    }
+    return picked.role === 'pick' && picked.data ? this.addToPantry(picked.data as Product) : false;
   }
 
   async addManually(): Promise<boolean> {

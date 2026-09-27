@@ -8,6 +8,7 @@
  */
 
 import type { Plan, PlanSlot, SlotType } from '@metrum/meal-planner-domain';
+import { consumeNeeds, restoreRows, type Consumption, type PantryUndo } from './pantry.js';
 import { toPlan, toPlanSlot, type PlanRow, type PlanSlotRow } from './rows.js';
 import { bool, type Clock, type SqlDb, type SqlExecutor } from './sql.js';
 
@@ -91,6 +92,31 @@ export class PlansRepo {
 
   async setPinned(slotId: string, pinned: boolean): Promise<void> {
     await this.db.run('UPDATE plan_slots SET pinned = ?, updated_at = ? WHERE id = ?', [bool(pinned), this.clock.now(), slotId]);
+  }
+
+  /**
+   * §11's Mark cooked: one serving's `needs` come out of the pantry and the slot is
+   * stamped, in one transaction. Idempotent — a slot already cooked (or gone) changes
+   * nothing and returns null, so a double tap cannot decrement twice.
+   */
+  async cook(slotId: string, needs: ReadonlyMap<string, number>): Promise<Consumption | null> {
+    return this.db.transaction(async (tx) => {
+      const open = await tx.all<{ id: string }>('SELECT id FROM plan_slots WHERE id = ? AND cooked_at IS NULL', [slotId]);
+      if (!open[0]) return null;
+      const consumption = await consumeNeeds(tx, this.clock, needs);
+      const now = this.clock.now();
+      await tx.run('UPDATE plan_slots SET cooked_at = ?, updated_at = ? WHERE id = ?', [now, now, slotId]);
+      return consumption;
+    });
+  }
+
+  /** Undo for `cook`: the pantry rows back exactly as they were, and the slot uncooked. */
+  async uncook(slotId: string, undo: PantryUndo): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const now = this.clock.now();
+      await restoreRows(tx, now, undo);
+      await tx.run('UPDATE plan_slots SET cooked_at = NULL, updated_at = ? WHERE id = ?', [now, slotId]);
+    });
   }
 
   async remove(planId: string): Promise<void> {
