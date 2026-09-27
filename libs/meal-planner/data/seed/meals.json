@@ -1,0 +1,637 @@
+{
+  "version": 1,
+  "meals": [
+    {
+      "key": "oatmeal",
+      "name": "Oatmeal & banana",
+      "slots": [
+        "breakfast"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "banana",
+          "quantity": 1,
+          "displayText": "1 banana, sliced"
+        },
+        {
+          "product": "oats",
+          "quantity": 46.300998814965304,
+          "displayText": "46 g rolled oats"
+        },
+        {
+          "product": "milk",
+          "quantity": 139.03842898256292,
+          "displayText": "139 ml milk"
+        }
+      ]
+    },
+    {
+      "key": "scrambled-eggs",
+      "name": "Scrambled eggs",
+      "slots": [
+        "breakfast"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "eggs",
+          "quantity": 2,
+          "displayText": "2 eggs"
+        },
+        {
+          "product": "butter",
+          "quantity": 14.208780319676015,
+          "displayText": "14 g butter"
+        },
+        {
+          "product": "milk",
+          "quantity": 8.246090215845944,
+          "displayText": "8 ml milk"
+        }
+      ]
+    },
+    {
+      "key": "pbj",
+      "name": "PB&J",
+      "slots": [
+        "breakfast",
+        "lunch"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "bread",
+          "quantity": 2,
+          "displayText": "2 slices bread"
+        },
+        {
+          "product": "pb",
+          "quantity": 35.84026622296173,
+          "displayText": "36 g peanut butter"
+        },
+        {
+          "product": "jam",
+          "quantity": 9.983361064891847,
+          "displayText": "10 g strawberry jam"
+        }
+      ]
+    },
+    {
+      "key": "chicken-rice",
+      "name": "Chicken & rice",
+      "slots": [
+        "lunch",
+        "dinner"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "broccoli",
+          "quantity": 100,
+          "displayText": "100 g broccoli"
+        },
+        {
+          "product": "oil",
+          "quantity": 10,
+          "displayText": "10 g olive oil"
+        },
+        {
+          "product": "chicken",
+          "quantity": 163.19597853406697,
+          "displayText": "163 g chicken breast"
+        },
+        {
+          "product": "rice",
+          "quantity": 77.1958426737314,
+          "displayText": "77 g white rice (dry)"
+        }
+      ]
+    },
+    {
+      "key": "tuna-sandwich",
+      "name": "Tuna sandwich",
+      "slots": [
+        "lunch"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "bread",
+          "quantity": 2,
+          "displayText": "2 slices bread"
+        },
+        {
+          "product": "spinach",
+          "quantity": 30,
+          "displayText": "30 g baby spinach"
+        },
+        {
+          "product": "tuna",
+          "quantity": 89.67313051555969,
+          "displayText": "90 g tuna, drained"
+        },
+        {
+          "product": "mayo",
+          "quantity": 26.335171853228058,
+          "displayText": "26 g mayonnaise"
+        }
+      ]
+    },
+    {
+      "key": "spaghetti-bolognese",
+      "name": "Spaghetti bolognese",
+      "slots": [
+        "dinner"
+      ],
+      "servings": 4,
+      "ingredients": [
+        {
+          "product": "marinara",
+          "quantity": 400,
+          "displayText": "400 g marinara sauce"
+        },
+        {
+          "product": "oil",
+          "quantity": 20,
+          "displayText": "20 g olive oil"
+        },
+        {
+          "product": "beef",
+          "quantity": 443.598986749805,
+          "displayText": "444 g ground beef"
+        },
+        {
+          "product": "spaghetti",
+          "quantity": 396.0814497272019,
+          "displayText": "396 g spaghetti"
+        }
+      ]
+    },
+    {
+      "key": "greek-yogurt",
+      "name": "Greek yogurt",
+      "slots": [
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "yogurt",
+          "quantity": 146.44351464435147,
+          "displayText": "146 g Greek yogurt"
+        },
+        {
+          "product": "honey",
+          "quantity": 20.92050209205021,
+          "displayText": "21 g honey"
+        }
+      ]
+    },
+    {
+      "key": "apple-pb",
+      "name": "Apple + peanut butter",
+      "slots": [
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "apple",
+          "quantity": 1,
+          "displayText": "1 apple, sliced"
+        },
+        {
+          "product": "pb",
+          "quantity": 29.979784366576823,
+          "displayText": "30 g peanut butter"
+        },
+        {
+          "product": "honey",
+          "quantity": 1.6846361185983827,
+          "displayText": "2 g honey"
+        }
+      ]
+    },
+    {
+      "key": "eggs-toast",
+      "name": "Eggs on toast",
+      "slots": [
+        "breakfast"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "eggs",
+          "quantity": 2,
+          "displayText": "2 eggs"
+        },
+        {
+          "product": "bread",
+          "quantity": 2,
+          "displayText": "2 slices toast"
+        },
+        {
+          "product": "butter",
+          "quantity": 5,
+          "displayText": "1 tsp butter"
+        }
+      ]
+    },
+    {
+      "key": "pb-toast",
+      "name": "Peanut butter toast",
+      "slots": [
+        "breakfast",
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "bread",
+          "quantity": 1,
+          "displayText": "1 slice toast"
+        },
+        {
+          "product": "pb",
+          "quantity": 16,
+          "displayText": "1 tbsp peanut butter"
+        }
+      ]
+    },
+    {
+      "key": "yogurt-parfait",
+      "name": "Yogurt & oat parfait",
+      "slots": [
+        "breakfast"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "yogurt",
+          "quantity": 170,
+          "displayText": "¾ cup Greek yogurt"
+        },
+        {
+          "product": "oats",
+          "quantity": 30,
+          "displayText": "⅓ cup rolled oats"
+        },
+        {
+          "product": "honey",
+          "quantity": 10,
+          "displayText": "2 tsp honey"
+        },
+        {
+          "product": "banana",
+          "quantity": 0.5,
+          "displayText": "½ banana"
+        }
+      ]
+    },
+    {
+      "key": "cottage-fruit",
+      "name": "Cottage cheese & apple",
+      "slots": [
+        "breakfast",
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "cottage",
+          "quantity": 150,
+          "displayText": "⅔ cup cottage cheese"
+        },
+        {
+          "product": "apple",
+          "quantity": 1,
+          "displayText": "1 apple, chopped"
+        }
+      ]
+    },
+    {
+      "key": "bean-burrito",
+      "name": "Bean & cheese burrito",
+      "slots": [
+        "lunch",
+        "dinner"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "tortilla",
+          "quantity": 1,
+          "displayText": "1 large flour tortilla"
+        },
+        {
+          "product": "beans",
+          "quantity": 130,
+          "displayText": "½ can black beans"
+        },
+        {
+          "product": "cheddar",
+          "quantity": 30,
+          "displayText": "¼ cup shredded cheddar"
+        },
+        {
+          "product": "salsa",
+          "quantity": 60,
+          "displayText": "¼ cup salsa"
+        }
+      ]
+    },
+    {
+      "key": "chicken-wrap",
+      "name": "Chicken & spinach wrap",
+      "slots": [
+        "lunch"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "tortilla",
+          "quantity": 1,
+          "displayText": "1 flour tortilla"
+        },
+        {
+          "product": "chicken",
+          "quantity": 120,
+          "displayText": "120 g chicken breast, cooked"
+        },
+        {
+          "product": "spinach",
+          "quantity": 20,
+          "displayText": "handful baby spinach"
+        },
+        {
+          "product": "mayo",
+          "quantity": 10,
+          "displayText": "2 tsp mayonnaise"
+        }
+      ]
+    },
+    {
+      "key": "egg-salad",
+      "name": "Egg salad sandwich",
+      "slots": [
+        "lunch"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "eggs",
+          "quantity": 2,
+          "displayText": "2 hard-boiled eggs"
+        },
+        {
+          "product": "mayo",
+          "quantity": 15,
+          "displayText": "1 tbsp mayonnaise"
+        },
+        {
+          "product": "bread",
+          "quantity": 2,
+          "displayText": "2 slices bread"
+        }
+      ]
+    },
+    {
+      "key": "tuna-salad",
+      "name": "Tuna & spinach salad",
+      "slots": [
+        "lunch"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "tuna",
+          "quantity": 142,
+          "displayText": "1 can tuna, drained"
+        },
+        {
+          "product": "spinach",
+          "quantity": 60,
+          "displayText": "2 cups baby spinach"
+        },
+        {
+          "product": "oil",
+          "quantity": 10,
+          "displayText": "2 tsp olive oil"
+        }
+      ]
+    },
+    {
+      "key": "salmon-potato",
+      "name": "Salmon, potato & broccoli",
+      "slots": [
+        "dinner"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "salmon",
+          "quantity": 170,
+          "displayText": "6 oz salmon fillet"
+        },
+        {
+          "product": "potato",
+          "quantity": 1,
+          "displayText": "1 potato, roasted"
+        },
+        {
+          "product": "broccoli",
+          "quantity": 100,
+          "displayText": "1 cup broccoli"
+        },
+        {
+          "product": "oil",
+          "quantity": 5,
+          "displayText": "1 tsp olive oil"
+        }
+      ]
+    },
+    {
+      "key": "beef-tacos",
+      "name": "Beef tacos",
+      "slots": [
+        "dinner"
+      ],
+      "servings": 4,
+      "ingredients": [
+        {
+          "product": "beef",
+          "quantity": 454,
+          "displayText": "1 lb ground beef"
+        },
+        {
+          "product": "tortilla",
+          "quantity": 8,
+          "displayText": "8 small flour tortillas"
+        },
+        {
+          "product": "cheddar",
+          "quantity": 110,
+          "displayText": "1 cup shredded cheddar"
+        },
+        {
+          "product": "salsa",
+          "quantity": 240,
+          "displayText": "1 cup salsa"
+        }
+      ]
+    },
+    {
+      "key": "chicken-stir-fry",
+      "name": "Chicken & broccoli stir-fry",
+      "slots": [
+        "dinner"
+      ],
+      "servings": 2,
+      "ingredients": [
+        {
+          "product": "chicken",
+          "quantity": 340,
+          "displayText": "¾ lb chicken breast"
+        },
+        {
+          "product": "broccoli",
+          "quantity": 300,
+          "displayText": "3 cups broccoli"
+        },
+        {
+          "product": "rice",
+          "quantity": 150,
+          "displayText": "¾ cup white rice (dry)"
+        },
+        {
+          "product": "oil",
+          "quantity": 15,
+          "displayText": "1 tbsp olive oil"
+        }
+      ]
+    },
+    {
+      "key": "loaded-potato",
+      "name": "Loaded baked potato",
+      "slots": [
+        "lunch",
+        "dinner"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "potato",
+          "quantity": 1,
+          "displayText": "1 large potato"
+        },
+        {
+          "product": "cheddar",
+          "quantity": 30,
+          "displayText": "¼ cup shredded cheddar"
+        },
+        {
+          "product": "broccoli",
+          "quantity": 80,
+          "displayText": "¾ cup broccoli"
+        },
+        {
+          "product": "butter",
+          "quantity": 5,
+          "displayText": "1 tsp butter"
+        }
+      ]
+    },
+    {
+      "key": "rice-beans",
+      "name": "Rice & beans",
+      "slots": [
+        "lunch",
+        "dinner"
+      ],
+      "servings": 2,
+      "ingredients": [
+        {
+          "product": "rice",
+          "quantity": 150,
+          "displayText": "¾ cup white rice (dry)"
+        },
+        {
+          "product": "beans",
+          "quantity": 425,
+          "displayText": "1 can black beans"
+        },
+        {
+          "product": "salsa",
+          "quantity": 120,
+          "displayText": "½ cup salsa"
+        }
+      ]
+    },
+    {
+      "key": "almonds",
+      "name": "Handful of almonds",
+      "slots": [
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "almonds",
+          "quantity": 28,
+          "displayText": "1 oz almonds"
+        }
+      ]
+    },
+    {
+      "key": "banana-snack",
+      "name": "Banana",
+      "slots": [
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "banana",
+          "quantity": 1,
+          "displayText": "1 banana"
+        }
+      ]
+    },
+    {
+      "key": "boiled-eggs",
+      "name": "Hard-boiled eggs",
+      "slots": [
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "eggs",
+          "quantity": 2,
+          "displayText": "2 hard-boiled eggs"
+        }
+      ]
+    },
+    {
+      "key": "cheese-apple",
+      "name": "Cheddar & apple",
+      "slots": [
+        "snack"
+      ],
+      "servings": 1,
+      "ingredients": [
+        {
+          "product": "cheddar",
+          "quantity": 30,
+          "displayText": "1 oz cheddar"
+        },
+        {
+          "product": "apple",
+          "quantity": 1,
+          "displayText": "1 apple, sliced"
+        }
+      ]
+    }
+  ]
+}

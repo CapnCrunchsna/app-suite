@@ -7,6 +7,7 @@
     "@capacitor-community/sqlite": "^8.1.1",
     "@capacitor-mlkit/barcode-scanning": "^8.2.1",
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.2",
     "@metrum/meal-planner-data": "0.0.1",
     "@metrum/meal-planner-domain": "0.0.1",

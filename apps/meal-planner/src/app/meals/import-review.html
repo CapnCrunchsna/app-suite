@@ -1,0 +1,111 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-button (click)="cancel()">Cancel</ion-button></ion-buttons>
+    <ion-title>Import recipe</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [strong]="true" [disabled]="!canSave() || saving()" (click)="save()">Save</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (error()) {
+    <p class="ion-padding error" role="alert">{{ error() }}</p>
+  }
+  <ion-list lines="full">
+    <ion-item>
+      <ion-input label="Name" labelPlacement="stacked" [value]="name()" (ionInput)="name.set(value($event))" />
+    </ion-item>
+    <ion-item>
+      <ion-label>Servings</ion-label>
+      <ion-button slot="end" fill="outline" aria-label="Fewer servings" [disabled]="servings() <= 1" (click)="stepServings(-1)">
+        <ion-icon slot="icon-only" name="remove-outline" />
+      </ion-button>
+      <span slot="end" class="stepper-value numbers">{{ servings() }}</span>
+      <ion-button slot="end" fill="outline" aria-label="More servings" (click)="stepServings(1)">
+        <ion-icon slot="icon-only" name="add-outline" />
+      </ion-button>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-label>
+        <p>Can be</p>
+        <mp-slot-chips [selected]="slots()" (changed)="slots.set($event)" />
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <ion-list>
+    <ion-list-header>Ingredients</ion-list-header>
+    @for (line of lines(); track line.key) {
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <p class="import-original">{{ line.source.original }}</p>
+          <button type="button" class="link-button" (click)="choose(line)">
+            @switch (status(line)) {
+              @case ('to-taste') {
+                To taste — not counted
+              }
+              @case ('unlinked') {
+                <span class="needs">Choose a product…</span>
+              }
+              @default {
+                {{ line.product?.name }}
+              }
+            }
+          </button>
+          @if (line.estimate) {
+            <p class="needs">
+              {{ line.estimate }} —
+              <button type="button" class="link-button" (click)="confirmEstimate(line)">looks right</button>
+            </p>
+          }
+          @if (status(line) === 'needs-amount') {
+            <p class="needs">Enter how much, in {{ unitWord[line.product!.packageUnit] }}</p>
+          }
+        </ion-label>
+        @if (line.product) {
+          <ion-input
+            slot="end"
+            class="ingredient-amount ingredient-amount--narrow"
+            type="number"
+            inputmode="decimal"
+            [attr.aria-label]="'Amount of ' + line.product.name"
+            [value]="line.quantity"
+            (ionInput)="setQuantity(line, $event)"
+          />
+          <ion-note slot="end">{{ unitWord[line.product.packageUnit] }}</ion-note>
+        }
+      </ion-item>
+    }
+  </ion-list>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <div class="ion-padding-horizontal import-footer">
+      <p class="numbers" aria-live="polite">
+        Per serving: <strong>{{ kcal() }} kcal</strong> · <strong>{{ protein() }} g</strong> protein
+        @if (siteKcal() !== null) {
+          <br />The recipe page says {{ siteKcal() }} kcal
+          @if (recipe().siteProtein !== null) {
+            · {{ recipe().siteProtein }} g protein
+          }
+        }
+      </p>
+      @if (disagrees()) {
+        <ion-segment [value]="trust()" (ionChange)="trust.set($any(value($event)))">
+          <ion-segment-button value="computed"><ion-label>Use ours</ion-label></ion-segment-button>
+          <ion-segment-button value="site"><ion-label>Use the page's</ion-label></ion-segment-button>
+        </ion-segment>
+      }
+      @if (blockingCount() > 0) {
+        <ion-note>{{ blockingCount() }} {{ blockingCount() === 1 ? 'line needs' : 'lines need' }} an amount checked before saving.</ion-note>
+      } @else if (unlinkedCount() > 0) {
+        <ion-note>
+          {{ unlinkedCount() }} {{ unlinkedCount() === 1 ? 'ingredient isn’t' : 'ingredients aren’t' }} linked to your products, so
+          {{ unlinkedCount() === 1 ? 'it won’t' : 'they won’t' }} count toward calories or pantry checks.
+        </ion-note>
+      }
+    </div>
+  </ion-toolbar>
+</ion-footer>

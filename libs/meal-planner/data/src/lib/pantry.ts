@@ -13,7 +13,7 @@
  * row as it was — not a new row that happens to hold the same amount.
  */
 
-import { pantryStock, type PantryItem, type Product, type ProductDraft } from '@metrum/meal-planner-domain';
+import { pantryStock, planDepletion, type PantryItem, type Product, type ProductDraft } from '@metrum/meal-planner-domain';
 import type { ProductsRepo } from './products.js';
 import { toPantryItem, toProduct, type PantryItemRow, type ProductRow } from './rows.js';
 import type { Clock, SqlDb, SqlExecutor } from './sql.js';
@@ -146,6 +146,15 @@ export class PantryRepo {
     });
   }
 
+  /**
+   * §11's decrement for one serving's `needs`, in one transaction: each product drawn
+   * from its rows oldest-expiry first, rows clamped at zero and soft-deleted when empty.
+   * Returns what ran short and the undo that restores every touched row exactly.
+   */
+  async consume(needs: ReadonlyMap<string, number>): Promise<Consumption> {
+    return this.db.transaction((tx) => consumeNeeds(tx, this.clock, needs));
+  }
+
   /** Total live quantity per product — what the planner plans against (§5). */
   async stock(): Promise<Map<string, number>> {
     const rows = await this.db.all<PantryItemRow>(`SELECT ${ITEM_COLUMNS} FROM pantry_items WHERE deleted_at IS NULL`);
@@ -171,6 +180,39 @@ export class PantryRepo {
     const rows = await tx.all<PantryItemRow>(`SELECT ${ITEM_COLUMNS} FROM pantry_items WHERE id = ?`, [id]);
     return toPantryItem(rows[0]);
   }
+}
+
+export interface Consumption {
+  readonly undo: PantryUndo;
+  /** Products the pantry could not fully cover, and by how much (§11's "ran short"). */
+  readonly shortfalls: readonly { readonly productId: string; readonly shortBy: number }[];
+}
+
+/** `PantryRepo.consume` inside a caller's transaction — cooking also stamps the plan slot. */
+export async function consumeNeeds(tx: SqlExecutor, clock: Clock, needs: ReadonlyMap<string, number>): Promise<Consumption> {
+  const touched: { id: string; quantity: number; deletedAt: string | null }[] = [];
+  const shortfalls: { productId: string; shortBy: number }[] = [];
+  const now = clock.now();
+  for (const [productId, need] of needs) {
+    const rows = (
+      await tx.all<PantryItemRow>(
+        `SELECT ${ITEM_COLUMNS} FROM pantry_items WHERE product_id = ? AND deleted_at IS NULL AND quantity > 0`,
+        [productId],
+      )
+    ).map(toPantryItem);
+    const plan = planDepletion(rows, need);
+    for (const step of plan.decrements) {
+      touched.push({ id: step.rowId, quantity: step.from, deletedAt: null });
+      await tx.run('UPDATE pantry_items SET quantity = ?, updated_at = ?, deleted_at = ? WHERE id = ?', [
+        step.to,
+        now,
+        step.to === 0 ? now : null,
+        step.rowId,
+      ]);
+    }
+    if (plan.shortBy > 0) shortfalls.push({ productId, shortBy: plan.shortBy });
+  }
+  return { undo: { rows: touched }, shortfalls };
 }
 
 export async function snapshot(tx: SqlExecutor, ids: readonly string[]): Promise<PantryUndo> {

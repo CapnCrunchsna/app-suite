@@ -24,6 +24,11 @@
             "glob": "sql-wasm.wasm",
             "input": "node_modules/sql.js/dist",
             "output": "assets"
+          },
+          {
+            "glob": "*.json",
+            "input": "libs/meal-planner/data/seed",
+            "output": "assets/seed"
           }
         ],
         "styles": [

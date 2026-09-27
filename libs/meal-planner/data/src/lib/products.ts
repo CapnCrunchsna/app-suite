@@ -11,6 +11,7 @@
  */
 
 import { basisFor, productProblems, type Product, type ProductDraft } from '@metrum/meal-planner-domain';
+import { recomputeMealsUsing } from './meals.js';
 import { placeholders, toProduct, type ProductRow } from './rows.js';
 import type { Clock, SqlDb, SqlExecutor } from './sql.js';
 
@@ -53,24 +54,29 @@ export class ProductsRepo {
     return (await this.get(id, tx)) as Product;
   }
 
+  /** Also recomputes every meal that uses the product, so their cached nutrition stays true (§4). */
   async update(id: string, draft: Omit<ProductDraft, 'source'>): Promise<Product> {
     assertValid(draft);
-    await this.db.run(
-      `UPDATE products SET barcode = ?, name = ?, brand = ?, package_unit = ?, package_amount = ?,
-         nutrition_basis = ?, kcal = ?, protein_g = ?, updated_at = ? WHERE id = ?`,
-      [
-        blankToNull(draft.barcode),
-        draft.name.trim(),
-        blankToNull(draft.brand),
-        draft.packageUnit,
-        draft.packageAmount,
-        basisFor(draft.packageUnit),
-        draft.kcal,
-        draft.proteinG,
-        this.clock.now(),
-        id,
-      ],
-    );
+    await this.db.transaction(async (tx) => {
+      const now = this.clock.now();
+      await tx.run(
+        `UPDATE products SET barcode = ?, name = ?, brand = ?, package_unit = ?, package_amount = ?,
+           nutrition_basis = ?, kcal = ?, protein_g = ?, updated_at = ? WHERE id = ?`,
+        [
+          blankToNull(draft.barcode),
+          draft.name.trim(),
+          blankToNull(draft.brand),
+          draft.packageUnit,
+          draft.packageAmount,
+          basisFor(draft.packageUnit),
+          draft.kcal,
+          draft.proteinG,
+          now,
+          id,
+        ],
+      );
+      await recomputeMealsUsing(tx, [id], now);
+    });
     const product = await this.get(id);
     if (!product) throw new Error(`no product ${id}`);
     return product;

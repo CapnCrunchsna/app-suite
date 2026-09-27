@@ -70,6 +70,7 @@
     "@capacitor-community/sqlite": "^8.1.1",
     "@capacitor-mlkit/barcode-scanning": "^8.2.1",
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.2",
     "@fastify/multipart": "^9.4.0",
     "@fastify/swagger": "^9.8.1",

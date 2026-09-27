@@ -7,13 +7,14 @@
  */
 
 import { Injectable, inject, type Type } from '@angular/core';
-import { LoadingController, ModalController, ToastController } from '@ionic/angular';
+import { LoadingController, ModalController } from '@ionic/angular';
 import type { PantryEntry } from '@metrum/meal-planner-data';
 import { productLabel, type Product } from '@metrum/meal-planner-domain';
 import type { ProductPrefill } from '@metrum/meal-planner-import';
 import { AddToPantry, type AddToPantryResult } from '../components/add-to-pantry';
 import { ProductForm } from '../components/product-form';
 import { Store } from '../data/store';
+import { Notify } from '../shared/notify';
 import { BarcodeLookup } from './barcode-lookup';
 import { BulkReview } from './bulk-review';
 import { BulkScanSession } from './bulk-scan-session';
@@ -29,7 +30,7 @@ interface Dismissed<T> {
 @Injectable({ providedIn: 'root' })
 export class PantryFlows {
   private readonly modals = inject(ModalController);
-  private readonly toasts = inject(ToastController);
+  private readonly notify = inject(Notify);
   private readonly loading = inject(LoadingController);
   private readonly store = inject(Store);
   private readonly lookup = inject(BarcodeLookup);
@@ -65,7 +66,7 @@ export class PantryFlows {
     if (scan.role !== 'done' || session.lines().length === 0) return false;
     const review = await this.present<number>(BulkReview, { session });
     if (review.role !== 'committed') return false;
-    await this.toast(`Added ${review.data} ${review.data === 1 ? 'item' : 'items'} to the pantry`);
+    await this.notify.toast(`Added ${review.data} ${review.data === 1 ? 'item' : 'items'} to the pantry`);
     return true;
   }
 
@@ -92,20 +93,6 @@ export class PantryFlows {
     return true;
   }
 
-  async toast(message: string, undo?: () => Promise<void>): Promise<void> {
-    const toast = await this.toasts.create({
-      message,
-      duration: undo ? 5000 : 2000,
-      position: 'bottom',
-      positionAnchor: 'pantry-fab',
-      buttons: undo ? [{ text: 'Undo', role: 'undo' }] : [],
-    });
-    await toast.present();
-    if (!undo) return;
-    const { role } = await toast.onDidDismiss();
-    if (role === 'undo') await undo();
-  }
-
   private async productForm(props: { prefill?: Partial<ProductPrefill>; notice?: string }): Promise<Product | null> {
     const form = await this.present<Product>(ProductForm, props);
     return form.role === 'saved' && form.data ? form.data : null;
@@ -120,7 +107,7 @@ export class PantryFlows {
     if (sheet.role !== 'confirm' || !sheet.data) return false;
     const { pantry } = await this.store.ready();
     await pantry.add({ productId: product.id, packages: sheet.data.packages, expiresOn: sheet.data.expiresOn });
-    await this.toast(`Added ${sheet.data.packages > 1 ? `${sheet.data.packages} × ` : ''}${productLabel(product)}`);
+    await this.notify.toast(`Added ${sheet.data.packages > 1 ? `${sheet.data.packages} × ` : ''}${productLabel(product)}`);
     return true;
   }
 

@@ -83,6 +83,62 @@ export function densityFor(productName: string): number | null {
   return best?.gramsPerCup ?? null;
 }
 
+/** A unit a person can enter an ingredient amount in (the Meal Builder's unit picker, §10). */
+export type EntryUnit = 'item' | MassUnit | VolumeUnit;
+
+/**
+ * The units §10 lets a product be measured in: items for a counted product; mass units
+ * for a weighed one, plus cups and spoons when the density table knows it (§6 rule 3);
+ * volume units for a liquid.
+ */
+export function entryUnitsFor(product: { readonly packageUnit: BaseUnit; readonly name: string }): EntryUnit[] {
+  if (product.packageUnit === 'COUNT') return ['item'];
+  if (product.packageUnit === 'ML') return ['ml', 'l', 'cup', 'tbsp', 'tsp', 'floz'];
+  const mass: EntryUnit[] = ['g', 'kg', 'oz', 'lb'];
+  return densityFor(product.name) === null ? mass : [...mass, 'cup', 'tbsp', 'tsp'];
+}
+
+/** `amount` of `unit` in the product's base unit; null when §6 cannot convert it. */
+export function entryToBase(
+  amount: number,
+  unit: EntryUnit,
+  product: { readonly packageUnit: BaseUnit; readonly name: string },
+): number | null {
+  if (unit === 'item') return product.packageUnit === 'COUNT' ? amount : null;
+  const base = toBase(amount, unit);
+  const conversion = convertForProduct(base.quantity, base.unit, product);
+  return conversion.kind === 'ask' ? null : conversion.quantity;
+}
+
+const UNIT_WORDS: Readonly<Record<EntryUnit, [string, string]>> = {
+  item: ['item', 'items'],
+  g: ['g', 'g'],
+  kg: ['kg', 'kg'],
+  oz: ['oz', 'oz'],
+  lb: ['lb', 'lb'],
+  ml: ['ml', 'ml'],
+  l: ['L', 'L'],
+  cup: ['cup', 'cups'],
+  tbsp: ['tbsp', 'tbsp'],
+  tsp: ['tsp', 'tsp'],
+  floz: ['fl oz', 'fl oz'],
+};
+
+export function entryUnitWord(unit: EntryUnit, amount = 2): string {
+  return UNIT_WORDS[unit][amount === 1 ? 0 : 1];
+}
+
+/**
+ * What §6 rule 3 needs the person to confirm, or null when nothing was estimated.
+ * "1 cup of Rolled oats is about 90 g."
+ */
+export function densityNote(unit: EntryUnit, product: { readonly packageUnit: BaseUnit; readonly name: string }): string | null {
+  if (product.packageUnit !== 'G' || !(unit in ML_PER)) return null;
+  const perUnit = entryToBase(1, unit, product);
+  if (perUnit === null) return null;
+  return `1 ${entryUnitWord(unit, 1)} of ${product.name} is about ${Math.round(perUnit * 10) / 10} g.`;
+}
+
 /**
  * What to do with an entered quantity for a given product (§6's four rules).
  *

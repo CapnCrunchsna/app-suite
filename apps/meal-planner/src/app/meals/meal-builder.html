@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-button (click)="cancel()">Cancel</ion-button></ion-buttons>
+    <ion-title>{{ existing() ? 'Edit meal' : 'New meal' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [strong]="true" [disabled]="problems().length > 0 || saving()" (click)="save()">Save</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (error()) {
+    <p class="ion-padding error" role="alert">{{ error() }}</p>
+  }
+  <ion-list lines="full">
+    <ion-item>
+      <ion-input
+        label="Name"
+        labelPlacement="stacked"
+        autocapitalize="sentences"
+        [value]="name()"
+        (ionInput)="name.set(value($event))"
+      />
+    </ion-item>
+    <ion-item lines="none">
+      <ion-label>
+        <p>Can be</p>
+        <mp-slot-chips [selected]="slots()" (changed)="slots.set($event)" />
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>Servings</ion-label>
+      <ion-button slot="end" fill="outline" aria-label="Fewer servings" [disabled]="servings() <= 1" (click)="stepServings(-1)">
+        <ion-icon slot="icon-only" name="remove-outline" />
+      </ion-button>
+      <span slot="end" class="stepper-value numbers">{{ servings() }}</span>
+      <ion-button slot="end" fill="outline" aria-label="More servings" (click)="stepServings(1)">
+        <ion-icon slot="icon-only" name="add-outline" />
+      </ion-button>
+    </ion-item>
+  </ion-list>
+
+  <ion-list>
+    <ion-list-header>Ingredients</ion-list-header>
+    @for (row of rows(); track row.key) {
+      @if (row.textOnly) {
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            {{ row.displayText }}
+            <p>{{ row.toTaste ? 'To taste — not counted' : 'Not linked to a product — not counted' }}</p>
+          </ion-label>
+          <ion-button slot="end" fill="clear" color="medium" aria-label="Remove line" (click)="removeRow(row)">
+            <ion-icon slot="icon-only" name="close-circle-outline" />
+          </ion-button>
+        </ion-item>
+      } @else {
+        <ion-item>
+          <div class="ingredient">
+            <button type="button" class="link-button ingredient-name" (click)="changeProduct(row)">
+              {{ row.product?.name ?? 'Choose a product' }}
+            </button>
+            <div class="ingredient-controls">
+              <ion-input
+                class="ingredient-amount"
+                type="number"
+                inputmode="decimal"
+                aria-label="Amount"
+                placeholder="0"
+                [value]="row.amount"
+                (ionInput)="setAmount(row, $event)"
+              />
+              @if (row.product) {
+                <ion-select aria-label="Unit" interface="popover" [value]="row.unit" (ionChange)="setUnit(row, $event)">
+                  @for (unit of unitsFor(row.product); track unit) {
+                    <ion-select-option [value]="unit">{{ unitWord(unit) }}</ion-select-option>
+                  }
+                </ion-select>
+              }
+              <ion-button fill="clear" color="medium" aria-label="Remove ingredient" (click)="removeRow(row)">
+                <ion-icon slot="icon-only" name="close-circle-outline" />
+              </ion-button>
+            </div>
+          </div>
+        </ion-item>
+      }
+    }
+    <ion-item button [detail]="false" (click)="addRow()">
+      <ion-icon slot="start" name="add-outline" />
+      <ion-label color="primary">Add ingredient</ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <p class="ion-padding-horizontal numbers per-serving" aria-live="polite">
+      Per serving: <strong>{{ kcal() }} kcal</strong> · <strong>{{ protein() }} g</strong> protein
+    </p>
+  </ion-toolbar>
+</ion-footer>

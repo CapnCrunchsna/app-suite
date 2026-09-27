@@ -4,6 +4,12 @@
  * The point is that migrations, repositories and the §11 decrement run against real
  * SQLite — the same engine the phone uses — rather than against a mock that agrees with
  * whatever the code under test assumes.
+ *
+ * It is stricter than SQLite in one way, on purpose: using the outer handle while a
+ * transaction is open throws. On the phone the adapter queues every call behind the open
+ * transaction (apps/meal-planner/src/app/data/capacitor-sql-db.ts), so a repository that
+ * reads through `this.db` from inside its own transaction callback does not misbehave
+ * there — it hangs forever. Here it fails the test instead.
  */
 
 import Database from 'better-sqlite3';
@@ -11,6 +17,8 @@ import type { Clock, SqlDb, SqlExecutor, SqlValue } from '../lib/sql.js';
 
 export function nodeSqliteDb(): SqlDb & { close(): void } {
   const raw = new Database(':memory:');
+  let inTransaction = false;
+
   const executor: SqlExecutor = {
     async exec(sql: string) {
       raw.exec(sql);
@@ -22,10 +30,23 @@ export function nodeSqliteDb(): SqlDb & { close(): void } {
       return raw.prepare(sql).all(...params) as T[];
     },
   };
+
+  const outer = <A extends unknown[], R>(fn: (...args: A) => Promise<R>) =>
+    (...args: A): Promise<R> => {
+      if (inTransaction) {
+        return Promise.reject(new Error('outer database handle used inside a transaction: this deadlocks on the device'));
+      }
+      return fn(...args);
+    };
+
   return {
-    ...executor,
+    exec: outer(executor.exec),
+    run: outer(executor.run),
+    all: outer(executor.all) as SqlExecutor['all'],
     async transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> {
+      if (inTransaction) throw new Error('nested transaction: this deadlocks on the device');
       raw.exec('BEGIN');
+      inTransaction = true;
       try {
         const result = await fn(executor);
         raw.exec('COMMIT');
@@ -33,6 +54,8 @@ export function nodeSqliteDb(): SqlDb & { close(): void } {
       } catch (error) {
         raw.exec('ROLLBACK');
         throw error;
+      } finally {
+        inTransaction = false;
       }
     },
     close: () => raw.close(),

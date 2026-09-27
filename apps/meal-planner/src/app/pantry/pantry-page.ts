@@ -24,6 +24,7 @@ import {
   IonList,
   IonNote,
   IonSearchbar,
+  IonSpinner,
   IonTitle,
   IonToolbar,
   type ViewWillEnter,
@@ -34,6 +35,7 @@ import { addIcons } from 'ionicons';
 import { add, barcodeOutline, createOutline, trashOutline } from 'ionicons/icons';
 import { Store } from '../data/store';
 import { eventValue } from '../shared/events';
+import { Notify } from '../shared/notify';
 import { PantryFlows } from './pantry-flows';
 
 @Component({
@@ -55,6 +57,7 @@ import { PantryFlows } from './pantry-flows';
     IonButton,
     IonFab,
     IonFabButton,
+    IonSpinner,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pantry-page.html',
@@ -63,6 +66,7 @@ export class PantryPage implements ViewWillEnter {
   private readonly store = inject(Store);
   private readonly flows = inject(PantryFlows);
   private readonly sheets = inject(ActionSheetController);
+  private readonly notify = inject(Notify);
 
   protected readonly entries = signal<PantryEntry[]>([]);
   protected readonly loaded = signal(false);
@@ -102,9 +106,11 @@ export class PantryPage implements ViewWillEnter {
     const { pantry } = await this.store.ready();
     const undo = await pantry.remove(entry.item.id);
     this.entries.update((list) => list.filter((e) => e.item.id !== entry.item.id));
-    await this.flows.toast(`Removed ${entry.product.name}`, async () => {
-      await pantry.restore(undo);
-      await this.reload();
+    await this.notify.toast(`Removed ${entry.product.name}`, {
+      undo: async () => {
+        await pantry.restore(undo);
+        await this.reload();
+      },
     });
   }
 

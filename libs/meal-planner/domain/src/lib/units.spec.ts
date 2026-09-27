@@ -1,4 +1,4 @@
-import { convertForProduct, densityFor, toBase } from './units.js';
+import { convertForProduct, densityFor, densityNote, entryToBase, entryUnitsFor, toBase } from './units.js';
 import { formatAmount, formatRemaining } from './format.js';
 import { fitsWithReserved, pantryStock, shortfalls } from './pantry.js';
 
@@ -27,6 +27,34 @@ describe('§6 conversions', () => {
     });
     expect(convertForProduct(15, 'ML', { packageUnit: 'G', name: 'Paprika' })).toEqual({ kind: 'ask', unit: 'G' });
     expect(convertForProduct(100, 'G', { packageUnit: 'COUNT', name: 'Eggs' })).toEqual({ kind: 'ask', unit: 'COUNT' });
+  });
+});
+
+describe('entry units (§10 Meal Builder)', () => {
+  const oats = { packageUnit: 'G' as const, name: 'Rolled oats' };
+  const paprika = { packageUnit: 'G' as const, name: 'Paprika' };
+  const milk = { packageUnit: 'ML' as const, name: 'Milk' };
+  const eggs = { packageUnit: 'COUNT' as const, name: 'Eggs' };
+
+  it('offers cups for a weighed food only when its density is known', () => {
+    expect(entryUnitsFor(oats)).toEqual(['g', 'kg', 'oz', 'lb', 'cup', 'tbsp', 'tsp']);
+    expect(entryUnitsFor(paprika)).toEqual(['g', 'kg', 'oz', 'lb']);
+    expect(entryUnitsFor(milk)).toContain('cup');
+    expect(entryUnitsFor(eggs)).toEqual(['item']);
+  });
+
+  it('converts to the product’s base unit', () => {
+    expect(entryToBase(2, 'item', eggs)).toBe(2);
+    expect(entryToBase(0.5, 'cup', oats)).toBe(45);
+    expect(entryToBase(1, 'lb', oats)).toBe(453.6);
+    expect(entryToBase(1, 'cup', milk)).toBe(240);
+    expect(entryToBase(1, 'cup', paprika)).toBeNull();
+  });
+
+  it('words the density estimate for confirmation', () => {
+    expect(densityNote('cup', oats)).toBe('1 cup of Rolled oats is about 90 g.');
+    expect(densityNote('g', oats)).toBeNull();
+    expect(densityNote('cup', milk)).toBeNull();
   });
 });
 

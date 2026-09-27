@@ -84,6 +84,7 @@ export interface MealRow {
   source_url: string | null;
   kcal_per_serving: number;
   protein_per_serving: number;
+  nutrition_source: 'ingredients' | 'site';
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -99,6 +100,7 @@ export function toMeal(row: MealRow): Meal {
     sourceUrl: row.source_url,
     kcalPerServing: row.kcal_per_serving,
     proteinPerServing: row.protein_per_serving,
+    nutritionSource: row.nutrition_source,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,

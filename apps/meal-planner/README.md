@@ -44,6 +44,6 @@ or open that folder in Android Studio.
 |---|---|
 | 0 — Scaffold | Done. Boots on web and on the Android emulator; schema v1 migrates on both. |
 | 1 — Products & pantry | Done, bar one check. Verified in the browser (typed barcodes through Open Food Facts, bulk scan with review, remove/undo, edit, catalog) and on the emulator (camera permission flow, scan overlay over a live preview, manual add persisting across restarts). **Still needs a real phone:** scanning an actual barcode, and the airplane-mode fallback. |
-| 2 — Meal library | Not started |
+| 2 — Meal library | Done. T2, T3, T4 and T8 pass; the seeded library reproduces T5 through the planner. A live BBC Good Food recipe imported on the emulator with every line linked or to taste. |
 | 3 — Planner | Engine done ahead of its UI: T5–T7 pass in `libs/meal-planner/domain` |
 | 4 — Depletion & polish | Not started |

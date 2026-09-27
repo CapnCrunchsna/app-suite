@@ -30,6 +30,13 @@ was fixed in place instead, and its revision note says what changed.
   (`jeep-sqlite/dist/components/jeep-sqlite`), not its lazy loader, which collided with
   Ionic's Stencil runtime. Reasoning in `src/app/data/database.ts`.
 
+- **`@capacitor/app` is installed** though §2 did not name it: without it Android's Back
+  button bypassed Ionic entirely and closed the app from inside a modal. `src/app/app.ts`
+  hands Back to Ionic and exits only when nothing is left to close.
+- **First launch seeds the starter library over the native bridge**, a few hundred
+  plugin calls that take seconds on the emulator. The pages show a spinner until their
+  first read finishes rather than an empty state that would be wrong.
+
 ## Scanning and lookup
 
 - **Scanning uses the plugin's `startScan` with our own overlay**, for single and bulk
@@ -68,6 +75,27 @@ was fixed in place instead, and its revision note says what changed.
 - **Ids come from `crypto.getRandomValues`**, not `randomUUID`, which exists only in a
   secure context — so the app still works when opened over a LAN address to test on a
   phone.
+
+## Meals and import
+
+- **The starter library is generated** by `tools/make-meal-planner-seeds.mjs` into
+  `libs/meal-planner/data/seed/`. The eight T5 meals' "balancing" quantities are solved
+  exactly and kept at full precision; the script's header says why rounding them would
+  break T5.
+- **Editing a meal keeps each untouched line's exact stored quantity and text**, and
+  carries to-taste and unlinked lines through as text, so re-saving changes nothing the
+  person did not change.
+- **An imported recipe defaults to lunch and dinner**; the review shows the same slot
+  chips as the builder. §10's review has no slot field, and "all four" would offer a
+  lasagna at breakfast.
+- **"1 can" of something sold by weight or volume reads as one package**, flagged as an
+  estimate to confirm, like a cup of flour (§6 rule 3).
+- **A recipe site answering 401/403 gets its own message.** Several large sites (in
+  testing: AllRecipes, Simply Recipes, Budget Bytes, Cookie and Kate) refuse any client
+  that is not a full browser; the app says the site refused rather than showing a status
+  code. BBC Good Food and RecipeTin Eats imported fine.
+- **The builder and the import review ask before Back discards their work**; their own
+  Save and Cancel never ask. See `src/app/shared/discard-guard.ts`.
 
 ## Look and navigation
 

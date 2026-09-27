@@ -12,7 +12,13 @@ export const appRoutes: Routes = [
     component: TabsPage,
     children: [
       { path: 'pantry', loadComponent: () => import('./pantry/pantry-page').then((m) => m.PantryPage) },
-      { path: 'meals', loadComponent: () => import('./meals/meals-page').then((m) => m.MealsPage) },
+      {
+        path: 'meals',
+        children: [
+          { path: '', loadComponent: () => import('./meals/meals-page').then((m) => m.MealsPage) },
+          { path: ':id', loadComponent: () => import('./meals/meal-detail-page').then((m) => m.MealDetailPage) },
+        ],
+      },
       { path: 'today', loadComponent: () => import('./today/today-page').then((m) => m.TodayPage) },
       { path: 'settings', loadComponent: () => import('./settings/settings-page').then((m) => m.SettingsPage) },
       { path: '', redirectTo: 'today', pathMatch: 'full' },

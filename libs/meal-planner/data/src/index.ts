@@ -4,3 +4,5 @@ export * from './lib/rows.js';
 export * from './lib/products.js';
 export * from './lib/pantry.js';
 export * from './lib/settings.js';
+export * from './lib/meals.js';
+export * from './lib/seed.js';

@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "products": [
+    {
+      "key": "oats",
+      "name": "Rolled oats",
+      "packageUnit": "G",
+      "packageAmount": 1000,
+      "kcal": 379,
+      "proteinG": 13.2
+    },
+    {
+      "key": "banana",
+      "name": "Bananas",
+      "packageUnit": "COUNT",
+      "packageAmount": 6,
+      "kcal": 105,
+      "proteinG": 1.3
+    },
+    {
+      "key": "milk",
+      "name": "Milk (2%)",
+      "packageUnit": "ML",
+      "packageAmount": 2000,
+      "kcal": 50,
+      "proteinG": 3.3
+    },
+    {
+      "key": "eggs",
+      "name": "Large eggs",
+      "packageUnit": "COUNT",
+      "packageAmount": 12,
+      "kcal": 72,
+      "proteinG": 6.3
+    },
+    {
+      "key": "butter",
+      "name": "Butter",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 717,
+      "proteinG": 0.9
+    },
+    {
+      "key": "bread",
+      "name": "Sandwich bread",
+      "packageUnit": "COUNT",
+      "packageAmount": 20,
+      "kcal": 80,
+      "proteinG": 3
+    },
+    {
+      "key": "pb",
+      "name": "Peanut butter",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 600,
+      "proteinG": 25
+    },
+    {
+      "key": "jam",
+      "name": "Strawberry jam",
+      "packageUnit": "G",
+      "packageAmount": 340,
+      "kcal": 250,
+      "proteinG": 0.4
+    },
+    {
+      "key": "chicken",
+      "name": "Chicken breast",
+      "packageUnit": "G",
+      "packageAmount": 1000,
+      "kcal": 120,
+      "proteinG": 22.5
+    },
+    {
+      "key": "rice",
+      "name": "White rice",
+      "packageUnit": "G",
+      "packageAmount": 2000,
+      "kcal": 365,
+      "proteinG": 7.1
+    },
+    {
+      "key": "oil",
+      "name": "Olive oil",
+      "packageUnit": "G",
+      "packageAmount": 500,
+      "kcal": 884,
+      "proteinG": 0
+    },
+    {
+      "key": "tuna",
+      "name": "Tuna in water (drained)",
+      "packageUnit": "G",
+      "packageAmount": 142,
+      "kcal": 116,
+      "proteinG": 25.5
+    },
+    {
+      "key": "mayo",
+      "name": "Mayonnaise",
+      "packageUnit": "G",
+      "packageAmount": 887,
+      "kcal": 680,
+      "proteinG": 1
+    },
+    {
+      "key": "spaghetti",
+      "name": "Spaghetti",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 371,
+      "proteinG": 13
+    },
+    {
+      "key": "beef",
+      "name": "Ground beef (85% lean)",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 215,
+      "proteinG": 18.6
+    },
+    {
+      "key": "marinara",
+      "name": "Marinara sauce",
+      "packageUnit": "G",
+      "packageAmount": 680,
+      "kcal": 50,
+      "proteinG": 1.5
+    },
+    {
+      "key": "yogurt",
+      "name": "Greek yogurt (nonfat)",
+      "packageUnit": "G",
+      "packageAmount": 907,
+      "kcal": 59,
+      "proteinG": 10.2
+    },
+    {
+      "key": "honey",
+      "name": "Honey",
+      "packageUnit": "G",
+      "packageAmount": 340,
+      "kcal": 304,
+      "proteinG": 0.3
+    },
+    {
+      "key": "apple",
+      "name": "Apples",
+      "packageUnit": "COUNT",
+      "packageAmount": 6,
+      "kcal": 95,
+      "proteinG": 0.5
+    },
+    {
+      "key": "cheddar",
+      "name": "Cheddar cheese",
+      "packageUnit": "G",
+      "packageAmount": 227,
+      "kcal": 403,
+      "proteinG": 22.9
+    },
+    {
+      "key": "tortilla",
+      "name": "Flour tortillas",
+      "packageUnit": "COUNT",
+      "packageAmount": 10,
+      "kcal": 140,
+      "proteinG": 3.6
+    },
+    {
+      "key": "beans",
+      "name": "Black beans (canned)",
+      "packageUnit": "G",
+      "packageAmount": 425,
+      "kcal": 91,
+      "proteinG": 6
+    },
+    {
+      "key": "salsa",
+      "name": "Salsa",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 36,
+      "proteinG": 1.5
+    },
+    {
+      "key": "broccoli",
+      "name": "Broccoli",
+      "packageUnit": "G",
+      "packageAmount": 340,
+      "kcal": 34,
+      "proteinG": 2.8
+    },
+    {
+      "key": "salmon",
+      "name": "Salmon fillet",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 208,
+      "proteinG": 20
+    },
+    {
+      "key": "potato",
+      "name": "Potatoes",
+      "packageUnit": "COUNT",
+      "packageAmount": 10,
+      "kcal": 160,
+      "proteinG": 4.3
+    },
+    {
+      "key": "almonds",
+      "name": "Almonds",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 579,
+      "proteinG": 21
+    },
+    {
+      "key": "cottage",
+      "name": "Cottage cheese",
+      "packageUnit": "G",
+      "packageAmount": 454,
+      "kcal": 98,
+      "proteinG": 11
+    },
+    {
+      "key": "spinach",
+      "name": "Baby spinach",
+      "packageUnit": "G",
+      "packageAmount": 142,
+      "kcal": 23,
+      "proteinG": 2.9
+    }
+  ]
+}

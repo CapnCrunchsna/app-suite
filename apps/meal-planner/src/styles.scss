@@ -64,6 +64,62 @@ ion-note.remaining {
   font-size: 1.2rem;
 }
 
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ion-color-primary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+// Builder rows are two lines at phone width: the product on top, its controls below.
+.ingredient {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 0;
+}
+
+.ingredient-name {
+  font-size: 1rem;
+}
+
+.ingredient-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ingredient-amount {
+  max-width: 5.5rem;
+  text-align: end;
+}
+
+.ingredient-controls .ingredient-amount {
+  max-width: 4.5rem;
+  text-align: start;
+}
+
+.ingredient-amount--narrow {
+  max-width: 4.5rem;
+}
+
+.import-original {
+  margin-bottom: 2px;
+}
+
+.per-serving,
+.import-footer p {
+  margin: 8px 0;
+}
+
+.detail-nutrition {
+  font-size: 1.1rem;
+  margin: 0 0 4px;
+}
+
 .stepper-value {
   min-width: 2ch;
   text-align: center;

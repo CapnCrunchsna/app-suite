@@ -113,6 +113,17 @@ CREATE TABLE settings (
 );
 `,
   },
+  {
+    // §8 step 6 lets the person trust a recipe site's nutrition over the computed one.
+    // Without a record of that choice, the next recompute (a product's kcal corrected,
+    // say) would silently overwrite it.
+    version: 2,
+    name: 'meals.nutrition_source',
+    sql: `
+ALTER TABLE meals ADD COLUMN nutrition_source TEXT NOT NULL DEFAULT 'ingredients'
+  CHECK (nutrition_source IN ('ingredients','site'));
+`,
+  },
 ];
 
 /** Applies every migration newer than the database, each in its own transaction. Returns the resulting version. */

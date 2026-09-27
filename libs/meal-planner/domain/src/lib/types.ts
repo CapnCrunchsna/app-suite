@@ -58,6 +58,8 @@ export interface Meal {
   /** Cached from the ingredients (§4); recomputed whenever they change. */
   readonly kcalPerServing: number;
   readonly proteinPerServing: number;
+  /** `site` when the person chose a recipe page's figures over the computed ones (§8 step 6). */
+  readonly nutritionSource: 'ingredients' | 'site';
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly deletedAt: string | null;

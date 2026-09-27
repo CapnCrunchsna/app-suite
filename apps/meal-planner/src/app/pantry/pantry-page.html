@@ -15,7 +15,9 @@
       <p>The pantry could not be read.</p>
       <p class="error">{{ failure() }}</p>
     </div>
-  } @else if (loaded() && entries().length === 0) {
+  } @else if (!loaded()) {
+    <div class="empty-state" aria-busy="true"><ion-spinner /></div>
+  } @else if (entries().length === 0) {
     <div class="empty-state">
       <p>Nothing in the pantry yet. Scan what you have, or add it by hand.</p>
       <ion-button (click)="scan()">

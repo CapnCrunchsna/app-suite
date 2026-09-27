@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { RouteReuseStrategy, provideRouter } from '@angular/router';
+import { RouteReuseStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
 import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular';
 import { appRoutes } from './app.routes';
 
@@ -12,6 +12,7 @@ export const appConfig: ApplicationConfig = {
     // Ionic keeps each tab's page alive across tab switches; Angular's default strategy
     // would destroy and rebuild it, losing scroll position and half-typed input.
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    provideRouter(appRoutes),
+    // Route params arrive as component inputs (the meal detail's `id`).
+    provideRouter(appRoutes, withComponentInputBinding()),
   ],
 };
