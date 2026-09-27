@@ -97,6 +97,25 @@ was fixed in place instead, and its revision note says what changed.
 - **The builder and the import review ask before Back discards their work**; their own
   Save and Cancel never ask. See `src/app/shared/discard-guard.ts`.
 
+## Today
+
+- **A row's Swap replaces that one meal**, holding every other placed meal where it is
+  (slots a partial plan left empty are re-solved too). §10 lists Swap as a row action but
+  describes it as "regenerates only unpinned slots", which is what Generate already does
+  on a planned day; so on a planned day that button reads **Re-plan unpinned meals**, and
+  the row action is the narrower one. Swap is disabled on pinned and cooked rows.
+- **A card identical to the day's current plan is not offered.** The planner is
+  deterministic (§13.7), so without this, re-planning a day that was planned from the top
+  card would offer that same day again as the first choice.
+- **Changing the meal or snack count makes a new plan** and soft-deletes the old one, pins
+  included (see `PlansRepo`); the screen says so before you choose. Once a slot is cooked
+  the counts are locked, so a cooked meal is never dropped with its plan.
+- **The date selector stops at today.** §10 allows forward navigation; a past day's plan
+  would only be a diary, which §13.5 rules out.
+- **The planner runs on the UI thread.** It is synchronous and ~130 ms on a 200-meal
+  library on the laptop; a worker would add a message boundary and nothing you could feel.
+  Re-measure on a mid-range phone before moving it (Phase 3's < 1 s criterion).
+
 ## Look and navigation
 
 - **Ionic's palette with the MetrumDigital teal as primary**, not `@metrum/ui` theming:

@@ -1,0 +1,170 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button aria-label="Previous day" [disabled]="date() <= today()" (click)="step(-1)">
+        <ion-icon slot="icon-only" name="chevron-back-outline" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="ion-text-center">{{ label() }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button aria-label="Next day" (click)="step(1)">
+        <ion-icon slot="icon-only" name="chevron-forward-outline" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (failure()) {
+    <div class="empty-state" role="alert">
+      <p>The plan could not be read.</p>
+      <p class="error">{{ failure() }}</p>
+    </div>
+  } @else if (!loaded()) {
+    <div class="empty-state" aria-busy="true"><ion-spinner /><p>Getting your meals ready…</p></div>
+  } @else if (mealCount() === 0) {
+    <div class="empty-state">
+      <p>There are no meals to plan with. Build one, or import a recipe.</p>
+      <ion-button routerLink="/meals">Go to Meals</ion-button>
+    </div>
+  } @else {
+    @if (options(); as cards) {
+      <ion-list-header>
+        <ion-label>{{ swapping() === null ? 'Choose a plan' : 'Choose a swap for ' + slotLabel(swapping()!) }}</ion-label>
+        <ion-button (click)="options.set(null)">Cancel</ion-button>
+      </ion-list-header>
+      @if (nothingMakeable()) {
+        <div class="empty-state">
+          <p>Nothing in the pantry makes a whole meal yet. Add what you have and try again.</p>
+          <ion-button routerLink="/pantry">Go to Pantry</ion-button>
+        </div>
+      } @else {
+        @for (card of cards; track $index) {
+          <ion-card button class="plan-card" (click)="choose(card)">
+            <ion-card-content>
+              @for (id of card.mealIds; track $index) {
+                <div class="plan-card-row" [class.changed]="changed(card, $index)">
+                  <span class="plan-card-slot">{{ slotLabel($index) }}</span>
+                  <span class="plan-card-meal">{{ mealName(id) }}</span>
+                  <span class="numbers">{{ mealKcal(id) }}</span>
+                </div>
+              }
+              <p class="plan-card-totals numbers">
+                <strong>{{ totals(card.kcal, card.protein) }}</strong>
+                @if (note(card); as n) {
+                  <ion-badge color="warning">{{ n }}</ion-badge>
+                }
+              </p>
+            </ion-card-content>
+          </ion-card>
+        } @empty {
+          <div class="empty-state"><p>Nothing else fits alongside the rest of the day.</p></div>
+        }
+      }
+    } @else {
+      @if (saved(); as day) {
+        <ion-list>
+          <ion-list-header>
+            <ion-label>
+              Planned
+              <p class="numbers">{{ totals(savedTotals().kcal, savedTotals().protein) }}</p>
+            </ion-label>
+          </ion-list-header>
+          @for (slot of day.slots; track slot.id) {
+            <ion-item>
+              <ion-label>
+                <p>{{ slotLabel(slot.position) }}</p>
+                {{ mealName(slot.mealId) }}
+                @if (slot.cookedAt) {
+                  <p>Cooked</p>
+                }
+              </ion-label>
+              <ion-note slot="end" class="numbers">{{ mealKcal(slot.mealId) }}</ion-note>
+              <ion-button
+                slot="end"
+                fill="clear"
+                [attr.aria-label]="slot.pinned ? 'Unpin' : 'Pin'"
+                [attr.aria-pressed]="slot.pinned"
+                [color]="slot.pinned ? 'primary' : 'medium'"
+                [disabled]="!!slot.cookedAt || !slot.mealId || busy()"
+                (click)="togglePin(slot)"
+              >
+                <ion-icon slot="icon-only" [name]="slot.pinned ? 'lock-closed' : 'lock-open-outline'" />
+              </ion-button>
+              <ion-button
+                slot="end"
+                fill="clear"
+                color="medium"
+                aria-label="Swap"
+                [disabled]="!!slot.cookedAt || slot.pinned || busy()"
+                (click)="swap(slot.position)"
+              >
+                <ion-icon slot="icon-only" name="swap-horizontal-outline" />
+              </ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      } @else {
+        <div class="empty-state today-empty"><p>Nothing planned for {{ label() === 'Today' ? 'today' : 'this day' }} yet. Set your targets and generate.</p></div>
+      }
+
+      <ion-list lines="full">
+        <ion-list-header><ion-label>Targets</ion-label></ion-list-header>
+        <ion-item>
+          <ion-input
+            label="Calories"
+            labelPlacement="fixed"
+            type="number"
+            inputmode="numeric"
+            class="numbers"
+            [value]="kcalText()"
+            (ionInput)="kcalText.set(value($event))"
+          />
+          <span slot="end">kcal</span>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Protein"
+            labelPlacement="fixed"
+            type="number"
+            inputmode="decimal"
+            class="numbers"
+            [value]="proteinText()"
+            (ionInput)="proteinText.set(value($event))"
+          />
+          <span slot="end">g</span>
+        </ion-item>
+        <ion-item>
+          <ion-label>Meals</ion-label>
+          <ion-button slot="end" fill="outline" aria-label="Fewer meals" [disabled]="shapeLocked() || counts().meals <= 1" (click)="stepCount('meals', -1)">
+            <ion-icon slot="icon-only" name="remove-outline" />
+          </ion-button>
+          <span slot="end" class="stepper-value numbers">{{ counts().meals }}</span>
+          <ion-button slot="end" fill="outline" aria-label="More meals" [disabled]="shapeLocked() || counts().meals >= 3" (click)="stepCount('meals', 1)">
+            <ion-icon slot="icon-only" name="add-outline" />
+          </ion-button>
+        </ion-item>
+        <ion-item>
+          <ion-label>Snacks</ion-label>
+          <ion-button slot="end" fill="outline" aria-label="Fewer snacks" [disabled]="shapeLocked() || counts().snacks <= 0" (click)="stepCount('snacks', -1)">
+            <ion-icon slot="icon-only" name="remove-outline" />
+          </ion-button>
+          <span slot="end" class="stepper-value numbers">{{ counts().snacks }}</span>
+          <ion-button slot="end" fill="outline" aria-label="More snacks" [disabled]="shapeLocked() || counts().snacks >= 3" (click)="stepCount('snacks', 1)">
+            <ion-icon slot="icon-only" name="add-outline" />
+          </ion-button>
+        </ion-item>
+      </ion-list>
+      @if (shapeLocked()) {
+        <p class="ion-padding-horizontal notice">A meal has been cooked today, so the day's meals and snacks stay as they are.</p>
+      } @else if (saved() && !keepsShape()) {
+        <p class="ion-padding-horizontal notice">Choosing a plan with these slots replaces the day's plan, pins included.</p>
+      }
+      <div class="ion-padding">
+        <ion-button expand="block" [disabled]="!targets() || busy()" (click)="generate()">
+          {{ keepsShape() ? 'Re-plan unpinned meals' : 'Generate' }}
+        </ion-button>
+      </div>
+    }
+  }
+</ion-content>

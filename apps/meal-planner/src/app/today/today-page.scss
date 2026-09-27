@@ -1,0 +1,32 @@
+.today-empty {
+  padding: 24px 24px 8px;
+}
+
+.plan-card {
+  margin-bottom: 12px;
+}
+
+.plan-card-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  gap: 8px;
+  padding: 2px 0;
+  color: var(--ion-color-medium);
+
+  &.changed {
+    color: var(--ion-text-color);
+    font-weight: 600;
+  }
+}
+
+.plan-card-slot {
+  font-size: 0.85rem;
+}
+
+.plan-card-totals {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  color: var(--ion-text-color);
+}

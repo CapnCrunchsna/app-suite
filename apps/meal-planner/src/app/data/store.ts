@@ -12,6 +12,7 @@ import { Injectable, inject } from '@angular/core';
 import {
   MealsRepo,
   PantryRepo,
+  PlansRepo,
   ProductsRepo,
   SettingsRepo,
   loadSeedLibrary,
@@ -25,6 +26,7 @@ export interface Repos {
   readonly products: ProductsRepo;
   readonly pantry: PantryRepo;
   readonly meals: MealsRepo;
+  readonly plans: PlansRepo;
   readonly settings: SettingsRepo;
 }
 
@@ -46,6 +48,7 @@ export class Store {
       products: new ProductsRepo(db, systemClock),
       pantry: new PantryRepo(db, systemClock),
       meals: new MealsRepo(db, systemClock),
+      plans: new PlansRepo(db, systemClock),
       settings: new SettingsRepo(db),
     };
   }
