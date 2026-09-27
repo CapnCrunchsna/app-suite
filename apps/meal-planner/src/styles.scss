@@ -40,3 +40,49 @@
 .numbers {
   font-variant-numeric: tabular-nums;
 }
+
+ion-note.remaining {
+  font-size: 0.95rem;
+  color: var(--ion-text-color);
+}
+
+.notice {
+  margin: 0 0 8px;
+  color: var(--ion-color-medium);
+}
+
+.error {
+  color: var(--ion-color-danger);
+}
+
+.needs {
+  color: var(--ion-color-warning-shade);
+}
+
+.sheet-title {
+  margin: 8px 0 16px;
+  font-size: 1.2rem;
+}
+
+.stepper-value {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 600;
+}
+
+// While the barcode scanner runs, the camera is drawn *behind* the WebView
+// (platform/scanner.ts): everything is hidden and see-through except the scan modal.
+body.barcode-scanner-active {
+  visibility: hidden;
+  --background: transparent;
+  --ion-background-color: transparent;
+}
+
+.barcode-scanner-modal {
+  visibility: visible;
+}
+
+body.barcode-scanner-active .barcode-scanner-modal {
+  --background: transparent;
+  --ion-background-color: transparent;
+}

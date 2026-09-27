@@ -1,0 +1,66 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Pantry</ion-title>
+  </ion-toolbar>
+  @if (entries().length > 0) {
+    <ion-toolbar>
+      <ion-searchbar placeholder="Filter" [debounce]="100" (ionInput)="filter.set(value($event))" />
+    </ion-toolbar>
+  }
+</ion-header>
+
+<ion-content>
+  @if (failure()) {
+    <div class="empty-state" role="alert">
+      <p>The pantry could not be read.</p>
+      <p class="error">{{ failure() }}</p>
+    </div>
+  } @else if (loaded() && entries().length === 0) {
+    <div class="empty-state">
+      <p>Nothing in the pantry yet. Scan what you have, or add it by hand.</p>
+      <ion-button (click)="scan()">
+        <ion-icon slot="start" name="barcode-outline" />
+        Scan a barcode
+      </ion-button>
+      <ion-button fill="clear" (click)="openAdd()">Other ways to add</ion-button>
+    </div>
+  } @else {
+    <ion-list>
+      @for (entry of visible(); track entry.item.id) {
+        <ion-item-sliding #sliding>
+          <ion-item-options side="start">
+            <ion-item-option (click)="edit(entry, sliding)">
+              <ion-icon slot="start" name="create-outline" />
+              Edit
+            </ion-item-option>
+          </ion-item-options>
+
+          <ion-item button [detail]="false" (click)="edit(entry)">
+            <ion-label>
+              {{ entry.product.name }}
+              @if (detail(entry); as line) {
+                <p>{{ line }}</p>
+              }
+            </ion-label>
+            <ion-note slot="end" class="numbers remaining">{{ remaining(entry) }}</ion-note>
+          </ion-item>
+
+          <ion-item-options side="end" (ionSwipe)="remove(entry, sliding)">
+            <ion-item-option color="danger" [expandable]="true" (click)="remove(entry, sliding)">
+              <ion-icon slot="start" name="trash-outline" />
+              Remove
+            </ion-item-option>
+          </ion-item-options>
+        </ion-item-sliding>
+      } @empty {
+        <div class="empty-state"><p>Nothing matches “{{ filter() }}”.</p></div>
+      }
+    </ion-list>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button id="pantry-fab" aria-label="Add to pantry" (click)="openAdd()">
+      <ion-icon name="add" />
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

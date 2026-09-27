@@ -46,9 +46,12 @@ async function open(): Promise<SqlDb> {
 
   if (platform === 'web') {
     // jeep-sqlite is the plugin's web implementation: a custom element hosting sql.js,
-    // whose wasm the build copies to /assets (project.json).
-    const { defineCustomElements } = await import('jeep-sqlite/loader');
-    await defineCustomElements(window);
+    // whose wasm the build copies to /assets (project.json). Its custom-elements build,
+    // not its lazy loader: Ionic's components run on Stencil's shared custom-elements
+    // runtime, and the dev server merged the loader's runtime into that one — after
+    // which <jeep-sqlite> was "unknown to this Stencil runtime" and never opened.
+    const { defineCustomElement } = await import('jeep-sqlite/dist/components/jeep-sqlite');
+    defineCustomElement();
     if (!document.querySelector('jeep-sqlite')) document.body.appendChild(document.createElement('jeep-sqlite'));
     await customElements.whenDefined('jeep-sqlite');
     await sqlite.initWebStore();

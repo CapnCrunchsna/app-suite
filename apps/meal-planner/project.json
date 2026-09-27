@@ -65,8 +65,12 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
+      "//options": "prebundle.exclude: the three workspace libs change under active development, and a pre-bundled copy goes stale silently (the served data lib once lacked PantryRepo). They are consumed from dist/, so after changing one, restart the server (serve depends on ^build). jeep-sqlite must stay pre-bundled: excluded, the app build tries to bundle sql.js's Node-only require('crypto').",
       "options": {
-        "port": 4203
+        "port": 4203,
+        "prebundle": {
+          "exclude": ["@metrum/meal-planner-domain", "@metrum/meal-planner-data", "@metrum/meal-planner-import"]
+        }
       },
       "configurations": {
         "production": {

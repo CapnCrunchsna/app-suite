@@ -1,0 +1,55 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-button (click)="cancel()">Cancel</ion-button></ion-buttons>
+    <ion-title>{{ mode() === 'bulk' ? 'Bulk scan' : 'Scan barcode' }}</ion-title>
+    @if (mode() === 'bulk') {
+      <ion-buttons slot="end">
+        <ion-button [strong]="true" [disabled]="count() === 0" (click)="done()">Done</ion-button>
+      </ion-buttons>
+    }
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [class.camera]="camera">
+  @if (camera) {
+    <div class="viewfinder" [class.viewfinder--hit]="flash()" aria-hidden="true"></div>
+    <p class="hint">
+      @if (problem()) {
+        {{ problem() }}
+      } @else {
+        Point the camera at a barcode.
+      }
+    </p>
+  } @else {
+    <p class="ion-padding">
+      Camera scanning needs the mobile app. Type the number printed under the barcode instead.
+    </p>
+    <ion-item>
+      <ion-input
+        label="Barcode"
+        labelPlacement="stacked"
+        inputmode="numeric"
+        placeholder="e.g. 5000159484695"
+        [value]="typed()"
+        (ionInput)="typed.set(value($event))"
+        (keyup.enter)="submitTyped()"
+      />
+      <ion-button slot="end" [disabled]="!typedValid()" (click)="submitTyped()">
+        {{ mode() === 'bulk' ? 'Add' : 'Look up' }}
+      </ion-button>
+    </ion-item>
+  }
+</ion-content>
+
+@if (mode() === 'bulk') {
+  <ion-footer>
+    <ion-toolbar>
+      <p class="tally numbers" aria-live="polite">
+        <strong>{{ count() }}</strong> {{ count() === 1 ? 'item' : 'items' }}
+        @if (lastLabel()) {
+          · last: {{ lastLabel() }}
+        }
+      </p>
+    </ion-toolbar>
+  </ion-footer>
+}

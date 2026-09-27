@@ -37,6 +37,17 @@ describe('§10 quantity formatting', () => {
     expect(formatRemaining(1760, 'ML', 2000)).toBe('1.76 L of 2 L');
   });
 
+  it('measures "of" in the whole packages a multi-package purchase still spans', () => {
+    expect(formatRemaining(24, 'COUNT', 12)).toBe('24 of 24');
+    expect(formatRemaining(21, 'COUNT', 12)).toBe('21 of 24');
+    expect(formatRemaining(11, 'COUNT', 12)).toBe('11 of 12');
+    expect(formatRemaining(3500, 'ML', 2000)).toBe('3.5 L of 4 L');
+  });
+
+  it('gives a product sold singly no "of"', () => {
+    expect(formatRemaining(12, 'COUNT', 1)).toBe('12');
+  });
+
   it('formats a lone amount in the larger unit once it passes a thousand', () => {
     expect(formatAmount(240, 'ML')).toBe('240 ml');
     expect(formatAmount(1500, 'G')).toBe('1.5 kg');

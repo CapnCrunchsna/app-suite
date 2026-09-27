@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Cancel</ion-button>
+    </ion-buttons>
+    <ion-title>{{ editing() ? 'Edit product' : 'New product' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [strong]="true" [disabled]="problems().length > 0 || saving()" (click)="save()">Save</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (notice()) {
+    <p class="ion-padding-horizontal ion-padding-top notice">{{ notice() }}</p>
+  }
+  @if (error()) {
+    <p class="ion-padding-horizontal error" role="alert">{{ error() }}</p>
+  }
+
+  <ion-list lines="full">
+    <ion-item>
+      <ion-input
+        label="Name"
+        labelPlacement="stacked"
+        autocapitalize="words"
+        [value]="name()"
+        (ionInput)="name.set(eventValue($event))"
+      />
+    </ion-item>
+    <ion-item>
+      <ion-input
+        label="Brand (optional)"
+        labelPlacement="stacked"
+        autocapitalize="words"
+        [value]="brand()"
+        (ionInput)="brand.set(eventValue($event))"
+      />
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <p>Sold by</p>
+        <ion-segment [value]="unit()" (ionChange)="setUnit($event)">
+          <ion-segment-button value="COUNT"><ion-label>Items</ion-label></ion-segment-button>
+          <ion-segment-button value="G"><ion-label>Weight</ion-label></ion-segment-button>
+          <ion-segment-button value="ML"><ion-label>Volume</ion-label></ion-segment-button>
+        </ion-segment>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-input
+        type="number"
+        inputmode="decimal"
+        labelPlacement="stacked"
+        [label]="amountLabel()"
+        [value]="amount()"
+        (ionInput)="amount.set(eventValue($event))"
+      />
+    </ion-item>
+    <ion-item>
+      <ion-input
+        type="number"
+        inputmode="decimal"
+        labelPlacement="stacked"
+        [label]="'Calories (kcal ' + nutritionLabel() + ')'"
+        [value]="kcal()"
+        (ionInput)="kcal.set(eventValue($event))"
+      />
+    </ion-item>
+    <ion-item>
+      <ion-input
+        type="number"
+        inputmode="decimal"
+        labelPlacement="stacked"
+        [label]="'Protein (g ' + nutritionLabel() + ')'"
+        [value]="protein()"
+        (ionInput)="protein.set(eventValue($event))"
+      />
+    </ion-item>
+    <ion-item>
+      <ion-input
+        label="Barcode (optional)"
+        labelPlacement="stacked"
+        inputmode="numeric"
+        [value]="barcode()"
+        (ionInput)="barcode.set(eventValue($event))"
+      />
+    </ion-item>
+  </ion-list>
+
+  @if (problems().includes('name') && name().length === 0) {
+    <ion-note class="ion-padding">A name and a package size are all it needs to save.</ion-note>
+  }
+
+  @if (editing()) {
+    <div class="ion-padding">
+      <ion-button color="danger" fill="clear" expand="block" (click)="remove()">Delete product</ion-button>
+    </div>
+  }
+</ion-content>

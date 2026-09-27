@@ -1,0 +1,31 @@
+// Over the live camera the content area must be see-through; the header and footer
+// keep their own backgrounds so the controls stay legible.
+ion-content.camera {
+  --background: transparent;
+}
+
+.viewfinder {
+  margin: 20vh auto 0;
+  width: min(80vw, 320px);
+  aspect-ratio: 3 / 2;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35);
+  transition: border-color 120ms ease;
+}
+
+.viewfinder--hit {
+  border-color: var(--ion-color-primary);
+}
+
+.hint {
+  margin: 24px auto 0;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.tally {
+  margin: 0;
+  padding: 0 16px;
+}

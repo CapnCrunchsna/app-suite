@@ -6,8 +6,6 @@ export default defineConfig(() => ({
   test: {
     name: 'meal-planner-import',
     watch: false,
-    // Phase 0 scaffold: this lib's code and its T3/T4/T8 tests arrive in Phase 2.
-    passWithNoTests: true,
     globals: true,
     environment: 'node',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],

@@ -23,6 +23,38 @@ was fixed in place instead, and its revision note says what changed.
   through `~/.gradle/gradle.properties` — see `games/chip-away/scripts/README.md`.
 - **The dev server is `meal-planner` in both launch configs** (workspace and app-suite),
   same command, same port 4203, so a session rooted in either repo can start it.
+- **The dev server does not pre-bundle the three `@metrum/meal-planner-*` libs** (a
+  pre-bundled copy went stale and lacked `PantryRepo`). They are served from `dist/`, so
+  restart the server after changing one. jeep-sqlite must stay pre-bundled.
+- **jeep-sqlite is registered from its custom-elements build**
+  (`jeep-sqlite/dist/components/jeep-sqlite`), not its lazy loader, which collided with
+  Ionic's Stencil runtime. Reasoning in `src/app/data/database.ts`.
+
+## Scanning and lookup
+
+- **Scanning uses the plugin's `startScan` with our own overlay**, for single and bulk
+  scans alike, not its ready-made `scan()` UI — that one is experimental and Android may
+  kill the app mid-scan and lose the result. See `src/app/platform/scanner.ts`.
+- **The browser build takes typed barcodes** where the phone uses the camera, in the same
+  overlay. It is not a feature so much as what makes the scan → Open Food Facts → pantry
+  path testable on a laptop; it is shown only where there is no camera.
+- **Bulk scan counts a barcode again only after 2.5 s out of view.** The scanner reports
+  a code on every frame it can read it; see `src/app/pantry/bulk-scan-session.ts`.
+- **A counted product from Open Food Facts takes OFF's per-serving values.** §4 forbids a
+  per-100 basis on a `COUNT` product, and a carton of eggs' serving is usually one egg.
+  When OFF has no kcal but has kJ, kJ ÷ 4.184 is used.
+- **The Open Food Facts contact is `https://github.com/CapnCrunchsna`**, in
+  `APP_CONTACT` (`src/app/platform/http.ts`). Change it there if the project gets a page.
+
+## Pantry
+
+- **A pantry row is one purchase**, so two cartons are one row of 24, and "of" in
+  "21 of 24" is the whole packages the row still spans. A product sold singly shows a
+  bare count. Reasoning in `libs/meal-planner/domain/src/lib/format.ts`.
+- **A brand the name already contains is not shown twice** ("Nutella", not
+  "Nutella · Nutella"): `distinctBrand` in the domain lib.
+- **Edit's "Full" and "About half" measure the whole row**, so "about half" of two jars
+  is one jar.
 
 ## Storage
 
