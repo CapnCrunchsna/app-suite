@@ -1,0 +1,10 @@
+{
+  "appId": "com.metrumdigital.mealplanner",
+  "appName": "Meal Planner",
+  "webDir": "../../dist/apps/meal-planner/browser",
+  "plugins": {
+    "CapacitorSQLite": {
+      "androidIsEncryption": false
+    }
+  }
+}

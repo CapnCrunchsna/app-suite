@@ -1,0 +1,15 @@
+{
+  "name": "@metrum/meal-planner",
+  "version": "0.0.1",
+  "private": true,
+  "//dependencies": "The Capacitor packages are listed here, not only at the root, because `npx cap sync` discovers native plugins from the package.json beside capacitor.config.json. Versions match the root, so npm hoists them rather than installing twice.",
+  "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@metrum/meal-planner-data": "0.0.1",
+    "@metrum/meal-planner-domain": "0.0.1",
+    "@metrum/meal-planner-import": "0.0.1"
+  }
+}

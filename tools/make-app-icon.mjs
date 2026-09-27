@@ -118,6 +118,36 @@ const ICONS = {
       { rect: [27, 10, 11, 42], fill: '#a78bfa' },
     ],
   },
+
+  /**
+   * Meal Planner: two pantry shelves with jars on them.
+   *
+   * The pantry is the product — the planner can only plan what is on the shelf —
+   * so the mark is the shelf. It mixes both orientations on purpose: the planks are
+   * horizontal like Ledgerline's rows and the jars vertical like Edgeline's bars,
+   * and neither neighbour has both, so the three stay apart at tab size.
+   *
+   * Colours are the MetrumDigital dark teal: the surface ground, the dim teal for
+   * the planks, the pale text tone for the jars, and the accent on the one jar that
+   * is tonight's dinner.
+   */
+  'meal-planner': {
+    label: 'Meal Planner',
+    background: '#0f2124',
+    radius: 12,
+    // Jars are 9–12 units wide, above the 7-unit floor Ledgerline's note sets; the
+    // planks are 5 because they only have to read as a line under the jars.
+    bars: [
+      { rect: [12, 12, 10, 18], fill: '#dcefeb' },
+      { rect: [27, 18, 9, 12], fill: '#dcefeb' },
+      { rect: [41, 10, 11, 20], fill: '#dcefeb' },
+      { rect: [7, 30, 50, 5], fill: '#7ea8a1' },
+      { rect: [12, 37, 12, 15], fill: '#2dd4bf' },
+      { rect: [29, 42, 9, 10], fill: '#dcefeb' },
+      { rect: [42, 38, 10, 14], fill: '#dcefeb' },
+      { rect: [7, 52, 50, 5], fill: '#7ea8a1' },
+    ],
+  },
 };
 
 const GRID = 64;

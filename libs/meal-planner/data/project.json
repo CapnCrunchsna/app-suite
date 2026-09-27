@@ -1,0 +1,12 @@
+{
+  "name": "meal-planner-data",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/meal-planner/data/src",
+  "projectType": "library",
+  "tags": [
+    "scope:mp",
+    "type:data-access"
+  ],
+  "// targets": "to see all targets run: nx show project meal-planner-data --web",
+  "targets": {}
+}

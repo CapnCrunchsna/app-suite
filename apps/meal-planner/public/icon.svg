@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Meal Planner">
+  <rect width="64" height="64" rx="12" fill="#0f2124"/>
+  <rect x="12" y="12" width="10" height="18" rx="3.33" fill="#dcefeb"/>
+  <rect x="27" y="18" width="9" height="12" rx="3" fill="#dcefeb"/>
+  <rect x="41" y="10" width="11" height="20" rx="3.67" fill="#dcefeb"/>
+  <rect x="7" y="30" width="50" height="5" rx="1.67" fill="#7ea8a1"/>
+  <rect x="12" y="37" width="12" height="15" rx="4" fill="#2dd4bf"/>
+  <rect x="29" y="42" width="9" height="10" rx="3" fill="#dcefeb"/>
+  <rect x="42" y="38" width="10" height="14" rx="3.33" fill="#dcefeb"/>
+  <rect x="7" y="52" width="50" height="5" rx="1.67" fill="#7ea8a1"/>
+</svg>

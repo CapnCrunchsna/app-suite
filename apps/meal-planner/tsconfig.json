@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noPropertyAccessFromIndexSignature": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "module": "preserve",
+    // Same overrides as apps/ledgerline-ui/tsconfig.json, for the same reasons: Angular
+    // rejects `emitDeclarationOnly` (NG4006), the browser needs `dom`, and workspace
+    // libs resolve through their built `dist/` — which is what the bundler loads.
+    "emitDeclarationOnly": false,
+    "lib": ["es2022", "dom"],
+    "customConditions": []
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

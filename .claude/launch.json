@@ -27,6 +27,12 @@
       "port": 4202
     },
     {
+      "name": "meal-planner",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "serve", "meal-planner"],
+      "port": 4203
+    },
+    {
       "name": "edgeline-api",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "serve", "edgeline-api"],

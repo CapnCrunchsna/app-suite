@@ -4,6 +4,9 @@ The Nx monorepo for the Angular/TypeScript UIs and Ionic/Capacitor mobile apps, 
 backends wired via Nx `run-commands`. See [`CLAUDE.md`](CLAUDE.md) for what lives here and the
 stack defaults.
 
+**Meal Planner** (`apps/meal-planner`, `libs/meal-planner/*`) is the Ionic/Capacitor app
+here; its README covers running it on the web and on Android.
+
 Currently bootstrapped by **Ledgerline**, a locally run financial-statement analyzer. Its
 contract is [`docs/ledgerline-spec.md`](docs/ledgerline-spec.md); the plan artifact is one
 level up at `artifacts/plans/ledgerline-design.md`.

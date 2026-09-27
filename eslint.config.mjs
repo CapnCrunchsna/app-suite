@@ -39,6 +39,10 @@ export default [
               onlyDependOnLibsWithTags: ['scope:el', 'scope:shared'],
             },
             {
+              sourceTag: 'scope:mp',
+              onlyDependOnLibsWithTags: ['scope:mp', 'scope:shared'],
+            },
+            {
               sourceTag: 'scope:shared',
               onlyDependOnLibsWithTags: ['scope:shared'],
             },
@@ -67,6 +71,13 @@ export default [
               onlyDependOnLibsWithTags: ['type:domain', 'type:format'],
             },
             { sourceTag: 'type:llm', onlyDependOnLibsWithTags: ['type:domain', 'type:format'] },
+            // Meal Planner's importers (OFF, USDA, recipe URLs). meal-planner-spec.md §2:
+            // pure TS over the domain, never the data lib — an import produces a draft
+            // for the user to review, and saving it is the app's call.
+            {
+              sourceTag: 'type:import',
+              onlyDependOnLibsWithTags: ['type:domain', 'type:format'],
+            },
             {
               sourceTag: 'type:feature',
               onlyDependOnLibsWithTags: [

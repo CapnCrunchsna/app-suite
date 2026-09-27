@@ -36,6 +36,12 @@ Then verify with `node ../../scripts/check-artifacts.mjs`.
   merchant normalization chain, the nine analyzer rules with their thresholds, and the
   page-level UI contract. Registered on the dashboard; its companion plan artifact is
   `../../artifacts/plans/ledgerline-design.md`.
+- **`meal-planner-spec.md`** — the Meal Planner build specification: the SQLite schema,
+  nutrition and unit rules, the planner algorithm with its golden-test numbers, the
+  ingredient parser and product matcher, the four screens, the phase checklists and the
+  §13 prohibitions (first among them: no LLM calls). Registered on the dashboard; its
+  companion plan artifact is `../../artifacts/plans/pantry-meal-planner-design.md`. Moved
+  here from `artifacts/plans/` on 2026-09-27, as implementation began.
 - **`statement-parsing.md`** — implementation notes for the CSV ingest path: the
   format-profile schema, the `parse-statement` CLI, how to add a bank, the five places the
   code deliberately departs from the spec, and what has and has not been validated against a

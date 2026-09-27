@@ -8,6 +8,7 @@
     "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
     "check": "nx run-many -t lint typecheck test build",
+    "serve:meal-planner": "nx serve meal-planner",
     "parse": "node tools/parse-statement.mjs",
     "seed:dev": "node tools/seed-dev-data.mjs"
   },
@@ -19,6 +20,7 @@
     "@angular/cli": "~22.0.4",
     "@angular/compiler-cli": "~22.0.4",
     "@angular/language-service": "~22.0.4",
+    "@capacitor/cli": "^8.5.2",
     "@eslint/js": "^9.39.5",
     "@nx/angular": "23.1.0",
     "@nx/eslint": "^23.1.0",
@@ -55,6 +57,7 @@
     "apps/*",
     "libs/ledgerline/*",
     "libs/edgeline/*",
+    "libs/meal-planner/*",
     "libs/shared/*"
   ],
   "dependencies": {
@@ -64,10 +67,18 @@
     "@angular/forms": "~22.0.4",
     "@angular/platform-browser": "~22.0.4",
     "@angular/router": "~22.0.4",
+    "@capacitor-community/sqlite": "^8.1.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@fastify/multipart": "^9.4.0",
     "@fastify/swagger": "^9.8.1",
+    "@ionic/angular": "^9.0.5",
     "better-sqlite3": "^12.11.1",
     "fastify": "^5.11.2",
-    "rxjs": "~7.8.0"
+    "ionicons": "^8.1.0",
+    "jeep-sqlite": "^2.8.0",
+    "rxjs": "~7.8.0",
+    "sql.js": "1.11.0"
   }
 }

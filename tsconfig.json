@@ -44,6 +44,18 @@
     },
     {
       "path": "./libs/shared/format"
+    },
+    {
+      "path": "./libs/meal-planner/domain"
+    },
+    {
+      "path": "./libs/meal-planner/import"
+    },
+    {
+      "path": "./libs/meal-planner/data"
+    },
+    {
+      "path": "./apps/meal-planner"
     }
   ],
   "compilerOptions": {}

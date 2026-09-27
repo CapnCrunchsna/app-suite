@@ -14,7 +14,10 @@ inside it.
   local desktop app, with an Elasticsearch re-index planned for the home server. Spec:
   `docs/ledgerline-spec.md`.
 - **Meal Planner** — Ionic + Capacitor (Android-first) + PWA; local-first **SQLite on device**
-  (the ES exception for local-first mobile; keep the data model sync-friendly).
+  (the ES exception for local-first mobile; keep the data model sync-friendly). App at
+  `apps/meal-planner`, libs under `libs/meal-planner/`. Spec: `docs/meal-planner-spec.md` —
+  normative, phases strict, §13 prohibitions are hard rules. Open choices go in the app's
+  `DECISIONS.md`.
 - **Photo-to-Calendar** — Ionic + Capacitor (Android); Claude vision API (Haiku); Android
   CalendarProvider.
 - **Edgeline** — sports betting intelligence: +EV/arbitrage detection with Discord alerts and

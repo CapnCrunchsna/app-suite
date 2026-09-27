@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "references": [
+    {
+      "path": "../../libs/meal-planner/domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/meal-planner/import/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/meal-planner/data/tsconfig.lib.json"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+// Ionic's own CSS is loaded ahead of this file (project.json `styles`), including the
+// system dark palette. This file only sets the app's accent — the MetrumDigital teal —
+// and the few global rules the pages share.
+
+:root {
+  --ion-color-primary: #0d9488;
+  --ion-color-primary-rgb: 13, 148, 136;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0b8378;
+  --ion-color-primary-tint: #259e94;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-color-primary: #2dd4bf;
+    --ion-color-primary-rgb: 45, 212, 191;
+    --ion-color-primary-contrast: #042f2e;
+    --ion-color-primary-contrast-rgb: 4, 47, 46;
+    --ion-color-primary-shade: #28baa8;
+    --ion-color-primary-tint: #42d8c5;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ion-color-medium);
+}
+
+.empty-state p {
+  margin: 0;
+  max-width: 28ch;
+}
+
+.numbers {
+  font-variant-numeric: tabular-nums;
+}

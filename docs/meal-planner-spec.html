@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantry Meal Planner — v1 Implementation Specification — MetrumDigital</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%20role='img'%20aria-label='MetrumDigital'%3E%20%3Cdefs%3E%20%3ClinearGradient%20id='mdg'%20x1='0'%20y1='0'%20x2='32'%20y2='32'%20gradientUnits='userSpaceOnUse'%3E%20%3Cstop%20offset='0'%20stop-color='%230ea5e9'/%3E%20%3Cstop%20offset='.55'%20stop-color='%2314b8a6'/%3E%20%3Cstop%20offset='1'%20stop-color='%2322c55e'/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20x='1'%20y='1'%20width='30'%20height='30'%20rx='8'%20fill='%230d9488'/%3E%20%3Cg%20fill='%235eead4'%3E%20%3Crect%20x='1'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3C/g%3E%20%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='3'%20fill='url(%23mdg)'/%3E%20%3Cpath%20d='M9%2022V10.5l7%206.5%207-6.5V22'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%20%3C/svg%3E">
+
+<!-- Restore saved theme before paint to avoid flash. Default is dark. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('md-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0a1517; --surface:#0f2124; --surface-2:#143034; --border:#1f4a47;
+    --text:#dcefeb; --text-dim:#7ea8a1; --accent:#2dd4bf; --accent-2:#34d399;
+    --code-bg:#0f2124; --shadow:0 1px 3px rgba(0,0,0,.5);
+    --radius:10px; --maxw:880px;
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff; --surface:#f0faf8; --surface-2:#e0f3ef; --border:#bfe3dc;
+    --text:#0b2a27; --text-dim:#48706a; --accent:#0d9488; --accent-2:#059669;
+    --code-bg:#f0faf8; --shadow:0 1px 3px rgba(140,149,159,.3);
+  }
+  html[data-theme="dark"]{color-scheme:dark}
+  html[data-theme="light"]{color-scheme:light}
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    transition:background .2s ease,color .2s ease;
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
+  }
+  .topbar a{color:var(--accent); text-decoration:none; font-weight:600}
+  .topbar a:hover{text-decoration:underline}
+  .home{white-space:nowrap; display:inline-flex; align-items:center; gap:8px}
+  .brand-mark{width:22px; height:22px; flex:none}
+  .related{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+  .related .label{color:var(--text-dim); font-weight:400}
+  .related a{font-weight:500; padding:3px 10px; border:1px solid var(--border);
+    border-radius:999px; background:var(--surface-2)}
+  .spacer{flex:1}
+  .toggle{
+    cursor:pointer; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:600;
+  }
+  .toggle:hover{border-color:var(--accent)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:40px 24px 80px}
+  h1{font-size:2rem; line-height:1.2; margin:0 0 6px}
+  h2{margin-top:2em; padding-bottom:.3em; border-bottom:1px solid var(--border)}
+  .meta{color:var(--text-dim); font-size:14px; margin:0 0 32px}
+  .meta .tag{display:inline-block; padding:2px 10px; border-radius:999px;
+    background:var(--surface-2); border:1px solid var(--border); margin-right:8px; font-weight:600}
+  a{color:var(--accent)}
+  code{background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:.15em .4em; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.9em}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; overflow:auto}
+  pre code{background:none; border:none; padding:0}
+  blockquote{margin:1em 0; padding:.5em 1em; border-left:4px solid var(--accent);
+    background:var(--surface); border-radius:0 var(--radius) var(--radius) 0; color:var(--text-dim)}
+  table{border-collapse:collapse; width:100%; margin:1em 0}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left}
+  th{background:var(--surface-2)}
+  hr{border:none; border-top:1px solid var(--border); margin:2em 0}
+  footer{max-width:var(--maxw); margin:0 auto; padding:24px; color:var(--text-dim);
+    font-size:14px; border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../../dashboard.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="mdLogoT" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0ea5e9"/><stop offset=".55" stop-color="#14b8a6"/><stop offset="1" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0d9488"/>
+      <g fill="#5eead4"><rect x="1" y="8.5" width="4" height="2.6"/><rect x="1" y="14.7" width="4" height="2.6"/><rect x="1" y="20.9" width="4" height="2.6"/><rect x="27" y="8.5" width="4" height="2.6"/><rect x="27" y="14.7" width="4" height="2.6"/><rect x="27" y="20.9" width="4" height="2.6"/></g>
+      <rect x="5" y="5" width="22" height="22" rx="3" fill="url(#mdLogoT)"/>
+      <path d="M9 22V10.5l7 6.5 7-6.5V22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>← Dashboard</span>
+  </a>
+  <nav class="related">
+    <span class="label">Related:</span>
+    <a href="../../artifacts/plans/pantry-meal-planner-design.html">Pantry Meal Planner — Design Session & v1 Plan</a>
+  </nav>
+  <span class="spacer"></span>
+  <button id="themeToggle" class="toggle" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+<h1>Pantry Meal Planner — v1 Implementation Specification</h1>
+<p class="meta"><span class="tag">plans</span> 2026-07-06</p>
+<p><strong>Type:</strong> Plan · <strong>Date:</strong> 2026-07-06, revised 2026-09-27 · <strong>Project:</strong> Meal Planner App<br>
+<strong>Companion:</strong> <code>../../artifacts/plans/pantry-meal-planner-design.md</code> (design rationale). <strong>If the two conflict, this spec wins.</strong><br>
+This spec lives beside the code it governs (<code>app-suite/docs/</code>) and lands in the same commits.<br>
+The 2026-09-27 revision, made as implementation began, fixed what building it exposed: <a href="#s2">§2</a><br>
+drops the <code>ui</code> lib and pins the <code>data</code> lib's storage port, <a href="#s7">§7</a> drops a contact email from a<br>
+request header, <a href="#s8">§8.1</a> reorders a regex whose fraction branch could never match, <a href="#s9">§9</a> defines<br>
+level 3 exactly, <a href="#s10">§10</a> caps the meal stepper at the three meal types that exist, and <a href="#s14">§14</a> T7<br>
+gets numbers.</p>
+<h2 id="s0">0. How to use this document</h2>
+<p>This spec is written for an implementer (human or model) who was not part of the design session. Follow it literally.</p>
+<ul><li>Build the phases in <a href="#s12">§12</a> <strong>in order</strong>. Do not start a phase before the previous phase's acceptance criteria pass.</li><li>Anything not listed in this spec is <strong>out of scope</strong>. Do not add features, screens, settings, or dependencies beyond those named here. <a href="#s13">§13</a> lists explicit prohibitions.</li><li>Where the spec gives exact numbers (weights, thresholds, golden tests), implement them exactly. Golden tests in <a href="#s14">§14</a> must pass with the exact expected values.</li><li>If something is genuinely unspecified, choose the <strong>simplest</strong> option consistent with <a href="#s13">§13</a>, and record the choice in a <code>DECISIONS.md</code> at the app root.</li><li>Package <em>versions</em> are not normative (use current stable); package <em>choices</em> and the project structure are normative.</li></ul>
+<h2 id="s1">1. Product summary</h2>
+<p>A mobile app (Android first, iOS once a Mac is available to build it, plus a PWA build used for testing). The user maintains a <strong>pantry</strong> (foods they own), a <strong>meal library</strong> (their meals with ingredients), and a daily <strong>calorie + protein budget</strong>. The app generates candidate day plans — combinations of meals from the library that fit the budget using only food actually in the pantry. The user can pin a specific meal ("I want tacos today") and regenerate the rest. Cooking a meal decrements its ingredients from the pantry.</p>
+<p>Single user. All data on-device. No accounts, no backend, no LLM.</p>
+<h2 id="s2">2. Workspace and project structure</h2>
+<p>Nx monorepo (the existing MetrumDigital workspace standard), Angular with Ionic standalone components, Capacitor for native builds.</p>
+<pre><code>apps/meal-planner/            Ionic Angular app + Capacitor config (android/), the
+                              Capacitor adapters (SQLite, HTTP, scanner), pages, and
+                              presentational components under src/app/components/
+libs/meal-planner/domain/     Pure TS, no Angular imports: entities, unit logic,
+                              nutrition math, planner engine, depletion
+libs/meal-planner/data/       Pure TS: schema, migrations, repositories, seed loader —
+                              written against a `SqlDb` port, never a driver
+libs/meal-planner/import/     Pure TS: OFF client, USDA client, recipe URL importer,
+                              ingredient parser, product matcher</code></pre>
+<p>There is no <code>ui</code> lib: one app consumes these components, and an Angular component lib in this workspace needs its own ng-packagr build (see <code>libs/shared/ui/README.md</code>). Extract one when a second consumer exists.</p>
+<p>The <code>data</code> lib owns every SQL statement but no driver. The app supplies a <code>SqlDb</code> over <code>@capacitor-community/sqlite</code>; the lib's tests supply one over <code>better-sqlite3</code> (already a workspace dependency), so migrations, repositories and the <a href="#s11">§11</a> decrement run against real SQLite in Node.</p>
+<p>Key dependencies:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Purpose</th><th>Package</th></tr>
+<tr><td>UI framework</td><td><code>@angular/*</code>, <code>@ionic/angular</code> (standalone)</td></tr>
+<tr><td>Native bridge</td><td><code>@capacitor/core</code>, <code>@capacitor/cli</code>, <code>@capacitor/android</code> (<code>@capacitor/ios</code> when iOS starts)</td></tr>
+<tr><td>Barcode scanning</td><td><code>@capacitor-mlkit/barcode-scanning</code></td></tr>
+<tr><td>Storage</td><td><code>@capacitor-community/sqlite</code> (+ <code>jeep-sqlite</code> for the web build)</td></tr>
+<tr><td>HTTP that bypasses CORS on device</td><td><code>CapacitorHttp</code> from <code>@capacitor/core</code></td></tr>
+<tr><td>Unit tests</td><td>Vitest via Nx defaults (<code>better-sqlite3</code> for the <code>data</code> lib's port)</td></tr>
+</table></div>
+<p>Rules:</p>
+<ul><li><code>domain</code> and <code>import</code> libs must have <strong>zero</strong> Angular/Ionic/Capacitor imports so their logic is unit-testable in Node. Network and storage are injected as interfaces.</li><li>All timestamps: ISO 8601 UTC strings. All IDs: UUID v4 strings generated on device.</li><li>Soft delete only: set <code>deleted_at</code>; never hard-DELETE rows (future sync requirement).</li></ul>
+<h2 id="s3">3. Database schema (SQLite DDL — normative)</h2>
+<pre><code>CREATE TABLE products (
+  id              TEXT PRIMARY KEY,          -- UUID v4
+  barcode         TEXT,                      -- nullable; not all products have one
+  name            TEXT NOT NULL,
+  brand           TEXT,
+  package_unit    TEXT NOT NULL CHECK (package_unit IN ('COUNT','G','ML')),
+  package_amount  REAL NOT NULL,             -- e.g. 12 (COUNT), 500 (G), 2000 (ML)
+  nutrition_basis TEXT NOT NULL CHECK (nutrition_basis IN ('PER_100','PER_UNIT')),
+  kcal            REAL,                      -- per 100 g/ml, or per single unit
+  protein_g       REAL,                      -- same basis as kcal
+  source          TEXT NOT NULL DEFAULT 'manual'
+                    CHECK (source IN ('off','usda','manual','seed')),
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL,
+  deleted_at      TEXT
+);
+CREATE INDEX idx_products_barcode ON products(barcode);
+
+CREATE TABLE pantry_items (
+  id          TEXT PRIMARY KEY,
+  product_id  TEXT NOT NULL REFERENCES products(id),
+  quantity    REAL NOT NULL,                 -- in the product's base unit:
+                                             -- COUNT -&gt; units, G -&gt; grams, ML -&gt; ml
+  expires_on  TEXT,                          -- YYYY-MM-DD, nullable (v1: stored, unused)
+  acquired_at TEXT NOT NULL,
+  updated_at  TEXT NOT NULL,
+  deleted_at  TEXT
+);
+
+CREATE TABLE meals (
+  id             TEXT PRIMARY KEY,
+  name           TEXT NOT NULL,
+  servings       REAL NOT NULL DEFAULT 1,    -- servings the ingredient list yields
+  slots          TEXT NOT NULL,              -- JSON array, subset of
+                                             -- ["breakfast","lunch","dinner","snack"]
+  source         TEXT NOT NULL DEFAULT 'manual'
+                   CHECK (source IN ('manual','import','seed')),
+  source_url     TEXT,
+  kcal_per_serving    REAL NOT NULL,         -- cached; recompute on ingredient change
+  protein_per_serving REAL NOT NULL,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  deleted_at     TEXT
+);
+
+CREATE TABLE meal_ingredients (
+  id           TEXT PRIMARY KEY,
+  meal_id      TEXT NOT NULL REFERENCES meals(id),
+  product_id   TEXT,                         -- nullable: unmapped / to-taste lines
+  quantity     REAL,                         -- in unit below; null if to_taste
+  unit         TEXT CHECK (unit IN ('COUNT','G','ML')),
+  display_text TEXT NOT NULL,                -- original human text, e.g. "2 cups flour"
+  to_taste     INTEGER NOT NULL DEFAULT 0,   -- 1 = exclude from nutrition &amp; feasibility
+  position     INTEGER NOT NULL,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  deleted_at   TEXT
+);
+
+CREATE TABLE plans (
+  id             TEXT PRIMARY KEY,
+  plan_date      TEXT NOT NULL,              -- YYYY-MM-DD; UNIQUE among non-deleted
+  kcal_budget    REAL NOT NULL,
+  protein_target REAL NOT NULL,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  deleted_at     TEXT
+);
+
+CREATE TABLE plan_slots (
+  id        TEXT PRIMARY KEY,
+  plan_id   TEXT NOT NULL REFERENCES plans(id),
+  slot_type TEXT NOT NULL CHECK (slot_type IN ('breakfast','lunch','dinner','snack')),
+  position  INTEGER NOT NULL,
+  meal_id   TEXT,                            -- assigned meal, nullable
+  pinned    INTEGER NOT NULL DEFAULT 0,
+  cooked_at TEXT,                            -- set when user marks it cooked
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE settings (                      -- single-row-per-key store
+  key   TEXT PRIMARY KEY,                    -- e.g. 'default_kcal_budget',
+  value TEXT NOT NULL                        -- 'default_protein_target',
+);                                           -- 'default_slots', 'usda_api_key'</code></pre>
+<p><strong>Base-unit rule (critical):</strong> every stored quantity is in <code>COUNT</code>, <code>G</code>, or <code>ML</code>. Cups, tbsp, oz, etc. are converted at the input boundary (<a href="#s6">§6</a>) and never stored — only echoed back via <code>display_text</code>.</p>
+<h2 id="s4">4. Nutrition math (exact)</h2>
+<p>For an ingredient with quantity <code>q</code> in base unit and its product <code>p</code>:</p>
+<ul><li><code>nutrition_basis = 'PER_UNIT'</code> (only valid for COUNT products): <code>kcal = q × p.kcal</code>, <code>protein = q × p.protein_g</code></li><li><code>nutrition_basis = 'PER_100'</code> (G or ML products): <code>kcal = (q / 100) × p.kcal</code>, <code>protein = (q / 100) × p.protein_g</code></li><li><code>to_taste = 1</code> or <code>product_id IS NULL</code>: contributes <strong>0</strong> kcal / 0 protein.</li></ul>
+<p>Meal per-serving values: sum over ingredients ÷ <code>servings</code>. Round only for display (nearest whole kcal, protein to 1 decimal); store unrounded.</p>
+<h2 id="s5">5. Pantry feasibility (exact)</h2>
+<p>A meal is <strong>makeable</strong> if for every ingredient with <code>to_taste = 0</code> and a non-null <code>product_id</code>, total non-deleted pantry quantity of that product ≥ ingredient quantity (for 1 serving of the meal: ingredient quantities are for the full recipe, so per-serving need = <code>quantity / servings</code>; planning consumes exactly <strong>1 serving</strong> per slot in v1). A <em>plan</em> is feasible only if the summed per-serving needs across all its meals fit the pantry (a shared ingredient must cover all meals that use it, together).</p>
+<h2 id="s6">6. Units and conversions</h2>
+<p>Canonical volume: 1 tsp = 5 ml, 1 tbsp = 15 ml, 1 fl oz = 30 ml, 1 cup = 240 ml. Canonical mass: 1 oz = 28.35 g, 1 lb = 453.6 g.</p>
+<p>Volume→mass needs a density. Ship this table as a constant (grams per US cup); scale linearly for tsp/tbsp/fl-oz via the volume ratios above:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Food (match by token)</th><th>g/cup</th><th></th><th>Food</th><th>g/cup</th></tr>
+<tr><td>flour</td><td>120</td><td></td><td>rolled oats</td><td>90</td></tr>
+<tr><td>sugar (granulated)</td><td>200</td><td></td><td>brown sugar</td><td>220</td></tr>
+<tr><td>rice (uncooked)</td><td>185</td><td></td><td>butter</td><td>227</td></tr>
+<tr><td>peanut butter</td><td>256</td><td></td><td>honey</td><td>340</td></tr>
+<tr><td>shredded cheese</td><td>113</td><td></td><td>cocoa powder</td><td>100</td></tr>
+</table></div>
+<p>Conversion policy at input time:</p>
+<ol><li>Target product is ML-based and input is volume → convert directly.</li><li>Target product is G-based and input is mass → convert directly.</li><li>Target product is G-based and input is volume → look up density table by token match on the product name; if found, prefill the gram value <strong>but require user confirmation</strong>; if not found, ask the user for grams.</li><li>Target product is COUNT-based → input must be a count; anything else asks the user.</li></ol>
+<h2 id="s7">7. Barcode scanning and product lookup</h2>
+<p>Flow for a single scan (<code>@capacitor-mlkit/barcode-scanning</code>, camera permission requested on first use with a one-line explanation):</p>
+<ol><li>Barcode string → look up local <code>products.barcode</code>.</li><li><strong>Hit:</strong> show "Add ⟨name⟩ to pantry" sheet: quantity stepper (default 1 package), optional expiration date. Confirm → insert <code>pantry_items</code> row with <code>quantity = packages × package_amount</code>.</li><li><strong>Miss:</strong> GET <code>https://world.openfoodfacts.org/api/v2/product/{barcode}?fields=product_name,brands,quantity,serving_size,nutriments</code> with header <code>User-Agent: MetrumMealPlanner/&lt;version&gt; (&lt;contact&gt;)</code> on native (browsers refuse to let a page set <code>User-Agent</code>, and OFF's API serves CORS, so the web build uses plain <code>fetch</code>). The contact is one constant in the app, and it is a project URL, not anyone's email address — every install would send it. Response <code>status == 1</code> → prefill the product form: <code>name</code> ← <code>product_name</code>, <code>brand</code> ← <code>brands</code>, kcal/protein ← <code>nutriments["energy-kcal_100g"]</code> / <code>nutriments["proteins_100g"]</code> with <code>nutrition_basis='PER_100'</code>; parse <code>quantity</code> (e.g. <code>"500 g"</code>, <code>"1 L"</code>, <code>"12"</code>) into <code>package_amount</code>/<code>package_unit</code>, leaving blank if unparseable. User reviews → save product (<code>source='off'</code>) → step 2 sheet.</li><li><strong>OFF miss or offline:</strong> open the blank manual product form (same form, <code>source='manual'</code>). The form must be completable in under ~20 seconds: name, package unit/amount, kcal, protein, optional barcode (pre-filled from the scan).</li></ol>
+<p><strong>Bulk scan mode:</strong> continuous camera session; each recognized barcode is added as 1 package using steps 1–3 (unknown products queue for review instead of interrupting); running count shown; "Done" opens a review list (edit quantities, resolve queued unknowns, remove mistakes) before committing all rows in one transaction.</p>
+<p><strong>USDA FoodData Central (optional):</strong> only if the user has entered an API key in Settings. Used for <em>generic</em> food search in the product picker: <code>GET https://api.nal.usda.gov/fdc/v1/foods/search?api_key=…&amp;query=…&amp;pageSize=10</code>. Map kcal (nutrient 1008) and protein (nutrient 1003) per 100 g. No key → hide the option.</p>
+<p>Cache every successful OFF/USDA result as a local product row; never re-fetch a barcode that exists locally.</p>
+<h2 id="s8">8. Recipe URL import</h2>
+<p>Platform note: recipe sites do not send CORS headers. Fetch pages with <code>CapacitorHttp</code> (native). On the web/PWA build, if the fetch fails for CORS reasons, show "URL import requires the mobile app" — do <strong>not</strong> ship a proxy.</p>
+<p>Pipeline:</p>
+<ol><li><strong>Fetch</strong> the URL (follow redirects, 15 s timeout).</li><li><strong>Extract JSON-LD:</strong> collect every <code>&lt;script type="application/ld+json"&gt;</code> block; parse each (tolerate arrays and <code>@graph</code> wrappers); find the first object whose <code>@type</code> is <code>"Recipe"</code> or contains <code>"Recipe"</code>. None found → error "No recipe found on this page" (v1 does not fall back to HTML scraping).</li><li><strong>Extract fields:</strong> <code>name</code>; <code>recipeYield</code> (first integer found in it, default 1); <code>recipeIngredient</code> (array of strings); <code>nutrition.calories</code> / <code>nutrition.proteinContent</code> if present (numbers extracted from strings like <code>"240 calories"</code>).</li><li><strong>Parse each ingredient string</strong> (<a href="#s8">§8.1</a>).</li><li><strong>Match each parsed ingredient to a product</strong> (<a href="#s8">§8.2</a>).</li><li><strong>Review screen</strong> (<a href="#s10">§10</a>, Import Review) — nothing is saved until the user confirms. On confirm: create any "new product" rows, insert the meal (<code>source='import'</code>, <code>source_url</code> set) and its ingredients; compute nutrition per <a href="#s4">§4</a>. If site-provided nutrition disagrees with computed by &gt;25%, show both and let the user pick which to trust (store the choice in the cached per-serving fields; ingredients stay as mapped).</li></ol>
+<h3 id="s8-1">8.1 Ingredient parser (exact)</h3>
+<p>Input: one string. Output: <code>{ qty: number|null, unit: 'COUNT'|'G'|'ML'|null, rawUnit: string|null, name: string, note: string|null, toTaste: boolean }</code>.</p>
+<ol><li>Trim; collapse whitespace. Replace unicode fractions (¼ ½ ¾ ⅓ ⅔ ⅕ ⅛) with decimals; <code>"1 ½"</code> and <code>"1 1/2"</code> both → <code>1.5</code>.</li><li>If the line matches <code>/to taste|for serving|for garnish|optional/i</code> → <code>toTaste = true</code>, and remove the matched phrase (with any comma before it) from the line.</li><li>Extract a parenthetical <code>\(([^)]*)\)</code> into <code>note</code> and remove it (e.g. <code>"(15 oz)"</code>), then collapse whitespace again.</li><li>Match leading quantity: <code>/^(\d+\/\d+|\d+(?:\.\d+)?)/</code> (fractions like <code>3/4</code> → 0.75). The fraction branch comes first: alternation takes the first branch that matches, so with the decimal branch first, <code>3/4</code> parses as <code>3</code>.</li><li>Match the next token against the unit table (case-insensitive, plural-tolerant): <code>cup(s)→cup, tablespoon(s)|tbsp→tbsp, teaspoon(s)|tsp→tsp, fl oz→floz, ounce(s)|oz→oz, pound(s)|lb(s)→lb, gram(s)|g→g, kilogram(s)|kg→kg, milliliter(s)|ml→ml, liter(s)|l→l, can(s)→can, slice(s)→slice, clove(s)→clove, pinch(es)→pinch</code>. Convert to base per <a href="#s6">§6</a> (<code>cup/tbsp/tsp/floz/ml/l → ML</code>, <code>oz/lb/g/kg → G</code>, <code>can/slice/clove/pinch → COUNT</code>), keeping the original in <code>rawUnit</code>. A quantity with no unit token is <code>COUNT</code> with <code>rawUnit = null</code>; no quantity at all leaves <code>qty</code>, <code>unit</code> and <code>rawUnit</code> null.</li><li>Strip a leading <code>of </code>; text before the first comma is <code>name</code>, after it appends to <code>note</code> (e.g. <code>", drained"</code>; several note parts join with <code>"; "</code>). <code>name</code> is lowercased and trimmed.</li></ol>
+<p>Golden cases (must pass exactly — see <a href="#s14">§14</a> T3).</p>
+<h3 id="s8-2">8.2 Product matcher (exact)</h3>
+<ul><li>Normalize both ingredient <code>name</code> and product names: lowercase, strip punctuation, split on whitespace, drop stopwords <code>{fresh, large, small, medium, chopped, diced, shredded, sliced, minced, drained, rinsed, cooked, raw, of, the, a, an}</code>.</li><li>Score = Jaccard similarity of the token sets: <code>|A ∩ B| / |A ∪ B|</code>.</li><li><strong>Auto-map</strong> when top score ≥ 0.5 <strong>and</strong> (top − second) ≥ 0.2. Otherwise the review screen shows the top 5 candidates plus "Search…", "Create new product", and "Mark as to-taste".</li></ul>
+<h2 id="s9">9. The planner engine (exact)</h2>
+<p>Pure function in <code>domain</code>:</p>
+<pre><code>generatePlans(input: {
+  kcalBudget: number, proteinTarget: number,
+  slots: SlotType[],                       // e.g. ['breakfast','lunch','dinner','snack']
+  pinned: Map&lt;slotIndex, mealId&gt;,
+  meals: Meal[], pantry: PantrySnapshot
+}) -&gt; { level: 0|1|2|3, plans: RankedPlan[] }   // up to 3 plans</code></pre>
+<p><strong>Constraint levels</strong> — evaluate level 0 first; return the first level that yields ≥ 1 plan:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Level</th><th>Calorie window (total kcal)</th><th>Protein constraint</th></tr>
+<tr><td>0</td><td><code>[0.9 × B, B]</code> inclusive</td><td><code>total ≥ 0.9 × T</code></td></tr>
+<tr><td>1</td><td><code>[0.8 × B, B]</code> inclusive</td><td><code>total ≥ 0.9 × T</code></td></tr>
+<tr><td>2</td><td><code>[0.8 × B, B]</code> inclusive</td><td>none (flag the deficit in the result)</td></tr>
+<tr><td>3</td><td>Best effort, exactly one plan: see below</td><td>none</td></tr>
+</table></div>
+<p><strong>Level 3 (exact):</strong> place each pinned meal first, if it is still feasible against the pantry and fits the remaining budget. Then, for each unpinned slot in list order, take the eligible, not-yet-used, still-feasible meal with the <strong>highest</strong> <code>kcal_per_serving</code> that fits the remaining budget (ties: input order), reserving its ingredients. A slot with no such meal stays empty, and the plan is flagged partial. It is scored with the formula below using <code>lo = 0</code>.</p>
+<p><strong>Candidate generation:</strong> meals that are makeable (<a href="#s5">§5</a>), filtered per slot by eligibility (<code>slot_type ∈ meal.slots</code>). A meal may appear <strong>at most once</strong> per plan. Per slot, if more than 40 candidates, keep the 40 whose <code>kcal_per_serving</code> is closest to <code>slotShare × B</code>, where slotShare is: breakfast 0.25, lunch 0.30, dinner 0.35, and the remaining 0.10 split equally among snack slots. (If the slot list differs from B/L/D, normalize the shares of the present types to sum to 1.)</p>
+<p><strong>Search:</strong> depth-first over slots in list order. Pinned slots are fixed (their meal is always a candidate even if slot-ineligible; pantry feasibility still applies). Maintain a running ingredient-reservation map; skip a meal whose per-serving needs exceed remaining pantry. Prune a branch when <code>runningKcal + Σ min-candidate-kcal(remaining slots) &gt; B</code>. Hard cap: 50,000 nodes visited per level; on hitting the cap, proceed with plans found so far.</p>
+<p><strong>Scoring</strong> (per complete plan; window bounds <code>lo</code> per the active level):</p>
+<pre><code>calorieScore = 1 − (B − totalKcal) / (B − lo)          // 1.0 at budget, 0.0 at window floor
+proteinScore = min(totalProtein / proteinTarget, 1.0)
+score        = 0.6 × calorieScore + 0.4 × proteinScore</code></pre>
+<p><strong>Diversity selection:</strong> sort passing plans by score descending, cap the pool at 10. Greedily pick up to 3: first the top plan; each subsequent pick maximizes <code>score − 0.1 × Σ_selected |sharedMeals(plan, selectedPlan)|</code>. Ties: earlier in the sorted pool wins.</p>
+<p><strong>Regenerate with pins:</strong> identical call with <code>pinned</code> filled from slots the user locked; assigned-but-unpinned slots are cleared and re-solved.</p>
+<p><strong>Determinism:</strong> no randomness anywhere. Same inputs → same outputs (required for <a href="#s14">§14</a>).</p>
+<h2 id="s10">10. Screens (Ionic tabs; v1 complete list)</h2>
+<p>Tab bar: <strong>Pantry · Meals · Today · Settings</strong>. No other top-level navigation.</p>
+<p><strong>Pantry</strong> — searchable list; each row: product name, remaining quantity formatted as <code>"9 of 12"</code> (COUNT), <code>"420 g of 500 g"</code> (G), <code>"1.76 L of 2 L"</code> (ML). Swipe left → <strong>Remove</strong> (sets <code>quantity = 0</code> and soft-deletes the row; one-tap, no confirm, with a 5-second undo toast). Swipe right → Edit (quantity, expiration). FAB "+" → action sheet: <em>Scan barcode / Bulk scan / Search catalog / Add manually</em>. "Search catalog" searches local products (+ USDA if key present).</p>
+<p><strong>Meals</strong> — list with name, kcal/protein per serving, and a makeable indicator (✓ or "missing: X, Y" computed live from pantry). Header buttons: <em>New meal</em> (Meal Builder), <em>Import from URL</em> (prompt for URL → Import Review). Meal detail: ingredient list with <code>display_text</code>, per-serving nutrition, Edit, Delete (soft).</p>
+<p><strong>Meal Builder</strong> — fields: name; eligible-slot chips (multi-select, default all four); servings stepper; ingredient rows = product picker (search + recents) + quantity + unit picker limited to units valid for that product (<a href="#s6">§6</a> rules, with density-confirm dialog when rule 3 applies); running kcal/protein per serving updates live. Save disabled until name + ≥ 1 mapped ingredient.</p>
+<p><strong>Import Review</strong> — recipe name (editable), servings (editable), then one row per parsed ingredient: original string, parsed qty/unit (editable), mapping status — auto-mapped product (tappable to change), or "Choose…" with the top-5 list / search / create-new / to-taste. Footer: computed kcal/protein per serving (live), site-claimed values if present, Save / Cancel. Nothing persists on Cancel.</p>
+<p><strong>Today</strong> — date selector (default today; forward navigation allowed, plans are per-date). Inputs: kcal budget, protein target (prefilled from settings defaults), slot configuration (steppers: meals 1–3 → mapped to breakfast/lunch/dinner in order, snacks 0–3; three is the ceiling because those are the meal types that exist). <strong>Generate</strong> → up to 3 plan cards, each showing per-slot meals + totals (<code>1980 kcal · 103 g protein</code>) and the constraint level if &gt; 0 ("relaxed calories", "protein short by Ng", "partial"). Selecting a card assigns it to the date. Assigned view: one row per slot with meal name and kcal; row actions: <strong>Pin/Unpin</strong>, <strong>Swap</strong> (regenerates only unpinned slots), <strong>Mark cooked</strong>. Mark cooked → decrement per <a href="#s11">§11</a>, snackbar "Pantry updated" with <strong>Undo</strong> (10 s, restores exact quantities).</p>
+<p><strong>Settings</strong> — default kcal budget (default 2000), default protein target (default 100 g), default slots (3 meals + 1 snack), USDA API key (optional), Export data (share a JSON dump of all tables), Delete all data (typed confirmation "DELETE"). Nothing else.</p>
+<h2 id="s11">11. Depletion (v1 behavior, exact)</h2>
+<p>On <strong>Mark cooked</strong> for a slot's meal: for each ingredient with <code>to_taste = 0</code> and a product mapping, <code>need = quantity / servings</code> (one serving). Decrement pantry items of that product, oldest <code>expires_on</code> first (nulls last), then oldest <code>acquired_at</code>; clamp each row at 0 (soft-delete rows that reach 0). If total available &lt; need, decrement to zero anyway and include "⟨product⟩ ran short" in the snackbar. Set <code>cooked_at</code>. Cooking is per-slot and idempotent (a cooked slot's button becomes disabled).</p>
+<p>The pantry swipe-<strong>Remove</strong> (<a href="#s10">§10</a>) is the only other depletion mechanism in v1. The richer flows (per-ingredient "used it up / still have some", leftovers-as-pantry-items, reconcile mode, expiration-aware planning) are <strong>fast-follow — do not build them in v1.</strong></p>
+<h2 id="s12">12. Build phases and acceptance criteria</h2>
+<p><strong>Phase 0 — Scaffold.</strong> Nx app + libs per <a href="#s2">§2</a>; SQLite schema <a href="#s3">§3</a> with a migration runner (versioned, forward-only); tab shell renders on web; Capacitor builds run on at least one native platform. ✓ when: <code>nx test</code> green, app boots with empty tabs.</p>
+<p><strong>Phase 1 — Products &amp; pantry.</strong> Product CRUD, manual add, single scan flow (<a href="#s7">§7</a>), bulk scan, OFF integration + caching, pantry list with quantity formatting, remove/undo, edit. ✓ when: scan a real barcode → pantry row appears with correct nutrition; airplane mode → manual form fallback works; T1 tests pass.</p>
+<p><strong>Phase 2 — Meal library.</strong> Meal Builder with live nutrition (<a href="#s4">§4</a>), seed content (<a href="#s15">§15</a>) loaded on first launch, URL import pipeline (<a href="#s8">§8</a>) end-to-end with Import Review. ✓ when: T2 + T3 + T4 pass; importing a real recipe URL yields a saved meal with ≥ 80% of ingredients auto-mapped or user-resolved.</p>
+<p><strong>Phase 3 — Planner.</strong> Engine per <a href="#s9">§9</a> in <code>domain</code> with zero UI dependencies; Today screen with generate/assign/pin/swap. ✓ when: T5 + T6 pass byte-exact; generating on a 200-meal library completes &lt; 1 s on a mid-range phone.</p>
+<p><strong>Phase 4 — Depletion &amp; polish.</strong> Mark cooked (<a href="#s11">§11</a>) with undo; Settings; data export; empty states for every screen (each names the action that fills it, e.g. pantry empty state has a Scan button). ✓ when: T7 passes; a full loop (scan → build meal → generate → pin → cook → pantry decremented) works on device.</p>
+<h2 id="s13">13. Hard prohibitions</h2>
+<ol><li><strong>No LLM or AI-service calls of any kind.</strong> Not optional, not behind a flag.</li><li><strong>No backend, no accounts, no auth, no analytics/telemetry.</strong> Only permitted network calls: Open Food Facts, USDA FDC (only with user-provided key), user-initiated recipe URL fetches.</li><li><strong>No hard DELETEs</strong> of user data rows; soft-delete only. No schema drift from <a href="#s3">§3</a> without a migration.</li><li><strong>No storing non-base units.</strong> <code>COUNT</code>/<code>G</code>/<code>ML</code> only; originals live in <code>display_text</code>.</li><li><strong>No food diary / logging features</strong> (weight tracking, streaks, historical calorie charts). The product is pantry-constrained planning, not diet logging.</li><li><strong>No gram-perfect inventory ambitions:</strong> never block a flow to demand precise quantities; estimates and defaults always acceptable.</li><li><strong>No randomness in the planner.</strong></li><li><strong>No features beyond this spec</strong> (shopping lists, multi-day planning, leftovers, reconcile mode, receipt OCR, household sync are all explicitly future).</li></ol>
+<h2 id="s14">14. Required golden tests (unit tests in <code>domain</code>/<code>import</code>)</h2>
+<p><strong>T1 — Nutrition math.</strong> Product eggs: COUNT, PER_UNIT, kcal 70, protein 6. Product milk: ML, PER_100, kcal 42, protein 3.4. Meal "test" servings 1 with 2 eggs + 240 ml milk → kcal = <code>2×70 + 2.4×42 = 240.8</code>, protein = <code>2×6 + 2.4×3.4 = 20.16</code>.</p>
+<p><strong>T2 — Decrement.</strong> Pantry: eggs qty 9, milk qty 2000. Cook a 1-serving meal using 2 eggs + 240 ml milk → eggs 7, milk 1760. Cook a 2-serving meal (4 eggs listed, servings 2) → decrements 2 eggs → 5.</p>
+<p><strong>T3 — Ingredient parser.</strong></p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Input</th><th>qty</th><th>unit</th><th>name</th><th>flags/note</th></tr>
+<tr><td><code>2 cups shredded cheddar cheese</code></td><td>480</td><td>ML→(density confirm)</td><td><code>shredded cheddar cheese</code></td><td>rawUnit <code>cup</code></td></tr>
+<tr><td><code>1 (15 oz) can black beans, drained</code></td><td>1</td><td>COUNT</td><td><code>black beans</code></td><td>note <code>15 oz; drained</code></td></tr>
+<tr><td><code>3 large eggs</code></td><td>3</td><td>COUNT</td><td><code>large eggs</code></td><td>—</td></tr>
+<tr><td><code>½ cup milk</code></td><td>120</td><td>ML</td><td><code>milk</code></td><td>—</td></tr>
+<tr><td><code>1 1/2 lbs ground beef</code></td><td>680.4</td><td>G</td><td><code>ground beef</code></td><td>—</td></tr>
+<tr><td><code>Salt to taste</code></td><td>null</td><td>null</td><td><code>salt</code></td><td>toTaste = true</td></tr>
+</table></div>
+<p><strong>T4 — Matcher.</strong> Ingredient <code>shredded cheddar cheese</code> vs products [<code>Cheddar Cheese Block</code>, <code>Mozzarella</code>, <code>Milk</code>]: normalized tokens {cheddar, cheese} vs {cheddar, cheese, block} → Jaccard 2/3 ≈ 0.667; second-best 0 → auto-map to <code>Cheddar Cheese Block</code>.</p>
+<p><strong>T5 — Planner, level 0.</strong> Meal library (kcal, protein, slots — all makeable, ample pantry): Oatmeal &amp; banana (350, 12, B); Scrambled eggs (250, 13, B); PB&amp;J (400, 15, B+L); Chicken &amp; rice (600, 45, L+D); Tuna sandwich (450, 30, L); Spaghetti bolognese (700, 35, D); Greek yogurt (150, 15, S); Apple + peanut butter (280, 8, S). Input: budget 2000, protein 100, slots [B, L, D, S], no pins. Expected: level 0; exactly 5 passing plans with scores —</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Plan (B/L/D/S)</th><th>kcal</th><th>protein</th><th>score</th></tr>
+<tr><td>PB&amp;J / Chicken&amp;rice / Spaghetti / Apple+PB</td><td>1980</td><td>103</td><td><strong>0.94</strong></td></tr>
+<tr><td>Oatmeal / Chicken&amp;rice / Spaghetti / Apple+PB</td><td>1930</td><td>100</td><td>0.79</td></tr>
+<tr><td>PB&amp;J / Chicken&amp;rice / Spaghetti / Greek yogurt</td><td>1850</td><td>110</td><td>0.55</td></tr>
+<tr><td>Eggs / Chicken&amp;rice / Spaghetti / Apple+PB</td><td>1830</td><td>101</td><td>0.49</td></tr>
+<tr><td>Oatmeal / Chicken&amp;rice / Spaghetti / Greek yogurt</td><td>1800</td><td>107</td><td>0.40</td></tr>
+</table></div>
+<p>Diversity pick (k = 3) returns rows 1, 2, 3 in that order.</p>
+<p><strong>T6 — Planner, pinned + relaxation.</strong> Same library/inputs, lunch pinned to Tuna sandwich. Level 0 yields nothing. Expected: level 1; top plan by raw score is PB&amp;J / Tuna / Chicken&amp;rice / Apple+PB — 1730 kcal, 98 protein, calorieScore <code>1 − 270/400 = 0.325</code>, score <code>0.6×0.325 + 0.4×0.98 = 0.587</code>.</p>
+<p><strong>T7 — Plan feasibility.</strong> Pantry has 3 eggs only. Meals A and B are each (500 kcal, 30 g protein, slots L+D) and each needs 2 eggs per serving; they are the whole library. Budget 1000, protein 60, slots [L, D]. With ample eggs A+B is a level-0 plan (1000 kcal, 60 g, score 1.0). With 3 eggs no plan may contain both, so levels 0–2 find nothing and the result is level 3: lunch = A, dinner empty, partial, 500 kcal. With 4 eggs the level-0 plan returns.</p>
+<p><strong>T8 — JSON-LD extraction.</strong> Fixture HTML containing an <code>@graph</code> array with a <code>Recipe</code> object → name, yield, and ingredient strings extracted; fixture with no recipe → the exact error "No recipe found on this page".</p>
+<h2 id="s15">15. Seed content</h2>
+<p>Ship <code>assets/seed/products.json</code> and <code>assets/seed/meals.json</code>, loaded once on first launch (<code>source='seed'</code>; seeds are editable and soft-deletable like anything else). ~25 generic products (USDA-typical values) and ~24 meals covering all four slots roughly evenly — plain, recognizable staples (oatmeal, scrambled eggs, PB&amp;J, grilled chicken + rice, spaghetti bolognese, tuna sandwich, yogurt, fruit + nut butter, etc.). Every seed meal's ingredients must map to seed products so the planner works on first launch with zero user input. Include the eight T5 meals with exactly the T5 numbers, so the golden tests double as seed validation.</p>
+<h2 id="s16">16. Explicitly future (do not build, but do not preclude)</h2>
+<p>Multi-day planning with inventory carry-forward; shopping list with checkoff → pantry; leftovers as pantry items; per-ingredient post-cook adjustments; reconcile mode; expiration-aware "use it up" scoring; household sync via backend (the soft-delete + UUID + timestamp discipline in <a href="#s2">§2</a>–3 exists for this); recipe search APIs; receipt OCR; voice entry; optional gracefully-degrading LLM assist for meal drafting.</p>
+</main>
+
+<footer>
+  Generated by Claude Code · <a href="../../dashboard.html">Back to dashboard</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('md-theme', next); } catch (e) {}
+    syncToggleLabel();
+  }
+  function syncToggleLabel(){
+    var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+  }
+  syncToggleLabel();
+</script>
+</body>
+</html>
