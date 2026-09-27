@@ -108,15 +108,9 @@ export function generatePlans(input: PlannerInput): PlanResult {
   for (const [index, level] of PLANNER_RULES.levels.entries()) {
     const floor = level.calorieFloor * input.kcalBudget;
     const proteinMin = level.proteinFloor === null ? null : level.proteinFloor * input.proteinTarget;
-    const found = search(candidates, input, floor, proteinMin);
-    if (found.length === 0) continue;
-    const ranked = found
-      .map((plan) => ({
-        ...plan,
-        score: scorePlan(plan.kcal, plan.protein, input.kcalBudget, floor, input.proteinTarget),
-      }))
-      .sort((a, b) => (Math.abs(a.score - b.score) < EPS ? 0 : b.score - a.score));
-    return { level: index as ConstraintLevel, plans: diversify(ranked) };
+    const pool = search(candidates, input, floor, proteinMin);
+    if (pool.length === 0) continue;
+    return { level: index as ConstraintLevel, plans: diversify(pool) };
   }
 
   return { level: 3, plans: [bestEffort(input)] };
@@ -150,12 +144,19 @@ function candidateLists(input: PlannerInput): PlannerMeal[][] {
   });
 }
 
-interface FoundPlan {
-  readonly mealIds: readonly (string | null)[];
-  readonly kcal: number;
-  readonly protein: number;
-  readonly partial: boolean;
-  readonly proteinShortBy: number;
+/**
+ * The passing plans the diversity pick draws from: the best `poolSize` by score, ties in
+ * the order found — exactly the head of a stable sort of every passing plan, without
+ * keeping or sorting the rest. A loose budget can pass hundreds of thousands of plans,
+ * and storing them all was most of the planner's time.
+ */
+function addToPool(pool: RankedPlan[], plan: RankedPlan): void {
+  const size = PLANNER_RULES.poolSize;
+  if (pool.length === size && plan.score <= pool[size - 1].score + EPS) return;
+  let at = pool.length;
+  while (at > 0 && plan.score > pool[at - 1].score + EPS) at--;
+  pool.splice(at, 0, plan);
+  if (pool.length > size) pool.pop();
 }
 
 function search(
@@ -163,7 +164,7 @@ function search(
   input: PlannerInput,
   floor: number,
   proteinMin: number | null,
-): FoundPlan[] {
+): RankedPlan[] {
   const budget = input.kcalBudget;
   const n = candidates.length;
   if (candidates.some((c) => c.length === 0)) return [];
@@ -174,7 +175,7 @@ function search(
     minRest[i] = minRest[i + 1] + Math.min(...candidates[i].map((m) => m.kcal));
   }
 
-  const found: FoundPlan[] = [];
+  const pool: RankedPlan[] = [];
   const chosen: PlannerMeal[] = [];
   const used = new Set<string>();
   const reserved = new Map<string, number>();
@@ -184,10 +185,13 @@ function search(
     if (i === n) {
       if (kcal < floor - EPS || kcal > budget + EPS) return;
       if (proteinMin !== null && protein < proteinMin - EPS) return;
-      found.push({
+      const score = scorePlan(kcal, protein, budget, floor, input.proteinTarget);
+      if (pool.length === PLANNER_RULES.poolSize && score <= pool[pool.length - 1].score + EPS) return;
+      addToPool(pool, {
         mealIds: chosen.map((m) => m.id),
         kcal,
         protein,
+        score,
         partial: false,
         proteinShortBy: Math.max(0, input.proteinTarget - protein),
       });
@@ -210,7 +214,7 @@ function search(
   };
 
   visit(0, 0, 0);
-  return found;
+  return pool;
 }
 
 function reserve(reserved: Map<string, number>, needs: ServingNeeds, sign: 1 | -1): void {

@@ -7,3 +7,4 @@ export * from './lib/units.js';
 export * from './lib/format.js';
 export * from './lib/depletion.js';
 export * from './lib/planner.js';
+export * from './lib/replan.js';
