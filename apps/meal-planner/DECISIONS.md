@@ -12,8 +12,17 @@ was fixed in place instead, and its revision note says what changed.
   with `LinkError: … function import requires a callable` and no database. Move this pin
   only together with a jeep-sqlite upgrade, and re-check that the web build opens its
   database.
-- **Ionic 9 is imported from `@ionic/angular`**, not `@ionic/angular/standalone`: in v9
-  the standalone build *is* the package root.
+- **Ionic 9 is imported per component** (`@ionic/angular/ion-button`,
+  `@ionic/angular/toast-controller`), not from the package root; only type imports use
+  the root. main.ts reaches the root barrel, so esbuild put every component any lazy page
+  used into the initial chunk (1.12 MB, over the 1 MB budget). Per-component imports
+  moved input, select, searchbar, toast and loading out of it (804 kB). The simple
+  components share one file in Ionic's package and stay initial. Import new Ionic
+  components the same way.
+- **Testing Ionic in a hidden Browser pane stalls page transitions**: a hidden page gets
+  no `requestAnimationFrame`, so tab switches and overlays never finish and pages look
+  stuck on their spinner. It is not the app. Test with the pane visible, or use the
+  `meal-planner-static` launch config (the production build, served on 4204).
 - **Zoneless Angular** (the workspace default). Ionic runs without `zone.js`; npm installs
   it only as Ionic's declared peer, and nothing imports it.
 - **Android first; no `ios/` yet.** Nothing here can build iOS, and the app-suite

@@ -8,7 +8,9 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { AlertController, LoadingController, ModalController } from '@ionic/angular';
+import { AlertController } from '@ionic/angular/alert-controller';
+import { LoadingController } from '@ionic/angular/loading-controller';
+import { ModalController } from '@ionic/angular/modal-controller';
 import type { MealWithIngredients } from '@metrum/meal-planner-data';
 import type { Meal } from '@metrum/meal-planner-domain';
 import { importRecipe, NoRecipeError, type RecipeImport } from '@metrum/meal-planner-import';

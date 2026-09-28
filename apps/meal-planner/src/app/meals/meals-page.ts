@@ -7,21 +7,19 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import {
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonSearchbar,
-  IonSpinner,
-  IonTitle,
-  IonToolbar,
-  type ViewWillEnter,
-} from '@ionic/angular';
+import type { ViewWillEnter } from '@ionic/angular';
+import { IonButton } from '@ionic/angular/ion-button';
+import { IonButtons } from '@ionic/angular/ion-buttons';
+import { IonContent } from '@ionic/angular/ion-content';
+import { IonHeader } from '@ionic/angular/ion-header';
+import { IonIcon } from '@ionic/angular/ion-icon';
+import { IonItem } from '@ionic/angular/ion-item';
+import { IonLabel } from '@ionic/angular/ion-label';
+import { IonList } from '@ionic/angular/ion-list';
+import { IonSearchbar } from '@ionic/angular/ion-searchbar';
+import { IonSpinner } from '@ionic/angular/ion-spinner';
+import { IonTitle } from '@ionic/angular/ion-title';
+import { IonToolbar } from '@ionic/angular/ion-toolbar';
 import { displayKcal, displayProtein, shortfalls, type Meal } from '@metrum/meal-planner-domain';
 import { addIcons } from 'ionicons';
 import { addOutline, checkmarkCircle, linkOutline } from 'ionicons/icons';

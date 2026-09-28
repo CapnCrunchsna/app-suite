@@ -5,7 +5,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { IonChip, IonLabel } from '@ionic/angular';
+import { IonChip } from '@ionic/angular/ion-chip';
+import { IonLabel } from '@ionic/angular/ion-label';
 import { SLOT_TYPES, type SlotType } from '@metrum/meal-planner-domain';
 
 export const SLOT_LABEL: Readonly<Record<SlotType, string>> = {

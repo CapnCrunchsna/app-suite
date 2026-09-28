@@ -12,23 +12,21 @@
  */
 
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import {
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonNote,
-  IonSearchbar,
-  IonSpinner,
-  IonTitle,
-  IonToolbar,
-  ModalController,
-  type ViewDidEnter,
-} from '@ionic/angular';
+import type { ViewDidEnter } from '@ionic/angular';
+import { IonButton } from '@ionic/angular/ion-button';
+import { IonButtons } from '@ionic/angular/ion-buttons';
+import { IonContent } from '@ionic/angular/ion-content';
+import { IonHeader } from '@ionic/angular/ion-header';
+import { IonItem } from '@ionic/angular/ion-item';
+import { IonLabel } from '@ionic/angular/ion-label';
+import { IonList } from '@ionic/angular/ion-list';
+import { IonListHeader } from '@ionic/angular/ion-list-header';
+import { IonNote } from '@ionic/angular/ion-note';
+import { IonSearchbar } from '@ionic/angular/ion-searchbar';
+import { IonSpinner } from '@ionic/angular/ion-spinner';
+import { IonTitle } from '@ionic/angular/ion-title';
+import { IonToolbar } from '@ionic/angular/ion-toolbar';
+import { ModalController } from '@ionic/angular/modal-controller';
 import { distinctBrand, formatAmount, type Product } from '@metrum/meal-planner-domain';
 import { searchUsda, type ProductPrefill } from '@metrum/meal-planner-import';
 import { Store } from '../data/store';

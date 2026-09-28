@@ -92,6 +92,18 @@
         "watch": false
       }
     },
+    "serve-static": {
+      "//": "The production build as the APK ships it: no HMR, no dependency pre-bundling. Test what the phone runs here.",
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "meal-planner:build",
+        "staticFilePath": "dist/apps/meal-planner/browser",
+        "port": 4204,
+        "spa": true
+      }
+    },
     "cap-sync": {
       "//": "Copies the production web build into android/ and refreshes native plugins. Run after `nx build meal-planner`.",
       "executor": "nx:run-commands",

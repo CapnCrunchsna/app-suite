@@ -4,23 +4,21 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { NavController } from '@ionic/angular';
-import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
-  IonChip,
-  IonContent,
-  IonHeader,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonNote,
-  IonTitle,
-  IonToolbar,
-  type ViewWillEnter,
-} from '@ionic/angular';
+import { NavController } from '@ionic/angular/nav-controller';
+import type { ViewWillEnter } from '@ionic/angular';
+import { IonBackButton } from '@ionic/angular/ion-back-button';
+import { IonButton } from '@ionic/angular/ion-button';
+import { IonButtons } from '@ionic/angular/ion-buttons';
+import { IonChip } from '@ionic/angular/ion-chip';
+import { IonContent } from '@ionic/angular/ion-content';
+import { IonHeader } from '@ionic/angular/ion-header';
+import { IonItem } from '@ionic/angular/ion-item';
+import { IonLabel } from '@ionic/angular/ion-label';
+import { IonList } from '@ionic/angular/ion-list';
+import { IonListHeader } from '@ionic/angular/ion-list-header';
+import { IonNote } from '@ionic/angular/ion-note';
+import { IonTitle } from '@ionic/angular/ion-title';
+import { IonToolbar } from '@ionic/angular/ion-toolbar';
 import type { MealWithIngredients } from '@metrum/meal-planner-data';
 import { displayKcal, displayProtein, type Product } from '@metrum/meal-planner-domain';
 import { SLOT_LABEL } from '../components/slot-chips';

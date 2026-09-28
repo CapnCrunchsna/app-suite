@@ -5,7 +5,7 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { ModalController } from '@ionic/angular/modal-controller';
 import type { Product } from '@metrum/meal-planner-domain';
 import type { ProductPrefill } from '@metrum/meal-planner-import';
 import { ProductForm } from '../components/product-form';

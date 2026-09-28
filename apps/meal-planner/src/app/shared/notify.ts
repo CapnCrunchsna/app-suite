@@ -5,7 +5,7 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { ToastController } from '@ionic/angular';
+import { ToastController } from '@ionic/angular/toast-controller';
 
 @Injectable({ providedIn: 'root' })
 export class Notify {

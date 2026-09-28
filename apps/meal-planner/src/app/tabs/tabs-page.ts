@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular';
+import { IonIcon } from '@ionic/angular/ion-icon';
+import { IonLabel } from '@ionic/angular/ion-label';
+import { IonTabBar } from '@ionic/angular/ion-tab-bar';
+import { IonTabButton } from '@ionic/angular/ion-tab-button';
+import { IonTabs } from '@ionic/angular/ion-tabs';
 import { addIcons } from 'ionicons';
 import { basketOutline, calendarOutline, restaurantOutline, settingsOutline } from 'ionicons/icons';
 

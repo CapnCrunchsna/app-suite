@@ -11,20 +11,17 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import {
-  IonButton,
-  IonButtons,
-  IonContent,
-  IonFooter,
-  IonHeader,
-  IonInput,
-  IonItem,
-  IonTitle,
-  IonToolbar,
-  ModalController,
-  type ViewDidEnter,
-  type ViewWillLeave,
-} from '@ionic/angular';
+import type { ViewDidEnter, ViewWillLeave } from '@ionic/angular';
+import { IonButton } from '@ionic/angular/ion-button';
+import { IonButtons } from '@ionic/angular/ion-buttons';
+import { IonContent } from '@ionic/angular/ion-content';
+import { IonFooter } from '@ionic/angular/ion-footer';
+import { IonHeader } from '@ionic/angular/ion-header';
+import { IonInput } from '@ionic/angular/ion-input';
+import { IonItem } from '@ionic/angular/ion-item';
+import { IonTitle } from '@ionic/angular/ion-title';
+import { IonToolbar } from '@ionic/angular/ion-toolbar';
+import { ModalController } from '@ionic/angular/modal-controller';
 import { Scanner } from '../platform/scanner';
 import { eventValue } from '../shared/events';
 import { lineLabel, type BulkScanSession } from './bulk-scan-session';

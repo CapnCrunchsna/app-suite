@@ -8,27 +8,25 @@
  */
 
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import {
-  ActionSheetController,
-  IonButton,
-  IonContent,
-  IonFab,
-  IonFabButton,
-  IonHeader,
-  IonIcon,
-  IonItem,
-  IonItemOption,
-  IonItemOptions,
-  IonItemSliding,
-  IonLabel,
-  IonList,
-  IonNote,
-  IonSearchbar,
-  IonSpinner,
-  IonTitle,
-  IonToolbar,
-  type ViewWillEnter,
-} from '@ionic/angular';
+import type { ViewWillEnter } from '@ionic/angular';
+import { ActionSheetController } from '@ionic/angular/action-sheet-controller';
+import { IonButton } from '@ionic/angular/ion-button';
+import { IonContent } from '@ionic/angular/ion-content';
+import { IonFab } from '@ionic/angular/ion-fab';
+import { IonFabButton } from '@ionic/angular/ion-fab-button';
+import { IonHeader } from '@ionic/angular/ion-header';
+import { IonIcon } from '@ionic/angular/ion-icon';
+import { IonItem } from '@ionic/angular/ion-item';
+import { IonItemOption } from '@ionic/angular/ion-item-option';
+import { IonItemOptions } from '@ionic/angular/ion-item-options';
+import { IonItemSliding } from '@ionic/angular/ion-item-sliding';
+import { IonLabel } from '@ionic/angular/ion-label';
+import { IonList } from '@ionic/angular/ion-list';
+import { IonNote } from '@ionic/angular/ion-note';
+import { IonSearchbar } from '@ionic/angular/ion-searchbar';
+import { IonSpinner } from '@ionic/angular/ion-spinner';
+import { IonTitle } from '@ionic/angular/ion-title';
+import { IonToolbar } from '@ionic/angular/ion-toolbar';
 import type { PantryEntry } from '@metrum/meal-planner-data';
 import { distinctBrand, formatRemaining } from '@metrum/meal-planner-domain';
 import { addIcons } from 'ionicons';

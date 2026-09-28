@@ -8,7 +8,8 @@
  */
 
 import { inject } from '@angular/core';
-import { AlertController, IonModalToken } from '@ionic/angular';
+import { AlertController } from '@ionic/angular/alert-controller';
+import { IonModalToken } from '@ionic/angular/ion-modal-token';
 
 export function guardDiscard(isDirty: () => boolean, what: string): void {
   const modal = inject(IonModalToken, { optional: true });

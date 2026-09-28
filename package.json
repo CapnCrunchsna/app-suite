@@ -9,6 +9,7 @@
     "test": "nx run-many -t test",
     "check": "nx run-many -t lint typecheck test build",
     "serve:meal-planner": "nx serve meal-planner",
+    "serve-static:meal-planner": "nx serve-static meal-planner",
     "parse": "node tools/parse-statement.mjs",
     "seed:dev": "node tools/seed-dev-data.mjs"
   },

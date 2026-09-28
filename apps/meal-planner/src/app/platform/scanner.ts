@@ -16,7 +16,7 @@
 import { Injectable, inject } from '@angular/core';
 import { BarcodeFormat, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { AlertController } from '@ionic/angular';
+import { AlertController } from '@ionic/angular/alert-controller';
 import { isNative } from './http';
 
 const ACTIVE_CLASS = 'barcode-scanner-active';

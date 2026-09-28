@@ -7,7 +7,8 @@
  */
 
 import { Injectable, inject, type Type } from '@angular/core';
-import { LoadingController, ModalController } from '@ionic/angular';
+import { LoadingController } from '@ionic/angular/loading-controller';
+import { ModalController } from '@ionic/angular/modal-controller';
 import type { PantryEntry } from '@metrum/meal-planner-data';
 import { productLabel, type Product } from '@metrum/meal-planner-domain';
 import type { ProductPrefill } from '@metrum/meal-planner-import';

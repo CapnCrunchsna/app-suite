@@ -33,6 +33,12 @@
       "port": 4203
     },
     {
+      "name": "meal-planner-static",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "serve-static:meal-planner"],
+      "port": 4204
+    },
+    {
       "name": "edgeline-api",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "serve", "edgeline-api"],
