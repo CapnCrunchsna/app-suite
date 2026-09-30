@@ -144,10 +144,20 @@ session, each of which cost real credits or real time.
 | `/v4/sports/{sport}/scores?daysFrom=` | **2** | `grading.grade` |
 
 **An empty `/odds` answer is free** (measured 2026-09-23: `baseball_mlb_preseason`, inactive,
-returned `[]` with `x-requests-last: 0`). So a weekly-plan slot for a sport out of season costs
-nothing — the NBA slots until its 2026-10-20 opener, or MLB slots left in after the World Series.
-Careful what "empty" means: `basketball_wnba` had no games *upcoming* but three in play, returned
-them, and cost 1.
+returned `[]` with `x-requests-last: 0`). So a weekly-plan slot for a sport with nothing listed
+costs nothing — MLB slots left in after the World Series, say. Careful what "empty" means:
+`basketball_wnba` had no games *upcoming* but three in play, returned them, and cost 1. **And the
+NBA is not empty before its opener** (corrected 2026-09-29): `/events` lists its games as far out
+as 12-25, so every NBA slot since 2026-09-23 has paid full price for them, and one recommended the
+Christmas Day game 91 days before tip-off.
+
+**Month-end sidecar, 2026-09-30.** The allowance resets on the 1st, so September's last ~290
+credits went on information rather than lapsing: `sidecars/month_end_2026_09.py` polls NCAAF every
+45 minutes and NFL hourly all day, NHL and MLB around their games, buys true closing lines before
+that day's starts where something was detected, and runs three small cost experiments for October
+(ten named books against two regions, and a poll filtered to an empty time window). It goes
+through `run_once` like the Poll now button, writes no setting and stamps nothing, and keeps a
+per-action log in `sidecars/runs/`. Delete it and its test once the day has been read.
 
 Two consequences that are not obvious from §8.4:
 
