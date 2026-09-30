@@ -25,6 +25,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,6 +48,29 @@ from .base import (
 )
 
 log = logging.getLogger(__name__)
+
+_API_KEY_IN_URL = re.compile(r"(apiKey=)[^&\s\"']+")
+
+
+class _RedactApiKey(logging.Filter):
+    """Mask the key in httpx's own request log line.
+
+    httpx logs every request at INFO with its full URL, and the key travels as a
+    query parameter. The worker logs at INFO, so until 2026-09-29 every poll
+    printed the key to its console, whatever point 2 above says about this
+    module. Redacting rather than silencing keeps the one line per request that
+    shows which endpoint was called and what it answered.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "apiKey=" in message:
+            record.msg = _API_KEY_IN_URL.sub(r"\1[redacted]", message)
+            record.args = None
+        return True
+
+
+logging.getLogger("httpx").addFilter(_RedactApiKey())
 
 
 def _month_elapsed_fraction(now: datetime) -> float:

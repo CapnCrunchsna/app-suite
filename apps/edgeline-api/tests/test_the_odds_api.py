@@ -8,6 +8,7 @@ it, and they were captured by the §8 recorder, not by this suite.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 
 import httpx
@@ -64,6 +65,24 @@ async def test_odds_request_asks_for_decimal_and_carries_the_key():
     assert params["markets"] == "h2h,spreads,totals"
     assert params["regions"] == "us"
     assert params["apiKey"] == API_KEY
+
+
+@respx.mock
+async def test_the_key_never_reaches_a_log_line(caplog):
+    """httpx logs each request at INFO with its full URL, and the worker logs at
+    INFO: until 2026-09-29 every poll printed the key to the console. The line
+    itself is worth keeping, so it survives with the key masked."""
+    odds_route().mock(return_value=httpx.Response(200, json=[]))
+    caplog.set_level(logging.INFO)
+    p = provider()
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert "HTTP Request" in caplog.text
+    assert "apiKey=[redacted]" in caplog.text
+    assert API_KEY not in caplog.text
 
 
 @respx.mock
