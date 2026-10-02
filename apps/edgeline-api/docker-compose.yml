@@ -9,6 +9,12 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
     container_name: edgeline-es
+    # Back by itself whenever Docker is (spec §4.1, 2026-10-01). A laptop sleep can take
+    # the WSL VM down under the container: on 2026-09-29 it exited 255 with nothing in its
+    # own log, and with no policy it stayed down ~18 hours, taking the next day's polls
+    # with it. `unless-stopped`, so a deliberate stop holds; `es-down` removes the
+    # container outright and is unaffected.
+    restart: unless-stopped
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false

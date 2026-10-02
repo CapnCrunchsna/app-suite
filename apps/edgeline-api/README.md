@@ -62,6 +62,14 @@ nx run edgeline-api:test       # ES-backed tests skip themselves if ES is down
 `.env` is gitignored, so a **git worktree does not inherit it** — copy it in from the main
 checkout before running anything that needs the Odds API key.
 
+**Elasticsearch comes back by itself** — `restart: unless-stopped` in `docker-compose.yml`
+(§4.1, 2026-10-01). A laptop sleep that takes the Docker VM down used to leave the container
+stopped: on 2026-09-29 it exited 255 at 23:26 with nothing in its own log and stayed down for 18
+hours, and the next day's polls with it. A container created before that line picks the policy up
+with `docker update --restart unless-stopped edgeline-es` (no restart needed), or from the next
+`es-up`, which recreates it from the file; the data lives in the `esdata` volume either way.
+`es-down` still stops it for good, because it removes the container rather than stopping it.
+
 Kibana is the window into every index — there is no other admin UI, by design — but it is
 **opt-in**: it costs about a gigabyte in the WSL VM and is rarely open, so `es-up` leaves it down.
 `nx run edgeline-api:kibana-up` brings it up on <http://localhost:5601>, `kibana-down` stops it.

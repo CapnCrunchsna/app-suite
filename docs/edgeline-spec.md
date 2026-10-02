@@ -232,6 +232,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.0.3
+    restart: unless-stopped            # back by itself when Docker is (2026-10-01)
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false   # acceptable ONLY with the localhost-only binding below
@@ -255,6 +256,18 @@ Security is disabled only because both ports bind to `127.0.0.1`. If ES ever mov
 machine (e.g. to the home server), enable auth + TLS **first** and move credentials to `.env`.
 Kibana at `http://localhost:5601` is the ops window into every index — no extra tooling needed.
 It is opt-in (a compose profile), because it costs about a gigabyte on the laptop and is rarely open.
+
+**Elasticsearch restarts itself — `restart: unless-stopped`, added 2026-10-01.** At 23:26 ET on
+2026-09-29 the container exited with code 255 and nothing in its own log: the Docker WSL VM going
+away under a laptop sleep, not Elasticsearch failing. Its restart policy was `no`, so it stayed
+down for about 18 hours, until it was started by hand at 17:05 on 2026-09-30, and that day's
+polling went with it — a cycle cannot run without the settings it reads first. The policy brings
+the container back whenever Docker comes back. `unless-stopped` rather than `always`, so a
+deliberate stop holds; `es-down` removes the container outright and is unaffected. The running
+container was given the policy the same day with `docker update --restart unless-stopped
+edgeline-es`, which needs no restart. The line in the compose file is what makes it permanent: a
+container `es-up` creates or recreates takes its policy from this file, not from the last `docker
+update`.
 
 ### 4.2 Bootstrap rules (`es.py` + `indices.py`)
 
