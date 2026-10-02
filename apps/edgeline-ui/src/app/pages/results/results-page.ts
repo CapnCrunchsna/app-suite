@@ -43,7 +43,16 @@ import { NO_DATA, formatCents, formatLocalDay, formatRatioAsPercent, formatSigne
 import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
+import { humanise } from '../../labels';
 import { SystemStatus } from '../../system-status.service';
+
+/** `excluded_reason` values (`audit.py`), as the clause that follows a count. */
+const EXCLUSION_REASONS: Record<string, string> = {
+  detected_after_start:
+    'detected after the game had already started — dead lines a book had not taken down, not edges',
+  duplicate_alert:
+    'repeated an earlier recommendation of the same opportunity — graded at the same price, so the same evidence twice',
+};
 
 type Group = 'day' | 'week';
 /** §11.1's toggle: every graded recommendation, or only the ones you actually
@@ -128,6 +137,19 @@ export class ResultsPage {
    * fewer rows would be the same failure one level down.
    */
   protected readonly excluded = computed(() => this.totals().excluded ?? 0);
+
+  /**
+   * Why, reason by reason. Until 2026-10-01 every excluded row was a dead line
+   * detected after its game started, and the note said so unconditionally; a
+   * repeat recommendation of one opportunity is the second reason now, and a
+   * note that called it a dead line would misstate it.
+   */
+  protected readonly excludedWhy = computed(() =>
+    Object.entries(this.totals().excluded_by_reason ?? {})
+      .filter(([, count]) => count > 0)
+      .map(([reason, count]) => `${count} ${EXCLUSION_REASONS[reason] ?? humanise(reason)}`)
+      .join('; '),
+  );
 
   /** Nothing has been graded at all — a different sentence from "graded, but
    *  none of it settled". */

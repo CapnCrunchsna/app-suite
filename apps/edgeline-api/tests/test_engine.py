@@ -847,26 +847,20 @@ async def test_a_materially_better_edge_re_alerts_once_the_cooldown_clears(
 
 
 @pytest.mark.es
-async def test_an_improvement_absorbed_during_a_cooldown_does_not_re_alert_later(
+async def test_an_improvement_absorbed_during_a_cooldown_is_announced_once_it_clears(
     es_url, test_index_prefix
 ):
-    """Pins a real consequence of §7.4's wording, so it is a known behaviour.
+    """The half of §7.4's 2026-09-04 note that the 2026-10-01 amendment reverses.
 
-    §7.4 says "update `edge_pct`; re-alert ONLY if edge improved by >=
-    edge_improve_delta_pct AND cooldown expired". The baseline for "improved" is
-    therefore the stored value, which every cycle overwrites. So a jump that
-    happens while the cooldown is still running is absorbed into `edge_pct`, and
-    once the cooldown clears there is no longer an improvement to detect — the
-    better edge is never announced.
-
-    That is the literal reading and it is what ships. Changing it would mean
-    storing the edge as at the last alert, which §4.3 has no field for, so it is
-    a spec decision rather than an implementation one.
+    The baseline for "improved" used to be the stored `edge_pct`, which every
+    cycle overwrites, so a jump that arrived while the cooldown was running was
+    absorbed and never announced — pinned here then as the literal reading.
+    Measured against `alerted_edge_pct`, the edge at the alert, the jump is still
+    an improvement when the cooldown clears.
     """
     from elasticsearch import AsyncElasticsearch
 
     from edgeline.engine import run_once
-    from edgeline.indices import all_index_names
     from edgeline.notify import RecordingSink
 
     client = AsyncElasticsearch(hosts=[es_url])
@@ -889,7 +883,8 @@ async def test_an_improvement_absorbed_during_a_cooldown_does_not_re_alert_later
         )
         assert blocked.alerted == []
 
-        # Cooldown now clear, edge unchanged since last cycle -> still silent.
+        # Cooldown now clear, edge unchanged since the last cycle — but well
+        # above where it was alerted, so it is announced.
         settled = await run_once(
             provider,
             client,
@@ -898,8 +893,226 @@ async def test_an_improvement_absorbed_during_a_cooldown_does_not_re_alert_later
             sink=sink,
             settings=settings(alert_cooldown_s=0),
         )
-        assert settled.alerted == []
+        assert [d.type for d in settled.alerted] == [TYPE_EV]
+        assert len(sink.sent) == 2
+    finally:
+        await client.close()
+
+
+def ev_only_payload(guardians: float) -> list[dict]:
+    """One +EV price and no arbitrage, for the re-alert tests.
+
+    Five books at a heavily vigged 1.80/1.80 put the fair Guardians at 0.5, and
+    "juicy" offers `guardians` on them, so its edge is `(0.5 x guardians - 1) x
+    100`: 2.20 is 10%, 2.12 is 6%, 2.24 is 12%. The books' 1.80 on the Tigers
+    keeps every pairing above an inverse sum of 1 up to about 2.25, so no arb
+    competes for the cooldown slot.
+    """
+    bookmakers = [h2h(book, 1.80, 1.80) for book in FAIR_BOOKS]
+    bookmakers.append(h2h("juicy", guardians, 1.60))
+    return [{**EVENT_HEADER, "bookmakers": bookmakers}]
+
+
+async def _opportunity(client, prefix, doc_id) -> dict:
+    from edgeline.indices import with_prefix
+
+    found = await client.get(index=with_prefix(OPPORTUNITIES_INDEX, prefix), id=doc_id)
+    return found["_source"]
+
+
+@pytest.mark.es
+async def test_an_edge_that_dips_and_recovers_does_not_re_alert_at_the_same_price(
+    es_url, test_index_prefix
+):
+    """The mechanism behind 2026-09-30's second Utah State recommendation: the
+    edge dipped a poll (16.64% at the 18:00 alert, 2.64% at 18:45) and the 19:30
+    edge was measured against the stored `edge_pct`, the last poll's. That one
+    came back at a better price; this pins the case where it comes back to the
+    alerted price and the old baseline still read an improvement."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    clear = settings(alert_cooldown_s=0)  # only §7.4's edge gate is under test
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(ev_only_payload(2.20))
+        first = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink)
+        [alerted] = first.alerted
+        assert (await _opportunity(client, prefix, alerted.hash))["alerted_edge_pct"] == (
+            pytest.approx(10.0)
+        )
+
+        provider.payload = ev_only_payload(2.12)  # 6%: dips
+        dipped = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        provider.payload = ev_only_payload(2.20)  # 10% again: 4 points above the last poll
+        recovered = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert dipped.alerted == []
+        assert recovered.alerted == []
         assert len(sink.sent) == 1
+
+        # A real improvement on the alert still gets through, and becomes the
+        # baseline for the next one.
+        provider.payload = ev_only_payload(2.24)  # 12%
+        better = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert [d.hash for d in better.alerted] == [alerted.hash]
+        assert (await _opportunity(client, prefix, alerted.hash))["alerted_edge_pct"] == (
+            pytest.approx(12.0)
+        )
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_an_opportunity_that_lost_the_cooldown_race_alerts_once_the_slot_is_free(
+    es_url, test_index_prefix
+):
+    """§7.4's race, decided 2026-10-01. Both doctored detections are h2h, so the
+    +EV takes the one slot and the arb loses it. The arb used to alert later only
+    if its edge 'improved' on the previous poll — in practice never. The
+    cooldown is a rate limit: losing the slot defers the alert."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    # At the default $1,000 the arb's allocation is $20, which rounds to 10/10
+    # and loses its profit (§6.5's re-check), so it could never alert anyway.
+    rich = settings(bankroll_start_cents=2_000_000)
+    clear = settings(bankroll_start_cents=2_000_000, alert_cooldown_s=0)
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(doctored_payload())
+
+        first = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=rich
+        )
+        assert [d.type for d in first.alerted] == [TYPE_EV]
+
+        second = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert [d.type for d in second.alerted] == [TYPE_ARB]
+
+        # Both alerted now, neither better than at its alert: nothing more.
+        third = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert third.alerted == []
+        assert len(sink.sent) == 2
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_line_that_closes_and_comes_back_is_not_news(es_url, test_index_prefix):
+    """The other way one price could be recommended twice: the line vanishes for
+    a poll, §7.4 closes it, and it comes back as the same hash. The re-created
+    document keeps its alert, so the gate compares with that."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.dedup import STATUS_ALERTED
+    from edgeline.engine import run_once
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    clear = settings(alert_cooldown_s=0)
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(ev_only_payload(2.20))
+        [alerted] = (
+            await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink)
+        ).alerted
+
+        provider.payload = fair_only_payload()
+        gone = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert gone.closed == [alerted.hash]
+
+        provider.payload = ev_only_payload(2.20)
+        back = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert back.alerted == []
+        assert len(sink.sent) == 1
+        document = await _opportunity(client, prefix, alerted.hash)
+        assert document["status"] == STATUS_ALERTED
+        assert document["alerted_edge_pct"] == pytest.approx(10.0)
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_an_alert_from_before_its_edge_was_recorded_is_not_repeated(
+    es_url, test_index_prefix
+):
+    """Every opportunity alerted before 2026-10-01 has no `alerted_edge_pct`.
+    Its alert-time edge is unknown, so improvement alone never re-alerts it —
+    whether it is still alerted, or closed and back, where only the
+    recommendation naming it remembers the alert."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.dedup import STATUS_ALERTED
+    from edgeline.engine import run_once
+    from edgeline.indices import with_prefix
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    clear = settings(alert_cooldown_s=0)
+    opportunities = with_prefix(OPPORTUNITIES_INDEX, prefix)
+
+    async def forget_the_edge(doc_id: str) -> None:
+        await client.update(
+            index=opportunities,
+            id=doc_id,
+            script={"source": "ctx._source.remove('alerted_edge_pct')"},
+            refresh="wait_for",
+        )
+
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(ev_only_payload(2.20))
+        [alerted] = (
+            await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink)
+        ).alerted
+        await forget_the_edge(alerted.hash)
+
+        provider.payload = ev_only_payload(2.24)  # two points better
+        still_alerted = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert still_alerted.alerted == []
+
+        provider.payload = fair_only_payload()
+        await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        await forget_the_edge(alerted.hash)  # closed, and no field to carry
+        provider.payload = ev_only_payload(2.24)
+        back = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert back.alerted == []
+        assert len(sink.sent) == 1
+        assert (await _opportunity(client, prefix, alerted.hash))["status"] == STATUS_ALERTED
     finally:
         await client.close()
 

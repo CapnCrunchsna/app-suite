@@ -557,6 +557,22 @@ detected_after_start`. It decides from the data (opportunity `detected_at` again
 `commence_time`), never from a list of ids, and it marks rather than deletes: the rows stay, the
 summary leaves them out, and `totals.excluded` lets the page say how many were set aside.
 
+**Re-alerts are measured against the last alert, and one opportunity counts once
+(2026-10-01).** §7.4's re-alert gate compared a new edge with the last poll's, which every cycle
+overwrites, so an edge that dipped one poll read as improved the next: Utah State at betPARX was
+alerted at 12.5 (16.64%) at 18:00 ET on 2026-09-30, fell to 11.0 (2.64%) at 18:45, and was alerted
+again at 13.0 (21.30%) at 19:30 against the 2.64. Opportunities now carry `alerted_edge_pct`,
+written with each alert, and a re-alert needs `edge_improve_delta_pct` over *that* (the 19:30
+alert clears it; a return to 12.5 would not); an opportunity alerted before the field existed
+never re-alerts on improvement alone, and one that lost a cooldown race to a bigger edge now alerts
+on a later cycle instead of never. Grading values every recommendation of an opportunity at the
+opportunity's first-detection leg — both Utah State alerts at 11.5 — so a later recommendation of
+the same opportunity is the same evidence twice: grading writes it with `excluded_reason:
+duplicate_alert`, `python -m edgeline.audit` applies the same rule to results graded before, and
+the summary's `totals.excluded_by_reason` says which rule set each row aside. The **worker** runs
+the alert gate and grading, so it needs a restart to get either; the API needs one for the
+summary.
+
 **It has now, and the first one won (2026-09-18).** A catch-up poll fired **70 seconds after the
 laptop woke** — precisely the cycle the pre-2026-09-15 scheduler dropped — and priced Minnesota
 Twins -1.5 at 2.63 across betrivers, ballybet and betPARX, **4h10m before first pitch**: +EV

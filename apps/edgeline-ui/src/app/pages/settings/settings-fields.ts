@@ -289,7 +289,7 @@ export const POLLING = {
       kind: 'number',
       step: 0.1,
       unit: '%',
-      hint: 'Inside the cooldown, the same opportunity is re-alerted only if its edge grew at least this much (§7.4).',
+      hint: 'An opportunity already alerted is alerted again only once its edge is at least this much better than when it was last alerted — not than at the last poll, against which an edge that dipped and recovered could re-alert an unchanged price (§7.4).',
     },
     {
       key: 'quota_monthly_budget',

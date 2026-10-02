@@ -1170,6 +1170,17 @@
             "type": "number",
             "title": "Edge Pct"
           },
+          "alerted_edge_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alerted Edge Pct"
+          },
           "status": {
             "type": "string",
             "title": "Status"
@@ -2210,6 +2221,13 @@
             "type": "integer",
             "title": "Excluded",
             "default": 0
+          },
+          "excluded_by_reason": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Excluded By Reason"
           }
         },
         "type": "object",

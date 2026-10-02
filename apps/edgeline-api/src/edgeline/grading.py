@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from .audit import DUPLICATE_ALERT, is_duplicate_recommendation
 from .config import Settings
 from .indices import (
     BANKROLL_LEDGER_INDEX,
@@ -454,6 +455,18 @@ async def _grade_one(
         "needs_manual": outcome == VOID,
         "graded_at": utc_now_iso(),
     }
+    # A later recommendation of the same opportunity is valued at the same leg
+    # price as the first (the loop above reads the opportunity's legs, not the
+    # recommendation's), so it is one piece of evidence counted twice (§12,
+    # 2026-10-01). Marked as it is written, rather than left for `python -m
+    # edgeline.audit` to find: a result exists only after this job, and a rule
+    # someone must remember to run after it is how the dead-line rows sat in the
+    # figures for two weeks. Not knowing leaves it counted, the audit's direction.
+    try:
+        if await is_duplicate_recommendation(client, rec_id, source, prefix=prefix):
+            document["excluded_reason"] = DUPLICATE_ALERT
+    except Exception:
+        log.warning("could not check %s for an earlier alert; left counted", rec_id)
     await client.index(
         index=with_prefix(RESULTS_INDEX, prefix),
         id=rec_id,  # §4.4 rule 1: re-running overwrites, never duplicates

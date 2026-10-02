@@ -24,7 +24,8 @@ started (`audit.py`), and until 2026-09-23 they were most of this page: −$39.0
 and a 33% hit rate over a real record of one bet at +$6.52. They are marked, not
 deleted, and `totals.excluded` says how many were set aside so the page can say
 so — a figure that quietly drops rows is the same failure as one that quietly
-mixes evidence.
+mixes evidence. Since 2026-10-01 a repeat recommendation of one opportunity is the
+second reason (`duplicate_alert`), so `totals.excluded_by_reason` says which.
 """
 
 from __future__ import annotations
@@ -59,7 +60,15 @@ async def summary(
             # filter it describes.
             "excluded": {
                 "global": {},
-                "aggs": {"marked": {"filter": {"exists": {"field": "excluded_reason"}}}},
+                "aggs": {
+                    "marked": {
+                        "filter": {"exists": {"field": "excluded_reason"}},
+                        # Why, per reason: since 2026-10-01 there are two, and a
+                        # page that names one reason for all of them misstates
+                        # the other.
+                        "aggs": {"reasons": {"terms": {"field": "excluded_reason", "size": 20}}},
+                    }
+                },
             },
             "buckets": {
                 "date_histogram": {
@@ -153,7 +162,12 @@ def _clv_provenance(scope: dict[str, Any]) -> dict[str, Any]:
 
 
 def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
-    excluded = aggregations.get("excluded", {}).get("marked", {}).get("doc_count", 0)
+    marked = aggregations.get("excluded", {}).get("marked", {})
+    excluded = marked.get("doc_count", 0)
+    by_reason = {
+        bucket["key"]: bucket["doc_count"]
+        for bucket in marked.get("reasons", {}).get("buckets", [])
+    }
     totals = aggregations.get("totals")
     if not totals:
         return {
@@ -165,6 +179,7 @@ def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
             "clv_from_derived": 0,
             "avg_clv_pct_closing": None,
             "excluded": excluded,
+            "excluded_by_reason": by_reason,
         }
     wins = totals["wins"]["doc_count"]
     settled = totals["settled"]["doc_count"]
@@ -177,4 +192,5 @@ def _totals(aggregations: dict[str, Any]) -> dict[str, Any]:
         "settled": settled,
         "hit_rate": _hit_rate(wins, settled),
         "excluded": excluded,
+        "excluded_by_reason": by_reason,
     }

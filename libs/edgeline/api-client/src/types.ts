@@ -93,6 +93,7 @@ export interface OpportunityRow {
   market_key: string;
   legs?: OpportunityLegRow[];
   edge_pct: number;
+  alerted_edge_pct?: number | null;
   status: string;
   detected_at: string;
   expires_at?: string | null;
@@ -272,6 +273,7 @@ export interface SummaryTotals {
   settled?: number;
   hit_rate?: number | null;
   excluded?: number;
+  excluded_by_reason?: Record<string, number>;
 }
 
 export interface UnmatchedRowResponse {

@@ -486,6 +486,128 @@ async def test_clv_is_null_when_no_price_was_ever_stored(es_url, test_index_pref
         await client.close()
 
 
+async def _second_recommendation(
+    client, prefix, *, to_win_cents: int, opportunity_id: str = OPP_HASH, rec_id: str = "rec-repeat"
+) -> str:
+    """Another recommendation, 90 minutes after the seeded one — the shape of
+    2026-09-30's 18:00 and 19:30 alerts on Utah State."""
+    from edgeline.indices import RECOMMENDATIONS_INDEX, with_prefix
+
+    await client.index(
+        index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+        id=rec_id,
+        document={
+            "opportunity_id": opportunity_id,
+            "stakes": {
+                "total_cents": 1100,
+                "legs": [
+                    {
+                        "book_key": "dk",
+                        "selection": REDS,
+                        "stake_cents": 1100,
+                        "to_win_cents": to_win_cents,
+                        "deep_link": "",
+                        "link_level": "none",
+                    }
+                ],
+                "method": "kelly",
+                "guardrails_applied": [],
+            },
+            "paper": True,
+            "channel": "log",
+            "sent_at": "2026-09-02T16:30:00Z",
+        },
+        refresh="wait_for",
+    )
+    return rec_id
+
+
+@pytest.mark.es
+async def test_a_second_recommendation_of_one_opportunity_is_graded_and_set_aside(
+    es_url, test_index_prefix
+):
+    """§12, 2026-10-01. Utah State at betPARX was recommended at 12.5 and then
+    13.0 — and graded, like every recommendation of an opportunity, at the
+    opportunity's own leg, 11.5. One bet at one price, twice. Grading marks the
+    later one as it writes it: the result exists only after this job, so a rule
+    run by hand afterwards would leave it in the figures until remembered."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.audit import DUPLICATE_ALERT
+    from edgeline.grading import grade
+    from edgeline.indices import RESULTS_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _seed(client, prefix)
+        # Staked at 2.20 rather than the seeded 2.10, like 13.0 after 12.5.
+        repeat = await _second_recommendation(client, prefix, to_win_cents=1320)
+        report = await grade(
+            _ScoresProvider(completed_scores_payload()),
+            client, sport_key="baseball_mlb", settings=settings(), prefix=prefix,
+        )
+
+        assert sorted(report.graded) == sorted([REC_ID, repeat])
+        results = with_prefix(RESULTS_INDEX, prefix)
+        first = (await client.get(index=results, id=REC_ID))["_source"]
+        later = (await client.get(index=results, id=repeat))["_source"]
+        assert "excluded_reason" not in first  # the first of the run is the one that counts
+        assert later["excluded_reason"] == DUPLICATE_ALERT
+        # Graded in full, at the opportunity's 2.10, and only kept out of the figures.
+        assert later["outcome"] == WIN
+        assert later["clv_pct"] == pytest.approx(first["clv_pct"])
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_recommendation_of_another_opportunity_still_counts(es_url, test_index_prefix):
+    """Another opportunity — another book, say — is graded at its own leg, so it
+    is its own evidence, even on the same game."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.grading import grade
+    from edgeline.indices import OPPORTUNITIES_INDEX, RESULTS_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    other = "e" * 64
+    try:
+        await _seed(client, prefix)
+        seeded = await client.get(index=with_prefix(OPPORTUNITIES_INDEX, prefix), id=OPP_HASH)
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            id=other,
+            document={**seeded["_source"], "legs": [{**seeded["_source"]["legs"][0], "book_key": "fd"}]},
+            refresh="wait_for",
+        )
+        later = await _second_recommendation(
+            client, prefix, to_win_cents=1210, opportunity_id=other, rec_id="rec-other-book"
+        )
+        await grade(
+            _ScoresProvider(completed_scores_payload()),
+            client, sport_key="baseball_mlb", settings=settings(), prefix=prefix,
+        )
+
+        result = (await client.get(index=with_prefix(RESULTS_INDEX, prefix), id=later))["_source"]
+        assert "excluded_reason" not in result
+    finally:
+        await client.close()
+
+
+def test_only_the_first_recommendation_of_an_opportunity_counts():
+    from edgeline.audit import repeated_recommendations
+
+    recommendations = {
+        "rec-1930": {"opportunity_id": "utah-betparx", "sent_at": "2026-09-30T23:30:21Z"},
+        "rec-1800": {"opportunity_id": "utah-betparx", "sent_at": "2026-09-30T22:00:16Z"},
+        "rec-ballybet": {"opportunity_id": "utah-ballybet", "sent_at": "2026-09-30T23:38:00Z"},
+        "rec-orphan": {"sent_at": "2026-09-30T23:40:00Z"},  # names nothing: never a repeat
+    }
+    assert repeated_recommendations(recommendations) == {"rec-1930"}
+
+
 @pytest.mark.es
 async def test_re_running_grading_changes_nothing(es_url, test_index_prefix):
     """§12 step 2's idempotency, and the reason it matters: step 5 writes to the

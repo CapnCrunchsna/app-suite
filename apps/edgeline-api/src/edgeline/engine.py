@@ -30,9 +30,9 @@ from .dedup import (
     STATUS_OPEN,
     closing_transition,
     cooldown_key,
-    edge_improved,
     expiry_transition,
     is_expired,
+    may_alert,
     opp_hash,
     parse_iso,
     select_cooldown_winners,
@@ -754,14 +754,51 @@ async def run_once(
     detected = {d.hash: d for d in report.detections}
     await _retire_vanished(client, opportunities, stored, detected, now, now_iso, report)
 
+    # What each detection's opportunity was told before (§7.4, amended
+    # 2026-10-01): its live document, or the closed one of a line that died and
+    # came back — same hash, same bet — and, where neither records an alert,
+    # whether a recommendation names it anyway.
+    history = {doc_id: hit["_source"] for doc_id, hit in stored.items()}
+    history.update(
+        await _earlier_lives(
+            client, opportunities, [d.hash for d in report.detections if d.hash not in stored]
+        )
+    )
+    recommended = await _recommended_opportunities(
+        client,
+        [
+            doc_id
+            for doc_id, source in history.items()
+            if doc_id in detected
+            and source.get("alerted_edge_pct") is None
+            and source.get("status") != STATUS_ALERTED
+        ],
+        prefix=prefix,
+    )
+
     eligible: list[tuple[tuple[str, str], Detection, float]] = []
     for detection in report.detections:
         prior = stored.get(detection.hash)
+        before = history.get(detection.hash, {})
+        alerted_edge = before.get("alerted_edge_pct")
+        was_alerted = (
+            alerted_edge is not None
+            or before.get("status") == STATUS_ALERTED
+            or detection.hash in recommended
+        )
         if prior is None:
+            document = detection.to_document()
+            if was_alerted:
+                # A line that closed and has come back is still the bet that was
+                # alerted, so it keeps that record and the gate below compares
+                # it with the alert rather than treating it as news.
+                document["status"] = STATUS_ALERTED
+                if alerted_edge is not None:
+                    document["alerted_edge_pct"] = alerted_edge
             await client.index(
                 index=opportunities,
                 id=detection.hash,
-                document=detection.to_document(),
+                document=document,
                 refresh="wait_for",  # §4.4 rule 2
             )
         else:
@@ -769,15 +806,16 @@ async def run_once(
             await _update_opportunity(
                 client, opportunities, detection.hash, {"edge_pct": detection.edge_pct}, prior
             )
-            # §7.4: an existing opportunity re-alerts only on a materially
-            # better edge. Without this one long-lived mispricing shouts every
-            # cycle for as long as it lives.
-            if not edge_improved(
-                prior["_source"].get("edge_pct", 0.0),
-                detection.edge_pct,
-                settings.edge_improve_delta_pct,
-            ):
-                continue
+        # §7.4: an alerted opportunity re-alerts only when materially better
+        # than at that alert — not than at the last poll, against which an edge
+        # that dipped and recovered reads as an improvement at an unchanged price.
+        if not may_alert(
+            alerted_edge_pct=alerted_edge,
+            was_alerted=was_alerted,
+            new_edge_pct=detection.edge_pct,
+            delta_pct=settings.edge_improve_delta_pct,
+        ):
+            continue
         eligible.append(
             (cooldown_key(detection.sport_key, detection.market_key), detection, detection.edge_pct)
         )
@@ -836,11 +874,13 @@ async def run_once(
             refresh="wait_for",
         )
         # Only now does the opportunity count as alerted — which is what the
-        # cooldown, the re-alert gate and T2.5's instrumentation all read.
+        # cooldown, the re-alert gate and T2.5's instrumentation all read. The
+        # edge goes with it: it is the baseline every later re-alert is
+        # measured against (§7.4).
         await client.update(
             index=opportunities,
             id=detection.hash,
-            doc={"status": STATUS_ALERTED},
+            doc={"status": STATUS_ALERTED, "alerted_edge_pct": detection.edge_pct},
             refresh="wait_for",
         )
         report.alerted.append(detection)
@@ -1133,6 +1173,52 @@ async def load_last_alert_times(
         )
         last.setdefault(key, hit["_source"]["sent_at"])
     return last
+
+
+async def _earlier_lives(client, index: str, ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Stored documents for hashes this cycle is about to (re)create.
+
+    Not live, or `load_live_opportunities` would have returned them — so a line
+    that closed and has come back, carrying `alerted_edge_pct` if it was alerted
+    in its earlier life. Empty on a failed read, which treats them as new: the
+    record's duplicate rule (§12) still catches a repeat at the same price, and
+    raising here would fail a cycle whose odds are already bought.
+    """
+    if not ids:
+        return {}
+    try:
+        found = await client.mget(index=index, ids=sorted(set(ids)))
+    except Exception:
+        log.warning("could not read earlier opportunity documents; treating them as new")
+        return {}
+    return {doc["_id"]: doc["_source"] for doc in found["docs"] if doc.get("found")}
+
+
+async def _recommended_opportunities(client, ids: list[str], *, prefix: str) -> set[str]:
+    """Which of `ids` a recommendation names — alerted, whatever the document says.
+
+    Asked only of documents recording no alert, which after 2026-10-01 means
+    ones alerted before `alerted_edge_pct` existed and since closed: closing
+    overwrote `status`, and nothing else on the document remembers the alert.
+    **Fails closed** — an unreadable answer counts every id as alerted, which
+    defers a never-alerted opportunity by one cycle rather than risking a second
+    alert on a bet already recommended.
+    """
+    wanted = sorted(set(ids))
+    if not wanted:
+        return set()
+    try:
+        found = await client.search(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+            size=0,
+            query={"terms": {"opportunity_id": wanted}},
+            aggs={"named": {"terms": {"field": "opportunity_id", "size": len(wanted)}}},
+        )
+    except Exception:
+        log.warning("could not read which opportunities were recommended; holding their alerts")
+        return set(wanted)
+    buckets = found.get("aggregations", {}).get("named", {}).get("buckets", [])
+    return {bucket["key"] for bucket in buckets}
 
 
 async def _retire_vanished(

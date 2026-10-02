@@ -567,6 +567,66 @@ async def test_the_audit_excludes_a_bet_detected_after_first_pitch_and_nothing_e
     assert await exclude_results_detected_after_start(client, prefix=prefix) == []
 
 
+async def test_the_audit_sets_aside_a_repeat_recommendation_already_graded_and_says_why(api):
+    """The duplicate rule for results graded before grading applied it itself
+    (2026-10-01): an earlier recommendation of the same opportunity, which
+    grading values at the same leg price. The summary then names each reason,
+    so the page stops calling every excluded row a dead line."""
+    http, client, prefix = api
+    from edgeline.audit import DUPLICATE_ALERT, exclude_duplicate_results
+    from edgeline.indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, RESULTS_INDEX, with_prefix
+
+    for opportunity_id, book in ((OPP_HASH, "betparx"), ("f" * 64, "ballybet")):
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            id=opportunity_id,
+            document={
+                "type": "ev", "event_id": EVENT_ID, "market_key": "h2h",
+                "legs": [{"book_key": book, "selection": "Utah State Aggies", "line": None,
+                          "price_decimal": 11.5, "devig_prob": 0.083, "bet_first": False}],
+                "edge_pct": 21.3, "status": "alerted", "detected_at": "2026-09-30T21:15:00Z",
+                "expires_at": "2026-10-03T23:30:00Z",
+            },
+            refresh="wait_for",
+        )
+
+    async def graded(rec_id: str, opportunity_id: str, sent_at: str, **extra) -> None:
+        await client.index(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+            id=rec_id,
+            document={
+                "opportunity_id": opportunity_id,
+                "stakes": {"total_cents": 400, "method": "kelly", "guardrails_applied": [],
+                           "legs": []},
+                "paper": True, "channel": "log", "sent_at": sent_at,
+            },
+            refresh="wait_for",
+        )
+        await client.index(
+            index=with_prefix(RESULTS_INDEX, prefix),
+            id=rec_id,
+            document={"bet_id": "", "outcome": "win", "pnl_cents": 4200,
+                      "clv_pct": None, "needs_manual": False, "graded_at": utc_now_iso(),
+                      **extra},
+            refresh="wait_for",
+        )
+
+    await graded("rec-1800", OPP_HASH, "2026-09-30T22:00:16Z")  # staked at 12.5
+    await graded("rec-1930", OPP_HASH, "2026-09-30T23:30:21Z")  # 13.0; both graded at 11.5
+    await graded("rec-ballybet", "f" * 64, "2026-09-30T23:38:00Z")  # another opportunity
+    await graded("rec-dead", "c" * 64, "2026-09-10T02:45:00Z", excluded_reason="detected_after_start")
+
+    assert await exclude_duplicate_results(client, prefix=prefix) == ["rec-1930"]
+    marked = await client.get(index=with_prefix(RESULTS_INDEX, prefix), id="rec-1930")
+    assert marked["_source"]["excluded_reason"] == DUPLICATE_ALERT
+    assert await exclude_duplicate_results(client, prefix=prefix) == []  # idempotent
+
+    totals = (await http.get("/api/results/summary")).json()["totals"]
+    assert totals["graded"] == 2
+    assert totals["excluded"] == 2
+    assert totals["excluded_by_reason"] == {"detected_after_start": 1, "duplicate_alert": 1}
+
+
 # ---- bankroll (§10, §4.4 rule 3) -------------------------------------------
 
 

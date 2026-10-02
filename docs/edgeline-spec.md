@@ -205,7 +205,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `devig_method` | `"multiplicative"` | one of multiplicative/additive/power/shin |
 | `consensus_weights` | `{"default":1}` | per-book integer weights, e.g. `{"pinnacle":3}` |
 | `staleness_sigma_floor` | `0.002` | σ floor to avoid divide-by-near-zero |
-| `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this |
+| `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this since its last alert (amended 2026-10-01, §7.4) |
 | `alert_cooldown_s` | `300` | per market key |
 | `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys. **Since 2026-09-23** what the interval polls when `poll_schedule` is empty, and what §10's manual trigger buys on a day the plan has nothing |
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
@@ -293,7 +293,7 @@ update`.
 | `edgeline-sportsbooks` | book key | display_name kw · md_licensed bool · enabled bool · priority integer · link_templates obj(enabled:false) |
 | `edgeline-events` | `{sport_key}:{provider_event_id}` | sport_key kw · commence_time date · home_team kw · away_team kw · completed bool · home_score integer · away_score integer |
 | `edgeline-odds-snapshots` | auto | event_id kw · book_key kw · market_key kw · selection kw · line double · price_decimal double · is_closing bool · @timestamp date |
-| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double |
+| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double |
 | `edgeline-recommendations` | auto | opportunity_id kw (= opp_hash) · stakes obj(enabled:false, the §5 StakePlan) · paper bool · channel kw · sent_at date · message_ref kw |
 | `edgeline-bets` | auto | recommendation_id kw · confirmed_via kw(button\|reaction\|ui) · stake_actual_cents long · odds_actual_decimal double · placed_at date |
 | `edgeline-results` | **recommendation id** | bet_id kw · outcome kw(win\|loss\|push\|void) · pnl_cents long · clv_pct double · clv_source kw(closing\|derived) · clv_staleness_s long · needs_manual bool · graded_at date · excluded_reason kw (§12, added 2026-09-23) |
@@ -535,13 +535,15 @@ id, and every state change goes through the update API under optimistic concurre
 (§4.4 rule 4).
 
 - Hash exists with status open/alerted: update `edge_pct`; re-alert ONLY if edge improved by
-  ≥ `edge_improve_delta_pct` AND cooldown expired.
+  ≥ `edge_improve_delta_pct` over `alerted_edge_pct`, the edge at its last alert, AND cooldown
+  expired (amended 2026-10-01, below).
 - Detection disappears next cycle → status `closed`, record `closing_edge_pct`.
 - `commence_time` passes → status `expired`.
 - Cooldown: at most one alert per `(sport, market_key)` per `alert_cooldown_s`, whichever
   detection has the highest edge wins the slot.
 
-**Known consequence of the re-alert wording (recorded 2026-09-04, T2.4).** The baseline for
+**Known consequence of the re-alert wording (recorded 2026-09-04, T2.4; superseded 2026-10-01,
+below).** The baseline for
 "edge improved" is the stored `edge_pct`, which the same rule overwrites every cycle. So an
 improvement that arrives *while the cooldown is still running* is absorbed into `edge_pct`, and
 once the cooldown clears there is no longer an improvement to detect — the better edge is never
@@ -549,6 +551,29 @@ announced. This is the literal reading and it is what ships; a test pins it so i
 silently. Comparing instead against the edge *as at the last alert* would need a field §4.3 does
 not have, which is a spec decision rather than an implementation one. Revisit if paper trading
 shows meaningful edges going unannounced.
+
+**Re-alerts are measured against the edge at the last alert — amended 2026-10-01.** Paper trading
+found the worse half of the note above. Because every cycle overwrote `edge_pct`, the baseline was
+the previous poll, so an edge that dipped one poll read as improved the next. Utah State at betPARX
+(NCAAF h2h) shows it: first detected at 11.5 (7.31%) at 17:15 ET on 2026-09-30, alerted at 12.5
+(16.64%) at 18:00, down to 11.0 (2.64%) at 18:45, and alerted again at 13.0 (21.30%) at 19:30 —
+measured against the 2.64. That second alert came at a better price, 4.66 points over the first,
+so the corrected gate sends it too; what the old baseline gets wrong is an edge that comes back to
+the price it was alerted at, which it re-alerts unchanged. §4.3 gains `alerted_edge_pct`, written
+with each alert, and the gate compares against it: a dip and recovery no longer re-alerts, and an
+improvement absorbed during a cooldown is announced once it clears.
+Three cases. An opportunity alerted since the field exists re-alerts only at ≥
+`edge_improve_delta_pct` above its `alerted_edge_pct`. One alerted before it, whose alert-time
+edge is unknown, never re-alerts on improvement alone: every such opportunity expires with its
+game within days, and guessing the baseline is how the duplicate happened. One never alerted
+competes for the cooldown slot on every cycle it is still detected — **decided the same day**:
+an opportunity that lost the `(sport, market_key)` race at first detection used to alert later
+only if its edge "improved" on the previous poll, so in practice never, and the cooldown is a rate
+limit — losing one cycle's slot to a bigger edge defers an alert, it does not discard it. A line
+that closes and comes back is the same hash and the same bet: the re-created document keeps
+`status: alerted` and its `alerted_edge_pct`, and where a closed document predates the field, a
+recommendation naming the hash is what marks it as alerted. §12 sets aside the second Utah State
+recommendation on other grounds: grading values both at the opportunity's 11.5.
 
 The last-alert time the cooldown reads is **derived, not stored**: `edgeline-recommendations`
 knows when an alert went out (`sent_at`) and `edgeline-opportunities` knows what it was about
@@ -961,6 +986,25 @@ the record of what the system did is not edited away. `python -m edgeline.audit 
 sets the flag, deciding from the data rather than from a list of ids: opportunity
 `detected_at` against the event's `commence_time`, the rule `detect_opportunities` has
 enforced since 2026-09-11. A trail that cannot be followed stays counted.
+
+**A second recommendation of one opportunity counts once — added 2026-10-01.** Utah State at
+betPARX was recommended at 18:00 (`96e83d8e4ccbb205-1790805603`, staked at 12.5) and again at
+19:30 ET (`96e83d8e4ccbb205-1790811002`, staked at 13.0) on 2026-09-30, on one opportunity (§7.4).
+Step 2 values every leg at the *opportunity's* `price_decimal` — the price it was first detected
+at, 11.5 — not at the price a recommendation was staked at, so the record holds the same bet at the
+same price twice: the same CLV, one piece of evidence counted twice. A recommendation is
+`excluded_reason: duplicate_alert` when an earlier recommendation exists for the same opportunity;
+the earliest counts. That valuation is recorded here, not changed — the 18:00 recommendation is
+graded at 11.5 too, though it was staked at 12.5 — and if grading ever values a recommendation at
+its own alert price, this rule must compare those prices instead. **Applied at grading, as each
+result is written** rather than left to the audit: a result exists only after the nightly grade,
+and that game is Saturday 2026-10-03, so a rule someone had to remember to run afterwards is how
+the dead-line rows above sat in the figures for two weeks. `python -m edgeline.audit --apply`
+runs the same rule over results graded before it existed. The result is still graded in full; a
+bet a human confirmed still moves the ledger, since it is real money whatever the evidence rule
+says; and a check that cannot be answered leaves the result counted. `totals.excluded_by_reason`
+now breaks `totals.excluded` down, so the page names each reason instead of calling every
+excluded row a dead line.
 
 **Scores are fetched only for sports with a bet to settle (added 2026-09-23).** Step 1 used to run
 for every enabled sport on every run, at 2 credits a sport whether or not anything settled; once

@@ -41,8 +41,8 @@
   @if (excluded() > 0) {
     <p class="excluded">
       {{ excluded() }} {{ excluded() === 1 ? 'recommendation is' : 'recommendations are' }}
-      left out of every figure below: detected after the game had already started — dead
-      lines a book had not taken down, not edges. Kept on record, not deleted.
+      left out of every figure below{{ excludedWhy() ? ': ' + excludedWhy() : '' }}. Kept on
+      record, not deleted.
     </p>
   }
 

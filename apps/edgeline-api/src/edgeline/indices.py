@@ -121,6 +121,12 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
                 },
             },
             "edge_pct": _DOUBLE,
+            #: The edge when this opportunity was last alerted (§7.4, added
+            #: 2026-10-01). `edge_pct` is overwritten every cycle, so comparing a
+            #: re-alert against it measured the last poll, not the last alert: an
+            #: edge that dipped and recovered could re-alert at the same price.
+            #: Absent until the first alert.
+            "alerted_edge_pct": _DOUBLE,
             "status": _KEYWORD,  # open | alerted | closed | expired
             "detected_at": _DATE,
             "expires_at": _DATE,

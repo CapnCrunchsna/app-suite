@@ -76,6 +76,9 @@ class OpportunityRow(BaseModel):
     market_key: str
     legs: list[OpportunityLegRow] = Field(default_factory=list)
     edge_pct: float
+    #: The edge when it was last alerted, which a re-alert is measured against
+    #: (§7.4, 2026-10-01). Absent until the first alert.
+    alerted_edge_pct: float | None = None
     status: str
     detected_at: str
     expires_at: str | None = None
@@ -180,6 +183,9 @@ class SummaryTotals(ClvProvenance):
     #: reported so the page can say rows were set aside rather than silently
     #: showing fewer of them (`audit.py`).
     excluded: int = 0
+    #: `excluded`, per reason — `detected_after_start`, `duplicate_alert`
+    #: (2026-10-01) — so the page names why each row was set aside.
+    excluded_by_reason: dict[str, int] = Field(default_factory=dict)
 
 
 class SummaryResponse(BaseModel):

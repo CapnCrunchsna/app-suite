@@ -8,9 +8,10 @@ literally, `sorted()`'s list repr included — it is a wire format now, not an
 implementation detail, and "tidying" it would orphan every stored document.
 
 Two independent gates stand between a detection and an alert, and they answer
-different questions. `edge_improved` asks whether *this* opportunity is now
-materially better than when it was last alerted. The cooldown asks whether *any*
-alert has gone out for this sport and market recently. Both must pass.
+different questions. `may_alert` asks whether *this* opportunity is new to the
+reader or materially better than when it was last alerted. The cooldown asks
+whether *any* alert has gone out for this sport and market recently. Both must
+pass.
 """
 
 from __future__ import annotations
@@ -60,6 +61,35 @@ def edge_improved(previous_edge_pct: float, new_edge_pct: float, delta_pct: floa
     long-lived mispricing would re-alert on every cycle.
     """
     return (new_edge_pct - previous_edge_pct) >= delta_pct
+
+
+def may_alert(
+    *,
+    alerted_edge_pct: float | None,
+    was_alerted: bool,
+    new_edge_pct: float,
+    delta_pct: float,
+) -> bool:
+    """§7.4's per-opportunity gate, as amended 2026-10-01.
+
+    * **Alerted, with the edge at that alert on record** (`alerted_edge_pct`):
+      only when the edge is materially better than *that*. Until 2026-10-01 the
+      baseline was the stored `edge_pct`, which every cycle overwrites, so an
+      edge that dipped one poll and recovered the next could re-alert at an
+      unchanged price. Utah State at betPARX shows the dip: alerted at 12.5
+      (16.64%) at 18:00 ET on 2026-09-30, 11.0 (2.64%) at 18:45, re-alerted at
+      13.0 (21.30%) at 19:30 against the 2.64.
+    * **Alerted before that field existed:** the edge at the alert is unknown,
+      so improvement alone never re-alerts it. Every such opportunity expires
+      with its game within days; guessing the baseline is how the duplicate
+      happened.
+    * **Never alerted:** competes for the cooldown slot like a new detection.
+      The cooldown is a rate limit, and an edge that lost one cycle's slot to a
+      bigger one is deferred by it, not discarded.
+    """
+    if alerted_edge_pct is not None:
+        return edge_improved(alerted_edge_pct, new_edge_pct, delta_pct)
+    return not was_alerted
 
 
 def cooldown_expired(

@@ -21,6 +21,7 @@ from edgeline.dedup import (
     edge_improved,
     expiry_transition,
     is_expired,
+    may_alert,
     opp_hash,
     parse_iso,
     select_cooldown_winners,
@@ -73,6 +74,30 @@ def test_edge_must_actually_grow_to_re_alert():
 def test_a_decayed_or_flat_edge_stays_quiet(new_edge):
     """Without this, one long-lived mispricing re-alerts every single cycle."""
     assert not edge_improved(2.0, new_edge, 0.5)
+
+
+def test_a_re_alert_is_measured_against_the_edge_at_the_last_alert():
+    """§7.4 as amended 2026-10-01. Against the last poll, an edge that dips and
+    recovers to where it was alerted reads as an improvement — Utah State at
+    betPARX went 16.64% (alerted), 2.64%, 21.30% on 2026-09-30, and the 21.30
+    was measured against the 2.64. Against the alert, a recovery is not one."""
+    assert not may_alert(
+        alerted_edge_pct=21.30, was_alerted=True, new_edge_pct=21.30, delta_pct=0.5
+    )
+    assert may_alert(alerted_edge_pct=21.30, was_alerted=True, new_edge_pct=21.80, delta_pct=0.5)
+
+
+def test_an_opportunity_never_alerted_competes_like_a_new_one():
+    """Losing a cooldown race defers an alert; it does not use up the chance."""
+    assert may_alert(alerted_edge_pct=None, was_alerted=False, new_edge_pct=2.1, delta_pct=0.5)
+
+
+def test_an_alert_whose_edge_was_never_recorded_is_not_repeated_on_improvement():
+    """Alerted before `alerted_edge_pct` existed: guessing the baseline is how
+    the duplicate happened, so improvement alone never re-alerts it."""
+    assert not may_alert(
+        alerted_edge_pct=None, was_alerted=True, new_edge_pct=40.0, delta_pct=0.5
+    )
 
 
 def test_cooldown_blocks_a_recent_alert_and_clears_afterwards():

@@ -234,12 +234,40 @@ describe('ResultsPage (§11.1, §12)', () => {
   describe('rows set aside by the audit', () => {
     it('says how many were left out and why', async () => {
       const { el } = await render((stub) => {
-        stub.summary = { ...POPULATED, totals: { ...POPULATED.totals, excluded: 5 } };
+        stub.summary = {
+          ...POPULATED,
+          totals: {
+            ...POPULATED.totals,
+            excluded: 5,
+            excluded_by_reason: { detected_after_start: 5 },
+          },
+        };
       });
       const note = el.querySelector('.excluded')?.textContent ?? '';
       expect(note).toContain('5 recommendations are');
       expect(note).toContain('already started');
       expect(note).toContain('not deleted');
+    });
+
+    /**
+     * 2026-10-01: a repeat recommendation of one opportunity is the second
+     * reason, and calling it a dead line would misstate it.
+     */
+    it('names each reason rather than calling every row a dead line', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = {
+          ...POPULATED,
+          totals: {
+            ...POPULATED.totals,
+            excluded: 6,
+            excluded_by_reason: { detected_after_start: 5, duplicate_alert: 1 },
+          },
+        };
+      });
+      const note = el.querySelector('.excluded')?.textContent?.replace(/\s+/g, ' ') ?? '';
+      expect(note).toContain('6 recommendations are');
+      expect(note).toContain('5 detected after the game had already started');
+      expect(note).toContain('1 repeated an earlier recommendation of the same opportunity');
     });
 
     it('says nothing when nothing was set aside', async () => {
