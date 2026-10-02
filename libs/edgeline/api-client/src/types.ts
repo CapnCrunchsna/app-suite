@@ -75,6 +75,27 @@ export interface LedgerEntry {
   "@timestamp": string;
 }
 
+/** CLV figures over one group of measured opportunities (`clv.py`). */
+export interface OpportunityClvStats {
+  key?: string | null;
+  count?: number;
+  mean_clv_pct?: number | null;
+  median_clv_pct?: number | null;
+  share_positive?: number | null;
+  from_closing?: number;
+}
+
+/** CLV over every opportunity whose game has started (§12, 2026-10-01). */
+export interface OpportunityClvSummary {
+  graded?: number;
+  circular?: number;
+  unpriced?: number;
+  measured?: OpportunityClvStats;
+  by_sport?: OpportunityClvStats[];
+  by_odds?: OpportunityClvStats[];
+  by_lead?: OpportunityClvStats[];
+}
+
 export interface OpportunityLegRow {
   book_key: string;
   selection: string;
@@ -264,6 +285,7 @@ export interface SummaryResponse {
   group: string;
   buckets?: SummaryBucket[];
   totals: SummaryTotals;
+  opportunity_clv?: OpportunityClvSummary | null;
 }
 
 export interface SummaryTotals {

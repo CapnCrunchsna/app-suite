@@ -295,7 +295,7 @@ update`.
 | `edgeline-sportsbooks` | book key | display_name kw · md_licensed bool · enabled bool · priority integer · link_templates obj(enabled:false) |
 | `edgeline-events` | `{sport_key}:{provider_event_id}` | sport_key kw · commence_time date · home_team kw · away_team kw · completed bool · home_score integer · away_score integer |
 | `edgeline-odds-snapshots` | auto | event_id kw · book_key kw · market_key kw · selection kw · line double · price_decimal double · is_closing bool · @timestamp date |
-| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double |
+| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double · sport_key kw · clv_pct double · clv_source kw · clv_staleness_s long · clv_priced_at date · clv_circular bool · clv_lead_s long · clv_price_decimal double · clv_graded_at date (§12, added 2026-10-01) |
 | `edgeline-recommendations` | auto | opportunity_id kw (= opp_hash) · stakes obj(enabled:false, the §5 StakePlan) · paper bool · channel kw · sent_at date · message_ref kw |
 | `edgeline-bets` | auto | recommendation_id kw · confirmed_via kw(button\|reaction\|ui) · stake_actual_cents long · odds_actual_decimal double · placed_at date |
 | `edgeline-results` | **recommendation id** | bet_id kw · outcome kw(win\|loss\|push\|void) · pnl_cents long · clv_pct double · clv_source kw(closing\|derived) · clv_staleness_s long · needs_manual bool · graded_at date · excluded_reason kw (§12, added 2026-09-23) |
@@ -894,7 +894,7 @@ All routes under `/api`. Auto-generated OpenAPI at `/api/openapi.json` (feeds §
 | `GET /api/opportunities?status=&type=&limit=` | opportunity table |
 | `GET /api/recommendations?paper=&from=&to=` | history w/ joined opportunity + result |
 | `POST /api/recommendations/{id}/confirm` | body `{stake_actual_cents, odds_actual_decimal}` → bets row (`confirmed_via='ui'`) |
-| `GET /api/results/summary?group=day\|week` | pnl, hit rate, avg CLV, rec vs executed split |
+| `GET /api/results/summary?group=day\|week` | pnl, hit rate, avg CLV, rec vs executed split; `opportunity_clv`, CLV over every opportunity (§12, added 2026-10-01) |
 | `GET /api/bankroll` / `POST /api/bankroll/adjust` | ledger view / manual deposit-withdraw rows |
 | `GET /api/matching` / `POST /api/matching/{id}/resolve` | quarantine queue |
 | `GET /api/system/health` | scheduler last-run, quota, kill_switch, paper_mode; `poll_plan` (added 2026-09-23) |
@@ -1067,6 +1067,29 @@ game, offshore ones included; since §3.2's `poll_bookmakers` names the enabled 
 the Maryland seven alone, so a game graded without a closing snapshot is measured by a consensus
 about half as broad, of the books a person here could bet at. Closing snapshots keep asking for
 `regions`, so a game with a bought closing line keeps the broad consensus (§8.4).
+
+**CLV is measured for every opportunity, not only the recommendations — added 2026-10-01.** §7.4's
+cooldown allows one alert per `(sport, market_key)` per window, so by 2026-10-01 144 opportunities
+had produced 26 recommendations, and step 4 measured CLV on a sixth of what the detector found. The
+rest cost nothing more to measure: their prices are stored. Every opportunity whose game has
+started is now measured with step 4's own `closing_consensus_prob`, at its **first-detection leg
+price** — `run_once` updates only `edge_pct` on an existing opportunity, so its legs keep the price
+it was found at — and stored on it (§4.3) with the provenance a result carries: `clv_source`,
+`clv_staleness_s`, and when the closing price was fetched, `clv_priced_at`. A multi-leg
+opportunity reports the plain mean of its legs, there being no stake to weight by. **A
+measurement is circular** when that price was fetched at or before `detected_at`: no later poll
+priced the game, so the "closing" price is the detecting poll's and the CLV re-measures the
+detection edge instead of testing it — 7 of the first 8 graded recommendations were that, and the
+one genuine CLV among them was +2.06%. Those carry `clv_circular` and are counted but left out of
+every figure. The nightly grade measures them first and unconditionally — it reads stored prices
+only, so it also runs offline and on days with nothing to settle — and `python -m edgeline.clv`
+does it on demand and prints the report: count, mean, median and share positive, overall and by
+sport, odds band (under 2.0, 2.0–3.0, 3.0–5.0, 5.0–10.0, 10.0 and over) and lead time (under 2 h,
+2–6 h, 6–24 h, 1–3 days, 3 days and over). `GET /api/results/summary` carries the same aggregation
+as `opportunity_clv`, and the Results page shows it below the recommendations' figures. A game
+with nothing stored before its start is marked measured with no CLV, and not asked again. **T4.4
+is unchanged**: at least 200 paper recommendations and their CLV distribution, reported to the
+user. This is supporting evidence beside it, not a redefinition of it.
 
 ---
 

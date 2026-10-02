@@ -501,7 +501,7 @@ async def closing_consensus_prob(
     settings: Settings,
     *,
     prefix: str,
-) -> float | None:
+) -> "ClosingPrice | None":
     """Consensus fair probability at the close, from `is_closing` snapshots (§12.4).
 
     Returns `None` when no closing snapshot exists — CLV is simply unknown for
@@ -525,6 +525,8 @@ async def closing_consensus_prob(
     )
     if not rows:
         return None
+    stamps = [row["@timestamp"] for row in rows if row.get("@timestamp")]
+    priced_at = max(stamps) if stamps else None
 
     by_book: dict[str, dict[str, float]] = {}
     for row in rows:
@@ -547,6 +549,7 @@ async def closing_consensus_prob(
         prob=consensus(fair, settings.consensus_weights),
         source=source,
         staleness_s=staleness,
+        priced_at=priced_at,
     )
 
 
@@ -557,6 +560,10 @@ class ClosingPrice:
     prob: float
     source: str  # CLV_CLOSING | CLV_DERIVED
     staleness_s: int | None = None
+    #: When the rows behind it were fetched. A price fetched at or before the
+    #: detection it measures is that detection's own poll — a circular CLV
+    #: (2026-10-01, `clv.py`).
+    priced_at: str | None = None
 
 
 async def _closing_rows(

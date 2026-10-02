@@ -105,6 +105,8 @@ class Detection:
         return {
             "type": self.type,
             "event_id": self.event_id,
+            # Since 2026-10-01, so the CLV summary can group by sport (`clv.py`).
+            "sport_key": self.sport_key,
             "market_key": self.market_key,
             "legs": [
                 {

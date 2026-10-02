@@ -277,4 +277,61 @@ describe('ResultsPage (§11.1, §12)', () => {
       expect(el.querySelector('.excluded')).toBeNull();
     });
   });
+
+  /**
+   * §12, 2026-10-01: CLV over every opportunity, as supporting evidence. The
+   * circular measurements are counted in words, never folded into a figure.
+   */
+  describe("every opportunity's CLV", () => {
+    const stats = (key: string | null, count: number, mean: number | null) => ({
+      key,
+      count,
+      mean_clv_pct: mean,
+      median_clv_pct: mean,
+      share_positive: count ? 0.5 : null,
+      from_closing: 0,
+    });
+
+    it('shows the overall figures and each breakdown, sports by name', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = {
+          ...POPULATED,
+          opportunity_clv: {
+            graded: 12,
+            circular: 7,
+            unpriced: 1,
+            measured: stats(null, 4, 2.06),
+            by_sport: [stats('americanfootball_ncaaf', 4, 2.06)],
+            by_odds: [stats('10.0 and over', 2, 3.1)],
+            by_lead: [stats('1 to 3 days', 4, 2.06)],
+          },
+        };
+      });
+      const panel = el.querySelector('.opportunity-clv')?.textContent?.replace(/\s+/g, ' ') ?? '';
+      expect(panel).toContain('All');
+      expect(panel).toContain('NCAAF');
+      expect(panel).toContain('10.0 and over');
+      expect(panel).toContain('1 to 3 days');
+      expect(el.textContent?.replace(/\s+/g, ' ')).toContain('7 circular measurements left out');
+    });
+
+    it('says nothing has been measured rather than showing zeros', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = {
+          ...POPULATED,
+          opportunity_clv: {
+            graded: 0,
+            circular: 0,
+            unpriced: 0,
+            measured: stats(null, 0, null),
+            by_sport: [],
+            by_odds: [],
+            by_lead: [],
+          },
+        };
+      });
+      expect(el.querySelector('.opportunity-clv')).toBeNull();
+      expect(el.textContent).toContain('Nothing measured yet');
+    });
+  });
 });

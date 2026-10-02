@@ -54,6 +54,7 @@ FLAG_FIELDS = {
     "needs_manual",
     "resolved",
     "bet_first",
+    "clv_circular",
 }
 # §4.3 asks for `integer` specifically on these; they are counts, not money.
 INTEGER_FIELDS = {"home_score", "away_score", "priority"}

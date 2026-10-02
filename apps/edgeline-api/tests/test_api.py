@@ -382,11 +382,42 @@ async def test_summary_aggregates_pnl_hit_rate_and_clv(api):
 async def test_hit_rate_is_null_rather_than_zero_with_nothing_settled(api):
     """"No data yet" and "you lose every bet" are very different claims."""
     http, _client, _prefix = api
-    totals = (await http.get("/api/results/summary")).json()["totals"]
+    body = (await http.get("/api/results/summary")).json()
+    totals = body["totals"]
     assert totals["graded"] == 0
     assert totals["hit_rate"] is None
     assert totals["clv_from_closing"] == 0
     assert totals["avg_clv_pct_closing"] is None
+    # Nor does every opportunity's CLV claim anything before one is measured.
+    assert body["opportunity_clv"]["measured"]["count"] == 0
+    assert body["opportunity_clv"]["measured"]["share_positive"] is None
+
+
+async def test_the_summary_carries_every_opportunitys_clv(api):
+    """§12, 2026-10-01: the same aggregation `python -m edgeline.clv` prints."""
+    http, client, prefix = api
+    from edgeline.indices import OPPORTUNITIES_INDEX, with_prefix
+
+    for doc_id, clv, circular in (("x", 5.0, False), ("y", -1.0, False), ("z", 20.0, True)):
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix), id=doc_id,
+            document={"type": "ev", "event_id": f"americanfootball_ncaaf:{doc_id}",
+                      "market_key": "h2h", "legs": [], "edge_pct": 5.0, "status": "expired",
+                      "detected_at": "2026-09-27T12:00:00Z", "expires_at": "2026-09-27T17:00:00Z",
+                      "sport_key": "americanfootball_ncaaf", "clv_pct": clv,
+                      "clv_source": "derived", "clv_circular": circular,
+                      "clv_price_decimal": 3.5, "clv_lead_s": 18_000,
+                      "clv_graded_at": "2026-09-28T06:00:00Z"},
+            refresh="wait_for",
+        )
+
+    clv = (await http.get("/api/results/summary")).json()["opportunity_clv"]
+    assert clv["graded"] == 3
+    assert clv["circular"] == 1
+    assert clv["measured"]["count"] == 2
+    assert clv["measured"]["mean_clv_pct"] == pytest.approx(2.0)
+    assert clv["measured"]["share_positive"] == pytest.approx(0.5)
+    assert [row["key"] for row in clv["by_sport"]] == ["americanfootball_ncaaf"]
 
 
 async def test_the_clv_average_travels_with_where_it_came_from(api):

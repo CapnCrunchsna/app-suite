@@ -188,10 +188,44 @@ class SummaryTotals(ClvProvenance):
     excluded_by_reason: dict[str, int] = Field(default_factory=dict)
 
 
+class OpportunityClvStats(BaseModel):
+    """CLV figures over one group of measured opportunities (`clv.py`)."""
+
+    #: The group's name — a sport key, an odds band, a lead-time band — or `None`
+    #: for the whole.
+    key: str | None = None
+    count: int = 0
+    mean_clv_pct: float | None = None
+    median_clv_pct: float | None = None
+    #: Null rather than 0.0 when nothing is measured: "no data" is not "never".
+    share_positive: float | None = None
+    #: How many were measured against a bought closing line, not a derived one.
+    from_closing: int = 0
+
+
+class OpportunityClvSummary(BaseModel):
+    """CLV over every opportunity whose game has started (§12, 2026-10-01).
+
+    Supporting evidence beside the recommendations' figures above — the cooldown
+    keeps those to about one opportunity in six. Circular measurements, priced by
+    the poll that found the edge, are counted and left out of every figure.
+    T4.4 still reads the recommendations.
+    """
+
+    graded: int = 0
+    circular: int = 0
+    unpriced: int = 0
+    measured: OpportunityClvStats = Field(default_factory=OpportunityClvStats)
+    by_sport: list[OpportunityClvStats] = Field(default_factory=list)
+    by_odds: list[OpportunityClvStats] = Field(default_factory=list)
+    by_lead: list[OpportunityClvStats] = Field(default_factory=list)
+
+
 class SummaryResponse(BaseModel):
     group: str
     buckets: list[SummaryBucket] = Field(default_factory=list)
     totals: SummaryTotals
+    opportunity_clv: OpportunityClvSummary | None = None
 
 
 class QuotaRow(BaseModel):

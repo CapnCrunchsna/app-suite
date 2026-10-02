@@ -34,7 +34,8 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends
 
-from ...indices import RESULTS_INDEX
+from ...clv import SUMMARY_BODY, summarise
+from ...indices import OPPORTUNITIES_INDEX, RESULTS_INDEX
 from ..deps import Context, get_context, search
 from ..models import SummaryResponse
 
@@ -115,7 +116,17 @@ async def summary(
         _bucket(bucket)
         for bucket in aggregations.get("buckets", {}).get("buckets", [])
     ]
-    return {"group": group, "buckets": buckets, "totals": _totals(aggregations)}
+    # Every opportunity's CLV (§12, 2026-10-01): one more aggregation request,
+    # shaped by `clv.py` so the CLI report and this page read the same figures.
+    opportunity_clv = summarise(
+        await search(context, OPPORTUNITIES_INDEX, track_total_hits=True, **SUMMARY_BODY)
+    )
+    return {
+        "group": group,
+        "buckets": buckets,
+        "totals": _totals(aggregations),
+        "opportunity_clv": opportunity_clv,
+    }
 
 
 def _hit_rate(wins: int, settled: int) -> float | None:

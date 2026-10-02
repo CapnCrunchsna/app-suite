@@ -43,7 +43,7 @@ import { NO_DATA, formatCents, formatLocalDay, formatRatioAsPercent, formatSigne
 import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
-import { humanise } from '../../labels';
+import { humanise, sportLabel } from '../../labels';
 import { SystemStatus } from '../../system-status.service';
 
 /** `excluded_reason` values (`audit.py`), as the clause that follows a count. */
@@ -150,6 +150,37 @@ export class ResultsPage {
       .map(([reason, count]) => `${count} ${EXCLUSION_REASONS[reason] ?? humanise(reason)}`)
       .join('; '),
   );
+
+  /**
+   * CLV over every opportunity whose game has started (§12, 2026-10-01), not
+   * only the recommendations above — the cooldown keeps those to about one in
+   * six. Supporting evidence, shown as such: T4.4 still reads the
+   * recommendations, and circular measurements are counted, not averaged.
+   */
+  protected readonly opportunityClv = computed(
+    () => this.summaryResource.value().opportunity_clv ?? null,
+  );
+  /** The overall figures, or null before anything is measured. */
+  protected readonly clvMeasured = computed(() => {
+    const measured = this.opportunityClv()?.measured;
+    return measured && (measured.count ?? 0) > 0 ? measured : null;
+  });
+  /** The breakdowns in the order the table shows them, sports by name. */
+  protected readonly opportunityClvGroups = computed(() => {
+    const clv = this.opportunityClv();
+    if (!clv) return [];
+    return [
+      {
+        title: 'By sport',
+        rows: (clv.by_sport ?? []).map((row) => ({ ...row, label: sportLabel(row.key ?? '') })),
+      },
+      { title: 'By odds', rows: (clv.by_odds ?? []).map((row) => ({ ...row, label: row.key ?? '' })) },
+      {
+        title: 'By lead time',
+        rows: (clv.by_lead ?? []).map((row) => ({ ...row, label: row.key ?? '' })),
+      },
+    ];
+  });
 
   /** Nothing has been graded at all — a different sentence from "graded, but
    *  none of it settled". */

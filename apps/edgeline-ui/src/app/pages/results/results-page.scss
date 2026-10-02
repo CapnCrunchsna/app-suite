@@ -23,6 +23,25 @@
   font-size: 0.85rem;
 }
 
+/* Every opportunity's CLV (§12, 2026-10-01): the explanation and the counts
+ * of what was set aside read as notes around the table, not as figures. */
+.clv-note {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+}
+
+.opportunity-clv__all td {
+  font-weight: 600;
+}
+
+.opportunity-clv__group th {
+  padding-top: 12px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
 .segmented {
   display: flex;
   overflow: hidden;

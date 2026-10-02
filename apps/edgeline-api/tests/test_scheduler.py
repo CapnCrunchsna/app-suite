@@ -1252,6 +1252,38 @@ async def test_grading_with_nothing_to_settle_fetches_nothing():
     assert graded == []
 
 
+async def test_the_nightly_grade_measures_every_opportunity_even_with_nothing_to_settle(
+    monkeypatch,
+):
+    """§12, 2026-10-01: CLV for every opportunity reads stored prices only, so it
+    runs on the days with no bet to settle — most days — and buys no scores."""
+    import edgeline.clv as clv_module
+
+    measured: list[str] = []
+
+    async def _measure(_client, _settings, *, prefix, now=None):
+        measured.append(prefix)
+        return 3
+
+    monkeypatch.setattr(clv_module, "grade_opportunities", _measure)
+    graded: list[str] = []
+
+    async def _grade(*_args, **kwargs):
+        graded.append(kwargs["sport_key"])
+
+    async def _nothing(*_args, **_kwargs):
+        return []
+
+    scheduler = _scheduler_with(grade=_grade, awaiting=_nothing, client=_Runtime(),
+                                config=Settings())
+    try:
+        await scheduler.get_job("grade").func()
+    finally:
+        scheduler.shutdown(wait=False)
+    assert measured == ["edgeline-"]
+    assert graded == []
+
+
 async def test_grading_that_cannot_tell_grades_every_sport_a_poll_can_reach():
     """Not knowing is not a reason to leave a bet unsettled — and "every sport"
     has to include the plan's, not only `sports_enabled`, or an NFL bet would sit

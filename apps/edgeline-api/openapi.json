@@ -1070,6 +1070,113 @@
         ],
         "title": "LedgerEntry"
       },
+      "OpportunityClvStats": {
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "default": 0
+          },
+          "mean_clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Clv Pct"
+          },
+          "median_clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Clv Pct"
+          },
+          "share_positive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Positive"
+          },
+          "from_closing": {
+            "type": "integer",
+            "title": "From Closing",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "OpportunityClvStats",
+        "description": "CLV figures over one group of measured opportunities (`clv.py`)."
+      },
+      "OpportunityClvSummary": {
+        "properties": {
+          "graded": {
+            "type": "integer",
+            "title": "Graded",
+            "default": 0
+          },
+          "circular": {
+            "type": "integer",
+            "title": "Circular",
+            "default": 0
+          },
+          "unpriced": {
+            "type": "integer",
+            "title": "Unpriced",
+            "default": 0
+          },
+          "measured": {
+            "$ref": "#/components/schemas/OpportunityClvStats"
+          },
+          "by_sport": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityClvStats"
+            },
+            "type": "array",
+            "title": "By Sport"
+          },
+          "by_odds": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityClvStats"
+            },
+            "type": "array",
+            "title": "By Odds"
+          },
+          "by_lead": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityClvStats"
+            },
+            "type": "array",
+            "title": "By Lead"
+          }
+        },
+        "type": "object",
+        "title": "OpportunityClvSummary",
+        "description": "CLV over every opportunity whose game has started (§12, 2026-10-01).\n\nSupporting evidence beside the recommendations' figures above — the cooldown\nkeeps those to about one opportunity in six. Circular measurements, priced by\nthe poll that found the edge, are counted and left out of every figure.\nT4.4 still reads the recommendations."
+      },
       "OpportunityLegRow": {
         "properties": {
           "book_key": {
@@ -2171,6 +2278,16 @@
           },
           "totals": {
             "$ref": "#/components/schemas/SummaryTotals"
+          },
+          "opportunity_clv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpportunityClvSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

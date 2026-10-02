@@ -132,6 +132,29 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             "expires_at": _DATE,
             "closed_at": _DATE,
             "closing_edge_pct": _DOUBLE,
+            #: Written at detection since 2026-10-01, and by `clv.py` on documents
+            #: from before: `event_id`'s prefix, as a field the summary can group by.
+            "sport_key": _KEYWORD,
+            # CLV for every opportunity (§12, added 2026-10-01; `clv.py`), at its
+            # first-detection leg price, once its game has started. Supporting
+            # evidence beside the recommendations' — T4.4 still reads those.
+            "clv_pct": _DOUBLE,
+            #: `closing` for a bought snapshot, `derived` for the last poll before
+            #: the start — the same provenance a result carries.
+            "clv_source": _KEYWORD,
+            "clv_staleness_s": _LONG,
+            #: When the closing price was fetched. At or before `detected_at` it
+            #: is the detecting poll's own price and the CLV re-measures the edge:
+            #: `clv_circular`, left out of the summary's figures.
+            "clv_priced_at": _DATE,
+            "clv_circular": _BOOLEAN,
+            #: Seconds from detection to the start, for the lead-time bands.
+            "clv_lead_s": _LONG,
+            #: The leg's price for the odds bands; null for an arbitrage.
+            "clv_price_decimal": _DOUBLE,
+            #: When it was measured — set even when no price existed, so a game
+            #: with nothing stored is not asked again every night.
+            "clv_graded_at": _DATE,
         },
     },
     RECOMMENDATIONS_INDEX: {

@@ -160,4 +160,65 @@
       </div>
     }
   </ui-panel>
+
+  <!-- §12, 2026-10-01: every opportunity's CLV, as supporting evidence. Below
+       the recommendations on purpose — T4.4's gate reads those. -->
+  <ui-panel heading="Every opportunity's CLV">
+    <p class="dim clv-note">
+      Every opportunity whose game has started, measured at the price it was found at — not only
+      the recommendations above, which the cooldown keeps to about one in six. A measurement
+      priced by the very poll that found the edge is circular and left out. Supporting evidence:
+      the go-live report still reads the recommendations.
+    </p>
+    @if (opportunityClv(); as clv) {
+      @if (clvMeasured(); as measured) {
+        <div class="table-wrap">
+          <table class="table opportunity-clv">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="num">Measured</th>
+                <th class="num">Mean CLV</th>
+                <th class="num">Median</th>
+                <th class="num">Positive</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="opportunity-clv__all">
+                <td>All</td>
+                <td class="num">{{ measured.count }}</td>
+                <td class="num">{{ signedPercent(measured.mean_clv_pct) }}</td>
+                <td class="num">{{ signedPercent(measured.median_clv_pct) }}</td>
+                <td class="num">{{ ratio(measured.share_positive) }}</td>
+              </tr>
+              @for (group of opportunityClvGroups(); track group.title) {
+                <tr class="opportunity-clv__group">
+                  <th colspan="5">{{ group.title }}</th>
+                </tr>
+                @for (row of group.rows; track row.label) {
+                  <tr>
+                    <td>{{ row.label }}</td>
+                    <td class="num">{{ row.count }}</td>
+                    <td class="num">{{ signedPercent(row.mean_clv_pct) }}</td>
+                    <td class="num">{{ signedPercent(row.median_clv_pct) }}</td>
+                    <td class="num">{{ ratio(row.share_positive) }}</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="dim clv-note">
+          {{ clv.circular ?? 0 }} circular {{ clv.circular === 1 ? 'measurement' : 'measurements' }}
+          left out · {{ clv.unpriced ?? 0 }} with no stored price ·
+          {{ measured.from_closing ?? 0 }} against a bought closing line
+        </p>
+      } @else {
+        <p class="empty">
+          Nothing measured yet. The nightly grade measures an opportunity once its game has
+          started; <code>python -m edgeline.clv</code> does it now.
+        </p>
+      }
+    }
+  </ui-panel>
 </div>

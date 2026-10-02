@@ -718,6 +718,7 @@ def build_scheduler(
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
 
+    from .clv import grade_opportunities
     from .engine import capture_closing_lines, load_settings, run_once
     from .grading import grade, sports_awaiting_settlement
     from .providers.base import ProviderBudgetExceeded
@@ -891,6 +892,17 @@ def build_scheduler(
             log.exception("grading: settings unreadable")
             _retry_soon(_grade, [attempt + 1], kind="grade", attempt=attempt + 1)
             return
+
+        # CLV for every opportunity whose game has started (§12, 2026-10-01).
+        # First and unconditional — it reads stored prices only, so it runs
+        # offline, and on the days with no bet to settle, which are most days.
+        # A failure is the next run's to repair: nothing in it is lost by waiting.
+        try:
+            measured = await grade_opportunities(client, current, prefix=prefix)
+            if measured:
+                log.info("grading: measured CLV for %d opportunit(ies) whose games started", measured)
+        except Exception:
+            log.warning("grading: opportunity CLV failed; the next run retries", exc_info=True)
 
         # Only the sports with a recommendation whose game has started and has
         # no result yet (added 2026-09-23). A scores fetch costs 2 credits per

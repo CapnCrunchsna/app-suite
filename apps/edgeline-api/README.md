@@ -309,6 +309,8 @@ src/edgeline/
   notify/        ✅ message.py + sink.py (spec §9.2, channel-agnostic)
                  …a channel adapter is still to come (spec §9.1/§9.3)
   grading.py     ✅ settlement, P&L, CLV, ledger, daily loss stop (spec §12)
+  clv.py         ✅ CLV for every opportunity, and its report (spec §12)
+  audit.py       ✅ which settled results may count as evidence (spec §12)
   scheduler.py   ✅ polling, closing capture, grading, budget guard (spec §13)
   api/           ✅ FastAPI app + one router per §10 resource group
 tests/
@@ -602,6 +604,24 @@ duplicate_alert`, `python -m edgeline.audit` applies the same rule to results gr
 the summary's `totals.excluded_by_reason` says which rule set each row aside. The **worker** runs
 the alert gate and grading, so it needs a restart to get either; the API needs one for the
 summary.
+
+**CLV is measured for every opportunity, not only the recommendations (2026-10-01).** The
+cooldown let 144 opportunities produce 26 recommendations, so grading recommendations alone saw a
+sixth of what was found. Every opportunity whose game has started is now measured with grading's
+own `closing_consensus_prob`, at its first-detection leg price, and stored on it (`clv_pct`,
+`clv_source`, `clv_staleness_s`, `clv_priced_at`, `clv_circular`, `clv_lead_s`). A measurement
+whose closing price was fetched at or before the detection is **circular** — the detecting poll's
+own price, re-measuring its edge, as 7 of the first 8 graded recommendations did — and is counted
+but kept out of the figures. The nightly grade does it first, for free, even offline; on demand:
+
+```bash
+uv run python -m edgeline.clv
+```
+
+measures what is missing and prints count, mean, median and share positive, overall and by sport,
+odds band and lead time. `GET /api/results/summary` carries the same figures as
+`opportunity_clv`, shown on the Results page under the recommendations. It is supporting evidence:
+T4.4 still asks for 200 paper recommendations and their CLV distribution.
 
 **It has now, and the first one won (2026-09-18).** A catch-up poll fired **70 seconds after the
 laptop woke** — precisely the cycle the pre-2026-09-15 scheduler dropped — and priced Minnesota
