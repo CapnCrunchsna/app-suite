@@ -60,6 +60,9 @@ import {
 
 type FieldValue = string | number | boolean | null | PollSlot[];
 
+/** The Odds API bills every ten named bookmakers as one region (§8.4). */
+const BOOKS_PER_REGION = 10;
+
 /** What a `bool` field is staged at, versus what the server says it is. */
 interface SafetyChange {
   readonly key: SettingKey;
@@ -138,9 +141,11 @@ export class SettingsPage {
   });
 
   /**
-   * What one poll costs — `markets × regions`, §8.4's per-poll figure — from the
-   * form as it stands, so the plan editor's projection moves when a region is
-   * added in the field above it rather than after a save.
+   * What one poll costs — §8.4's per-poll figure — from the form as it stands,
+   * so the plan editor's projection moves when a region is added in the field
+   * above it rather than after a save: `markets × regions`, or since 2026-10-01
+   * `markets × ceil(enabled books / 10)` when polls name the enabled books.
+   * How many are enabled comes from health, the one input not on this form.
    */
   protected readonly creditsPerPoll = computed(() => {
     // Form values are not signals: `revision` covers edits, `current` covers
@@ -151,7 +156,12 @@ export class SettingsPage {
       String(this.form.controls[key]?.value ?? '')
         .split(',')
         .filter((part) => part.trim().length > 0).length;
-    return count('markets_featured') * Math.max(count('regions'), 1);
+    const enabled = this.status.pollPlan()?.enabled_books ?? 0;
+    const units =
+      this.form.controls['poll_bookmakers']?.value === 'enabled' && enabled > 0
+        ? Math.ceil(enabled / BOOKS_PER_REGION)
+        : Math.max(count('regions'), 1);
+    return count('markets_featured') * units;
   });
 
   protected readonly budgetInForm = computed(() => {
@@ -162,6 +172,9 @@ export class SettingsPage {
   });
 
   constructor() {
+    // Health carries the enabled-book count `creditsPerPoll` prices a named-book
+    // poll from; the shell loads it too, and the call is a no-op once it has.
+    void this.status.ensureLoaded();
     for (const group of ALL_GROUPS) {
       const target = group.id === 'safety' ? this.safetyForm : this.form;
       for (const field of group.fields) {

@@ -178,12 +178,34 @@ class TheOddsApiProvider:
         markets: list[str],
         *,
         regions: str = DEFAULT_REGIONS,
+        bookmakers: list[str] | None = None,
+        commence_time_from: str | None = None,
+        commence_time_to: str | None = None,
     ) -> ProviderResponse:
+        """Featured odds for one sport (§8).
+
+        `bookmakers` names the books instead of asking for `regions`: every ten
+        named bill as one region (measured 2026-09-30 — ten named, 1 credit a
+        market; `us,us2`, 2), so it replaces the regions rather than joining
+        them. `commence_time_from`/`commence_time_to` (``YYYY-MM-DDTHH:MM:SSZ``)
+        limit the answer to events starting between them, and an answer with
+        no events in it costs nothing.
+        """
+        selection = {"bookmakers": ",".join(bookmakers)} if bookmakers else {"regions": regions}
+        window = {
+            name: value
+            for name, value in (
+                ("commenceTimeFrom", commence_time_from),
+                ("commenceTimeTo", commence_time_to),
+            )
+            if value
+        }
         return await self._request(
             "odds",
             f"/sports/{sport_key}/odds",
             {
-                "regions": regions,
+                **selection,
+                **window,
                 "markets": ",".join(markets),
                 "oddsFormat": ODDS_FORMAT,
                 # §9.4's ladder, from the provider. **Measured free on

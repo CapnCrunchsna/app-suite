@@ -211,9 +211,11 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
 | `markets_props` | `["batter_home_runs","pitcher_strikeouts"]` | polled per §8.4 |
 | `regions` | `["us","us2"]` | **added 2026-09-09.** The Odds API region buckets to request. `us` alone returns only 4 MD-legal books, one short of what §6.4's consensus needs — see §8.4. Each region multiplies the credit cost |
+| `poll_bookmakers` | `"enabled"` | **added 2026-10-01.** What a featured poll asks for: `enabled` names the enabled sportsbooks with `bookmakers=` — ten or fewer bill as one region, half of `us,us2` — and falls back to `regions` when none is enabled; `regions` requests the buckets above. Closing snapshots always ask for `regions` (§8.4, §12) |
 | `poll_interval_s` | `120` | featured-markets cycle (production) |
 | `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month. **Since 2026-09-23 only the fallback:** it applies when `poll_schedule` is empty |
 | `poll_schedule` | 14 slots — §8.4's table | **added 2026-09-23.** The free tier's featured cadence as fixed **America/New_York** times: a list of `{days, time, sport}` — `days` from `mon`…`sun`, `time` a 24-hour `HH:MM`, `sport` a The Odds API key. Each slot is one poll of one sport. Empty restores `poll_interval_dev_s`; a budget above the free tier's selects `poll_interval_s` and ignores it (§13). Takes effect at the next worker start |
+| `poll_lookahead_h` | `96` | **added 2026-10-01.** A featured poll asks only for games starting within this many hours (`commenceTimeFrom`/`commenceTimeTo`); an answer with none in it costs nothing. 0 asks for every game listed (§8.4) |
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
 | `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option |
@@ -580,6 +582,13 @@ knows when an alert went out (`sent_at`) and `edgeline-opportunities` knows what
 (`market_key`, `event_id`), so the two are joined over the cooldown window rather than adding a
 field.
 
+**A windowed poll reconciles only its window — added 2026-10-01.** A poll limited by §3.2's
+`poll_lookahead_h` returns nothing for a game beyond it, which says nothing about that game's lines.
+Closing every opportunity it did not see would end each one days out on every poll — the 12-25 NBA
+recommendation, NFL Ravens @ Falcons on 10-11 — and log line deaths that never happened. So an
+opportunity on an event starting after the window's end is left as it is; expiry at
+`commence_time` still applies, and a game inside the window that vanished still closes.
+
 ---
 
 ## 8. The Odds API Integration (`providers/the_odds_api.py`)
@@ -610,7 +619,8 @@ Base URL `https://api.the-odds-api.com/v4`. Auth: `apiKey` query param.
 | Dev (free, 500/mo) | `poll_schedule`: 14 fixed Eastern-time polls a week (→ ~360/mo, amended 2026-09-23); `poll_interval_dev_s` when the plan is empty | manual trigger only | ≤ 500/mo |
 | Production (~$59–100 tier) | every 120 s | every 600 s, only events starting < 6 h | compute before enabling: `(86400/interval) × markets × regions × 30` and per-event prop cost; must fit `quota_monthly_budget` |
 
-The weekly plan projects as `polls a week × markets × regions × 30/7`, rounded up.
+The weekly plan projects as `polls a week × markets × regions × 30/7`, rounded up — with
+`ceil(named books / 10)` in place of `regions` when polls name books (2026-10-01, below).
 
 The scheduler must refuse to start a cadence whose computed monthly cost exceeds
 `quota_monthly_budget`, and must log the computed figure at startup.
@@ -631,8 +641,8 @@ projection failed. Free endpoints (`/sports`, `/events`) are never refused, and 
 the guard at startup with a free `/sports` call so its first *paid* request is already covered.
 
 Endpoint costs, since guessing at them has been expensive: `/sports` and `/events` are free;
-`/odds` is `markets × regions`; `/scores` is 1, or 2 with `daysFrom`; historical odds is
-**10 × markets × regions**.
+`/odds` is `markets × regions`, or `markets × ceil(named books / 10)` with `bookmakers=`
+(2026-10-01); `/scores` is 1, or 2 with `daysFrom`; historical odds is **10 × markets × regions**.
 
 **`regions=us` does not cover the Maryland book list (measured 2026-09-09).** For
 `baseball_mlb` it returns 9 books, of which only **4** are MD-legal — `draftkings`, `fanduel`,
@@ -718,6 +728,31 @@ days, none.
 
 The plan is a setting (§3.2), edited in the UI (§11.1): seasons are handled by editing it —
 MLB's postseason is one row away — and an edit takes effect at the next worker start.
+
+**Named books and a lookahead window halve a poll — added 2026-10-01, from live calls the day
+before.** An NCAAF h2h `/odds` call naming the ten enabled books with `bookmakers=` cost **1
+credit**, against 2 for `regions=us,us2`: ten or fewer named books bill as one region. The same
+seven Maryland books — ballybet, betmgm, betparx, betrivers, draftkings, espnbet, fanduel — came
+back on all 65 events either way; williamhill_us, fanatics and bet365 are enabled but the feed
+never returns them. Detection reads only enabled books, so naming them changes nothing it finds.
+§3.2's `poll_bookmakers` (default `enabled`) names them, falling back to `regions` when none is
+enabled. A poll then costs `markets × ceil(named books / 10)`, which `plan_budget`, the startup
+check and `--check-budget` count from the enabled books: the default plan's 14 polls a week drop
+from 6 credits to 3, **360 → 180 a month**. And an NBA call limited by
+`commenceTimeFrom`/`commenceTimeTo` to the next 24 hours returned **0 events and cost 0**. The NBA
+lists games out to 12-25, so every NBA slot since 2026-09-23 had paid 6 credits for games weeks
+away, and one recommended the Christmas Day game 91 days out. §3.2's `poll_lookahead_h` (default
+**96**) asks only for games starting in the next four days. Four because the default plan has no
+NHL slot from Saturday to Monday, and Friday's 17:30 poll reaches Monday's last puck drop only with
+77 hours; four days covers that, NBA Friday→Monday and NFL Thursday→Sunday, so a game priced at one
+poll is usually priced again before it starts — which a CLV that is not circular needs (§12). The
+NBA slots are free until the window reaches the 2026-10-20 opener; NCAAF's Thursday and Friday
+games, 122 hours and more after Saturday's polls, are not reached. **Two consequences.** Prices a
+poll stores now come from the named books alone, so a game graded without a closing snapshot
+derives its consensus from the Maryland seven rather than the ~14 books two regions returned,
+offshore ones included (§12); closing snapshots keep asking for `regions` for that reason. And
+§7.4's reconciliation is limited to the window, or every opportunity days out would close on each
+poll.
 
 ---
 
@@ -1015,6 +1050,13 @@ those sports — on most days, none. It follows the data rather than the setting
 sport since dropped from the plan still settles, and when the datastore cannot answer, every sport
 a poll can reach is graded as before. One consequence: a sport with nothing to settle no longer
 has its events' final scores written, which nothing but this job reads.
+
+**The derived price is the polled books' price — amended 2026-10-01.** `closing_consensus_prob`
+builds its consensus from every book stored for the market. Two-region polls stored about 14 books a
+game, offshore ones included; since §3.2's `poll_bookmakers` names the enabled books, a poll stores
+the Maryland seven alone, so a game graded without a closing snapshot is measured by a consensus
+about half as broad, of the books a person here could bet at. Closing snapshots keep asking for
+`regions`, so a game with a bought closing line keeps the broad consensus (§8.4).
 
 ---
 

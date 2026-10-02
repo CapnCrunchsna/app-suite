@@ -17,7 +17,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...indices import PROVIDERS_INDEX, SETTINGS_INDEX
+from ...indices import PROVIDERS_INDEX, SETTINGS_INDEX, SPORTSBOOKS_INDEX
 from ..deps import Context, get_context, get_provider, hits, load_settings_doc, search
 from ..models import (
     HealthResponse,
@@ -50,6 +50,10 @@ async def health(context: Context = Depends(get_context)) -> HealthResponse:
         runtime = {}
 
     providers = hits(await search(context, PROVIDERS_INDEX, size=10, query={"match_all": {}}))
+    enabled = await search(
+        context, SPORTSBOOKS_INDEX, size=0, query={"term": {"enabled": True}}, track_total_hits=True
+    )
+    enabled_books = int(enabled.get("hits", {}).get("total", {}).get("value", 0) or 0)
 
     return {
         "paper_mode": settings.paper_mode,
@@ -66,13 +70,13 @@ async def health(context: Context = Depends(get_context)) -> HealthResponse:
             for provider in providers
         ],
         "sports_enabled": settings.sports_enabled,
-        "poll_plan": _poll_plan(settings),
+        "poll_plan": _poll_plan(settings, enabled_books),
     }
 
 
-def _poll_plan(settings) -> PollPlanStatus:
+def _poll_plan(settings, enabled_books: int) -> PollPlanStatus:
     """§13's cadence as the stored settings define it."""
-    from ...scheduler import PLAN_TIMEZONE, scheduled_polls, sports_for_poll_now
+    from ...scheduler import PLAN_TIMEZONE, plan_budget, scheduled_polls, sports_for_poll_now
 
     polls = scheduled_polls(settings)
     return PollPlanStatus(
@@ -81,6 +85,8 @@ def _poll_plan(settings) -> PollPlanStatus:
         sports=list(dict.fromkeys(poll.sport for poll in polls)),
         poll_now_sports=sports_for_poll_now(settings),
         timezone=PLAN_TIMEZONE,
+        enabled_books=enabled_books,
+        credits_per_poll=plan_budget(settings, enabled_books=enabled_books).credits_per_poll,
     )
 
 
@@ -102,8 +108,9 @@ async def poll_now(
     when the plan is empty, not in effect, or has nothing today
     (`sports_for_poll_now`).
 
-    It is an ordinary poll in every other respect: `markets × regions` credits
-    per sport, through the same pace guard as every other request, and it
+    It is an ordinary poll in every other respect: §8.4's per-poll credits for
+    each sport (`markets × regions`, or `markets × ceil(named books / 10)` since
+    2026-10-01), through the same pace guard as every other request, and it
     stamps the poll the way a scheduled one does — globally and per sport, with
     `manual` as its source. That stamp matters: a manual cycle *is* a poll, so
     `poll_is_due` must see it or the next worker restart pays for another, and a

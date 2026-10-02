@@ -68,6 +68,47 @@ async def test_odds_request_asks_for_decimal_and_carries_the_key():
 
 
 @respx.mock
+async def test_named_books_replace_the_regions_and_a_window_limits_the_games():
+    """§8.4, measured 2026-09-30: ten or fewer named books bill as one region,
+    so naming them replaces `regions` rather than joining it; and an answer
+    limited to a window with no game in it costs nothing."""
+    odds_route().mock(return_value=httpx.Response(200, json=[]))
+    p = provider()
+    try:
+        await p.fetch_odds(
+            "baseball_mlb",
+            ["h2h"],
+            regions="us,us2",
+            bookmakers=["fanduel", "betmgm"],
+            commence_time_from="2026-10-02T00:00:00Z",
+            commence_time_to="2026-10-06T00:00:00Z",
+        )
+    finally:
+        await p.aclose()
+
+    params = odds_route().calls.last.request.url.params
+    assert params["bookmakers"] == "fanduel,betmgm"
+    assert "regions" not in params
+    assert params["commenceTimeFrom"] == "2026-10-02T00:00:00Z"
+    assert params["commenceTimeTo"] == "2026-10-06T00:00:00Z"
+
+
+@respx.mock
+async def test_without_books_or_a_window_the_request_is_what_it_was():
+    odds_route().mock(return_value=httpx.Response(200, json=[]))
+    p = provider()
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"], regions="us,us2")
+    finally:
+        await p.aclose()
+
+    params = odds_route().calls.last.request.url.params
+    assert params["regions"] == "us,us2"
+    assert "bookmakers" not in params
+    assert "commenceTimeFrom" not in params and "commenceTimeTo" not in params
+
+
+@respx.mock
 async def test_the_key_never_reaches_a_log_line(caplog):
     """httpx logs each request at INFO with its full URL, and the worker logs at
     INFO: until 2026-09-29 every poll printed the key to the console. The line

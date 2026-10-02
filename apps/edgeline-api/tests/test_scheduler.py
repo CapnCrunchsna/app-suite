@@ -760,6 +760,45 @@ def test_the_default_plan_costs_what_the_twelve_hour_interval_did():
     assert budget.affordable
 
 
+def test_naming_ten_books_halves_the_default_plan():
+    """§8.4, 2026-10-01: ten or fewer named books bill as one region, so the
+    plan's 14 polls cost 3 credits each instead of 6 — 180 a month, not 360."""
+    budget = plan_budget(Settings(), enabled_books=10)
+    assert budget.named_books == 10
+    assert budget.units == 1
+    assert budget.credits_per_poll == 3
+    assert budget.projected_monthly_credits == 180
+
+
+def test_every_ten_named_books_is_another_region():
+    assert plan_budget(Settings(), enabled_books=11).credits_per_poll == 6
+    assert plan_budget(Settings(), enabled_books=21).credits_per_poll == 9
+
+
+@pytest.mark.parametrize("enabled", [None, 0], ids=["count unknown", "none enabled"])
+def test_without_books_to_name_the_regions_are_counted(enabled):
+    """A poll with no enabled book falls back to `regions`, and an unknown count
+    is priced the same way — the dearer request for any list of ten or fewer."""
+    budget = plan_budget(Settings(), enabled_books=enabled)
+    assert budget.named_books is None
+    assert budget.projected_monthly_credits == 360
+
+
+def test_asking_for_regions_ignores_how_many_books_are_enabled():
+    budget = plan_budget(settings(poll_bookmakers="regions"), enabled_books=10)
+    assert budget.named_books is None
+    assert budget.projected_monthly_credits == 360
+
+
+def test_the_startup_log_says_how_a_poll_is_priced(caplog):
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="edgeline.scheduler"):
+        check_budget(Settings(), enabled_books=10)
+    assert "180" in caplog.text
+    assert "10 named books" in caplog.text
+
+
 def test_a_plan_over_budget_refuses_to_start_and_names_the_setting_to_trim():
     heavy = plan(
         (EVERY_DAY, "11:00", "icehockey_nhl"),

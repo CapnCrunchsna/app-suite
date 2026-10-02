@@ -221,6 +221,13 @@ class PollPlanStatus(BaseModel):
     poll_now_sports: list[str] = Field(default_factory=list)
     #: The clock the plan's times are written in.
     timezone: str
+    #: How many sportsbooks are enabled — what a poll names when §3.2's
+    #: `poll_bookmakers` is `enabled` (2026-10-01), every ten billing as a region.
+    enabled_books: int = 0
+    #: What one poll of one sport costs at the stored settings: markets × regions,
+    #: or markets × ceil(named books / 10) — §8.4's per-poll figure, so the UI
+    #: prices a press with the engine's arithmetic rather than its own.
+    credits_per_poll: int = 0
 
 
 class HealthResponse(BaseModel):

@@ -221,16 +221,19 @@ export class DashboardPage {
   }
 
   /**
-   * What one press costs, computed from §3.2 rather than written down: the same
-   * `markets × regions × sports` arithmetic §8.4 projects the monthly bill from.
-   * The sports are the ones a press would actually buy — today's in the weekly
-   * plan, which the engine reports — not every sport the app knows about.
+   * What one press costs: §8.4's per-poll figure times the sports a press would
+   * actually buy — today's in the weekly plan, which the engine reports — not
+   * every sport the app knows about. The per-poll figure comes from health
+   * since 2026-10-01, because it now depends on how many books are enabled
+   * (ten named bill as one region); `markets × regions` from §3.2 stands in
+   * for an engine that does not report it.
    */
   protected readonly pollCostCredits = computed(() => {
     const markets = this.settings().markets_featured?.length ?? 0;
     const regions = this.settings().regions?.length ?? 0;
+    const perPoll = this.status.pollPlan()?.credits_per_poll || markets * regions;
     const sports = Math.max(this.status.pollNowSports().length, 1);
-    return markets * regions * sports;
+    return perPoll * sports;
   });
 
   /** Which sports a press buys, as their leagues' names. */

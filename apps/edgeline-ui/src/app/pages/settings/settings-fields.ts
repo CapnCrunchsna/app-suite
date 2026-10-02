@@ -1,6 +1,6 @@
 /**
  * §3.2's keys as data, grouped the way §11.1 asks for them: Staking,
- * Thresholds, Polling, Safety. Thirty-one of them as of 2026-09-23.
+ * Thresholds, Polling, Safety. Thirty-three of them as of 2026-10-01.
  *
  * A table rather than twenty-seven hand-written form rows, for one reason worth
  * more than the brevity: §3.2 is the list, Phase 3's exit is "every §3.2 setting
@@ -199,7 +199,7 @@ export const POLLING = {
       key: 'poll_schedule',
       label: 'Weekly poll plan',
       kind: 'schedule',
-      hint: 'When the worker buys odds on the free tier: fixed US Eastern times, per sport and weekday, whatever this computer’s zone. Each poll costs one sport’s markets × regions credits, and the worker refuses to start a plan projected over the monthly budget. A sport with nothing listed — out of season — costs nothing. Empty, the dev poll interval takes over. Takes effect when the worker restarts.',
+      hint: 'When the worker buys odds on the free tier: fixed US Eastern times, per sport and weekday, whatever this computer’s zone. Each poll costs one sport’s markets × regions credits — or markets × one per ten named books — and the worker refuses to start a plan projected over the monthly budget. A sport with nothing listed in the lookahead window costs nothing. Empty, the dev poll interval takes over. Takes effect when the worker restarts.',
     },
     {
       key: 'sports_enabled',
@@ -223,7 +223,23 @@ export const POLLING = {
       key: 'regions',
       label: 'Provider regions',
       kind: 'list',
-      hint: 'The Odds API region buckets to request, comma-separated. Each one multiplies the credit cost of every poll and the §13 budget guard counts them — `us` alone returns only four MD-legal books, one short of what a consensus needs, which is why the default is `us, us2` (§8.4).',
+      hint: 'The Odds API region buckets to request, comma-separated. Each one multiplies the credit cost of every poll they are used for and the §13 budget guard counts them — `us` alone returns only four MD-legal books, one short of what a consensus needs, which is why the default is `us, us2` (§8.4). Closing snapshots always use them; featured polls only when books are not named below.',
+    },
+    {
+      key: 'poll_bookmakers',
+      label: 'Featured polls ask for',
+      kind: 'select',
+      options: ['enabled', 'regions'],
+      hint: 'Enabled names the enabled sportsbooks instead of requesting regions: every ten named bill as one region, so ten books cost half of us + us2, and detection only ever reads enabled books anyway (measured 2026-09-30: the same seven Maryland books on all 65 NCAAF games either way). With no book enabled a poll falls back to regions. Prices stored from polls then come from those books alone, which is what grading falls back on for a game with no closing snapshot.',
+    },
+    {
+      key: 'poll_lookahead_h',
+      label: 'Poll lookahead',
+      kind: 'number',
+      step: 1,
+      min: 0,
+      unit: 'h',
+      hint: 'A featured poll asks only for games starting within this many hours. A poll with no game in the window costs nothing — the NBA is free until the window reaches its opener — and nothing is recommended months out. 96 covers the default plan’s longest gap between two polls of one sport (Friday’s NHL to Monday’s puck drops). 0 asks for every game listed.',
     },
     {
       key: 'book_state',

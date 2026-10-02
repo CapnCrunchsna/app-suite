@@ -605,11 +605,19 @@ class CycleReport:
     offline: bool = False
     quota_used: int | None = None
     quota_remaining: int | None = None
+    #: How many books the poll named (§8.4 `poll_bookmakers`); 0 when it asked
+    #: for `regions` instead.
+    named_books: int = 0
+    #: The end of the lookahead window the poll asked about, or `None` for none.
+    window_to: str | None = None
     # §7.4 lifecycle, and T2.5's line-death instrumentation.
     closed: list[str] = field(default_factory=list)
     expired: list[str] = field(default_factory=list)
     line_deaths: list[LineDeath] = field(default_factory=list)
     surviving_alerts: list[str] = field(default_factory=list)
+    #: Live opportunities on events beyond the window: not asked about, so left
+    #: as they were rather than closed for not being seen.
+    beyond_window: list[str] = field(default_factory=list)
 
 
 async def load_settings(client, *, prefix: str) -> Settings:
@@ -664,6 +672,31 @@ async def current_bankroll_cents(client, settings: Settings, *, prefix: str) -> 
     return total or settings.bankroll_start_cents
 
 
+#: `commenceTimeFrom`/`commenceTimeTo` take exactly this shape (§8).
+PROVIDER_STAMP = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def featured_request(
+    settings: Settings, enabled_books: dict[str, Any] | set[str], now: datetime
+) -> dict[str, Any]:
+    """The keyword arguments a featured poll passes `fetch_odds` (§8.4, 2026-10-01).
+
+    The enabled books by name when `poll_bookmakers` is `enabled` and any are
+    enabled — ten or fewer bill as one region, half of `us,us2` — and `regions`
+    otherwise; plus the lookahead window when `poll_lookahead_h` sets one.
+    `regions` travels either way and the adapter drops it when books are named.
+    """
+    request: dict[str, Any] = {"regions": ",".join(settings.regions)}
+    if settings.poll_bookmakers == "enabled" and enabled_books:
+        request["bookmakers"] = sorted(enabled_books)
+    if settings.poll_lookahead_h > 0:
+        request["commence_time_from"] = now.strftime(PROVIDER_STAMP)
+        request["commence_time_to"] = (
+            now + timedelta(hours=settings.poll_lookahead_h)
+        ).strftime(PROVIDER_STAMP)
+    return request
+
+
 async def run_once(
     provider,
     client,
@@ -703,9 +736,12 @@ async def run_once(
     books = await load_enabled_books(client, prefix=prefix)
     report.enabled_books = len(books)
 
-    response = await provider.fetch_odds(
-        sport_key, settings.markets_featured, regions=",".join(settings.regions)
+    request = featured_request(
+        settings, books, parse_iso(now_iso) if now_iso else datetime.now(timezone.utc)
     )
+    report.named_books = len(request.get("bookmakers", []))
+    report.window_to = request.get("commence_time_to")
+    response = await provider.fetch_odds(sport_key, settings.markets_featured, **request)
     report.quota_used = response.quota.used
     report.quota_remaining = response.quota.remaining
 
@@ -752,7 +788,16 @@ async def run_once(
     # reconciled against what this cycle found, before anything new is written.
     stored = await load_live_opportunities(client, sport_key, prefix=prefix)
     detected = {d.hash: d for d in report.detections}
-    await _retire_vanished(client, opportunities, stored, detected, now, now_iso, report)
+    await _retire_vanished(
+        client,
+        opportunities,
+        stored,
+        detected,
+        now,
+        now_iso,
+        report,
+        window_end=parse_iso(report.window_to) if report.window_to else None,
+    )
 
     # What each detection's opportunity was told before (§7.4, amended
     # 2026-10-01): its live document, or the closed one of a line that died and
@@ -1229,9 +1274,18 @@ async def _retire_vanished(
     now: datetime,
     now_iso: str,
     report: CycleReport,
+    *,
+    window_end: datetime | None = None,
 ) -> None:
     """Close or expire opportunities the feed no longer shows (§7.4), and record
-    the line deaths among them (T2.5)."""
+    the line deaths among them (T2.5).
+
+    **Only inside the window the poll asked about** (2026-10-01). A poll limited
+    by `poll_lookahead_h` returns nothing for a game beyond `window_end`, which
+    says nothing about its line — closing those would end every opportunity
+    days out on each poll, the NBA's 12-25 recommendation and NFL Ravens @
+    Falcons on 10-11 among them, and log line deaths that never happened.
+    """
     for doc_id, hit in stored.items():
         source = hit["_source"]
         was_alerted = source.get("status") == STATUS_ALERTED
@@ -1247,6 +1301,10 @@ async def _retire_vanished(
                 client, index, doc_id, expiry_transition(now_iso=now_iso), hit
             )
             report.expired.append(doc_id)
+            continue
+
+        if window_end is not None and expires_at and parse_iso(expires_at) > window_end:
+            report.beyond_window.append(doc_id)
             continue
 
         edge = source.get("edge_pct", 0.0)
@@ -1311,9 +1369,13 @@ def _format(report: CycleReport) -> str:
         f"quarantined      {report.quarantined}",
         f"enabled books    {report.enabled_books}",
         f"quota            {report.quota_used} used / {report.quota_remaining} left",
+        f"asked for        "
+        + (f"{report.named_books} named books" if report.named_books else "regions")
+        + (f", events to {report.window_to}" if report.window_to else ", every event listed"),
         f"detections       {len(report.detections)}",
         f"recommendations  {len(report.alerted)}",
-        f"closed/expired   {len(report.closed)} / {len(report.expired)}",
+        f"closed/expired   {len(report.closed)} / {len(report.expired)}"
+        + (f" ({len(report.beyond_window)} beyond the window, left)" if report.beyond_window else ""),
         f"alerts surviving {len(report.surviving_alerts)}",
     ]
     for death in report.line_deaths:

@@ -104,6 +104,9 @@ SOURCE_INTERVAL = "interval"
 RUNTIME_WRITE_RETRIES = 3
 #: The job ids that buy featured odds, for `next_poll`.
 POLL_JOB_PREFIXES = ("poll_featured:", "poll_scheduled:")
+#: The Odds API bills every ten named bookmakers as one region (§8.4; measured
+#: 2026-09-30: ten named, 1 credit for an h2h call that cost 2 over `us,us2`).
+BOOKS_PER_REGION = 10
 
 
 class BudgetExceeded(RuntimeError):
@@ -123,6 +126,9 @@ class BudgetPlan:
     #: How many polls a week `poll_schedule` makes when it sets the cadence;
     #: `None` when the interval does.
     scheduled_polls_per_week: int | None = None
+    #: How many books each poll names (§3.2 `poll_bookmakers`); `None` when the
+    #: polls ask for `regions` instead.
+    named_books: int | None = None
 
     @property
     def affordable(self) -> bool:
@@ -131,6 +137,20 @@ class BudgetPlan:
     @property
     def scheduled(self) -> bool:
         return self.scheduled_polls_per_week is not None
+
+    @property
+    def units(self) -> int:
+        """What one market of one poll costs: regions, or a region per ten books."""
+        return -(-self.named_books // BOOKS_PER_REGION) if self.named_books else self.regions
+
+    @property
+    def credits_per_poll(self) -> int:
+        return self.markets * self.units
+
+    def describe_units(self) -> str:
+        if self.named_books:
+            return f"{self.units} ({self.named_books} named books, ten bill as one region)"
+        return f"{self.units} region(s)"
 
 
 class ScheduledPoll(NamedTuple):
@@ -316,12 +336,27 @@ def featured_interval_s(settings: Settings) -> int:
     return settings.poll_interval_s
 
 
-def plan_budget(settings: Settings) -> BudgetPlan:
+def named_books_for_polls(settings: Settings, enabled_books: int | None) -> int | None:
+    """How many books a featured poll names, or `None` when it asks for regions.
+
+    `poll_bookmakers` (§3.2, 2026-10-01) names the enabled books; with none
+    enabled — or the count unknown — the poll and this projection both fall back
+    to `regions`, which is the dearer request for any list of ten or fewer.
+    """
+    if settings.poll_bookmakers == "enabled" and enabled_books:
+        return enabled_books
+    return None
+
+
+def plan_budget(settings: Settings, *, enabled_books: int | None = None) -> BudgetPlan:
     """§8.4: what the featured cadence costs a month.
 
-    On the interval, `(86400/interval) x markets x regions x 30` per enabled
-    sport. On the weekly plan, `polls a week x markets x regions x 30/7` — each
-    slot buys one sport, so the plan's sports are already in the count.
+    On the interval, `(86400/interval) x markets x units x 30` per enabled
+    sport. On the weekly plan, `polls a week x markets x units x 30/7` — each
+    slot buys one sport, so the plan's sports are already in the count. `units`
+    is the region count, or since 2026-10-01 `ceil(named books / 10)` when the
+    polls name the `enabled_books` (§3.2 `poll_bookmakers`) — so the caller
+    passes how many are enabled, and without it the regions are counted.
 
     Every slot is counted at full price, including a slot for a sport that is
     out of season. An empty response costs nothing (measured 2026-09-23,
@@ -337,20 +372,23 @@ def plan_budget(settings: Settings) -> BudgetPlan:
     interval = featured_interval_s(settings)
     markets = len(settings.markets_featured)
     regions = max(len(settings.regions), 1)
+    named = named_books_for_polls(settings, enabled_books)
+    units = -(-named // BOOKS_PER_REGION) if named else regions
     polls = scheduled_polls(settings)
     if polls:
         sports = len({poll.sport for poll in polls})
-        weekly = len(polls) * markets * regions
+        weekly = len(polls) * markets * units
         # Integer ceiling of weekly x 30/7.
         projected = -(-weekly * DAYS_PER_MONTH // DAYS_PER_WEEK)
     else:
         sports = max(len(settings.sports_enabled), 1)
-        per_sport = (SECONDS_PER_DAY / interval) * markets * regions * DAYS_PER_MONTH
+        per_sport = (SECONDS_PER_DAY / interval) * markets * units * DAYS_PER_MONTH
         projected = int(per_sport * sports)
     return BudgetPlan(
         featured_interval_s=interval,
         markets=markets,
         regions=regions,
+        named_books=named,
         sports=sports,
         # `offline_mode` makes every provider request a no-op (§3.2), so the
         # cadence costs nothing and no cadence can be unaffordable. Without this
@@ -362,28 +400,28 @@ def plan_budget(settings: Settings) -> BudgetPlan:
     )
 
 
-def check_budget(settings: Settings) -> BudgetPlan:
+def check_budget(settings: Settings, *, enabled_books: int | None = None) -> BudgetPlan:
     """Log the projected cost and refuse an unaffordable cadence (§13, §8.4)."""
-    plan = plan_budget(settings)
+    plan = plan_budget(settings, enabled_books=enabled_books)
     if plan.scheduled:
         log.info(
             "projected monthly credits: %d (%d scheduled polls a week x %d markets "
-            "x %d region(s) x 30/7, across %d sport(s)); budget %d",
+            "x %s x 30/7, across %d sport(s)); budget %d",
             plan.projected_monthly_credits,
             plan.scheduled_polls_per_week,
             plan.markets,
-            plan.regions,
+            plan.describe_units(),
             plan.sports,
             plan.budget,
         )
     else:
         log.info(
-            "projected monthly credits: %d (interval %ds x %d markets x %d region(s) "
+            "projected monthly credits: %d (interval %ds x %d markets x %s "
             "x %d sport(s)); budget %d",
             plan.projected_monthly_credits,
             plan.featured_interval_s,
             plan.markets,
-            plan.regions,
+            plan.describe_units(),
             plan.sports,
             plan.budget,
         )
@@ -534,13 +572,25 @@ async def reset_quota(client, *, prefix: str) -> None:
         log.warning("quota reset found no provider documents to update")
 
 
-def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edgeline-", sink=None):
+def build_scheduler(
+    provider,
+    client,
+    settings: Settings,
+    *,
+    prefix: str = "edgeline-",
+    sink=None,
+    enabled_books: int | None = None,
+):
     """Register §13's jobs. Returns the scheduler, not started.
 
     The featured cadence is one of two shapes, chosen once here: the weekly plan
     (`poll_schedule`) while it is in effect, one cron job per slot; otherwise the
     interval, one job per enabled sport. A plan edited in the UI therefore takes
     effect at the next worker start, like every other cadence setting.
+
+    `enabled_books` is how many sportsbooks are enabled, which prices a poll
+    that names them (§3.2 `poll_bookmakers`); without it the budget counts
+    regions.
     """
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -549,7 +599,7 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
     from .grading import grade, sports_awaiting_settlement
     from .providers.base import ProviderBudgetExceeded
 
-    plan = check_budget(settings)
+    plan = check_budget(settings, enabled_books=enabled_books)
     polls = scheduled_polls(settings)
     scheduler = AsyncIOScheduler(timezone="UTC")
 
@@ -950,7 +1000,7 @@ def build_scheduler(provider, client, settings: Settings, *, prefix: str = "edge
 
 async def _run() -> int:
     from .es import close_client, ensure_indices, get_client
-    from .engine import load_settings
+    from .engine import load_enabled_books, load_settings
     from .providers.the_odds_api import TheOddsApiProvider
 
     client = get_client()
@@ -976,7 +1026,8 @@ async def _run() -> int:
                 settings.quota_monthly_budget,
             )
 
-        scheduler = build_scheduler(provider, client, settings)
+        books = await load_enabled_books(client, prefix="edgeline-")
+        scheduler = build_scheduler(provider, client, settings, enabled_books=len(books))
         scheduler.start()
         polls = scheduled_polls(settings)
         upcoming = next_poll(scheduler.get_jobs())
@@ -1050,12 +1101,13 @@ def main(argv: list[str] | None = None) -> int:
 
 async def _check_budget_only() -> int:
     from .es import close_client, get_client
-    from .engine import load_settings
+    from .engine import load_enabled_books, load_settings
 
     client = get_client()
     try:
         settings = await load_settings(client, prefix="edgeline-")
-        plan = plan_budget(settings)
+        books = await load_enabled_books(client, prefix="edgeline-")
+        plan = plan_budget(settings, enabled_books=len(books))
         if plan.scheduled:
             sports = ", ".join(dict.fromkeys(poll.sport for poll in scheduled_polls(settings)))
             cadence = (
@@ -1068,9 +1120,15 @@ async def _check_budget_only() -> int:
                 f"featured interval  {plan.featured_interval_s}s\n"
                 f"sports             {plan.sports}\n"
             )
+        window = (
+            f"events up to {settings.poll_lookahead_h} h ahead"
+            if settings.poll_lookahead_h
+            else "every event listed"
+        )
         print(
             f"{cadence}"
-            f"markets x regions  {plan.markets} x {plan.regions}\n"
+            f"markets x units    {plan.markets} x {plan.describe_units()}"
+            f" = {plan.credits_per_poll} a poll, {window}\n"
             f"projected credits  {plan.projected_monthly_credits}/month\n"
             f"budget             {plan.budget}\n"
             f"verdict            {'OK' if plan.affordable else 'OVER BUDGET'}"

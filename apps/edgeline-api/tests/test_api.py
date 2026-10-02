@@ -750,7 +750,7 @@ class _EmptyProvider:
         self.armed = True
         return self.quota
 
-    async def fetch_odds(self, sport_key, markets, *, regions="us"):
+    async def fetch_odds(self, sport_key, markets, *, regions="us", **_request):
         from edgeline.providers.base import ProviderResponse
 
         if self._raises is not None:
@@ -951,6 +951,30 @@ async def test_health_says_what_sets_the_cadence_and_what_a_press_would_buy(api)
     # Every day of the default plan has a slot, so a press always buys that day's.
     assert plan["poll_now_sports"] and set(plan["poll_now_sports"]) <= set(plan["sports"])
     assert plan["timezone"] == "America/New_York"
+
+
+async def test_health_prices_a_poll_with_the_engines_arithmetic(api):
+    """§8.4, 2026-10-01: a poll that names the enabled books costs one region per
+    ten of them, so the per-poll price depends on how many are enabled — which
+    only the engine knows. With none enabled a poll asks for `us,us2`: 3 x 2."""
+    http, client, prefix = api
+    from edgeline.indices import SPORTSBOOKS_INDEX, SPORTSBOOK_SEEDS, with_prefix
+
+    plan = (await http.get("/api/system/health")).json()["poll_plan"]
+    assert plan["enabled_books"] == 0
+    assert plan["credits_per_poll"] == 6
+
+    for book in SPORTSBOOK_SEEDS:  # all ten
+        await client.update(
+            index=with_prefix(SPORTSBOOKS_INDEX, prefix), id=book, doc={"enabled": True},
+            refresh="wait_for",
+        )
+    plan = (await http.get("/api/system/health")).json()["poll_plan"]
+    assert plan["enabled_books"] == 10
+    assert plan["credits_per_poll"] == 3
+
+    await _store_settings(client, prefix, poll_bookmakers="regions")
+    assert (await http.get("/api/system/health")).json()["poll_plan"]["credits_per_poll"] == 6
 
 
 async def test_health_reports_the_interval_when_the_plan_is_empty(api):

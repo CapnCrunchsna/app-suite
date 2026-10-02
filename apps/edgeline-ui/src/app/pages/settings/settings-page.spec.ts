@@ -53,6 +53,7 @@ const SPEC_DEFAULTS: Settings = {
   markets_featured: ['h2h', 'spreads', 'totals'],
   markets_props: ['batter_home_runs', 'pitcher_strikeouts'],
   regions: ['us', 'us2'],
+  poll_bookmakers: 'enabled',
   poll_interval_s: 120,
   poll_interval_dev_s: 43200,
   poll_schedule: [
@@ -64,6 +65,7 @@ const SPEC_DEFAULTS: Settings = {
     { days: ['tue', 'wed', 'thu', 'fri'], time: '17:30', sport: 'icehockey_nhl' },
     { days: ['mon', 'tue', 'wed', 'fri'], time: '17:30', sport: 'basketball_nba' },
   ],
+  poll_lookahead_h: 96,
   props_poll_interval_s: 600,
   closing_capture_offset_s: 300,
   quota_monthly_budget: 500,
@@ -73,6 +75,8 @@ class ApiStub {
   settings: Settings = { ...SPEC_DEFAULTS };
   readonly patches: Record<string, unknown>[] = [];
   rejectWith: unknown = null;
+  /** What health says is enabled — the one input to a poll's price not on the form. */
+  enabledBooks = 0;
 
   getSettings(): Promise<Settings> {
     return Promise.resolve({ ...this.settings });
@@ -84,7 +88,15 @@ class ApiStub {
     return Promise.resolve({ ...this.settings });
   }
   getHealth() {
-    return Promise.resolve({ paper_mode: this.settings.paper_mode ?? true, kill_switch: false });
+    return Promise.resolve({
+      paper_mode: this.settings.paper_mode ?? true,
+      kill_switch: false,
+      poll_plan: {
+        mode: 'schedule',
+        timezone: 'America/New_York',
+        enabled_books: this.enabledBooks,
+      },
+    });
   }
 }
 
@@ -132,14 +144,17 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       expect(new Set(covered).size).toBe(covered.length);
       // The count is §3.2's, and moves when §3.2 does — 26 at Phase 3, plus
       // `regions` on 2026-09-09, `offline_mode` on 2026-09-10,
-      // `closing_capture_mode` on 2026-09-11, `book_state` on 2026-09-12 and
-      // `poll_schedule` on 2026-09-23.
-      expect(covered).toHaveLength(31);
+      // `closing_capture_mode` on 2026-09-11, `book_state` on 2026-09-12,
+      // `poll_schedule` on 2026-09-23, and `poll_bookmakers` and
+      // `poll_lookahead_h` on 2026-10-01.
+      expect(covered).toHaveLength(33);
       expect(covered).toContain('regions');
       expect(covered).toContain('offline_mode');
       expect(covered).toContain('closing_capture_mode');
       expect(covered).toContain('book_state');
       expect(covered).toContain('poll_schedule');
+      expect(covered).toContain('poll_bookmakers');
+      expect(covered).toContain('poll_lookahead_h');
     });
 
     it('groups them the way §11.1 names them', () => {
@@ -275,6 +290,26 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       expect(cost).toContain('14 polls a week');
       expect(cost).toContain('~360 credits');
       expect(cost).toContain('500 budget');
+    });
+
+    /**
+     * §8.4, 2026-10-01: ten or fewer named books bill as one region, so with the
+     * ten enabled a poll is 3 credits and the plan 180 — and asking for regions
+     * again, in the field above, prices it back at 360 before anything is saved.
+     */
+    it('prices a poll that names the enabled books at one region per ten', async () => {
+      const { fixture, el } = await render((stub) => {
+        stub.enabledBooks = 10;
+      });
+      await settle(fixture);
+      const cost = () => el.querySelector('#set-poll_schedule .plan__cost')?.textContent ?? '';
+      expect(cost()).toContain('~180 credits');
+
+      const select = el.querySelector('#set-poll_bookmakers') as HTMLSelectElement;
+      select.value = 'regions';
+      select.dispatchEvent(new Event('change'));
+      await settle(fixture);
+      expect(cost()).toContain('~360 credits');
     });
 
     it('sends the whole plan, days in week order, when a day is ticked', async () => {

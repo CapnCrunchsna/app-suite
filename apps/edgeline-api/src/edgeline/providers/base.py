@@ -114,6 +114,9 @@ class OddsProvider(Protocol):
         markets: list[str],
         *,
         regions: str = "us",
+        bookmakers: list[str] | None = None,
+        commence_time_from: str | None = None,
+        commence_time_to: str | None = None,
     ) -> ProviderResponse: ...
 
     async def fetch_events(self, sport_key: str) -> ProviderResponse: ...

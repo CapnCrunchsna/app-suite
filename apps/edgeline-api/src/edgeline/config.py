@@ -29,6 +29,7 @@ ENV_FILE = PROJECT_ROOT / ".env"
 
 DevigMethod = Literal["multiplicative", "additive", "power", "shin"]
 ClosingCaptureMode = Literal["off", "recommended", "all"]
+PollBookmakers = Literal["enabled", "regions"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 #: `datetime.weekday()` order, so `WEEKDAYS[d.weekday()]` names a date's day.
 WEEKDAYS: tuple[Weekday, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -187,6 +188,20 @@ class Settings(BaseModel):
     #: a fifth (espnbet), which is exactly enough. Each extra region multiplies the
     #: credit cost (§8.4), which is why `poll_interval_dev_s` doubled alongside it.
     regions: list[str] = Field(default_factory=lambda: ["us", "us2"])
+    #: What a featured poll asks the provider for (§8.4). Added 2026-10-01, from
+    #: live measurements the day before.
+    #:
+    #: * ``enabled`` — name the enabled sportsbooks with `bookmakers=`. Ten or
+    #:   fewer bill as **one** region: an NCAAF h2h call naming the ten cost 1
+    #:   credit against 2 for `us,us2`, and the same seven Maryland books came
+    #:   back on all 65 events either way. Detection only ever reads enabled
+    #:   books, so naming them changes nothing it finds. With no book enabled
+    #:   the poll falls back to `regions`.
+    #: * ``regions`` — request the `regions` buckets above, as before.
+    #:
+    #: Closing snapshots always request `regions`, whatever this says: grading's
+    #: consensus reads every book stored, offshore ones included (§12).
+    poll_bookmakers: PollBookmakers = "enabled"
 
     # Cadence
     poll_interval_s: int = 120
@@ -204,6 +219,22 @@ class Settings(BaseModel):
     #: afternoon. An empty list restores `poll_interval_dev_s`; a budget above the
     #: free tier's selects `poll_interval_s` and ignores this.
     poll_schedule: list[PollSlot] = Field(default_factory=_default_poll_schedule)
+    #: How far ahead a featured poll looks, in hours: it asks only for events
+    #: starting between now and now + this (`commenceTimeFrom`/`commenceTimeTo`,
+    #: §8.4). Added 2026-10-01; 0 asks for every event listed.
+    #:
+    #: An answer with no events in it is free, so a sport whose next game is
+    #: beyond the window costs nothing. The NBA lists games out to 12-25 and its
+    #: slots have paid 6 credits each for them; windowed, they are free until the
+    #: window reaches the 2026-10-20 opener (a 24-hour NBA call measured 0
+    #: events, 0 credits). It also ends recommendations on games months out, like
+    #: 2026-09-25's on the 12-25 Heat @ Celtics.
+    #:
+    #: 96 because the default plan has no NHL slot from Saturday to Monday, and
+    #: Friday's 17:30 poll reaches Monday's last puck drop only with 77 h; four
+    #: days covers it, and NBA Friday→Monday and NFL Thursday→Sunday, so a game
+    #: priced at one poll is usually priced again before it starts.
+    poll_lookahead_h: int = Field(default=96, ge=0)
     props_poll_interval_s: int = 600
     closing_capture_offset_s: int = 300
     #: Whether to **buy** closing lines, and for which events (§12.4). Added

@@ -148,7 +148,7 @@ session, each of which cost real credits or real time.
 | --- | --- | --- |
 | `/v4/sports` | **0** — free, and `x-requests-last: 0` confirms it | diagnostics only |
 | `/v4/sports/{sport}/events` | **0** — every listed game with its start time | diagnostics only |
-| `/v4/sports/{sport}/odds` | **markets × regions** (6 at current settings); **0 when the answer is empty** | `run_once`, `capture_closing_lines` |
+| `/v4/sports/{sport}/odds` | **markets × regions** (6 for `us,us2`), or **markets × ceil(named books / 10)** with `bookmakers=` (3 for the ten enabled books); **0 when the answer is empty** | `run_once` (named books), `capture_closing_lines` (regions) |
 | `/v4/sports/{sport}/scores?daysFrom=` | **2** | `grading.grade` |
 
 **An empty `/odds` answer is free** (measured 2026-09-23: `baseball_mlb_preseason`, inactive,
@@ -158,6 +158,20 @@ costs nothing — MLB slots left in after the World Series, say. Careful what "e
 NBA is not empty before its opener** (corrected 2026-09-29): `/events` lists its games as far out
 as 12-25, so every NBA slot since 2026-09-23 has paid full price for them, and one recommended the
 Christmas Day game 91 days before tip-off.
+
+**Named books cost half, and a window makes an idle sport free (measured 2026-09-30, live).** An
+NCAAF h2h `/odds` call naming the ten enabled books with `bookmakers=` cost **1 credit**; the same
+call over `regions=us,us2` cost 2 — ten or fewer named books bill as one region. The same seven
+Maryland books (ballybet, betmgm, betparx, betrivers, draftkings, espnbet, fanduel) came back on
+all 65 events either way; williamhill_us, fanatics and bet365 are enabled and never returned. An
+NBA call limited with `commenceTimeFrom`/`commenceTimeTo` to the next 24 hours returned 0 events
+and cost 0. Since 2026-10-01 a featured poll does both (§3.2 `poll_bookmakers`, `poll_lookahead_h`
+— 96 hours by default): the default plan is **180 credits a month instead of 360**, NBA slots are
+free until the window reaches the 2026-10-20 opener, and nothing is recommended months out. Two
+things follow. A poll stores prices from the named books only, so a game graded without a closing
+snapshot gets a Maryland-only consensus where it used to include the offshore books two regions
+returned; closing snapshots keep asking for `regions` (§12). And §7.4 no longer closes an
+opportunity on a game beyond the window — the poll did not ask about it.
 
 **Month-end sidecar, 2026-09-30.** The allowance resets on the 1st, so September's last ~290
 credits went on information rather than lapsing: `sidecars/month_end_2026_09.py` polls NCAAF every
@@ -170,10 +184,11 @@ per-action log in `sidecars/runs/`. Delete it and its test once the day has been
 Two consequences that are not obvious from §8.4:
 
 - **The §13 budget guard counts only the featured poll.** `plan_budget` projects
-  `(86400/interval) × markets × regions × 30`, or on the weekly plan
-  `polls a week × markets × regions × 30/7`, and knows nothing about the closing
-  sweep or grading. It reported a comfortable 360/500 while the real spend was
-  about 6 credits a minute. Treat its number as a floor, not a bill.
+  `(86400/interval) × markets × units × 30`, or on the weekly plan
+  `polls a week × markets × units × 30/7` — units being the regions, or one per ten
+  named books — and knows nothing about the closing sweep or grading. It reported a
+  comfortable 360/500 while the real spend was about 6 credits a minute. Treat its
+  number as a floor, not a bill.
 - **Grading costs 2 credits a sport, but only when there is a bet to settle.** Until
   2026-09-23 every run fetched scores for every enabled sport — including the catch-up
   grade 15 seconds after each worker start — whatever there was to grade. With the
@@ -425,14 +440,15 @@ data in §8.4 — each poll about ninety minutes before its sport's first big wi
 | Thu | NHL 17:30, NFL 18:45 |
 | Sat | NCAAF 10:30, NCAAF 17:30 |
 
-14 polls a week at 6 credits is **360 credits a month**, what the interval cost, and
-`--check-budget` prints it:
+14 polls a week at 6 credits was **360 credits a month**, what the interval cost. Since 2026-10-01
+a poll names the ten enabled books, which bill as one region, so it is 3 credits and the plan
+**180**; `--check-budget` prints it:
 
 ```
 poll plan          14 polls/week at fixed America/New_York times
 sports             4 (basketball_nba, americanfootball_nfl, icehockey_nhl, americanfootball_ncaaf)
-markets x regions  3 x 2
-projected credits  360/month
+markets x units    3 x 1 (10 named books, ten bill as one region) = 3 a poll, events up to 96 h ahead
+projected credits  180/month
 budget             500
 verdict            OK
 ```
@@ -504,7 +520,9 @@ uv run python -m edgeline.engine --once
 ```
 
 Fetches one poll cycle, normalizes it, stores snapshots and events, runs +EV and arbitrage
-detection, and prints what it found. It spends ~3 API credits and **never places a bet** (§16.1).
+detection, and prints what it found. It spends a poll's credits per sport — `markets ×
+ceil(named books / 10)`, 3 with the ten enabled books, or 0 when no game is in the window — and
+**never places a bet** (§16.1).
 
 **Zero detections was the expected output for a while, and the reason was structural rather than
 a quiet market.** Measured 2026-09-09 against a live `baseball_mlb` feed with §4.3's eight

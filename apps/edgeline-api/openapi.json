@@ -730,7 +730,7 @@
           "system"
         ],
         "summary": "Poll Now",
-        "description": "Run one featured cycle now — §8.4's \"manual trigger\", from the UI.\n\n**Why a button exists at all.** A cycle is only worth anything before the\ngames start (§7.4 refuses an event that has), and no cadence knows about\nthe news that makes one worth buying *now*. The interval §13 started with\nlanded wherever the worker was last restarted; the weekly plan that replaced\nit on 2026-09-23 lands at fixed times, which is better and still not this.\n\n**What it polls.** Today's sports in the weekly plan, by the plan's Eastern\ncalendar — a press on a Tuesday buys Tuesday's slate — or `sports_enabled`\nwhen the plan is empty, not in effect, or has nothing today\n(`sports_for_poll_now`).\n\nIt is an ordinary poll in every other respect: `markets × regions` credits\nper sport, through the same pace guard as every other request, and it\nstamps the poll the way a scheduled one does — globally and per sport, with\n`manual` as its source. That stamp matters: a manual cycle *is* a poll, so\n`poll_is_due` must see it or the next worker restart pays for another, and a\nslot of the plan due within three hours stands down on it rather than buying\nthe same sport twice.\n\nSettings come from the engine's strict loader rather than\n`load_settings_doc`: this is the one route that spends money, and a read that\nfails must not become a set of §3.2 defaults — that would hand the pace guard\nthe free tier's budget, or turn off an `offline_mode` someone set on purpose.\n\n§16.1 is untouched. This fetches prices and writes documents.",
+        "description": "Run one featured cycle now — §8.4's \"manual trigger\", from the UI.\n\n**Why a button exists at all.** A cycle is only worth anything before the\ngames start (§7.4 refuses an event that has), and no cadence knows about\nthe news that makes one worth buying *now*. The interval §13 started with\nlanded wherever the worker was last restarted; the weekly plan that replaced\nit on 2026-09-23 lands at fixed times, which is better and still not this.\n\n**What it polls.** Today's sports in the weekly plan, by the plan's Eastern\ncalendar — a press on a Tuesday buys Tuesday's slate — or `sports_enabled`\nwhen the plan is empty, not in effect, or has nothing today\n(`sports_for_poll_now`).\n\nIt is an ordinary poll in every other respect: §8.4's per-poll credits for\neach sport (`markets × regions`, or `markets × ceil(named books / 10)` since\n2026-10-01), through the same pace guard as every other request, and it\nstamps the poll the way a scheduled one does — globally and per sport, with\n`manual` as its source. That stamp matters: a manual cycle *is* a poll, so\n`poll_is_due` must see it or the next worker restart pays for another, and a\nslot of the plan due within three hours stands down on it rather than buying\nthe same sport twice.\n\nSettings come from the engine's strict loader rather than\n`load_settings_doc`: this is the one route that spends money, and a read that\nfails must not become a set of §3.2 defaults — that would hand the pace guard\nthe free tier's budget, or turn off an `offline_mode` someone set on purpose.\n\n§16.1 is untouched. This fetches prices and writes documents.",
         "operationId": "pollNow",
         "responses": {
           "200": {
@@ -1389,6 +1389,16 @@
           "timezone": {
             "type": "string",
             "title": "Timezone"
+          },
+          "enabled_books": {
+            "type": "integer",
+            "title": "Enabled Books",
+            "default": 0
+          },
+          "credits_per_poll": {
+            "type": "integer",
+            "title": "Credits Per Poll",
+            "default": 0
           }
         },
         "type": "object",
@@ -1862,6 +1872,15 @@
             "type": "array",
             "title": "Regions"
           },
+          "poll_bookmakers": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "regions"
+            ],
+            "title": "Poll Bookmakers",
+            "default": "enabled"
+          },
           "poll_interval_s": {
             "type": "integer",
             "title": "Poll Interval S",
@@ -1878,6 +1897,12 @@
             },
             "type": "array",
             "title": "Poll Schedule"
+          },
+          "poll_lookahead_h": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Poll Lookahead H",
+            "default": 96
           },
           "props_poll_interval_s": {
             "type": "integer",

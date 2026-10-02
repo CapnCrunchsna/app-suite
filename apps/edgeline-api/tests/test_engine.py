@@ -463,12 +463,15 @@ class _FixtureProvider:
     def __init__(self, payload):
         self.payload = payload
         self.calls: list[tuple[str, list[str]]] = []
+        #: The keyword arguments of each call — regions or named books, window.
+        self.requests: list[dict] = []
 
-    async def fetch_odds(self, sport_key, markets, *, regions="us"):
+    async def fetch_odds(self, sport_key, markets, *, regions="us", **request):
         from edgeline.providers.base import ProviderResponse, QuotaStatus
         from edgeline.schemas import utc_now_iso
 
         self.calls.append((sport_key, list(markets)))
+        self.requests.append({"regions": regions, **request})
         return ProviderResponse(
             provider_key=self.key,
             endpoint="odds",
@@ -1113,6 +1116,121 @@ async def test_an_alert_from_before_its_edge_was_recorded_is_not_repeated(
         assert back.alerted == []
         assert len(sink.sent) == 1
         assert (await _opportunity(client, prefix, alerted.hash))["status"] == STATUS_ALERTED
+    finally:
+        await client.close()
+
+
+# ---- what a poll asks for (§8.4, 2026-10-01) -------------------------------
+
+
+@pytest.mark.es
+async def test_a_poll_names_the_enabled_books_and_asks_only_for_the_window(
+    es_url, test_index_prefix
+):
+    """Ten or fewer named books bill as one region — half of `us,us2` — and
+    detection reads only enabled books anyway, so the poll names them. The
+    window bounds what it pays for: an answer with no game in it is free."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(doctored_payload())
+        before = datetime.now(timezone.utc)
+        report = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+
+        [request] = provider.requests
+        assert request["bookmakers"] == sorted([*FAIR_BOOKS, "juicy"])
+        start = datetime.strptime(request["commence_time_from"], "%Y-%m-%dT%H:%M:%SZ")
+        end = datetime.strptime(request["commence_time_to"], "%Y-%m-%dT%H:%M:%SZ")
+        assert end - start == timedelta(hours=96)
+        assert abs(start.replace(tzinfo=timezone.utc) - before) < timedelta(minutes=1)
+        assert report.named_books == 6
+        assert report.window_to == request["commence_time_to"]
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_regions_and_no_window_are_still_there_to_ask_for(es_url, test_index_prefix):
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(doctored_payload())
+        await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix,
+            settings=settings(poll_bookmakers="regions", poll_lookahead_h=0),
+        )
+        assert provider.requests == [{"regions": "us,us2"}]
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_with_no_book_enabled_a_poll_falls_back_to_the_regions(es_url, test_index_prefix):
+    """Naming no books would ask for nothing; the regions are the honest default."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix, books=False)
+        provider = _FixtureProvider(doctored_payload())
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        [request] = provider.requests
+        assert "bookmakers" not in request
+        assert request["regions"] == "us,us2"
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_windowed_poll_leaves_games_beyond_the_window_alone(es_url, test_index_prefix):
+    """The trap in a lookahead window. §7.4 closes whatever a poll no longer
+    shows, and a windowed poll shows nothing beyond its window — so without the
+    limit every opportunity days out would be closed on each poll, and logged as
+    a line death that never happened (the 12-25 NBA recommendation, NFL Ravens @
+    Falcons on 10-11). A game inside the window that vanished still closes."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.dedup import STATUS_CLOSED
+    from edgeline.engine import run_once
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    far = {**EVENT_HEADER, "id": "evt-far", "commence_time": _hours_from_now(240)}
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(
+            doctored_payload() + [{**far, "bookmakers": doctored_payload()[0]["bookmakers"]}]
+        )
+        everything = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix,
+            settings=settings(poll_lookahead_h=0),
+        )
+        near_ids = {d.hash for d in everything.detections if d.event_id.endswith(":evt1")}
+        far_ids = {d.hash for d in everything.detections if d.event_id.endswith(":evt-far")}
+        assert len(near_ids) == 2 and len(far_ids) == 2
+
+        # Windowed at 96 h: the far game is not asked about, and the near one
+        # has converged on a fair line.
+        provider.payload = fair_only_payload()
+        windowed = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+
+        assert set(windowed.closed) == near_ids
+        assert set(windowed.beyond_window) == far_ids
+        for doc_id in far_ids:
+            assert (await _opportunity(client, prefix, doc_id))["status"] != STATUS_CLOSED
     finally:
         await client.close()
 

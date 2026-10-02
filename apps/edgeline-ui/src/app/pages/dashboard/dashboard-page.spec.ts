@@ -401,6 +401,24 @@ describe('DashboardPage (§11.1)', () => {
       expect(button.textContent).toContain('Poll NHL, NBA now');
       expect(button.textContent).toContain('~12 credits');
     });
+
+    /**
+     * §8.4, 2026-10-01: a poll that names the ten enabled books bills as one
+     * region, so the per-poll price depends on what is enabled — which health
+     * reports from the engine's own arithmetic, and the button uses.
+     */
+    it("prices a press with the engine's per-poll figure when health has one", async () => {
+      const { el } = await render((stub) => {
+        stub.health = {
+          ...stub.health,
+          poll_plan: { ...planStatus(['icehockey_nhl', 'basketball_nba']), credits_per_poll: 3 },
+        };
+      });
+
+      expect((el.querySelector('.poll__button') as HTMLButtonElement).textContent).toContain(
+        '~6 credits',
+      );
+    });
   });
 
   describe('the weekly poll plan (§13, 2026-09-23)', () => {

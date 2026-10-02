@@ -49,6 +49,10 @@ SPEC_DEFAULTS = {
     # Not in §3.2's original table — added 2026-09-09, see §8.4. `us` alone
     # returns only four MD-legal books, one short of what §6.4's consensus needs.
     "regions": ["us", "us2"],
+    # Not in §3.2's original table — added 2026-10-01. Ten or fewer named books
+    # bill as one region: an NCAAF h2h call naming the ten cost 1 credit against
+    # 2 for us,us2, with the same seven Maryland books on all 65 events.
+    "poll_bookmakers": "enabled",
     "poll_interval_s": 120,
     # 12 h, not §3.2's original 6 h: two regions double the per-poll cost, so the
     # halved rate keeps the dev cadence at the same 360 credits/month.
@@ -65,6 +69,11 @@ SPEC_DEFAULTS = {
         {"days": ["tue", "wed", "thu", "fri"], "time": "17:30", "sport": "icehockey_nhl"},
         {"days": ["mon", "tue", "wed", "fri"], "time": "17:30", "sport": "basketball_nba"},
     ],
+    # Not in §3.2's original table — added 2026-10-01. Polls ask only for games
+    # starting within 96 h: an empty answer is free (an NBA call over the next
+    # 24 h measured 0 events, 0 credits), and 96 h reaches Monday's NHL puck
+    # drops from Friday's 17:30 slot, the plan's longest same-sport gap.
+    "poll_lookahead_h": 96,
     "props_poll_interval_s": 600,
     "closing_capture_offset_s": 300,
     # Not in §3.2's original table — added 2026-09-11. `off` derives CLV from

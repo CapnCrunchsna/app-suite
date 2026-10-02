@@ -132,6 +132,8 @@ export interface PollPlanStatus {
   sports?: string[];
   poll_now_sports?: string[];
   timezone: string;
+  enabled_books?: number;
+  credits_per_poll?: number;
 }
 
 /** One row of §3.2's `poll_schedule`: poll `sport` at `time` on each of `days`. */
@@ -211,9 +213,11 @@ export interface Settings {
   markets_featured?: string[];
   markets_props?: string[];
   regions?: string[];
+  poll_bookmakers?: "enabled" | "regions";
   poll_interval_s?: number;
   poll_interval_dev_s?: number;
   poll_schedule?: PollSlot[];
+  poll_lookahead_h?: number;
   props_poll_interval_s?: number;
   closing_capture_offset_s?: number;
   closing_capture_mode?: "off" | "recommended" | "all";
