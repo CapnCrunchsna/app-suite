@@ -176,14 +176,6 @@ snapshot gets a Maryland-only consensus where it used to include the offshore bo
 returned; closing snapshots keep asking for `regions` (§12). And §7.4 no longer closes an
 opportunity on a game beyond the window — the poll did not ask about it.
 
-**Month-end sidecar, 2026-09-30.** The allowance resets on the 1st, so September's last ~290
-credits went on information rather than lapsing: `sidecars/month_end_2026_09.py` polls NCAAF every
-45 minutes and NFL hourly all day, NHL and MLB around their games, buys true closing lines before
-that day's starts where something was detected, and runs three small cost experiments for October
-(ten named books against two regions, and a poll filtered to an empty time window). It goes
-through `run_once` like the Poll now button, writes no setting and stamps nothing, and keeps a
-per-action log in `sidecars/runs/`. Delete it and its test once the day has been read.
-
 Two consequences that are not obvious from §8.4:
 
 - **The §13 budget guard counts the polls and, since 2026-10-01, the closing checks — not

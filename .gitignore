@@ -33,8 +33,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
-# Per-action logs a throwaway Edgeline sidecar writes while it runs.
-apps/edgeline-api/sidecars/runs/
 
 # Secrets. `.env.example` IS versioned and documents the keys; `.env` holds the
 # Odds API key and the Discord bot token and must never be committed.
