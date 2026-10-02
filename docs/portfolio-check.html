@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio Check — advisor vs. index comparison — MetrumDigital</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%20role='img'%20aria-label='MetrumDigital'%3E%20%3Cdefs%3E%20%3ClinearGradient%20id='mdg'%20x1='0'%20y1='0'%20x2='32'%20y2='32'%20gradientUnits='userSpaceOnUse'%3E%20%3Cstop%20offset='0'%20stop-color='%230ea5e9'/%3E%20%3Cstop%20offset='.55'%20stop-color='%2314b8a6'/%3E%20%3Cstop%20offset='1'%20stop-color='%2322c55e'/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20x='1'%20y='1'%20width='30'%20height='30'%20rx='8'%20fill='%230d9488'/%3E%20%3Cg%20fill='%235eead4'%3E%20%3Crect%20x='1'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3C/g%3E%20%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='3'%20fill='url(%23mdg)'/%3E%20%3Cpath%20d='M9%2022V10.5l7%206.5%207-6.5V22'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%20%3C/svg%3E">
+
+<!-- Restore saved theme before paint to avoid flash. Default is dark. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('md-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0a1517; --surface:#0f2124; --surface-2:#143034; --border:#1f4a47;
+    --text:#dcefeb; --text-dim:#7ea8a1; --accent:#2dd4bf; --accent-2:#34d399;
+    --code-bg:#0f2124; --shadow:0 1px 3px rgba(0,0,0,.5);
+    --radius:10px; --maxw:880px;
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff; --surface:#f0faf8; --surface-2:#e0f3ef; --border:#bfe3dc;
+    --text:#0b2a27; --text-dim:#48706a; --accent:#0d9488; --accent-2:#059669;
+    --code-bg:#f0faf8; --shadow:0 1px 3px rgba(140,149,159,.3);
+  }
+  html[data-theme="dark"]{color-scheme:dark}
+  html[data-theme="light"]{color-scheme:light}
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    transition:background .2s ease,color .2s ease;
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
+  }
+  .topbar a{color:var(--accent); text-decoration:none; font-weight:600}
+  .topbar a:hover{text-decoration:underline}
+  .home{white-space:nowrap; display:inline-flex; align-items:center; gap:8px}
+  .brand-mark{width:22px; height:22px; flex:none}
+  .related{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+  .related .label{color:var(--text-dim); font-weight:400}
+  .related a{font-weight:500; padding:3px 10px; border:1px solid var(--border);
+    border-radius:999px; background:var(--surface-2)}
+  .spacer{flex:1}
+  .toggle{
+    cursor:pointer; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:600;
+  }
+  .toggle:hover{border-color:var(--accent)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:40px 24px 80px}
+  h1{font-size:2rem; line-height:1.2; margin:0 0 6px}
+  h2{margin-top:2em; padding-bottom:.3em; border-bottom:1px solid var(--border)}
+  .meta{color:var(--text-dim); font-size:14px; margin:0 0 32px}
+  .meta .tag{display:inline-block; padding:2px 10px; border-radius:999px;
+    background:var(--surface-2); border:1px solid var(--border); margin-right:8px; font-weight:600}
+  a{color:var(--accent)}
+  code{background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:.15em .4em; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.9em}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; overflow:auto}
+  pre code{background:none; border:none; padding:0}
+  blockquote{margin:1em 0; padding:.5em 1em; border-left:4px solid var(--accent);
+    background:var(--surface); border-radius:0 var(--radius) var(--radius) 0; color:var(--text-dim)}
+  table{border-collapse:collapse; width:100%; margin:1em 0}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left}
+  th{background:var(--surface-2)}
+  hr{border:none; border-top:1px solid var(--border); margin:2em 0}
+  footer{max-width:var(--maxw); margin:0 auto; padding:24px; color:var(--text-dim);
+    font-size:14px; border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../../dashboard.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="mdLogoT" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0ea5e9"/><stop offset=".55" stop-color="#14b8a6"/><stop offset="1" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0d9488"/>
+      <g fill="#5eead4"><rect x="1" y="8.5" width="4" height="2.6"/><rect x="1" y="14.7" width="4" height="2.6"/><rect x="1" y="20.9" width="4" height="2.6"/><rect x="27" y="8.5" width="4" height="2.6"/><rect x="27" y="14.7" width="4" height="2.6"/><rect x="27" y="20.9" width="4" height="2.6"/></g>
+      <rect x="5" y="5" width="22" height="22" rx="3" fill="url(#mdLogoT)"/>
+      <path d="M9 22V10.5l7 6.5 7-6.5V22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>← Dashboard</span>
+  </a>
+  <span class="spacer"></span>
+  <button id="themeToggle" class="toggle" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+<h1>Portfolio Check — advisor vs. index comparison</h1>
+<p class="meta"><span class="tag">plans</span> 2026-10-01</p>
+<p>Portfolio Check is a single-page local tool. It takes your holdings and your advisor's fee schedule and shows what the current setup costs, what that cost compounds to, and how much value the advisor has to add each year to break even with a self-managed index portfolio. It presents comparisons and education, never a recommendation. This document records the method, so it changes in the same commit as the code in <code>apps/portfolio-check</code>.</p>
+<h2 id="s1">1. Scope and build order</h2>
+<p>The build order was agreed before any code existed:</p>
+<ol><li><strong>Advisor vs. index comparison</strong>: built (this app).</li><li><strong>Portfolio tracker</strong>, with drift and rebalancing suggestions: not started. Whether it gets built depends on what #1 shows on real numbers.</li><li><strong>Contribution/DCA planner</strong>: not started. It depends on #1 for the same reason.</li></ol>
+<p>Hard limits that apply to all three:</p>
+<ul><li><strong>No market-timing signals.</strong> A backtester that shows how timing rules did historically is allowed. Recommending trades from one is not.</li><li><strong>No brokerage logins, stored credentials or aggregator APIs</strong> (Plaid and the like). Data comes in only by manual entry or a CSV export.</li><li><strong>Copy says what the numbers show, never what to do.</strong> The page carries a disclaimer that it is not personalized investment, tax or legal advice.</li><li><strong>Real financial data is never committed.</strong> The repo holds only made-up sample data, with fictional tickers.</li></ul>
+<h2 id="s2">2. Storage</h2>
+<p>Inputs live in the browser's <code>localStorage</code> under one key, <code>portfolio-check:inputs:v1</code>, and nowhere else. There is no backend. This departs from the workspace's Elasticsearch-first preference on purpose: the tool has one user, a few kilobytes of data and no query needs, and keeping it in the browser is also the privacy guarantee. Nothing leaves the machine.</p>
+<p>The sample data is never saved over the user's numbers. It only becomes saved state once the user edits it.</p>
+<h2 id="s3">3. Method</h2>
+<p>All calculations live in <code>src/app/calc/</code>. Rates there are fractions. The UI holds percents, and <code>inputs.ts</code> converts them once.</p>
+<p><strong>All-in cost</strong> is the advisory fee plus the value-weighted fund expense ratio times the balance. The page shows it in dollars and as a percent of the balance.</p>
+<p><strong>Fee schedules</strong> come in two AUM conventions, and the difference is real money:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Method</th><th>$600k on 1% to $500k / 0.8% above</th></tr>
+<tr><td><code>tiered</code>: each slice pays its own rate</td><td>$5,000 + $800 = $5,800</td></tr>
+<tr><td><code>whole-balance</code>: the whole balance pays the landing tier's rate</td><td>0.8% × $600k = $4,800</td></tr>
+</table></div>
+<p>Optional extras:</p>
+<ul><li><strong>Minimum fee.</strong> The bill is never less than this amount.</li><li><strong>Flat-fee schedules.</strong> A fixed dollar amount per year, instead of a percent.</li><li><strong>Capped last tier.</strong> If the last tier has an upper limit, the balance above it is billed at that tier's rate. It is never treated as free.</li></ul>
+<p><strong>Matched index portfolio.</strong> It holds the same value-weighted stock share as the current holdings, split between a stock index fund and a bond index fund. The default expense ratios are 0.03% for stocks and 0.04% for bonds; both are editable. It pays no advisory fee.</p>
+<p><strong>Projection.</strong> Both scenarios get the same gross return. Each year runs three steps:</p>
+<ol><li><code>grown = balance × (1 + g)</code></li><li><code>cost = grown × fundEr + advisoryFee(grown)</code></li><li><code>balance = grown − cost + contribution</code></li></ol>
+<p>The gross return deliberately cancels out of the comparison. Only cost differs between the two lines.</p>
+<p><strong>Break-even</strong> is the extra annual return the current setup needs to finish level with the index portfolio. It is found by bisection, because tiered fees have no closed form. The page shows it as a rate and as dollars this year. Next to it, the page shows the taxable balance, because that balance limits how much value tax-loss harvesting can add.</p>
+<p><strong>Look-back:</strong></p>
+<ul><li>The user enters, for each year, the value at the start, the net deposits and withdrawals, and the value at the end. The return comes from Modified Dietz with mid-year flows.</li><li>The benchmark for each year is the stock share × the S&amp;P 500 return, plus the bond share × the US Aggregate return, minus the index expense ratio.</li><li>The benchmark's dollar path replays the user's own cash flows using the same mid-year convention.</li><li>The default benchmark returns cover 2015–2025. They are approximate and editable, and the page says so.</li></ul>
+<h2 id="s4">4. Verification</h2>
+<p>Unit tests in <code>src/app/calc/*.spec.ts</code> cover:</p>
+<ul><li>tiered and whole-balance billing, minimum fees, tiers entered out of order, a capped last tier, and flat fees;</li><li>the projection against its closed form, <code>B₀((1+g)(1−fee))ⁿ</code>;</li><li>the claim that 1% a year costs about a quarter of the ending balance over 30 years (the test pins it at 25–27%);</li><li>that the solved break-even rate actually closes the gap;</li><li>the Dietz math, and the benchmark replay of the user's cash flows;</li><li>that the CSV parser keeps positions, drops totals and footers, and never outputs an account number.</li></ul>
+<h2 id="s5">5. Next steps</h2>
+<ul><li><strong>The user enters real holdings and the fee schedule.</strong> These come from the advisor's Form ADV Part 2A and a positions CSV with account numbers removed.</li><li><strong>Decide on #2 and #3 once the real numbers are in.</strong></li></ul>
+</main>
+
+<footer>
+  Generated by Claude Code · <a href="../../dashboard.html">Back to dashboard</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('md-theme', next); } catch (e) {}
+    syncToggleLabel();
+  }
+  function syncToggleLabel(){
+    var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+  }
+  syncToggleLabel();
+</script>
+</body>
+</html>

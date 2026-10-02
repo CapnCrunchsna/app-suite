@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noPropertyAccessFromIndexSignature": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "module": "preserve",
+    // Same browser-app overrides as apps/ledgerline-ui/tsconfig.json, which explains
+    // each: Angular rejects declaration-only emit, the browser needs `dom`, and
+    // `@metrum/ui` resolves through its built entry point like the bundler does.
+    "emitDeclarationOnly": false,
+    "lib": ["es2022", "dom"],
+    "customConditions": []
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

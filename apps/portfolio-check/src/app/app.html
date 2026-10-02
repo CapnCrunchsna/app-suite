@@ -1,0 +1,364 @@
+<header class="header">
+  <span class="header__name">Portfolio Check</span>
+  <span class="header__tagline">advisor vs. index, on your own numbers</span>
+  <span class="header__spacer"></span>
+  <ui-theme-switcher />
+</header>
+
+<main class="page">
+  <div class="page__head">
+    <h1 class="page__title">What is your advisor costing, and what would it have to earn back?</h1>
+    <p class="page__lede">
+      Enter your holdings and your advisor's fee schedule. The page compares your current setup with a
+      low-cost two-fund index portfolio at the same stock/bond mix and the same assumed market return, so
+      the only difference is cost. It shows what your numbers say; it does not tell you what to do.
+    </p>
+  </div>
+
+  @if (usingSample()) {
+    <p class="notice">
+      Showing <strong>made-up sample data</strong>. Import a positions CSV or edit the tables below to use your own
+      numbers — they are saved in this browser only, never sent anywhere.
+    </p>
+  }
+
+  <!-- ===== Results first: the answer is what the reader came for ===== -->
+  <section class="tiles" aria-label="Summary">
+    <div class="tile">
+      <span class="tile__label">All-in cost this year</span>
+      <span class="tile__value">{{ money(cost().total) }}</span>
+      <span class="tile__sub">
+        {{ percent(cost().totalRate) }} of {{ money(cost().balance) }} — advisory {{ money(cost().advisoryFee) }}
+        ({{ percent(cost().advisoryRate) }}) + funds {{ money(cost().fundExpenses) }} ({{ percent(cost().fundRate) }})
+      </span>
+    </div>
+    <div class="tile">
+      <span class="tile__label">Index portfolio, same mix</span>
+      <span class="tile__value">{{ money(index().total) }}</span>
+      <span class="tile__sub">{{ percent(index().totalRate, 3) }} — {{ percent(share(), 0) }} stocks / {{ percent(1 - share(), 0) }} bonds</span>
+    </div>
+    <div class="tile">
+      <span class="tile__label">Gap after {{ ending().years }} years</span>
+      <span class="tile__value">{{ money(ending().gap) }}</span>
+      <span class="tile__sub">
+        {{ money(ending().current.balance) }} vs {{ money(ending().index.balance) }}
+        @if (ending().index.balance > 0) {
+          — {{ percent(ending().gap / ending().index.balance, 0) }} of the index ending balance
+        }
+      </span>
+    </div>
+    <div class="tile">
+      <span class="tile__label">Break-even value added</span>
+      <span class="tile__value">{{ percent(breakEven().rate) }} / yr</span>
+      <span class="tile__sub">about {{ money(breakEven().dollars) }} this year</span>
+    </div>
+  </section>
+
+  @if (missingEr() > 0) {
+    <p class="notice notice--warn">
+      {{ missingEr() }} holding{{ missingEr() === 1 ? ' has' : 's have' }} no expense ratio yet and count as 0% —
+      the current setup's cost is understated until they're filled in. Each fund's fact sheet or prospectus lists it.
+    </p>
+  }
+
+  <ui-panel heading="Projected balance">
+    <p class="page__lede">
+      Both lines start at {{ money(cost().balance) }}, add {{ money(inputs().annualContribution) }} a year and earn the same
+      {{ inputs().grossReturnPct }}% a year before costs. The only difference is what each one pays.
+    </p>
+    <div class="projection">
+      <pc-projection-chart [current]="comparison().current" [index]="comparison().index" />
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Year</th><th class="num">Current</th><th class="num">Index</th><th class="num">Gap</th></tr>
+          </thead>
+          <tbody>
+            @for (m of milestones(); track m.year) {
+              <tr>
+                <td>{{ m.year }}</td>
+                <td class="num">{{ money(m.current) }}</td>
+                <td class="num">{{ money(m.index) }}</td>
+                <td class="num">{{ money(m.gap) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="fine">
+      Fees paid over the period: current setup {{ money(ending().current.costsPaid) }}, index portfolio
+      {{ money(ending().index.costsPaid) }}. The gap is bigger than the fee difference because fees paid
+      also stop compounding.
+    </p>
+  </ui-panel>
+
+  <ui-panel heading="Break-even: what the advisor has to add">
+    <p>
+      To finish level with the index portfolio after {{ ending().years }} years, the advisor's work has to be worth about
+      <strong>{{ percent(breakEven().rate) }} a year</strong> — roughly <strong>{{ money(breakEven().dollars) }}</strong> this
+      year — in value you would <em>not</em> have captured on your own.
+    </p>
+    <p>Things that can count toward it, and what limits each on your numbers:</p>
+    <ul class="list">
+      <li>
+        <strong>Tax-loss harvesting</strong> — only works in taxable accounts. You have
+        {{ money(byAccount().taxable) }} taxable
+        ({{ percent(cost().balance ? byAccount().taxable / cost().balance : 0, 0) }} of the total); the IRA, Roth and 401(k)
+        money ({{ money(byAccount().ira + byAccount().roth + byAccount()['401k']) }}) gets no benefit from it.
+      </li>
+      <li><strong>Asset location</strong> — holding bonds in tax-deferred accounts and stocks in taxable/Roth. A one-time setup, not a yearly effort.</li>
+      <li><strong>Withdrawal sequencing and Roth conversions</strong> — mostly worth something near and in retirement.</li>
+      <li><strong>Rebalancing</strong> — a once-a-year task with an index portfolio.</li>
+      <li>
+        <strong>Behavioral coaching</strong> — keeping you invested through a crash. Real and potentially the biggest item,
+        but it shows up in a few bad years rather than evenly every year.
+      </li>
+    </ul>
+    <p class="fine">
+      Industry estimates (Vanguard's "Advisor's Alpha", Morningstar's "Gamma") put the combined value of these at up to
+      roughly 1.5–3% a year in ideal conditions, much of it lumpy. A flat-fee or hourly fiduciary planner can deliver
+      several of them at a fixed price while you hold the index funds yourself.
+    </p>
+  </ui-panel>
+
+  <!-- ===== Inputs ===== -->
+  <ui-panel heading="Your holdings">
+    <div class="toolbar">
+      <label class="button">
+        Import positions CSV
+        <input type="file" accept=".csv,text/csv" class="visually-hidden" (change)="importCsv($event)" />
+      </label>
+      <button type="button" class="button" (click)="addHolding()">Add holding</button>
+      <span class="toolbar__spacer"></span>
+      <button type="button" class="button" (click)="loadSample()">Show sample data</button>
+      <button type="button" class="button button--danger" (click)="startFresh()">Clear everything</button>
+    </div>
+    @if (importMessage(); as msg) {
+      <p class="notice">{{ msg }}</p>
+    }
+    <p class="fine">
+      The importer reads only the symbol, description, value and account name columns of a brokerage "positions" export;
+      account numbers and every other column are dropped. Stock % is the share of a fund in stocks (100 for a stock fund,
+      0 for bonds or cash, 60 for a 60/40 fund).
+    </p>
+    @if (inputs().holdings.length === 0) {
+      <p class="empty">No holdings yet. <strong>Import a CSV</strong> or <strong>add a holding</strong>.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="table table--edit">
+          <thead>
+            <tr>
+              <th>Ticker</th><th>Description</th><th class="num">Value ($)</th><th class="num">Expense ratio (%)</th>
+              <th>Account</th><th class="num">Stock %</th><th><span class="visually-hidden">Remove</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of inputs().holdings; track $index; let i = $index) {
+              <tr>
+                <td><input type="text" class="w-ticker" aria-label="Ticker" [ngModel]="h.ticker" (ngModelChange)="setHolding(i, 'ticker', $event)" /></td>
+                <td><input type="text" aria-label="Description" [ngModel]="h.description" (ngModelChange)="setHolding(i, 'description', $event)" /></td>
+                <td class="num"><input type="number" min="0" step="100" class="w-money" aria-label="Value" [ngModel]="h.value" (ngModelChange)="setHolding(i, 'value', $event)" /></td>
+                <td class="num">
+                  <input type="number" min="0" step="0.01" class="w-pct" aria-label="Expense ratio percent"
+                    [class.missing]="h.expenseRatioPct === null" [ngModel]="h.expenseRatioPct" (ngModelChange)="setHolding(i, 'expenseRatioPct', $event)" />
+                </td>
+                <td>
+                  <select aria-label="Account type" [ngModel]="h.accountType" (ngModelChange)="setHolding(i, 'accountType', $event)">
+                    @for (t of accountTypes; track t.value) {
+                      <option [value]="t.value">{{ t.label }}</option>
+                    }
+                  </select>
+                </td>
+                <td class="num"><input type="number" min="0" max="100" step="5" class="w-pct" aria-label="Stock percent" [ngModel]="h.stockPct" (ngModelChange)="setHolding(i, 'stockPct', $event)" /></td>
+                <td><button type="button" class="button button--icon" [attr.aria-label]="'Remove ' + (h.ticker || 'holding')" (click)="removeHolding(i)">×</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </ui-panel>
+
+  <div class="two-col">
+    <ui-panel heading="Advisor fee schedule">
+      <div class="row">
+        <label class="field">
+          <span class="field__label">Fee type</span>
+          <select [ngModel]="inputs().fee.kind" (ngModelChange)="setFee('kind', $event)">
+            <option value="aum">% of assets (AUM)</option>
+            <option value="flat">Flat annual fee</option>
+          </select>
+        </label>
+        @if (inputs().fee.kind === 'aum') {
+          <label class="field">
+            <span class="field__label">Breakpoints apply</span>
+            <select [ngModel]="inputs().fee.method" (ngModelChange)="setFee('method', $event)">
+              <option value="tiered">Per slice (tiered)</option>
+              <option value="whole-balance">To the whole balance</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">Minimum fee ($/yr)</span>
+            <input type="number" min="0" step="100" class="w-money" [ngModel]="inputs().fee.minimumAnnual" (ngModelChange)="setFee('minimumAnnual', $event)" />
+          </label>
+        } @else {
+          <label class="field">
+            <span class="field__label">Annual fee ($)</span>
+            <input type="number" min="0" step="100" class="w-money" [ngModel]="inputs().fee.flatAnnual" (ngModelChange)="setFee('flatAnnual', $event)" />
+          </label>
+        }
+      </div>
+      @if (inputs().fee.kind === 'aum') {
+        <table class="table table--edit">
+          <thead><tr><th class="num">Up to ($)</th><th class="num">Rate (%/yr)</th><th><span class="visually-hidden">Remove</span></th></tr></thead>
+          <tbody>
+            @for (t of inputs().fee.tiers; track $index; let i = $index) {
+              <tr>
+                <td class="num"><input type="number" min="0" step="50000" class="w-money" aria-label="Tier ceiling" placeholder="and above" [ngModel]="t.upTo" (ngModelChange)="setTier(i, 'upTo', $event)" /></td>
+                <td class="num"><input type="number" min="0" step="0.05" class="w-pct" aria-label="Tier rate percent" [ngModel]="t.ratePct" (ngModelChange)="setTier(i, 'ratePct', $event)" /></td>
+                <td><button type="button" class="button button--icon" aria-label="Remove tier" (click)="removeTier(i)">×</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="fine">Leave the last "up to" blank for "and above". The advisor's Form ADV Part 2A lists the schedule.</p>
+        <button type="button" class="button" (click)="addTier()">Add breakpoint</button>
+      }
+    </ui-panel>
+
+    <ui-panel heading="Assumptions">
+      <div class="grid-fields">
+        <label class="field">
+          <span class="field__label">Years</span>
+          <input type="number" min="1" max="60" [ngModel]="inputs().horizonYears" (ngModelChange)="set('horizonYears', $event)" />
+        </label>
+        <label class="field">
+          <span class="field__label">Added per year ($)</span>
+          <input type="number" min="0" step="1000" [ngModel]="inputs().annualContribution" (ngModelChange)="set('annualContribution', $event)" />
+        </label>
+        <label class="field">
+          <span class="field__label">Return before costs (%/yr)</span>
+          <input type="number" step="0.5" [ngModel]="inputs().grossReturnPct" (ngModelChange)="set('grossReturnPct', $event)" />
+          <span class="field__hint">Same for both — it moves both lines, not the comparison.</span>
+        </label>
+        <label class="field">
+          <span class="field__label">Stock index fund ER (%)</span>
+          <input type="number" min="0" step="0.01" [ngModel]="inputs().stockIndexErPct" (ngModelChange)="set('stockIndexErPct', $event)" />
+        </label>
+        <label class="field">
+          <span class="field__label">Bond index fund ER (%)</span>
+          <input type="number" min="0" step="0.01" [ngModel]="inputs().bondIndexErPct" (ngModelChange)="set('bondIndexErPct', $event)" />
+        </label>
+      </div>
+      <p class="fine">
+        Broad total-market and S&amp;P 500 index funds and ETFs charge roughly 0.02–0.05%; total-bond funds about 0.03–0.05%.
+      </p>
+    </ui-panel>
+  </div>
+
+  <ui-panel heading="Look back: your actual returns vs. a matched index mix">
+    <p class="page__lede">
+      From year-end statements: the value at the start and end of each year and what you put in or took out. The
+      benchmark uses {{ percent(share(), 0) }} stocks (S&amp;P 500) / {{ percent(1 - share(), 0) }} bonds (US Aggregate),
+      minus index fund costs, and replays your same deposits and withdrawals. If the advisory fee is billed to the
+      account, these values are already net of it; if you pay it separately, subtract it from each year's end value.
+    </p>
+    @if (history(); as h) {
+      <div class="tiles">
+        <div class="tile">
+          <span class="tile__label">Your return, annualized</span>
+          <span class="tile__value">{{ percent(h.yourAnnualized) }}</span>
+          <span class="tile__sub">over {{ h.rows.length }} year{{ h.rows.length === 1 ? '' : 's' }}</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Matched index, annualized</span>
+          <span class="tile__value">{{ percent(h.benchmarkAnnualized) }}</span>
+          <span class="tile__sub">same mix, same years</span>
+        </div>
+        <div class="tile">
+          <span class="tile__label">Dollar difference</span>
+          <span class="tile__value">{{ money(h.benchmarkEndValue - h.actualEndValue) }}</span>
+          <span class="tile__sub">index {{ money(h.benchmarkEndValue) }} vs actual {{ money(h.actualEndValue) }}</span>
+        </div>
+      </div>
+      @if (h.missingYears.length) {
+        <p class="notice notice--warn">No benchmark returns for {{ h.missingYears.join(', ') }} — add them in the table below to include those years.</p>
+      }
+      <p class="fine">
+        A few years is a short window: a mix that was ahead or behind for three years tells you less than the fee does over
+        twenty-five. Your stock share today may also differ from what you held in earlier years.
+      </p>
+    } @else {
+      <p class="empty">Add at least one year below to see the look-back.</p>
+    }
+    <div class="table-wrap">
+      <table class="table table--edit">
+        <thead>
+          <tr>
+            <th>Year</th><th class="num">Start value ($)</th><th class="num">Added − withdrawn ($)</th><th class="num">End value ($)</th>
+            <th class="num">Your return</th><th class="num">Index</th><th><span class="visually-hidden">Remove</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (y of inputs().history; track $index; let i = $index) {
+            <tr>
+              <td><input type="number" class="w-year" aria-label="Year" [ngModel]="y.year" (ngModelChange)="setHistory(i, 'year', $event)" /></td>
+              <td class="num"><input type="number" class="w-money" aria-label="Start value" [ngModel]="y.startValue" (ngModelChange)="setHistory(i, 'startValue', $event)" /></td>
+              <td class="num"><input type="number" class="w-money" aria-label="Net contributions" [ngModel]="y.netContributions" (ngModelChange)="setHistory(i, 'netContributions', $event)" /></td>
+              <td class="num"><input type="number" class="w-money" aria-label="End value" [ngModel]="y.endValue" (ngModelChange)="setHistory(i, 'endValue', $event)" /></td>
+              @if (rowFor(y.year); as r) {
+                <td class="num">{{ percent(r.yourReturn, 1) }}</td>
+                <td class="num">{{ percent(r.benchmarkReturn, 1) }}</td>
+              } @else {
+                <td class="num dim">—</td><td class="num dim">—</td>
+              }
+              <td><button type="button" class="button button--icon" aria-label="Remove year" (click)="removeHistoryYear(i)">×</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="button" (click)="addHistoryYear()">Add year</button>
+
+    <details class="bench">
+      <summary>Benchmark returns used (editable)</summary>
+      <p class="fine">
+        Calendar-year total returns, in percent. Approximate — check them against a source you trust before relying on
+        the look-back, especially the most recent year.
+      </p>
+      <table class="table table--edit">
+        <thead><tr><th>Year</th><th class="num">S&amp;P 500 (%)</th><th class="num">US Aggregate bonds (%)</th></tr></thead>
+        <tbody>
+          @for (b of inputs().benchmarks; track $index; let i = $index) {
+            <tr>
+              <td><input type="number" class="w-year" aria-label="Benchmark year" [ngModel]="b.year" (ngModelChange)="setBenchmark(i, 'year', $event)" /></td>
+              <td class="num"><input type="number" step="0.01" class="w-pct" aria-label="Stock return" [ngModel]="b.stockPct" (ngModelChange)="setBenchmark(i, 'stockPct', $event)" /></td>
+              <td class="num"><input type="number" step="0.01" class="w-pct" aria-label="Bond return" [ngModel]="b.bondPct" (ngModelChange)="setBenchmark(i, 'bondPct', $event)" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <button type="button" class="button" (click)="addBenchmarkYear()">Add year</button>
+    </details>
+  </ui-panel>
+
+  <ui-panel heading="Questions to take to your advisor">
+    <ol class="list checklist">
+      <li><strong>Are you a fiduciary at all times, on all my accounts — and will you put that in writing?</strong> A broker's "best interest" standard is not the same thing.</li>
+      <li><strong>Please send your Form ADV Part 2A and 2B.</strong> You can also look the firm up at adviserinfo.sec.gov and check disciplinary history on FINRA BrokerCheck.</li>
+      <li><strong>Exactly how is my fee calculated?</strong> Tiered or whole-balance breakpoints, billed in advance or in arrears, which accounts it covers — and what did I pay last year in total, in dollars?</li>
+      <li><strong>Do you receive any other compensation?</strong> Commissions, 12b-1 fees, revenue sharing — and is each fund I own the cheapest share class available?</li>
+      <li><strong>What tax work is included?</strong> How much tax-loss harvesting did you do for me last year, how are assets placed across accounts, and do you analyze Roth conversions or coordinate with my tax preparer?</li>
+      <li><strong>What planning is included?</strong> Retirement income and withdrawal order, Social Security timing, insurance, estate — and when was my plan last updated?</li>
+      <li><strong>What is my target allocation, and when do you rebalance?</strong></li>
+      <li><strong>How have my accounts done, net of all fees, against a benchmark agreed in advance?</strong></li>
+      <li><strong>Do you offer a flat-fee or hourly arrangement?</strong></li>
+    </ol>
+  </ui-panel>
+
+  <p class="disclaimer">
+    Portfolio Check presents comparisons and general education, not personalized investment, tax or legal advice. Projections
+    use a constant assumed return and are illustrations, not forecasts. Your inputs are stored only in this browser.
+  </p>
+</main>

@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.header__name {
+  font-weight: 700;
+}
+
+.header__tagline {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.header__spacer {
+  flex: 1 1 auto;
+}
+
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+@media (max-width: 640px) {
+  .header__tagline {
+    display: none;
+  }
+}

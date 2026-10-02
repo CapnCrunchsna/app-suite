@@ -56,6 +56,9 @@
     },
     {
       "path": "./apps/meal-planner"
+    },
+    {
+      "path": "./apps/portfolio-check"
     }
   ],
   "compilerOptions": {}

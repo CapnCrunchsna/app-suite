@@ -42,6 +42,10 @@ Then verify with `node ../../scripts/check-artifacts.mjs`.
   §13 prohibitions (first among them: no LLM calls). Registered on the dashboard; its
   companion plan artifact is `../../artifacts/plans/pantry-meal-planner-design.md`. Moved
   here from `artifacts/plans/` on 2026-09-27, as implementation began.
+- **`portfolio-check.md`** — Portfolio Check's method: the fee-schedule conventions, the
+  projection and break-even math, the look-back, the localStorage-only storage decision, and
+  the hard limits (no timing signals, no brokerage logins, no advice). Registered on the
+  dashboard under "Portfolio Check".
 - **`statement-parsing.md`** — implementation notes for the CSV ingest path: the
   format-profile schema, the `parse-statement` CLI, how to add a bank, the five places the
   code deliberately departs from the spec, and what has and has not been validated against a

@@ -29,6 +29,11 @@ inside it.
   among them that the system recommends bets and **never places them**. The architecture plan
   (`../artifacts/plans/sports-betting-intel-system-plan.md`) stays a workspace artifact.
 
+- **Portfolio Check** — advisor vs. index fee comparison at `apps/portfolio-check`; Angular,
+  no backend, inputs in browser **localStorage** only (the ES exception for a single-user tool
+  with kilobytes of data, and the privacy guarantee). Method: `docs/portfolio-check.md`.
+  Comparisons and education only — never advice, never timing signals, never brokerage logins.
+
 ## Cross-project conventions
 - A shared `ui` library and a generated `api-client` library.
 - Backends serve pure JSON APIs; UIs consume generated TypeScript clients.

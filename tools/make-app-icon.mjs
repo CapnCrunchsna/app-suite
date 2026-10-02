@@ -148,6 +148,25 @@ const ICONS = {
       { rect: [7, 52, 50, 5], fill: '#7ea8a1' },
     ],
   },
+
+  /**
+   * Portfolio Check: the same money, two ending balances.
+   *
+   * Two columns on one baseline — the shorter in the dim text tone (the setup
+   * that pays more), the taller in the house teal (the one that pays less). The
+   * gap between their tops is the whole page. Wide columns (16 units) so the
+   * height difference, not the shape, carries it at tab size.
+   */
+  'portfolio-check': {
+    label: 'Portfolio Check',
+    background: '#0f2124',
+    radius: 12,
+    bars: [
+      { rect: [12, 28, 16, 24], fill: '#7ea8a1' },
+      { rect: [36, 10, 16, 42], fill: '#2dd4bf' },
+      { rect: [7, 52, 50, 5], fill: '#dcefeb' },
+    ],
+  },
 };
 
 const GRID = 64;

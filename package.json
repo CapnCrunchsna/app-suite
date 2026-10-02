@@ -11,7 +11,8 @@
     "serve:meal-planner": "nx serve meal-planner",
     "serve-static:meal-planner": "nx serve-static meal-planner",
     "parse": "node tools/parse-statement.mjs",
-    "seed:dev": "node tools/seed-dev-data.mjs"
+    "seed:dev": "node tools/seed-dev-data.mjs",
+    "serve:portfolio-check": "nx serve portfolio-check"
   },
   "private": true,
   "devDependencies": {

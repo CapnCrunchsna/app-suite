@@ -1,0 +1,75 @@
+{
+  "name": "portfolio-check",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "pc",
+  "sourceRoot": "apps/portfolio-check/src",
+  "tags": ["scope:pc", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/portfolio-check",
+        "browser": "apps/portfolio-check/src/main.ts",
+        "tsConfig": "apps/portfolio-check/tsconfig.app.json",
+        "inlineStyleLanguage": "scss",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/portfolio-check/public"
+          }
+        ],
+        "styles": ["apps/portfolio-check/src/styles.scss"],
+        "stylePreprocessorOptions": {
+          "includePaths": ["libs/shared/ui/styles"]
+        }
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4210
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "portfolio-check:build:production"
+        },
+        "development": {
+          "buildTarget": "portfolio-check:build:development"
+        }
+      }
+    },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "watch": false
+      }
+    }
+  }
+}
