@@ -17,6 +17,13 @@ things in here are deliberate and easy to undo by accident:
 The fixture recorder writes response *bodies* only. The API key travels as a query
 parameter, so it must never reach a fixture file, a log line, or an exception
 message; error text here quotes the endpoint path, never the request URL.
+
+**Several keys are one pool (2026-10-01).** Two free-tier keys are 1,000 credits a
+month. The adapter holds them in order (`ODDS_API_KEY`, then `ODDS_API_KEYS`),
+spends the first until its `x-requests-remaining` reaches zero — or the provider
+answers it with a spent-quota 401 — and then the next, and reports their quotas
+summed: what the pace guard compares against `quota_monthly_budget`, and what the
+dashboard's meter shows. A key is only ever named by its position, "key 2 of 2".
 """
 
 from __future__ import annotations
@@ -27,6 +34,7 @@ import logging
 import os
 import re
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -106,6 +114,29 @@ DEFAULT_FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures"
 RECORD_FIXTURES_ENV = "EDGELINE_RECORD_FIXTURES"
 
 
+@dataclass
+class _KeySlot:
+    """One API key and what the provider last said about its allowance."""
+
+    secret: str = field(repr=False)
+    quota: QuotaStatus = field(default_factory=QuotaStatus)
+    spent: bool = False
+
+
+def _summed(quotas: list[QuotaStatus]) -> QuotaStatus:
+    """The pool's quota: each field summed over the keys that reported it, and
+    `None` — unknown, never zero — when none has."""
+
+    def total(values: list[int | None]) -> int | None:
+        known = [value for value in values if value is not None]
+        return sum(known) if known else None
+
+    return QuotaStatus(
+        used=total([quota.used for quota in quotas]),
+        remaining=total([quota.remaining for quota in quotas]),
+    )
+
+
 @register_provider
 class TheOddsApiProvider:
     """v1 odds feed. One instance owns one ``httpx.AsyncClient``."""
@@ -116,6 +147,7 @@ class TheOddsApiProvider:
         self,
         api_key: str | None = None,
         *,
+        api_keys: list[str] | None = None,
         base_url: str = BASE_URL,
         timeout_s: float = TIMEOUT_S,
         max_attempts: int = MAX_ATTEMPTS,
@@ -128,7 +160,11 @@ class TheOddsApiProvider:
         pace_headroom: float = DEFAULT_PACE_HEADROOM,
         now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     ) -> None:
-        self._api_key = api_key
+        #: Keys given here win over `.env`; resolved there on first use, so an
+        #: instance can be built where no key is configured (tests, the API).
+        self._given_keys = [k for k in (api_keys or ([api_key] if api_key else [])) if k]
+        self._slots: list[_KeySlot] | None = None
+        self._slots_month = ""
         self.base_url = base_url.rstrip("/")
         self.timeout_s = timeout_s
         self.max_attempts = max_attempts
@@ -140,8 +176,6 @@ class TheOddsApiProvider:
         )
         self.fixture_dir = fixture_dir or DEFAULT_FIXTURE_DIR
         self._sleep = sleep
-        #: Whatever the last response's headers reported (§8).
-        self.quota = QuotaStatus()
         #: `quota_monthly_budget` (§3.2). `None` disables the pace guard, which
         #: is what tests and the fixture recorder want. The scheduler refreshes
         #: it from settings each tick, so changing it in the UI takes effect
@@ -149,6 +183,51 @@ class TheOddsApiProvider:
         self.monthly_budget = monthly_budget
         self.pace_headroom = pace_headroom
         self._now = now
+
+    # ---- the key pool (2026-10-01) -----------------------------------------
+
+    @property
+    def quota(self) -> QuotaStatus:
+        """Whatever the keys' last responses reported (§8), summed over the pool."""
+        return _summed([slot.quota for slot in self._slots or []])
+
+    @quota.setter
+    def quota(self, value: QuotaStatus) -> None:
+        """Set the first key's quota — what a single-key caller always meant."""
+        self._key_slots()[0].quota = value
+
+    @property
+    def key_quotas(self) -> list[QuotaStatus]:
+        """Per key, in spending order. Never the keys themselves."""
+        return [slot.quota for slot in self._slots or []]
+
+    def _key_slots(self) -> list[_KeySlot]:
+        if self._slots is None:
+            keys = self._given_keys or get_secrets().require_odds_keys()
+            self._slots = [_KeySlot(secret=key) for key in keys]
+            self._slots_month = self._now().strftime("%Y-%m")
+        return self._slots
+
+    def _spendable(self) -> list[tuple[int, _KeySlot]]:
+        """Keys still worth asking, in order: not answered "spent", and not
+        reporting zero remaining. Their 1-based positions travel with them.
+
+        A new calendar month forgets both, since the allowance resets with it
+        (verified 2026-09-10): a worker up across the 1st goes back to key 1
+        instead of finishing the pool on last month's word.
+        """
+        slots = self._key_slots()
+        month = self._now().strftime("%Y-%m")
+        if month != self._slots_month:
+            for slot in slots:
+                slot.spent = False
+                slot.quota = QuotaStatus()
+            self._slots_month = month
+        return [
+            (position, slot)
+            for position, slot in enumerate(slots, start=1)
+            if not slot.spent and slot.quota.remaining != 0
+        ]
 
     # ---- §8 endpoint table -------------------------------------------------
 
@@ -162,14 +241,26 @@ class TheOddsApiProvider:
         so a freshly started process would get one unguarded paid request, and a
         process that restarts often would get one each time. `/sports` costs
         nothing and returns the quota headers, so this buys the guard its
-        starting number at no cost. Failures are swallowed: an unarmed guard is
-        the behaviour we already had, and refusing to start the worker because a
-        courtesy call failed would be worse than the problem.
+        starting number at no cost — once per key, so the pool's sum is known
+        before the first paid request (2026-10-01). Failures are swallowed: an
+        unarmed guard is the behaviour we already had, and refusing to start the
+        worker because a courtesy call failed would be worse than the problem.
         """
         try:
-            await self.list_sports()
+            slots = self._key_slots()
         except Exception:
             log.warning("could not arm the budget guard; first request is unguarded")
+            return self.quota
+        for position, slot in enumerate(slots, start=1):
+            try:
+                await self._send("sports", "/sports", {}, slot=slot, position=position)
+            except Exception:
+                log.warning(
+                    "could not arm the budget guard with key %d of %d; its spend is unknown "
+                    "until it is used",
+                    position,
+                    len(slots),
+                )
         return self.quota
 
     async def fetch_odds(
@@ -268,9 +359,51 @@ class TheOddsApiProvider:
         *,
         sport_key: str | None = None,
     ) -> ProviderResponse:
+        """One request through the pool: the first key with allowance left, and
+        on a spent-quota 401 the next, for the same request. Nothing else moves
+        to the next key — a rejected key is a configuration error to fix, and a
+        5xx or a 429 is the provider's, not the key's."""
         self._check_pace(path)
+        slots = self._key_slots()
+        spendable = self._spendable()
+        if not spendable and path.endswith(FREE_PATH_SUFFIXES):
+            spendable = [(1, slots[0])]  # free: any key may ask
+        if not spendable:
+            raise ProviderQuotaExhausted(
+                f"refusing {path}: every key's monthly allowance is spent ({len(slots)} "
+                f"key(s), used {self.quota.used}). Nothing was sent. This resolves when the "
+                f"allowance resets; set `offline_mode` to keep working without the "
+                f"provider (§3.2)."
+            )
+        spent: ProviderQuotaExhausted | None = None
+        for position, slot in spendable:
+            try:
+                return await self._send(
+                    endpoint, path, params, slot=slot, position=position, sport_key=sport_key
+                )
+            except ProviderQuotaExhausted as refused:
+                slot.spent = True
+                spent = refused
+                if position < len(slots):
+                    log.warning(
+                        "The Odds API key %d of %d is spent; trying the next", position, len(slots)
+                    )
+        assert spent is not None  # the loop returns or records a refusal
+        raise spent
+
+    async def _send(
+        self,
+        endpoint: str,
+        path: str,
+        params: dict[str, Any],
+        *,
+        slot: _KeySlot,
+        position: int,
+        sport_key: str | None = None,
+    ) -> ProviderResponse:
+        """§8's HTTP policy for one request with one key."""
         url = f"{self.base_url}{path}"
-        query = {"apiKey": self._resolve_key(), **params}
+        query = {"apiKey": slot.secret, **params}
         backoff = self.initial_backoff_s
         client = self._get_client()
 
@@ -287,7 +420,9 @@ class TheOddsApiProvider:
             status = response.status_code
 
             if status == 401:
-                raise self._explain_401(path, response)
+                raise self._explain_401(
+                    path, response, position=position, keys=len(self._key_slots())
+                )
 
             if status == 429:
                 if attempt < self.max_attempts:
@@ -315,7 +450,9 @@ class TheOddsApiProvider:
             if status >= 400:
                 raise ProviderError(f"The Odds API {path} returned {status}")
 
-            self.quota = QuotaStatus.from_headers(response.headers)
+            # This key's headers; `self.quota` is the pool's sum (§8: the
+            # header is truth, per key).
+            slot.quota = QuotaStatus.from_headers(response.headers)
             payload = response.json()
 
             if self.record_fixtures:
@@ -346,6 +483,10 @@ class TheOddsApiProvider:
         `None` budget disables it, and `quota.used` is `None` until a response
         has been seen — so a fresh process gets one unguarded request. Call the
         free `/sports` endpoint first to arm it (see `arm_budget_guard`).
+
+        With several keys `used` is the pool's sum, against a
+        `quota_monthly_budget` the user raises to the pool's size — 1,000 for two
+        free keys (2026-10-01). Until they do, 500 spent on key 1 refuses key 2.
         """
         budget = self.monthly_budget
         used = self.quota.used
@@ -373,7 +514,9 @@ class TheOddsApiProvider:
             )
 
     @staticmethod
-    def _explain_401(path: str, response: httpx.Response) -> ProviderError:
+    def _explain_401(
+        path: str, response: httpx.Response, *, position: int = 1, keys: int = 1
+    ) -> ProviderError:
         """Decide which kind of 401 this is, and say so in the message.
 
         The Odds API returns 401 both for a bad key and for a spent monthly
@@ -383,8 +526,10 @@ class TheOddsApiProvider:
         listing endpoints that do not report quota still explain themselves.
 
         Whichever it is, the message carries the numbers. "API key invalid" on a
-        key that was valid cost a real investigation its first hour.
+        key that was valid cost a real investigation its first hour. With
+        several keys it says which, by position — never the key.
         """
+        which = f" (key {position} of {keys})" if keys > 1 else ""
         quota = QuotaStatus.from_headers(response.headers)
         try:
             body = response.text.strip()
@@ -397,15 +542,15 @@ class TheOddsApiProvider:
         )
         if spent:
             return ProviderQuotaExhausted(
-                f"The Odds API {path} refused the request (401): the monthly credit "
+                f"The Odds API {path} refused the request (401){which}: the monthly credit "
                 f"allowance is spent (used {quota.used}, remaining {quota.remaining}). "
                 f"The key is valid — this resolves when the allowance resets or the "
                 f"plan changes, not by retrying. Set `offline_mode` to keep working "
                 f"without the provider (§3.2).{said}"
             )
         return ProviderAuthError(
-            f"The Odds API {path} rejected the key (401): API key invalid. "
-            f"Check ODDS_API_KEY in .env (§3.1).{said}"
+            f"The Odds API {path} rejected the key (401){which}: API key invalid. "
+            f"Check ODDS_API_KEY and ODDS_API_KEYS in .env (§3.1).{said}"
         )
 
     # ---- fixture recorder (§8, debug flag) ---------------------------------
@@ -425,11 +570,6 @@ class TheOddsApiProvider:
         return target
 
     # ---- internals ---------------------------------------------------------
-
-    def _resolve_key(self) -> str:
-        if self._api_key:
-            return self._api_key
-        return get_secrets().require("odds_api_key")
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:

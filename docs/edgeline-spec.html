@@ -202,6 +202,7 @@ cp .env.example .env          # DONE — ODDS_API_KEY supplied by the user (§17
 <h2 id="s3">3. Configuration</h2>
 <h3 id="s3-1">3.1 <code>.env</code> (secrets only — never in git, never in the DB)</h3>
 <pre><code>ODDS_API_KEY=            # ASK USER
+ODDS_API_KEYS=           # optional: more keys for the same provider, comma-separated (§8, 2026-10-01)
 DISCORD_BOT_TOKEN=       # ASK USER
 DISCORD_CHANNEL_ID=      # ASK USER (numeric channel id for alerts)
 ES_URL=http://localhost:9200</code></pre>
@@ -394,6 +395,7 @@ for each detection: dedup (§7.4) → staking (§6.7) → deep links (§9.4)
 <tr><td>Scores</td><td><code>GET /sports/{sport}/scores?daysFrom=2</code></td><td>1–2 credits</td></tr>
 </table></div>
 <ul><li><strong>Always</strong> read response headers <code>x-requests-used</code> / <code>x-requests-remaining</code> and write them to <code>providers.quota_used</code>. Treat the header as truth, not your own math.</li><li>Request <code>oddsFormat=decimal</code> so no conversion ambiguity exists at ingest.</li><li>HTTP handling: timeout 15 s; on 429 back off ×2 up to 4 tries; on 401 → kill cycle and surface "API key invalid" in UI; on 5xx → skip cycle, log.</li><li><strong>Fixture recorder:</strong> a debug flag writes every raw response to <code>tests/fixtures/{sport}_{endpoint}_{timestamp}.json</code>. Golden/integration tests replay these with <code>respx</code> — no live API in tests, ever.</li></ul>
+<p><strong>Several keys are one pool — added 2026-10-01, by user decision.</strong> A second free-tier key for the same provider makes October 1,000 credits rather than 500; it is not a new provider (<a href="#s16">§16.7</a>). <code>ODDS_API_KEYS</code> (<a href="#s3">§3.1</a>) lists more keys, comma-separated, spent after <code>ODDS_API_KEY</code> in order, and either alone works. The adapter arms the guard with a free <code>/sports</code> call <strong>per key</strong>, spends the first key until its <code>x-requests-remaining</code> reads 0 — or the provider answers it with a spent-quota 401, in which case the same request goes to the next key — and then the next; a new calendar month forgets which were spent, since the allowance resets with it. A rejected key is not skipped: it is a configuration error, reported as "key 2 of 2", never by its value. The quota the adapter reports is the keys' sum: what <code>providers.quota_used</code> records, what <code>/health</code> shows, and what the pace guard compares with <code>quota_monthly_budget</code> — which the user raises to the pool's size, or the guard stops at the first key's 500. The key still travels as a query parameter, and the log filter that masks <code>apiKey=</code> masks every key.</p>
 <h3 id="s8-4">8.4 Polling policy vs. budget</h3>
 <div style="overflow-x:auto;margin:1em 0"><table>
 <tr><th>Mode</th><th>Featured markets</th><th>Props</th><th>Approx credits</th></tr>

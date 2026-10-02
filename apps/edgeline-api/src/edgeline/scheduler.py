@@ -1155,10 +1155,13 @@ async def _run() -> int:
             # the worker starts, rather than staying stale until the first paid
             # poll — which at the dev cadence can be twelve hours away.
             await record_quota(client, provider.key, quota, prefix="edgeline-")
+            # Since 2026-10-01 the adapter may hold several keys as one pool;
+            # `quota` is their sum, which is what the budget is compared with.
             log.info(
-                "budget guard armed: %s of %s credits used this month",
+                "budget guard armed: %s of %s credits used this month across %d key(s)",
                 quota.used,
                 settings.quota_monthly_budget,
+                len(getattr(provider, "key_quotas", None) or [None]),
             )
 
         books = await load_enabled_books(client, prefix="edgeline-")

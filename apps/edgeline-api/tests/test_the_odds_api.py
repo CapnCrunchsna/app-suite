@@ -487,6 +487,193 @@ async def test_error_messages_never_leak_the_api_key():
     assert API_KEY not in str(excinfo.value)
 
 
+# ---- several keys, one pool (2026-10-01) ------------------------------------
+#
+# Two free-tier keys are 1,000 credits a month. The adapter spends them in order,
+# moving on when a key reports nothing remaining or is answered with a spent-quota
+# 401, and reports the pool's quota summed — what the pace guard and the meter read.
+
+KEY_2 = "second-test-key-not-real-either"
+
+
+def _by_key(answers: dict[str, httpx.Response]):
+    """A respx side effect answering each key with its own response."""
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        return answers[request.url.params["apiKey"]]
+
+    return answer
+
+
+def _keys_asked(route) -> list[str]:
+    return [call.request.url.params["apiKey"] for call in route.calls]
+
+
+def _quota(used: int, remaining: int) -> dict[str, str]:
+    return {"x-requests-used": str(used), "x-requests-remaining": str(remaining)}
+
+
+@respx.mock
+async def test_the_first_key_is_spent_before_the_second_is_asked():
+    route = odds_route().mock(
+        side_effect=_by_key({
+            API_KEY: httpx.Response(200, json=[], headers=_quota(500, 0)),
+            KEY_2: httpx.Response(200, json=[], headers=_quota(3, 497)),
+        })
+    )
+    p = provider(api_keys=[API_KEY, KEY_2])
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])  # key 1 answers: nothing left
+        second = await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert _keys_asked(route) == [API_KEY, KEY_2]
+    assert p.quota == QuotaStatus(used=503, remaining=497)  # the pool, summed
+    assert second.quota == p.quota
+    assert p.key_quotas == [QuotaStatus(500, 0), QuotaStatus(3, 497)]
+
+
+@respx.mock
+async def test_a_spent_quota_401_moves_the_same_request_to_the_next_key():
+    """The provider can refuse a key before its counter reads zero; the request
+    is not lost, it goes to the next key — and later ones go there directly."""
+    route = odds_route().mock(
+        side_effect=_by_key({
+            API_KEY: httpx.Response(
+                401, json={"message": "Usage quota has been reached"}, headers=_quota(500, 0)
+            ),
+            KEY_2: httpx.Response(200, json=[{"id": "evt1"}], headers=_quota(6, 494)),
+        })
+    )
+    p = provider(api_keys=[API_KEY, KEY_2])
+    try:
+        result = await p.fetch_odds("baseball_mlb", ["h2h"])
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert result.payload == [{"id": "evt1"}]
+    assert _keys_asked(route) == [API_KEY, KEY_2, KEY_2]
+
+
+@respx.mock
+async def test_with_every_key_spent_nothing_more_is_sent():
+    spent = httpx.Response(401, json={"message": "Usage quota has been reached"},
+                           headers=_quota(500, 0))
+    route = odds_route().mock(side_effect=_by_key({API_KEY: spent, KEY_2: spent}))
+    p = provider(api_keys=[API_KEY, KEY_2])
+    try:
+        with pytest.raises(ProviderQuotaExhausted) as first:
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+        with pytest.raises(ProviderQuotaExhausted) as second:
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert route.call_count == 2  # one each; the second request was refused unsent
+    assert "key 2 of 2" in str(first.value)
+    assert "Nothing was sent" in str(second.value)
+
+
+@respx.mock
+async def test_arming_reads_every_key_for_free():
+    sports = respx.route(method="GET", host=HOST, path="/v4/sports").mock(
+        side_effect=_by_key({
+            API_KEY: httpx.Response(200, json=[], headers=_quota(500, 0)),
+            KEY_2: httpx.Response(200, json=[], headers=_quota(12, 488)),
+        })
+    )
+    p = provider(api_keys=[API_KEY, KEY_2], monthly_budget=1000, now=_at(10))
+    try:
+        quota = await p.arm_budget_guard()
+    finally:
+        await p.aclose()
+
+    assert quota == QuotaStatus(used=512, remaining=488)
+    assert _keys_asked(sports) == [API_KEY, KEY_2]
+
+
+@respx.mock
+async def test_the_pace_guard_compares_the_pools_sum_with_the_budget():
+    """Until `quota_monthly_budget` is raised to the pool's 1,000, the 500
+    spent on key 1 refuses key 2 — the user's switch, not the adapter's."""
+    route = odds_route().mock(return_value=httpx.Response(200, json=[], headers=_quota(4, 496)))
+    p = provider(api_keys=[API_KEY, KEY_2], monthly_budget=500, now=_at(30, 23))
+    p._key_slots()[0].quota = QuotaStatus(used=500, remaining=0)
+    p._key_slots()[1].quota = QuotaStatus(used=0, remaining=500)
+    try:
+        with pytest.raises(ProviderBudgetExceeded):
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+        assert route.call_count == 0
+
+        p.monthly_budget = 1000
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert _keys_asked(route) == [KEY_2]
+
+
+@respx.mock
+async def test_a_rejected_key_is_named_by_its_position_never_its_value():
+    odds_route().mock(return_value=httpx.Response(401, json={"message": "Invalid API key"}))
+    p = provider(api_keys=[API_KEY, KEY_2])
+    p._key_slots()[0].quota = QuotaStatus(used=500, remaining=0)
+    try:
+        with pytest.raises(ProviderAuthError) as excinfo:
+            await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    message = str(excinfo.value)
+    assert "key 2 of 2" in message
+    assert API_KEY not in message and KEY_2 not in message
+
+
+@respx.mock
+async def test_neither_key_reaches_a_log_line(caplog):
+    odds_route().mock(
+        side_effect=_by_key({
+            API_KEY: httpx.Response(200, json=[], headers=_quota(500, 0)),
+            KEY_2: httpx.Response(200, json=[], headers=_quota(3, 497)),
+        })
+    )
+    caplog.set_level(logging.INFO)
+    p = provider(api_keys=[API_KEY, KEY_2])
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert caplog.text.count("apiKey=[redacted]") == 2
+    assert API_KEY not in caplog.text
+    assert KEY_2 not in caplog.text
+
+
+@respx.mock
+async def test_a_new_month_goes_back_to_the_first_key():
+    """The allowance resets on the 1st, so last month's "spent" is forgotten."""
+    clock = [datetime(2026, 10, 31, 12, tzinfo=timezone.utc)]
+    route = odds_route().mock(
+        side_effect=_by_key({
+            API_KEY: httpx.Response(200, json=[], headers=_quota(500, 0)),
+            KEY_2: httpx.Response(200, json=[], headers=_quota(3, 497)),
+        })
+    )
+    p = provider(api_keys=[API_KEY, KEY_2], now=lambda: clock[0])
+    try:
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+        clock[0] = datetime(2026, 11, 1, 0, 5, tzinfo=timezone.utc)
+        await p.fetch_odds("baseball_mlb", ["h2h"])
+    finally:
+        await p.aclose()
+
+    assert _keys_asked(route) == [API_KEY, KEY_2, API_KEY]
+
+
 # ---- fixture recorder (§8, debug flag) ------------------------------------
 
 

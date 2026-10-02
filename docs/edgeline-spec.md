@@ -176,6 +176,7 @@ not just this one. The reasoning is recorded in the project's `metadata.descript
 
 ```
 ODDS_API_KEY=            # ASK USER
+ODDS_API_KEYS=           # optional: more keys for the same provider, comma-separated (§8, 2026-10-01)
 DISCORD_BOT_TOKEN=       # ASK USER
 DISCORD_CHANNEL_ID=      # ASK USER (numeric channel id for alerts)
 ES_URL=http://localhost:9200
@@ -611,6 +612,19 @@ Base URL `https://api.the-odds-api.com/v4`. Auth: `apiKey` query param.
 - **Fixture recorder:** a debug flag writes every raw response to
   `tests/fixtures/{sport}_{endpoint}_{timestamp}.json`. Golden/integration tests replay these
   with `respx` — no live API in tests, ever.
+
+**Several keys are one pool — added 2026-10-01, by user decision.** A second free-tier key for
+the same provider makes October 1,000 credits rather than 500; it is not a new provider (§16.7).
+`ODDS_API_KEYS` (§3.1) lists more keys, comma-separated, spent after `ODDS_API_KEY` in order, and
+either alone works. The adapter arms the guard with a free `/sports` call **per key**, spends the
+first key until its `x-requests-remaining` reads 0 — or the provider answers it with a spent-quota
+401, in which case the same request goes to the next key — and then the next; a new calendar month
+forgets which were spent, since the allowance resets with it. A rejected key is not skipped: it is a
+configuration error, reported as "key 2 of 2", never by its value. The quota the adapter reports is
+the keys' sum: what `providers.quota_used` records, what `/health` shows, and what the pace guard
+compares with `quota_monthly_budget` — which the user raises to the pool's size, or the guard stops
+at the first key's 500. The key still travels as a query parameter, and the log filter that masks
+`apiKey=` masks every key.
 
 ### 8.4 Polling policy vs. budget
 

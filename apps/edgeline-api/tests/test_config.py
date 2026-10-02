@@ -290,6 +290,18 @@ def test_secrets_and_settings_do_not_overlap():
         assert secret_key not in DEFAULT_SETTINGS
 
 
+def test_odds_keys_come_in_spending_order_once_each():
+    """`ODDS_API_KEY` first, then `ODDS_API_KEYS` in order (2026-10-01); either
+    alone is enough, and a key named twice is one key."""
+    both = Secrets(odds_api_key="a", odds_api_keys=" b , a,,c ", _env_file=None)
+    assert both.odds_keys() == ["a", "b", "c"]
+    assert Secrets(odds_api_key="", odds_api_keys="b", _env_file=None).odds_keys() == ["b"]
+    assert Secrets(odds_api_key="a", _env_file=None).odds_keys() == ["a"]
+    with pytest.raises(MissingSecretError) as excinfo:
+        Secrets(odds_api_key="", odds_api_keys="", _env_file=None).require_odds_keys()
+    assert "ODDS_API_KEYS" in str(excinfo.value)
+
+
 def test_missing_secret_names_the_file_to_fix():
     empty = Secrets(odds_api_key="", _env_file=None)
     with pytest.raises(MissingSecretError) as excinfo:

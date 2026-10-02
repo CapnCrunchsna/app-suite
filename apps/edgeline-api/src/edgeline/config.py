@@ -55,6 +55,11 @@ class Secrets(BaseSettings):
     )
 
     odds_api_key: str = ""
+    #: More keys for the same provider, comma-separated, spent after
+    #: `ODDS_API_KEY` in the order given (added 2026-10-01). Two free-tier keys
+    #: are one 1,000-credit pool: the adapter spends the first until it is gone,
+    #: then the next. Either alone is enough.
+    odds_api_keys: str = ""
     discord_bot_token: str = ""
     # Kept as a string: `.env.example` ships this key empty, and an `int` field
     # would turn "copied the example and haven't filled it in yet" into a
@@ -70,6 +75,21 @@ class Secrets(BaseSettings):
                 f"{ENV_FILE} and fill it in (spec §3.1, §17)."
             )
         return value
+
+    def odds_keys(self) -> list[str]:
+        """Every Odds API key, in spending order: `ODDS_API_KEY`, then
+        `ODDS_API_KEYS`. Blanks dropped, a key named twice counted once."""
+        named = [self.odds_api_key, *self.odds_api_keys.split(",")]
+        return list(dict.fromkeys(key.strip() for key in named if key.strip()))
+
+    def require_odds_keys(self) -> list[str]:
+        keys = self.odds_keys()
+        if not keys:
+            raise MissingSecretError(
+                f"ODDS_API_KEY (or ODDS_API_KEYS) is not set. Copy .env.example to "
+                f"{ENV_FILE} and fill it in (spec §3.1, §17)."
+            )
+        return keys
 
 
 class PollSlot(BaseModel):

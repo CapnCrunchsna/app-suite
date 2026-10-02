@@ -62,6 +62,9 @@ nx run edgeline-api:test       # ES-backed tests skip themselves if ES is down
 `.env` is gitignored, so a **git worktree does not inherit it** — copy it in from the main
 checkout before running anything that needs the Odds API key.
 
+**More than one Odds API key** (2026-10-01): put the others in `ODDS_API_KEYS`, comma-separated.
+They are spent after `ODDS_API_KEY`, in order, as one pool — see Credits below.
+
 **Elasticsearch comes back by itself** — `restart: unless-stopped` in `docker-compose.yml`
 (§4.1, 2026-10-01). A laptop sleep that takes the Docker VM down used to leave the container
 stopped: on 2026-09-29 it exited 255 at 23:26 with nothing in its own log and stayed down for 18
@@ -203,6 +206,16 @@ Two consequences that are not obvious from §8.4:
   weekly plan's four sports that would have been ~240 credits a month, so `_grade`
   now asks the datastore which sports have a recommendation on a started game with no
   result (`sports_awaiting_settlement`, free) and fetches scores for those alone.
+
+**Two keys are one pool (2026-10-01).** With a second free-tier key in `ODDS_API_KEYS`, October is
+1,000 credits. The adapter arms each key with a free `/sports` call at startup, spends key 1 until
+the provider reports nothing left on it — or refuses it as spent, in which case the same request
+goes to key 2 — and then key 2, and goes back to key 1 when a new month starts. Everything that
+reads the quota reads the pool's sum: `providers.quota_used`, `/health`, the dashboard's meter and
+the pace guard. **Raise `quota_monthly_budget` to 1000 once the second key is in `.env`** (Settings →
+Polling), or the guard stops at the first key's 500; the Providers page keeps its own budget for
+the meter, so set that to 1000 too. A key that is rejected outright is reported as "key 2 of 2",
+never by value, and every key is masked in the request log.
 
 **The enforcement is a pace guard, not the projection.** `_check_pace` in the adapter refuses a
 request locally — nothing sent — when `x-requests-used` is past `quota_monthly_budget`, or past
