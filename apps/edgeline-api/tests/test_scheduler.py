@@ -799,6 +799,112 @@ def test_the_startup_log_says_how_a_poll_is_priced(caplog):
     assert "10 named books" in caplog.text
 
 
+def test_the_closing_checks_are_part_of_the_bill():
+    """§8.4, 2026-10-01: the projection used to count the polls alone. A
+    measured closing figure is added as it stands."""
+    budget = plan_budget(Settings(), enabled_books=10, closing_credits=155)
+    assert budget.poll_credits == 180
+    assert budget.closing_credits == 155
+    assert budget.projected_monthly_credits == 335
+
+
+def test_a_closing_mode_that_tips_the_bill_over_is_named_in_the_refusal():
+    with pytest.raises(BudgetExceeded) as excinfo:
+        check_budget(
+            settings(closing_capture_mode="opportunities"), enabled_books=10, closing_credits=400
+        )
+    assert "580" in str(excinfo.value)
+    assert "closing_capture_mode=opportunities" in str(excinfo.value)
+
+
+@pytest.mark.es
+async def test_the_closing_projection_replays_the_last_weeks_games(es_url, test_index_prefix):
+    """What each mode would have bought for the games of the last seven days, x30/7.
+
+    Two MLB games starting together (one fetch), one later (another), one
+    without an opportunity, one ten days back and one NHL game the settings do
+    not poll. `opportunities` buys each start's due markets over two regions;
+    `recommended` all three markets where a recommendation names an
+    opportunity; `all` all three at every start."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.es import ensure_indices
+    from edgeline.indices import (
+        EVENTS_INDEX,
+        OPPORTUNITIES_INDEX,
+        RECOMMENDATIONS_INDEX,
+        with_prefix,
+    )
+    from edgeline.scheduler import projected_closing_credits
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc)
+    early = "2026-09-30T23:05:00Z"
+    later = "2026-09-29T23:10:00Z"
+    events = {
+        "baseball_mlb:a": ("baseball_mlb", early),
+        "baseball_mlb:b": ("baseball_mlb", early),
+        "baseball_mlb:c": ("baseball_mlb", later),
+        "baseball_mlb:quiet": ("baseball_mlb", "2026-09-28T17:05:00Z"),
+        "baseball_mlb:old": ("baseball_mlb", "2026-09-20T23:05:00Z"),
+        "icehockey_nhl:x": ("icehockey_nhl", early),
+    }
+    opportunities = {
+        "o-a-h2h": ("baseball_mlb:a", "h2h"),
+        "o-a-totals": ("baseball_mlb:a", "totals"),
+        "o-b-h2h": ("baseball_mlb:b", "h2h"),
+        "o-c-spreads": ("baseball_mlb:c", "spreads"),
+        "o-c-totals": ("baseball_mlb:c", "totals"),
+        "o-old": ("baseball_mlb:old", "h2h"),
+        "o-nhl": ("icehockey_nhl:x", "h2h"),
+    }
+    try:
+        await ensure_indices(client, prefix=prefix)
+        await client.delete_by_query(
+            index=f"{prefix}*", query={"match_all": {}}, refresh=True, conflicts="proceed"
+        )
+        for event_id, (sport, commence) in events.items():
+            await client.index(
+                index=with_prefix(EVENTS_INDEX, prefix), id=event_id,
+                document={"sport_key": sport, "commence_time": commence,
+                          "home_team": "H", "away_team": "A"},
+            )
+        for doc_id, (event_id, market) in opportunities.items():
+            await client.index(
+                index=with_prefix(OPPORTUNITIES_INDEX, prefix), id=doc_id,
+                document={"type": "ev", "event_id": event_id, "market_key": market, "legs": [],
+                          "edge_pct": 3.0, "status": "expired",
+                          "detected_at": "2026-09-28T12:00:00Z", "expires_at": early},
+            )
+        await client.index(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix), id="rec-a",
+            document={"opportunity_id": "o-a-h2h", "stakes": {}, "paper": True,
+                      "channel": "log", "sent_at": "2026-09-30T20:00:00Z"},
+        )
+        await client.indices.refresh(index=f"{prefix}*")
+
+        mlb_only = settings(poll_schedule=[], sports_enabled=["baseball_mlb"])
+
+        async def projected(mode: str, **extra) -> int:
+            return await projected_closing_credits(
+                client, mlb_only.model_copy(update={"closing_capture_mode": mode, **extra}),
+                prefix=prefix, now=now,
+            )
+
+        # early: {h2h, totals} x 2 regions = 4; later: {spreads, totals} = 4.
+        # 8 a week x 30/7 = 34.3 -> 35.
+        assert await projected("opportunities") == 35
+        # early only, three markets: 6 a week -> 25.7 -> 26.
+        assert await projected("recommended") == 26
+        # early, later and quiet, three markets each: 18 a week -> 77.1 -> 78.
+        assert await projected("all") == 78
+        assert await projected("off") == 0
+        assert await projected("opportunities", offline_mode=True) == 0
+    finally:
+        await client.close()
+
+
 def test_a_plan_over_budget_refuses_to_start_and_names_the_setting_to_trim():
     heavy = plan(
         (EVERY_DAY, "11:00", "icehockey_nhl"),

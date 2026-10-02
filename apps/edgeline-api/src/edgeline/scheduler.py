@@ -26,7 +26,14 @@ from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
 from .config import WEEKDAYS, PollSlot, Settings
-from .indices import PROVIDERS_INDEX, SETTINGS_INDEX, with_prefix
+from .indices import (
+    EVENTS_INDEX,
+    OPPORTUNITIES_INDEX,
+    PROVIDERS_INDEX,
+    RECOMMENDATIONS_INDEX,
+    SETTINGS_INDEX,
+    with_prefix,
+)
 from .schemas import utc_now_iso
 
 log = logging.getLogger(__name__)
@@ -107,6 +114,9 @@ POLL_JOB_PREFIXES = ("poll_featured:", "poll_scheduled:")
 #: The Odds API bills every ten named bookmakers as one region (§8.4; measured
 #: 2026-09-30: ten named, 1 credit for an h2h call that cost 2 over `us,us2`).
 BOOKS_PER_REGION = 10
+#: How many days of finished games the closing projection replays (§8.4). One
+#: weekly plan's worth, so every slot of the week is in it once.
+CLOSING_LOOKBACK_DAYS = 7
 
 
 class BudgetExceeded(RuntimeError):
@@ -129,6 +139,13 @@ class BudgetPlan:
     #: How many books each poll names (§3.2 `poll_bookmakers`); `None` when the
     #: polls ask for `regions` instead.
     named_books: int | None = None
+    #: What `closing_capture_mode` buys a month, measured rather than modelled
+    #: (`projected_closing_credits`), and already in `projected_monthly_credits`.
+    closing_credits: int = 0
+
+    @property
+    def poll_credits(self) -> int:
+        return self.projected_monthly_credits - self.closing_credits
 
     @property
     def affordable(self) -> bool:
@@ -348,8 +365,13 @@ def named_books_for_polls(settings: Settings, enabled_books: int | None) -> int 
     return None
 
 
-def plan_budget(settings: Settings, *, enabled_books: int | None = None) -> BudgetPlan:
-    """§8.4: what the featured cadence costs a month.
+def plan_budget(
+    settings: Settings, *, enabled_books: int | None = None, closing_credits: int = 0
+) -> BudgetPlan:
+    """§8.4: what the featured cadence costs a month, plus the closing checks.
+
+    `closing_credits` is `projected_closing_credits`' measurement, added as it
+    stands (2026-10-01); the cadence below is the arithmetic.
 
     On the interval, `(86400/interval) x markets x units x 30` per enabled
     sport. On the weekly plan, `polls a week x markets x units x 30/7` — each
@@ -394,35 +416,132 @@ def plan_budget(settings: Settings, *, enabled_books: int | None = None) -> Budg
         # cadence costs nothing and no cadence can be unaffordable. Without this
         # the guard would refuse to start an offline worker over a bill it will
         # never incur.
-        projected_monthly_credits=0 if settings.offline_mode else projected,
+        projected_monthly_credits=0 if settings.offline_mode else projected + closing_credits,
         budget=settings.quota_monthly_budget,
         scheduled_polls_per_week=len(polls) if polls else None,
+        closing_credits=0 if settings.offline_mode else closing_credits,
     )
 
 
-def check_budget(settings: Settings, *, enabled_books: int | None = None) -> BudgetPlan:
+async def projected_closing_credits(
+    client, settings: Settings, *, prefix: str, now: datetime | None = None
+) -> int:
+    """What `closing_capture_mode` would have bought for the last week's games, ×30/7.
+
+    Measured rather than modelled (2026-10-01). A closing fetch is bought per
+    *start time*: the sweep runs every minute and first reaches a game
+    `closing_capture_offset_s` before it starts, when its window ends within a
+    minute of that start — so games starting together share a fetch and a game
+    starting a few minutes later buys its own. Its cost therefore turns on how
+    many start times have something due, which only the stored events and
+    opportunities know. This replays the sweep over the games of the last
+    `CLOSING_LOOKBACK_DAYS` for the sports a poll can reach: per sport and start
+    time, the markets × regions — the opportunities' markets in `opportunities`
+    mode, `markets_featured` in the others (`recommended` counts a start time
+    only if a recommendation names one of its opportunities). Each distinct
+    start counts as its own fetch, which over-reports rather than under, and
+    the total is rounded up.
+
+    Raises when the datastore cannot answer; the caller decides what that means.
+    """
+    mode = settings.closing_capture_mode
+    if mode == "off" or settings.offline_mode:
+        return 0
+    now = now or datetime.now(timezone.utc)
+    stamp = "%Y-%m-%dT%H:%M:%SZ"
+    found = await client.search(
+        index=with_prefix(EVENTS_INDEX, prefix),
+        size=10_000,
+        source=["sport_key", "commence_time"],
+        query={
+            "bool": {
+                "filter": [
+                    {"terms": {"sport_key": active_sports(settings)}},
+                    {
+                        "range": {
+                            "commence_time": {
+                                "gte": (now - timedelta(days=CLOSING_LOOKBACK_DAYS)).strftime(stamp),
+                                "lt": now.strftime(stamp),
+                            }
+                        }
+                    },
+                ]
+            }
+        },
+    )
+    events = {hit["_id"]: hit["_source"] for hit in found["hits"]["hits"]}
+    if not events:
+        return 0
+
+    featured = set(settings.markets_featured)
+    markets: dict[str, set[str]] = {}
+    if mode == "all":
+        markets = {event_id: set(featured) for event_id in events}
+    else:
+        opportunities = await client.search(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            size=10_000,
+            source=["event_id", "market_key"],
+            query={"terms": {"event_id": sorted(events)}},
+        )
+        rows = {hit["_id"]: hit["_source"] for hit in opportunities["hits"]["hits"]}
+        if mode == "recommended":
+            named = await client.search(
+                index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
+                size=0,
+                query={"terms": {"opportunity_id": sorted(rows)}},
+                aggs={"ids": {"terms": {"field": "opportunity_id", "size": max(len(rows), 1)}}},
+            )
+            recommended = {b["key"] for b in named["aggregations"]["ids"]["buckets"]}
+            for doc_id, row in rows.items():
+                if doc_id in recommended:
+                    markets[row["event_id"]] = set(featured)
+        else:
+            for row in rows.values():
+                markets.setdefault(row["event_id"], set()).add(row["market_key"])
+
+    fetches: dict[tuple[str, str], set[str]] = {}
+    for event_id, wanted in markets.items():
+        source = events[event_id]
+        fetches.setdefault((source["sport_key"], source["commence_time"]), set()).update(wanted)
+
+    regions = max(len(settings.regions), 1)
+    credits = sum(len(wanted) * regions for wanted in fetches.values())
+    return -(-credits * DAYS_PER_MONTH // CLOSING_LOOKBACK_DAYS)
+
+
+def check_budget(
+    settings: Settings, *, enabled_books: int | None = None, closing_credits: int = 0
+) -> BudgetPlan:
     """Log the projected cost and refuse an unaffordable cadence (§13, §8.4)."""
-    plan = plan_budget(settings, enabled_books=enabled_books)
+    plan = plan_budget(settings, enabled_books=enabled_books, closing_credits=closing_credits)
+    closing = (
+        f" + {plan.closing_credits} for closing_capture_mode={settings.closing_capture_mode}"
+        if plan.closing_credits
+        else ""
+    )
     if plan.scheduled:
         log.info(
             "projected monthly credits: %d (%d scheduled polls a week x %d markets "
-            "x %s x 30/7, across %d sport(s)); budget %d",
+            "x %s x 30/7, across %d sport(s)%s); budget %d",
             plan.projected_monthly_credits,
             plan.scheduled_polls_per_week,
             plan.markets,
             plan.describe_units(),
             plan.sports,
+            closing,
             plan.budget,
         )
     else:
         log.info(
             "projected monthly credits: %d (interval %ds x %d markets x %s "
-            "x %d sport(s)); budget %d",
+            "x %d sport(s)%s); budget %d",
             plan.projected_monthly_credits,
             plan.featured_interval_s,
             plan.markets,
             plan.describe_units(),
             plan.sports,
+            closing,
             plan.budget,
         )
     if not plan.affordable:
@@ -431,6 +550,8 @@ def check_budget(settings: Settings, *, enabled_books: int | None = None) -> Bud
             if plan.scheduled
             else "Raise the budget (T4.1, needs the paid tier) or lengthen poll_interval_s"
         )
+        if plan.closing_credits:
+            remedy += f", or buy fewer closing lines than closing_capture_mode={settings.closing_capture_mode}"
         raise BudgetExceeded(
             f"cadence would cost ~{plan.projected_monthly_credits} credits/month, "
             f"over the quota_monthly_budget of {plan.budget}. {remedy}."
@@ -580,6 +701,7 @@ def build_scheduler(
     prefix: str = "edgeline-",
     sink=None,
     enabled_books: int | None = None,
+    closing_credits: int = 0,
 ):
     """Register §13's jobs. Returns the scheduler, not started.
 
@@ -590,7 +712,8 @@ def build_scheduler(
 
     `enabled_books` is how many sportsbooks are enabled, which prices a poll
     that names them (§3.2 `poll_bookmakers`); without it the budget counts
-    regions.
+    regions. `closing_credits` is `projected_closing_credits`' measurement,
+    which the budget adds to the polls.
     """
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -599,7 +722,7 @@ def build_scheduler(
     from .grading import grade, sports_awaiting_settlement
     from .providers.base import ProviderBudgetExceeded
 
-    plan = check_budget(settings, enabled_books=enabled_books)
+    plan = check_budget(settings, enabled_books=enabled_books, closing_credits=closing_credits)
     polls = scheduled_polls(settings)
     scheduler = AsyncIOScheduler(timezone="UTC")
 
@@ -1027,7 +1150,13 @@ async def _run() -> int:
             )
 
         books = await load_enabled_books(client, prefix="edgeline-")
-        scheduler = build_scheduler(provider, client, settings, enabled_books=len(books))
+        scheduler = build_scheduler(
+            provider,
+            client,
+            settings,
+            enabled_books=len(books),
+            closing_credits=await _measured_closing_credits(client, settings) or 0,
+        )
         scheduler.start()
         polls = scheduled_polls(settings)
         upcoming = next_poll(scheduler.get_jobs())
@@ -1099,6 +1228,22 @@ def main(argv: list[str] | None = None) -> int:
     return asyncio.run(_run())
 
 
+async def _measured_closing_credits(client, settings: Settings) -> int | None:
+    """`projected_closing_credits` for the worker's own indices, or `None` with a
+    warning when the datastore cannot say — the budget then counts polls alone,
+    and the pace guard (§8.4) is what stands behind it."""
+    try:
+        return await projected_closing_credits(client, settings, prefix="edgeline-")
+    except Exception as unreadable:
+        log.warning(
+            "could not measure what closing_capture_mode=%s costs (%s); the budget "
+            "counts the polls alone",
+            settings.closing_capture_mode,
+            unreadable,
+        )
+        return None
+
+
 async def _check_budget_only() -> int:
     from .es import close_client, get_client
     from .engine import load_enabled_books, load_settings
@@ -1107,7 +1252,8 @@ async def _check_budget_only() -> int:
     try:
         settings = await load_settings(client, prefix="edgeline-")
         books = await load_enabled_books(client, prefix="edgeline-")
-        plan = plan_budget(settings, enabled_books=len(books))
+        closing = await _measured_closing_credits(client, settings)
+        plan = plan_budget(settings, enabled_books=len(books), closing_credits=closing or 0)
         if plan.scheduled:
             sports = ", ".join(dict.fromkeys(poll.sport for poll in scheduled_polls(settings)))
             cadence = (
@@ -1125,10 +1271,22 @@ async def _check_budget_only() -> int:
             if settings.poll_lookahead_h
             else "every event listed"
         )
+        mode = settings.closing_capture_mode
+        if mode == "off" or settings.offline_mode:
+            closing_line = f"closing checks     none (closing_capture_mode={mode})\n"
+        elif closing is None:
+            closing_line = f"closing checks     unknown (closing_capture_mode={mode}; not counted)\n"
+        else:
+            closing_line = (
+                f"closing checks     {plan.closing_credits}/month (closing_capture_mode={mode}, "
+                f"the last {CLOSING_LOOKBACK_DAYS} days' games x 30/{CLOSING_LOOKBACK_DAYS})\n"
+            )
         print(
             f"{cadence}"
             f"markets x units    {plan.markets} x {plan.describe_units()}"
             f" = {plan.credits_per_poll} a poll, {window}\n"
+            f"polls              {plan.poll_credits}/month\n"
+            f"{closing_line}"
             f"projected credits  {plan.projected_monthly_credits}/month\n"
             f"budget             {plan.budget}\n"
             f"verdict            {'OK' if plan.affordable else 'OVER BUDGET'}"

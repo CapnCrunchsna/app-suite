@@ -1423,6 +1423,74 @@ async def test_recommended_mode_skips_an_event_nobody_bet(es_url, test_index_pre
 
 
 @pytest.mark.es
+async def test_opportunities_mode_buys_a_closing_line_only_where_one_will_be_read(
+    es_url, test_index_prefix
+):
+    """`closing_capture_mode="opportunities"` (2026-10-01): a game starting in the
+    window is bought only if it carries an opportunity — of any status, a closed
+    one included, since CLV is measured for every opportunity — and only in that
+    opportunity's markets, over the broad regions, asking only for the window."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+    from edgeline.indices import with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    mode = settings(closing_capture_mode="opportunities")
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _FixtureProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+        provider.requests.clear()
+
+        nothing_on_it = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix, now=now
+        )
+        assert nothing_on_it == []
+        assert provider.calls == [], "no opportunity on the game, nothing worth buying"
+
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            id="f" * 64,
+            document={
+                "type": "ev", "event_id": "baseball_mlb:evt1", "market_key": "totals", "legs": [],
+                "edge_pct": 3.0, "status": "closed", "detected_at": utc_iso(now - timedelta(hours=3)),
+                "expires_at": utc_iso(now + timedelta(seconds=120)),
+            },
+            refresh="wait_for",
+        )
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix, now=now
+        )
+
+        assert captured == ["baseball_mlb:evt1"]
+        assert provider.calls == [("baseball_mlb", ["totals"])]
+        [request] = provider.requests
+        assert request["regions"] == "us,us2"
+        assert "bookmakers" not in request
+        assert request["commence_time_from"] == utc_iso(now)
+        assert request["commence_time_to"] == utc_iso(now + timedelta(seconds=300))
+
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.calls.clear()
+        again = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix, now=now
+        )
+        assert again == []
+        assert provider.calls == []
+    finally:
+        await client.close()
+
+
+def utc_iso(when: datetime) -> str:
+    return when.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+@pytest.mark.es
 async def test_offline_mode_polls_nothing_and_says_so(es_url, test_index_prefix):
     """§3.2's `offline_mode`: the worker keeps running, this cycle buys nothing.
 

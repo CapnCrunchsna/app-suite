@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = PROJECT_ROOT / ".env"
 
 DevigMethod = Literal["multiplicative", "additive", "power", "shin"]
-ClosingCaptureMode = Literal["off", "recommended", "all"]
+ClosingCaptureMode = Literal["off", "recommended", "opportunities", "all"]
 PollBookmakers = Literal["enabled", "regions"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 #: `datetime.weekday()` order, so `WEEKDAYS[d.weekday()]` names a date's day.
@@ -247,6 +247,14 @@ class Settings(BaseModel):
     #: * ``recommended`` — buy one targeted snapshot per event that has an
     #:   ungraded recommendation. True closing lines where CLV actually decides
     #:   something. Measured at roughly 90 credits/month on this fixture list.
+    #: * ``opportunities`` — buy one sport-level snapshot when a game carrying an
+    #:   opportunity of any status starts inside the window, asking only for the
+    #:   markets those opportunities are in. Added 2026-10-01 for CLV on every
+    #:   opportunity: those are the games it is measured on, and a price from
+    #:   after detection is what keeps it from being circular. Measured on
+    #:   the stored opportunities that day: Saturday 09-26's NCAAF slate had 9
+    #:   start times with one, at 22 credits asking for the markets due against
+    #:   54 for all three; replayed over the week's games, ~155 credits a month.
     #: * ``all`` — buy one for every event in the window. What the code did
     #:   before this setting existed, at **1,188 credits/month against a 500
     #:   budget** — 2.4x the whole allowance, spent mostly on events nobody bet.

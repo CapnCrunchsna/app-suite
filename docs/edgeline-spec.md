@@ -218,7 +218,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `poll_lookahead_h` | `96` | **added 2026-10-01.** A featured poll asks only for games starting within this many hours (`commenceTimeFrom`/`commenceTimeTo`); an answer with none in it costs nothing. 0 asks for every game listed (§8.4) |
 | `props_poll_interval_s` | `600` | props, only for events starting within 6 h |
 | `closing_capture_offset_s` | `300` | force snapshot at start_time − 5 min (CLV) |
-| `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option |
+| `closing_capture_mode` | `"off"` | **added 2026-09-11.** Whether to *buy* closing lines: `off` buys none and derives CLV from the last price already stored before kickoff; `recommended` buys one per event carrying an alerted opportunity (~90 credits/month); `all` buys one per event in the window — **1,188 credits/month against a 500 budget**, measured, which is what this setting exists to stop being the only option. `opportunities` (**added 2026-10-01**, §13) buys one per game carrying an opportunity of any status, in only those opportunities' markets — ~155 credits/month on the week to 2026-10-01 |
 | `book_state` | `"md"` | **added 2026-09-12.** Fills the literal `{state}` some provider deep links carry (§9.4) — BetMGM and betPARX both return one. Lower-case two-letter code: the state whose sportsbooks you hold accounts with. A wrong value does not error, it sends someone to another state's site |
 | `quota_monthly_budget` | `500` | credits; raise when paid tier starts |
 
@@ -631,6 +631,16 @@ sweep (`markets × regions` per fetch) and grading (`/v4/scores` with `daysFrom`
 per run *and* once per worker start). On 2026-09-09 the projection read a comfortable 360/500
 while the real burn was roughly 6 credits a minute, and the month's allowance was gone in 66
 minutes.
+
+**The projection counts the closing checks — amended 2026-10-01.** With `closing_capture_mode`
+able to buy a line for every game carrying an opportunity (§13), the sweep is no longer a job the
+projection can leave out. Its cost is not a function of the settings: a fetch is bought per start
+time that has something due, which only the stored events and opportunities know. So it is
+**measured, not modelled** — the sweep is replayed over the last seven days' games for the sports a
+poll can reach, each distinct start time costing its markets × regions, ×30/7 rounded up — and
+added to the polls' figure in the startup check and `--check-budget`. On the week to 2026-10-01 it
+read 155 for `opportunities`, 180 for `recommended` and 1,466 for `all`. When the datastore cannot
+answer, the budget counts the polls alone and says so. Grading's scores fetch is still not counted.
 
 So the enforcement that matters is not the projection but a **pace guard at the provider seam**,
 which compares two facts and models nothing: `x-requests-used` as the provider last reported it,
@@ -1084,6 +1094,25 @@ observable behaviour is identical — a closing snapshot is taken once per event
 in-process one-shot is lost on restart, and losing it loses that event's CLV permanently. The
 closing price is the one number in this system that cannot be re-fetched after the fact, so the
 restart-safe form wins.
+
+**`closing_capture_mode` gains `opportunities` — added 2026-10-01.** A CLV priced by the poll that
+found the edge is circular — 7 of the first 8 graded recommendations were — and a price bought
+minutes before the start is the later price those measurements lack. Every opportunity is such a
+measurement, alerted or not, so the sweep buys one sport-level snapshot, stored `is_closing`, when a
+game carrying an opportunity starts within `closing_capture_offset_s`. **The event filter,
+decided:** an opportunity of *any* status — open, alerted or closed — because each is a CLV worth
+measuring, and one that closed an hour after detection is as much a measurement as one still open; expired
+opportunities are on games already started and cannot be due. It asks only for the markets those
+opportunities are in, over the broad `regions` rather than the named books (§8.4 — grading's
+consensus wants the offshore books), and only for games starting in the window, so an answer with
+none in it is free. It pays only when due: the question is answered from Elasticsearch — events in
+the window, less those with a closing line, intersected with opportunities — before the provider is
+asked anything, because the unconditional sweep spent the whole 500-credit month in 66 minutes on
+2026-09-09. Measured on the stored opportunities: Saturday 09-26's NCAAF slate had 9 start times
+with an opportunity, 22 credits asking for the markets due against 54 for all three; replayed over
+the week, ~155 credits a month, which the budget counts (§8.4). A start time is one fetch: the sweep
+runs every minute and first reaches a game five minutes out, so games starting together share a
+fetch and one starting a few minutes later buys its own. The default stays `off`.
 
 **The featured cadence is measured from the last poll that landed, not from process start
 (`poll_realign`, added 2026-09-16).** An APScheduler interval job anchors its grid to when the

@@ -287,8 +287,8 @@ export const POLLING = {
       key: 'closing_capture_mode',
       label: 'Closing capture',
       kind: 'select',
-      options: ['off', 'recommended', 'all'],
-      hint: 'Whether to spend credits buying closing lines. Off buys none and measures CLV against the last price already stored before kickoff — free, but up to a poll interval stale. Recommended buys one only for events carrying an alerted opportunity, which is where CLV decides anything (~90 credits/month). All buys one per event in the window: measured at 1,188 credits/month against a 500 budget, so it needs a paid tier.',
+      options: ['off', 'recommended', 'opportunities', 'all'],
+      hint: 'Whether to spend credits buying closing lines. Off buys none and measures CLV against the last price already stored before kickoff — free, but up to a poll interval stale, and circular when that is the very poll that found the edge. Recommended buys one for games with an alerted opportunity, in every market. Opportunities buys one for every game with an opportunity of any status, in only the markets they are in — the games CLV is measured on for every opportunity, at ~155 credits/month on the week to 2026-10-01. All buys one per game in the window: 1,188 credits/month, measured, against a 500 budget. The worker counts the chosen mode in its budget.',
     },
     {
       key: 'alert_cooldown_s',

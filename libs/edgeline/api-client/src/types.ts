@@ -220,7 +220,7 @@ export interface Settings {
   poll_lookahead_h?: number;
   props_poll_interval_s?: number;
   closing_capture_offset_s?: number;
-  closing_capture_mode?: "off" | "recommended" | "all";
+  closing_capture_mode?: "off" | "recommended" | "opportunities" | "all";
   book_state?: string;
   quota_monthly_budget?: number;
 }

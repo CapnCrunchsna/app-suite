@@ -183,12 +183,20 @@ per-action log in `sidecars/runs/`. Delete it and its test once the day has been
 
 Two consequences that are not obvious from §8.4:
 
-- **The §13 budget guard counts only the featured poll.** `plan_budget` projects
-  `(86400/interval) × markets × units × 30`, or on the weekly plan
-  `polls a week × markets × units × 30/7` — units being the regions, or one per ten
-  named books — and knows nothing about the closing sweep or grading. It reported a
-  comfortable 360/500 while the real spend was about 6 credits a minute. Treat its
-  number as a floor, not a bill.
+- **The §13 budget guard counts the polls and, since 2026-10-01, the closing checks — not
+  grading.** `plan_budget` projects `(86400/interval) × markets × units × 30`, or on the
+  weekly plan `polls a week × markets × units × 30/7` — units being the regions, or one per
+  ten named books. The closing sweep's cost depends on how many start times have something
+  due, so it is measured instead (`projected_closing_credits`): the sweep replayed over the
+  last seven days' games at the current `closing_capture_mode`, ×30/7. It once reported a
+  comfortable 360/500 while the real spend was about 6 credits a minute, from a sweep it did
+  not count. Treat its number as a floor, not a bill.
+- **`closing_capture_mode = opportunities` (2026-10-01)** buys a closing line for every game
+  carrying an opportunity of any status, five minutes before it starts, in only those
+  opportunities' markets and over the broad `regions`. On the week to 2026-10-01 that
+  replayed to ~155 credits a month (`recommended` 180, `all` 1,466); Saturday 09-26's NCAAF
+  slate alone had 9 start times with an opportunity, 22 credits for the markets due against
+  54 for all three. It is what gives a detection days out a price from after it was found.
 - **Grading costs 2 credits a sport, but only when there is a bet to settle.** Until
   2026-09-23 every run fetched scores for every enabled sport — including the catch-up
   grade 15 seconds after each worker start — whatever there was to grade. With the
@@ -448,10 +456,14 @@ a poll names the ten enabled books, which bill as one region, so it is 3 credits
 poll plan          14 polls/week at fixed America/New_York times
 sports             4 (basketball_nba, americanfootball_nfl, icehockey_nhl, americanfootball_ncaaf)
 markets x units    3 x 1 (10 named books, ten bill as one region) = 3 a poll, events up to 96 h ahead
-projected credits  180/month
+polls              180/month
+closing checks     155/month (closing_capture_mode=opportunities, the last 7 days' games x 30/7)
+projected credits  335/month
 budget             500
 verdict            OK
 ```
+
+(The closing line reads `none` while `closing_capture_mode` is `off`, its default.)
 
 What to know before changing it:
 

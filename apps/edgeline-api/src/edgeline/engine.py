@@ -981,18 +981,35 @@ async def capture_closing_lines(
         # 500, and most of it goes on events nobody bet.
         return []
 
+    markets = list(settings.markets_featured)
     if settings.closing_capture_mode == "recommended":
         if not await _recommended_events_awaiting_closing(
             client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
         ):
             return []
+    elif settings.closing_capture_mode == "opportunities":
+        due_markets = await _opportunity_markets_awaiting_closing(
+            client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
+        )
+        if not due_markets:
+            return []
+        # Only the markets an opportunity is in: a closing line nobody's CLV
+        # reads measures nothing, and every market is another credit.
+        markets = sorted(due_markets)
     elif not await _closing_capture_is_due(
         client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
     ):
         return []
 
+    # Always the broad `regions`, never the named books (§8.4, 2026-10-01): a
+    # closing line is grading's consensus, and offshore books belong in it. The
+    # window asks only for the games about to start; none in it is free.
     response = await provider.fetch_odds(
-        sport_key, settings.markets_featured, regions=",".join(settings.regions)
+        sport_key,
+        markets,
+        regions=",".join(settings.regions),
+        commence_time_from=now.strftime(PROVIDER_STAMP),
+        commence_time_to=window_end.strftime(PROVIDER_STAMP),
     )
     snapshots = normalize(provider.key, response.payload)
 
@@ -1120,6 +1137,42 @@ async def _recommended_events_awaiting_closing(
     except Exception:
         return False
     return found["hits"]["total"]["value"] > 0
+
+
+async def _opportunity_markets_awaiting_closing(
+    client, *, sport_key: str, now: datetime, window_end: datetime, prefix: str
+) -> set[str]:
+    """`closing_capture_mode="opportunities"`: the markets to buy closing lines in.
+
+    Every market of every opportunity, **of any status**, on a game starting
+    inside the window that still lacks its closing line. Any status because each
+    opportunity's CLV is worth measuring (2026-10-01): one closed an hour after
+    detection is as much a measurement as one still open, and an alert is not
+    what makes a price worth knowing. Answered from Elasticsearch, so a sweep
+    with nothing due costs nothing; empty on any failure, so it fails closed.
+    """
+    event_ids = await _events_in_window(
+        client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
+    )
+    if not event_ids:
+        return set()
+    outstanding = event_ids - await _events_with_closing_lines(
+        client, event_ids, prefix=prefix
+    )
+    if not outstanding:
+        return set()
+    try:
+        found = await client.search(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            size=0,
+            query={"terms": {"event_id": sorted(outstanding)}},
+            aggs={"markets": {"terms": {"field": "market_key", "size": 50}}},
+        )
+    except Exception:
+        log.warning("closing-capture opportunity check failed; skipping this sweep")
+        return set()
+    buckets = found.get("aggregations", {}).get("markets", {}).get("buckets", [])
+    return {bucket["key"] for bucket in buckets}
 
 
 async def _events_with_closing_lines(
