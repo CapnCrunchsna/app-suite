@@ -62,7 +62,8 @@ const PAD = { top: 16, right: 92, bottom: 28, left: 64 };
   styles: `
     :host { display: block; }
     .legend { display: flex; gap: 18px; margin-bottom: 6px; color: var(--text-dim); font-size: 0.82rem; }
-    .legend__item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend__item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .legend__item svg { flex: none; width: 22px; }
     .wrap { position: relative; }
     svg { display: block; width: 100%; height: auto; overflow: visible; }
     .grid { stroke: var(--border); stroke-width: 1; opacity: 0.6; }
