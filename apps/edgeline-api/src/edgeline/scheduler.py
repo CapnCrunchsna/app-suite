@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
-from .config import WEEKDAYS, PollSlot, Settings
+from .config import WEEKDAYS, PollSlot, Secrets, Settings
 from .indices import (
     EVENTS_INDEX,
     OPPORTUNITIES_INDEX,
@@ -41,7 +41,8 @@ log = logging.getLogger(__name__)
 SECONDS_PER_DAY = 86_400
 DAYS_PER_MONTH = 30
 DAYS_PER_WEEK = 7
-#: §13: the free tier's budget is what selects the dev cadence.
+#: §13: the free tier's budget is what selects the dev cadence — 500 credits a
+#: month for each key in `.env` (`free_tier_budget`).
 FREE_TIER_BUDGET = 500
 HEARTBEAT_INTERVAL_S = 60
 CLOSING_SWEEP_INTERVAL_S = 60
@@ -197,7 +198,25 @@ def schedule_in_effect(settings: Settings) -> bool:
     that already chose `poll_interval_dev_s` over `poll_interval_s` — and only
     when it has a slot. An empty plan is how the interval comes back.
     """
-    return bool(settings.poll_schedule) and settings.quota_monthly_budget <= FREE_TIER_BUDGET
+    return bool(settings.poll_schedule) and settings.quota_monthly_budget <= free_tier_budget()
+
+
+def free_tier_keys() -> int:
+    """How many Odds API keys `.env` names, at least one. Its own function so
+    the tests can pin it rather than read whatever this machine's `.env` holds."""
+    return max(len(Secrets().odds_keys()), 1)
+
+
+def free_tier_budget() -> int:
+    """§13: the most a month of free-tier keys provides, 500 for each.
+
+    The line between the free tier's cadence and the paid one. It was a flat 500
+    until 2026-10-02: raising `quota_monthly_budget` to 1,000 for the two-key
+    pool — what the README said to do — then read as the paid tier, swapped the
+    weekly plan for the 120 s interval, and projected 64,800 credits a month.
+    The guard refused it, so nothing was spent, but the worker would not start.
+    """
+    return FREE_TIER_BUDGET * free_tier_keys()
 
 
 def scheduled_polls(settings: Settings) -> list[ScheduledPoll]:
@@ -348,7 +367,7 @@ def next_poll(jobs) -> dict[str, Any]:
 
 def featured_interval_s(settings: Settings) -> int:
     """§13: the dev cadence applies while the budget is still the free tier's."""
-    if settings.quota_monthly_budget <= FREE_TIER_BUDGET:
+    if settings.quota_monthly_budget <= free_tier_budget():
         return settings.poll_interval_dev_s
     return settings.poll_interval_s
 

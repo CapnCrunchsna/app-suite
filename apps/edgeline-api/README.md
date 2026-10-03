@@ -206,7 +206,12 @@ goes to key 2 — and then key 2, and goes back to key 1 when a new month starts
 reads the quota reads the pool's sum: `providers.quota_used`, `/health`, the dashboard's meter and
 the pace guard. **Raise `quota_monthly_budget` to 1000 once the second key is in `.env`** (Settings →
 Polling), or the guard stops at the first key's 500; the Providers page keeps its own budget for
-the meter, so set that to 1000 too. A key that is rejected outright is reported as "key 2 of 2",
+the meter, so set that to 1000 too. The weekly plan stays in effect at 1000: the free tier's line
+is 500 credits per key in `.env` (corrected 2026-10-02 — a flat 500 read the raised budget as the
+paid tier, swapped the plan for the 120 s interval, and `--check-budget` refused it at 64,800).
+With the headroom, this install's plan adds five polls where edges live days out — NCAAF Thu/Fri
+17:30 and Sat 14:00, NFL Fri/Sat 17:30 — for 19 a week, 245 credits plus ~155 for closing checks,
+~400 of the 1,000; the default below is unchanged. A key that is rejected outright is reported as "key 2 of 2",
 never by value, and every key is masked in the request log.
 
 **The enforcement is a pace guard, not the projection.** `_check_pace` in the adapter refuses a

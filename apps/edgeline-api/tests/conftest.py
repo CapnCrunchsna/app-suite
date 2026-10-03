@@ -59,6 +59,14 @@ def load_fixture(pattern: str) -> Any:
     return json.loads(matches[-1].read_text(encoding="utf-8"))
 
 
+@pytest.fixture(autouse=True)
+def one_odds_key(monkeypatch):
+    """The free tier's line is 500 credits per key in `.env` (§13), and this
+    machine's `.env` holds two. Pinned to one, so a test means the same thing
+    whichever `.env` it runs beside; a test about the pool re-pins it."""
+    monkeypatch.setattr("edgeline.scheduler.free_tier_keys", lambda: 1)
+
+
 @pytest.fixture(scope="session")
 def es_url() -> str:
     return ES_URL

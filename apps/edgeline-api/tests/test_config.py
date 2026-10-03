@@ -296,7 +296,9 @@ def test_odds_keys_come_in_spending_order_once_each():
     both = Secrets(odds_api_key="a", odds_api_keys=" b , a,,c ", _env_file=None)
     assert both.odds_keys() == ["a", "b", "c"]
     assert Secrets(odds_api_key="", odds_api_keys="b", _env_file=None).odds_keys() == ["b"]
-    assert Secrets(odds_api_key="a", _env_file=None).odds_keys() == ["a"]
+    # `odds_api_keys` named, not left to its default: `_env_file=None` keeps the
+    # file out, but the process environment still reaches pydantic-settings.
+    assert Secrets(odds_api_key="a", odds_api_keys="", _env_file=None).odds_keys() == ["a"]
     with pytest.raises(MissingSecretError) as excinfo:
         Secrets(odds_api_key="", odds_api_keys="", _env_file=None).require_odds_keys()
     assert "ODDS_API_KEYS" in str(excinfo.value)

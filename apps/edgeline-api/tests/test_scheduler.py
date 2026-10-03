@@ -124,6 +124,20 @@ def test_a_raised_budget_switches_to_the_production_cadence():
     assert featured_interval_s(settings(quota_monthly_budget=20_000)) == 120
 
 
+def test_two_free_keys_are_still_the_free_tier(monkeypatch):
+    """2026-10-02: the README said to raise the budget to 1,000 for two keys, and
+    a flat 500 line read that as the paid tier — the weekly plan gave way to the
+    120 s interval, 64,800 credits projected, and the worker would not start."""
+    monkeypatch.setattr("edgeline.scheduler.free_tier_keys", lambda: 2)
+    two_keys = settings(quota_monthly_budget=2 * FREE_TIER_BUDGET)
+    assert featured_interval_s(two_keys) == 43_200
+    plan = plan_budget(two_keys, enabled_books=10)
+    assert plan.scheduled
+    assert plan.projected_monthly_credits == 180
+    # One credit past what the keys provide is the paid tier again.
+    assert not plan_budget(settings(quota_monthly_budget=2 * FREE_TIER_BUDGET + 1)).scheduled
+
+
 # ---- the refusal (§13) -----------------------------------------------------
 
 

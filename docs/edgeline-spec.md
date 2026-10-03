@@ -1187,7 +1187,8 @@ later. (A slot of the weekly plan is bounded instead — below.)
 2026-09-23).** §8.4 has the why and the plan. One cron job per slot,
 `poll_scheduled:<day>:<HHMM>:<sport>`, on America/New_York, so DST moves the UTC fire time and not
 the slot. The shape is chosen once at startup: the plan while it has a slot and the budget is the
-free tier's, the interval above otherwise — so emptying `poll_schedule` restores the 12-hour
+free tier's — 500 credits for each key in `.env`, so 1,000 for the two-key pool (corrected
+2026-10-02; a flat 500 read the pool's budget as the paid tier) — the interval above otherwise — so emptying `poll_schedule` restores the 12-hour
 interval, T4.1's raised budget selects the production cadence exactly as before, and a plan edited
 in the UI takes effect at the next worker start, like every other cadence setting. `--check-budget`
 and the startup log print the plan's projection, and the heartbeat stamps `next_poll_at` and
