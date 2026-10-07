@@ -874,6 +874,11 @@ def build_scheduler(
             return
         await _poll(sport_key, source=SOURCE_SCHEDULE)
 
+    #: Games already asked for by id after a closing window left them out — once
+    #: each, not once a minute until kickoff. In-process: a restart forgets it,
+    #: which costs at most one more request per game.
+    closing_fallback_tried: set[str] = set()
+
     async def _closing_sweep() -> None:
         # Re-read §3.2 each tick, the way `run_once` already does for `_poll`,
         # so flipping `offline_mode` (or any other setting) in the UI takes
@@ -894,7 +899,8 @@ def build_scheduler(
         for sport_key in active_sports(current):
             try:
                 await capture_closing_lines(
-                    provider, client, sport_key=sport_key, settings=current, prefix=prefix
+                    provider, client, sport_key=sport_key, settings=current, prefix=prefix,
+                    fallback_tried=closing_fallback_tried,
                 )
             except Exception:
                 log.exception("closing capture failed for %s", sport_key)

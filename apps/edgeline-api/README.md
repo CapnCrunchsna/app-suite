@@ -192,6 +192,12 @@ Two consequences that are not obvious from §8.4:
   replayed to ~155 credits a month (`recommended` 180, `all` 1,466); Saturday 09-26's NCAAF
   slate alone had 9 start times with an opportunity, 22 credits for the markets due against
   54 for all three. It is what gives a detection days out a price from after it was found.
+- **A game the window's answer leaves out is fetched by id, once (2026-10-07).** Sunday 10-04's
+  13:00 ET NFL window came back with 2 of 8 games and the 20:05 and 00:20 windows with none, on
+  an awake machine with the sweep on time; the cause is not yet known. Each such game carrying an
+  opportunity now gets one `/events/{id}/odds` request (`markets x regions`, ~2 credits), and the
+  miss is kept in `edgeline-unmatched` as `closing_window_miss` with what both answers held — read
+  them there (or on the matching page) to see why. The projection does not count these.
 - **Grading costs 2 credits a sport, but only when there is a bet to settle.** Until
   2026-09-23 every run fetched scores for every enabled sport — including the catch-up
   grade 15 seconds after each worker start — whatever there was to grade. With the

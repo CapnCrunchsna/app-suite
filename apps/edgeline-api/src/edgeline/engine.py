@@ -943,8 +943,13 @@ async def capture_closing_lines(
     settings: Settings,
     prefix: str = "edgeline-",
     now: datetime | None = None,
+    fallback_tried: set[str] | None = None,
 ) -> list[str]:
     """Snapshot the closing line for events about to start (§12 step 4, §13).
+
+    `fallback_tried` is the caller's record of games already asked for by id
+    after a window left them out, so each costs one fallback request, not one
+    a minute until it starts; `None` asks again every call.
 
     These `is_closing` rows are the only thing CLV can be computed against, and
     the window they are taken in is unrepeatable — once the event starts, the
@@ -984,20 +989,21 @@ async def capture_closing_lines(
         return []
 
     markets = list(settings.markets_featured)
+    wanted: dict[str, set[str]] = {}
     if settings.closing_capture_mode == "recommended":
         if not await _recommended_events_awaiting_closing(
             client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
         ):
             return []
     elif settings.closing_capture_mode == "opportunities":
-        due_markets = await _opportunity_markets_awaiting_closing(
+        wanted = await _opportunity_events_awaiting_closing(
             client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
         )
-        if not due_markets:
+        if not wanted:
             return []
         # Only the markets an opportunity is in: a closing line nobody's CLV
         # reads measures nothing, and every market is another credit.
-        markets = sorted(due_markets)
+        markets = sorted(set().union(*wanted.values()))
     elif not await _closing_capture_is_due(
         client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
     ):
@@ -1006,23 +1012,59 @@ async def capture_closing_lines(
     # Always the broad `regions`, never the named books (§8.4, 2026-10-01): a
     # closing line is grading's consensus, and offshore books belong in it. The
     # window asks only for the games about to start; none in it is free.
+    window = {
+        "commence_time_from": now.strftime(PROVIDER_STAMP),
+        "commence_time_to": window_end.strftime(PROVIDER_STAMP),
+    }
     response = await provider.fetch_odds(
-        sport_key,
-        markets,
-        regions=",".join(settings.regions),
-        commence_time_from=now.strftime(PROVIDER_STAMP),
-        commence_time_to=window_end.strftime(PROVIDER_STAMP),
+        sport_key, markets, regions=",".join(settings.regions), **window
     )
-    snapshots = normalize(provider.key, response.payload)
+    quarantine: list[UnmatchedRow] = []
+    snapshots = normalize(provider.key, response.payload, quarantine=quarantine)
 
     due = [
         s for s in snapshots if now < parse_iso(s.commence_time) <= window_end
     ]
-    if not due:
-        return []
-
     event_ids = {event_doc_id(s.sport_key, s.provider_event_id) for s in due}
-    already = await _events_with_closing_lines(client, event_ids, prefix=prefix)
+    already = await _events_with_closing_lines(client, event_ids | set(wanted), prefix=prefix)
+
+    # An opportunity's game the window should have returned and did not
+    # (2026-10-07). Sunday 10-04's 13:00 ET NFL window came back with 2 of its
+    # 8 games, and the 20:05 and 00:20 windows with none, so 6 of 8 games with an
+    # opportunity were graded against a price hours old. The laptop was awake,
+    # the sweep fired on time, and `/events` honours the same window, so the
+    # answer itself is what was short. Each such game is asked for once by its
+    # own id, and what both answers said is kept in `edgeline-unmatched`, so the
+    # next miss shows its cause rather than only its effect.
+    missed = sorted(set(wanted) - event_ids - already - (fallback_tried or set()))
+    misses: list[UnmatchedRow] = []
+    for event_id in missed:
+        if fallback_tried is not None:
+            fallback_tried.add(event_id)
+        found, record = await _fetch_one_closing_line(
+            provider, sport_key, event_id, sorted(wanted[event_id]), settings, quarantine
+        )
+        record.update(event_id=event_id, window=window, answered=_answer_summary(response.payload))
+        misses.append(UnmatchedRow(provider.key, CLOSING_WINDOW_MISS, record))
+        due.extend(found)
+        event_ids |= {event_id} if found else set()
+
+    from elasticsearch.helpers import async_bulk
+
+    if quarantine or misses:
+        log.warning(
+            "closing capture for %s: %d game(s) with an opportunity missing from the "
+            "window's answer, %d fragment(s) quarantined; kept in edgeline-unmatched",
+            sport_key, len(misses), len(quarantine),
+        )
+        await async_bulk(
+            client,
+            [
+                {"_index": with_prefix(UNMATCHED_INDEX, prefix), "_source": row.to_document()}
+                for row in [*misses, *quarantine]
+            ],
+        )
+
     pending = [
         s
         for s in due
@@ -1030,8 +1072,6 @@ async def capture_closing_lines(
     ]
     if not pending:
         return []
-
-    from elasticsearch.helpers import async_bulk
 
     await async_bulk(
         client,
@@ -1043,6 +1083,61 @@ async def capture_closing_lines(
     captured = sorted(event_ids - already)
     log.info("captured closing lines for %d event(s)", len(captured))
     return captured
+
+
+#: `edgeline-unmatched` reason for a game the closing window's answer left out.
+CLOSING_WINDOW_MISS = "closing_window_miss"
+
+
+def _answer_summary(payload: Any) -> list[dict[str, Any]]:
+    """Each event an odds answer held: id, start, and how many books priced it."""
+    if not isinstance(payload, list):
+        return [{"shape": type(payload).__name__}]
+    return [
+        {
+            "id": event.get("id"),
+            "commence_time": event.get("commence_time"),
+            "books": len(event.get("bookmakers") or []),
+        }
+        for event in payload
+        if isinstance(event, dict)
+    ]
+
+
+async def _fetch_one_closing_line(
+    provider,
+    sport_key: str,
+    event_id: str,
+    markets: list[str],
+    settings: Settings,
+    quarantine: list[UnmatchedRow],
+) -> tuple[list[BookOddsSnapshot], dict[str, Any]]:
+    """One missed game's closing line by its own id, and what the answer said.
+
+    `/events/{id}/odds` bills `markets x regions` like the window does, for one
+    game. Its snapshots are kept whatever start time it gives, since the game
+    has not started: a start that moved out of the window is itself the finding.
+    """
+    provider_event_id = event_id.split(":", 1)[1]
+    try:
+        response = await provider.fetch_event_odds(
+            sport_key, provider_event_id, markets, regions=",".join(settings.regions)
+        )
+    except Exception as failed:
+        return [], {"fallback": {"error": f"{type(failed).__name__}: {failed}"}}
+    found = [
+        s
+        for s in normalize(provider.key, response.payload, quarantine=quarantine)
+        if event_doc_id(s.sport_key, s.provider_event_id) == event_id
+    ]
+    payload = response.payload if isinstance(response.payload, dict) else {}
+    return found, {
+        "fallback": {
+            "commence_time": payload.get("commence_time"),
+            "books": len(payload.get("bookmakers") or []),
+            "snapshots": len(found),
+        }
+    }
 
 
 async def _closing_capture_is_due(
@@ -1141,10 +1236,11 @@ async def _recommended_events_awaiting_closing(
     return found["hits"]["total"]["value"] > 0
 
 
-async def _opportunity_markets_awaiting_closing(
+async def _opportunity_events_awaiting_closing(
     client, *, sport_key: str, now: datetime, window_end: datetime, prefix: str
-) -> set[str]:
-    """`closing_capture_mode="opportunities"`: the markets to buy closing lines in.
+) -> dict[str, set[str]]:
+    """`closing_capture_mode="opportunities"`: each game to buy a closing line
+    for, with the markets to buy it in.
 
     Every market of every opportunity, **of any status**, on a game starting
     inside the window that still lacks its closing line. Any status because each
@@ -1157,24 +1253,32 @@ async def _opportunity_markets_awaiting_closing(
         client, sport_key=sport_key, now=now, window_end=window_end, prefix=prefix
     )
     if not event_ids:
-        return set()
+        return {}
     outstanding = event_ids - await _events_with_closing_lines(
         client, event_ids, prefix=prefix
     )
     if not outstanding:
-        return set()
+        return {}
     try:
         found = await client.search(
             index=with_prefix(OPPORTUNITIES_INDEX, prefix),
             size=0,
             query={"terms": {"event_id": sorted(outstanding)}},
-            aggs={"markets": {"terms": {"field": "market_key", "size": 50}}},
+            aggs={
+                "events": {
+                    "terms": {"field": "event_id", "size": 1000},
+                    "aggs": {"markets": {"terms": {"field": "market_key", "size": 50}}},
+                }
+            },
         )
     except Exception:
         log.warning("closing-capture opportunity check failed; skipping this sweep")
-        return set()
-    buckets = found.get("aggregations", {}).get("markets", {}).get("buckets", [])
-    return {bucket["key"] for bucket in buckets}
+        return {}
+    buckets = found.get("aggregations", {}).get("events", {}).get("buckets", [])
+    return {
+        bucket["key"]: {market["key"] for market in bucket["markets"]["buckets"]}
+        for bucket in buckets
+    }
 
 
 async def _events_with_closing_lines(

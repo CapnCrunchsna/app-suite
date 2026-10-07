@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import dataclasses
+
 import pytest
 
 from edgeline.config import Settings
@@ -1482,6 +1484,100 @@ async def test_opportunities_mode_buys_a_closing_line_only_where_one_will_be_rea
         )
         assert again == []
         assert provider.calls == []
+    finally:
+        await client.close()
+
+
+class _ShortWindowProvider(_FixtureProvider):
+    """A closing window that answers without the game, as Sunday 10-04's 20:05
+    ET NFL window did, while the game's own `/events/{id}/odds` still has it."""
+
+    def __init__(self, payload):
+        super().__init__(payload)
+        self.window_payload: list | None = None
+        self.by_id: list[tuple[str, list[str], str]] = []
+
+    async def fetch_odds(self, sport_key, markets, *, regions="us", **request):
+        response = await super().fetch_odds(sport_key, markets, regions=regions, **request)
+        if self.window_payload is None:
+            return response
+        return dataclasses.replace(response, payload=self.window_payload)
+
+    async def fetch_event_odds(self, sport_key, event_id, markets, *, regions="us"):
+        self.by_id.append((event_id, list(markets), regions))
+        response = await super().fetch_odds(sport_key, markets, regions=regions)
+        [event] = [e for e in self.payload if e["id"] == event_id]
+        return dataclasses.replace(response, endpoint="event_odds", payload=event)
+
+
+@pytest.mark.es
+async def test_a_game_the_closing_window_leaves_out_is_asked_for_by_id_once(
+    es_url, test_index_prefix
+):
+    """2026-10-07: the windowed answer left out 6 of Sunday's 8 NFL games with an
+    opportunity. Each such game is fetched once by its own id, captured if that
+    answer has it, and the miss is kept in `edgeline-unmatched` with both answers
+    summarised — so the next one shows its cause."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import CLOSING_WINDOW_MISS, capture_closing_lines, run_once
+    from edgeline.indices import ODDS_SNAPSHOTS_INDEX, UNMATCHED_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    mode = settings(closing_capture_mode="opportunities")
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _ShortWindowProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            id="e" * 64,
+            document={
+                "type": "ev", "event_id": "baseball_mlb:evt1", "market_key": "h2h", "legs": [],
+                "edge_pct": 3.0, "status": "open", "detected_at": utc_iso(now - timedelta(hours=3)),
+                "expires_at": utc_iso(now + timedelta(seconds=120)),
+            },
+            refresh="wait_for",
+        )
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.window_payload = []
+        tried: set[str] = set()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix,
+            now=now, fallback_tried=tried,
+        )
+
+        assert captured == ["baseball_mlb:evt1"]
+        assert provider.by_id == [("evt1", ["h2h"], "us,us2")]
+        await client.indices.refresh(index=f"{prefix}*")
+        closing = await client.count(
+            index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix),
+            query={"bool": {"filter": [
+                {"term": {"event_id": "baseball_mlb:evt1"}}, {"term": {"is_closing": True}},
+            ]}},
+        )
+        assert closing["count"] > 0
+        [miss] = (await client.search(
+            index=with_prefix(UNMATCHED_INDEX, prefix),
+            query={"term": {"reason": CLOSING_WINDOW_MISS}},
+        ))["hits"]["hits"]
+        raw = miss["_source"]["raw"]
+        assert raw["event_id"] == "baseball_mlb:evt1"
+        assert raw["answered"] == []
+        assert raw["fallback"]["snapshots"] == closing["count"]
+
+        # Captured now, so nothing is due; and a game asked for once is not
+        # asked for again even if its fallback had come back empty.
+        provider.by_id.clear()
+        assert await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix,
+            now=now, fallback_tried=tried,
+        ) == []
+        assert provider.by_id == []
+        assert tried == {"baseball_mlb:evt1"}
     finally:
         await client.close()
 

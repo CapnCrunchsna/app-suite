@@ -1151,6 +1151,17 @@ the week, ~155 credits a month, which the budget counts (§8.4). A start time is
 runs every minute and first reaches a game five minutes out, so games starting together share a
 fetch and one starting a few minutes later buys its own. The default stays `off`.
 
+**A game the window leaves out is asked for by its id — added 2026-10-07.** Sunday 10-04's 13:00
+ET NFL window answered with 2 of its 8 games, and the 20:05 and 00:20 windows with none, so 6 of the
+8 NFL games carrying an opportunity were graded against a price hours old. The machine was awake,
+the sweep fired on time, and `/events` honours the same window, so the answer itself was short,
+and nothing kept it. Now each game carrying an opportunity that the window's answer omits is
+fetched once through `/events/{id}/odds` (the same `markets x regions`, for one game) and its
+snapshots stored `is_closing` whatever start they give; the miss goes to `edgeline-unmatched` as
+`closing_window_miss`, with both answers summarised (each event's id, start and book count), and
+the closing fetch's quarantined fragments, which it used to drop unseen, go there too. Once per
+game per worker run; the projection does not count these, so it stays a floor (§8.4).
+
 **The featured cadence is measured from the last poll that landed, not from process start
 (`poll_realign`, added 2026-09-16).** An APScheduler interval job anchors its grid to when the
 scheduler started, and knows nothing about a poll that came from anywhere else — §10's manual
