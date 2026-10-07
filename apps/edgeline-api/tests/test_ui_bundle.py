@@ -100,6 +100,18 @@ async def test_javascript_is_served_as_javascript(served):
         )
 
 
+async def test_the_page_is_revalidated_and_the_bundles_are_not(served):
+    """2026-10-07: a rebuilt Results page showed nothing new, because the page
+    naming the hashed bundles was sent with no cache rule at all. Every route
+    that answers with it says `no-cache`; a hashed bundle is left alone."""
+    async with served as http:
+        for path in ("/", "/results"):
+            response = await http.get(path)
+            assert response.headers.get("cache-control") == "no-cache", path
+        asset = await http.get("/main-abc123.js")
+        assert "cache-control" not in asset.headers
+
+
 async def test_an_unknown_api_path_stays_a_json_404(served):
     """The fallback must not swallow these. It did on Windows only, because
     Starlette hands `get_response` an OS-separated path and the guard compared

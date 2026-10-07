@@ -1,3 +1,18 @@
+/* Six tiles since 2026-10-08 (T4.4's two beside the four). The shared
+ * auto-fit grid wrapped them five and one, stranding a tile; three by two,
+ * or one row once there is room for six. Narrow screens keep the default. */
+@media (min-width: 720px) {
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .tiles {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

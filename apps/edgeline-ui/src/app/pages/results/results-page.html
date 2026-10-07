@@ -64,6 +64,35 @@
       </span>
     </div>
 
+    <!-- T4.4's two reads (spec §15, restated 2026-10-08), beside the headline
+         CLV: the detector over every opportunity, then the gate. -->
+    <div class="tile">
+      <span class="tile__label">Detector CLV</span>
+      <span class="tile__value">{{ signedPercent(clvMeasured()?.mean_clv_pct ?? null) }}</span>
+      <span class="tile__sub">
+        {{ clvMeasured()?.count ?? 0 }} of {{ detectorTarget }} opportunities measured
+      </span>
+    </div>
+
+    <div class="tile">
+      <span class="tile__label">Recommended vs rest</span>
+      <span class="tile__value" [class.neg]="alertSplit().wide">
+        {{ alertSplit().gapLabel ?? noData }}
+      </span>
+      <span class="tile__sub">
+        @if (alertSplit().gap === null) {
+          No recommended opportunity measured yet
+        } @else {
+          {{ signedPercent(alertSplit().recommended?.mean_clv_pct ?? null) }} vs
+          {{ signedPercent(alertSplit().rest?.mean_clv_pct ?? null) }} ·
+          {{ alertSplit().recommended?.count ?? 0 }} of {{ gateTarget }} recommended
+          @if (alertSplit().wide) {
+            · wider than the gate allows
+          }
+        }
+      </span>
+    </div>
+
     <div class="tile">
       <span class="tile__label">P&amp;L</span>
       <span

@@ -59,6 +59,13 @@ type Group = 'day' | 'week';
  *  placed and confirmed. */
 type Scope = 'all' | 'executed';
 
+/** T4.4 as restated 2026-10-08 (spec §15): the detector is read at 200
+ *  non-circular opportunity CLVs, the go-live gate at 50 recommended ones,
+ *  which must sit within ~2 points of the rest. */
+const DETECTOR_TARGET = 200;
+const GATE_TARGET = 50;
+const GAP_TOLERANCE_PTS = 2;
+
 @Component({
   selector: 'el-results-page',
   imports: [Panel],
@@ -165,6 +172,33 @@ export class ResultsPage {
     const measured = this.opportunityClv()?.measured;
     return measured && (measured.count ?? 0) > 0 ? measured : null;
   });
+  protected readonly detectorTarget = DETECTOR_TARGET;
+  protected readonly gateTarget = GATE_TARGET;
+
+  /**
+   * T4.4's two reads as tiles (2026-10-08), so their progress sits beside the
+   * headline figures rather than at the foot of the page. Both read every
+   * opportunity, so neither follows the all/executed toggle.
+   */
+  protected readonly alertSplit = computed(() => {
+    const rows = this.opportunityClv()?.by_alert ?? [];
+    const pick = (key: string) => rows.find((row) => row.key === key) ?? null;
+    const recommended = pick('recommended');
+    const rest = pick('not recommended');
+    const gap =
+      recommended?.mean_clv_pct != null && rest?.mean_clv_pct != null
+        ? recommended.mean_clv_pct - rest.mean_clv_pct
+        : null;
+    return {
+      recommended,
+      rest,
+      gap,
+      gapLabel: gap === null ? null : `${gap >= 0 ? '+' : ''}${gap.toFixed(2)} pts`,
+      // Outside the gate's tolerance: the recommendations need their own testing.
+      wide: gap !== null && gap < -GAP_TOLERANCE_PTS,
+    };
+  });
+
   /** The breakdowns in the order the table shows them, sports by name. */
   protected readonly opportunityClvGroups = computed(() => {
     const clv = this.opportunityClv();

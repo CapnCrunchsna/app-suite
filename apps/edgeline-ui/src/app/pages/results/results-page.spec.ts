@@ -315,7 +315,32 @@ describe('ResultsPage (§11.1, §12)', () => {
       expect(panel).toContain('1 to 3 days');
       expect(panel).toContain('By alert');
       expect(panel).toContain('Not recommended');
+
+      // T4.4's two reads as tiles: progress toward 200 and 50, and the gap,
+      // flagged once it is wider than the gate's ~2 points.
+      expect(tile(el, 'Detector CLV').textContent).toContain('4 of 200 opportunities');
+      const gate = tile(el, 'Recommended vs rest');
+      expect(gate.querySelector('.tile__value')?.textContent?.trim()).toBe('+2.01 pts');
+      expect(gate.querySelector('.tile__value')?.classList.contains('neg')).toBe(false);
+      expect(gate.textContent).toContain('1 of 50 recommended');
       expect(el.textContent?.replace(/\s+/g, ' ')).toContain('7 circular measurements left out');
+    });
+
+    it('flags a recommended side more than two points behind the rest', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = {
+          ...POPULATED,
+          opportunity_clv: {
+            graded: 96, circular: 0, unpriced: 0,
+            measured: stats(null, 96, 6.22),
+            by_alert: [stats('recommended', 16, 3.57), stats('not recommended', 80, 6.75)],
+          },
+        };
+      });
+      const gate = tile(el, 'Recommended vs rest');
+      expect(gate.querySelector('.tile__value')?.textContent?.trim()).toBe('-3.18 pts');
+      expect(gate.querySelector('.tile__value')?.classList.contains('neg')).toBe(true);
+      expect(gate.textContent).toContain('wider than the gate allows');
     });
 
     it('says nothing has been measured rather than showing zeros', async () => {

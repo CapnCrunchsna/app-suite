@@ -139,12 +139,21 @@ def _spa_files(directory: str):
     class SpaFiles(StaticFiles):
         async def get_response(self, path: str, scope):
             try:
-                return await super().get_response(path, scope)
+                response = await super().get_response(path, scope)
             except StarletteHTTPException as exc:
                 requested = path.replace("\\", "/").lstrip("/")
                 if exc.status_code != 404 or requested.startswith("api/"):
                     raise
-                return await super().get_response("index.html", scope)
+                response = await super().get_response("index.html", scope)
+            # The page is the one file whose name does not change with a build:
+            # it names the hashed bundles. Sent with only `last-modified`, a
+            # browser may reuse it heuristically and keep loading the previous
+            # build's scripts — a rebuilt Results page showed nothing new on
+            # 2026-10-07. `no-cache` revalidates it each load, and the `etag`
+            # keeps that a 304 when nothing changed. The bundles stay cacheable.
+            if response.headers.get("content-type", "").startswith("text/html"):
+                response.headers["Cache-Control"] = "no-cache"
+            return response
 
     return SpaFiles(directory=directory, html=True)
 
