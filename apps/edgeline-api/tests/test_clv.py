@@ -170,7 +170,7 @@ async def test_the_summary_counts_mean_median_and_share_with_circular_left_out(
     from elasticsearch import AsyncElasticsearch
 
     from edgeline.clv import format_report, opportunity_clv_summary
-    from edgeline.indices import OPPORTUNITIES_INDEX, with_prefix
+    from edgeline.indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, with_prefix
 
     client = AsyncElasticsearch(hosts=[es_url])
     prefix = test_index_prefix
@@ -199,6 +199,14 @@ async def test_the_summary_counts_mean_median_and_share_with_circular_left_out(
                       "expires_at": "2026-09-27T23:00:00Z", "sport_key": "icehockey_nhl",
                       "clv_pct": None, "clv_graded_at": "2026-09-28T06:00:00Z"},
         )
+        # "a" was alerted twice (a re-alert) and "circ" once: one recommended
+        # opportunity each, and the circular one stays out of the split as well.
+        for rec_id, opp_id in (("r1", "a"), ("r2", "a"), ("r3", "circ")):
+            await client.index(
+                index=with_prefix(RECOMMENDATIONS_INDEX, prefix), id=rec_id,
+                document={"opportunity_id": opp_id, "paper": True, "channel": "log",
+                          "sent_at": "2026-09-27T12:00:00Z"},
+            )
         await client.indices.refresh(index=f"{prefix}*")
 
         summary = await opportunity_clv_summary(client, prefix=prefix)
@@ -222,9 +230,15 @@ async def test_the_summary_counts_mean_median_and_share_with_circular_left_out(
         by_lead = {row["key"]: row["count"] for row in summary["by_lead"]}
         assert by_lead == {"under 2 h": 0, "2 to 6 h": 1, "6 to 24 h": 0,
                            "1 to 3 days": 2, "3 days and over": 0}
+        by_alert = {row["key"]: row for row in summary["by_alert"]}
+        assert by_alert["recommended"]["count"] == 1
+        assert by_alert["recommended"]["mean_clv_pct"] == pytest.approx(6.0)
+        assert by_alert["not recommended"]["count"] == 2
+        assert by_alert["not recommended"]["mean_clv_pct"] == pytest.approx(1.0)
 
         text = format_report(summary)
         assert "3 counted, 1 circular, 1 with no stored price" in text
+        assert "by alert" in text and "not recommended" in text
         assert "T4.4" in text
     finally:
         await client.close()

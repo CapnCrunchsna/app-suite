@@ -94,6 +94,7 @@ export interface OpportunityClvSummary {
   by_sport?: OpportunityClvStats[];
   by_odds?: OpportunityClvStats[];
   by_lead?: OpportunityClvStats[];
+  by_alert?: OpportunityClvStats[];
 }
 
 export interface OpportunityLegRow {

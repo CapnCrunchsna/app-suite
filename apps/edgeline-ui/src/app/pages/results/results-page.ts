@@ -179,6 +179,12 @@ export class ResultsPage {
         title: 'By lead time',
         rows: (clv.by_lead ?? []).map((row) => ({ ...row, label: row.key ?? '' })),
       },
+      // The go-live gate beside the detector (T4.4, 2026-10-08): the opportunities
+      // that became recommendations, and the rest.
+      {
+        title: 'By alert',
+        rows: (clv.by_alert ?? []).map((row) => ({ ...row, label: humanise(row.key ?? '') })),
+      },
     ];
   });
 

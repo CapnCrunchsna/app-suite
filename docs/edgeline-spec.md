@@ -1101,9 +1101,9 @@ does it on demand and prints the report: count, mean, median and share positive,
 sport, odds band (under 2.0, 2.0–3.0, 3.0–5.0, 5.0–10.0, 10.0 and over) and lead time (under 2 h,
 2–6 h, 6–24 h, 1–3 days, 3 days and over). `GET /api/results/summary` carries the same aggregation
 as `opportunity_clv`, and the Results page shows it below the recommendations' figures. A game
-with nothing stored before its start is marked measured with no CLV, and not asked again. **T4.4
-is unchanged**: at least 200 paper recommendations and their CLV distribution, reported to the
-user. This is supporting evidence beside it, not a redefinition of it.
+with nothing stored before its start is marked measured with no CLV, and not asked again. Since
+2026-10-08 the report also splits by alert — the opportunities that became recommendations (any
+recommendation's `opportunity_id`) and the rest — and **T4.4 reads both** (§15).
 
 ---
 
@@ -1336,7 +1336,21 @@ the channel that announces it. T3.1–T3.3 remain untouched and in order.*
   the UI edits it, and `book_home` is verified for 8 of 10 books. What remains is data only —
   one league URL per enabled book, plus the two books nothing here can reach (`espnbet` serves
   ESPN's certificate rather than a sportsbook, `bet365` answers Cloudflare with 403)
-- [ ] T4.4 Run ≥ 200 paper recommendations; compute CLV distribution; report to user
+- [ ] **T4.4 — restated 2026-10-08, by the user.** Two reads, the first faster. At ~17 paper
+  recommendations a week, 200 would arrive mid-December, because the cooldown — a rate limit for
+  the reader, not an evidence rule — admits about one opportunity in six. So:
+  - **T4.4a, the detector.** At ≥ 200 non-circular opportunity CLVs (`python -m edgeline.clv`),
+    report the distribution and what it says to tune — odds bands, lead time, sports. 96 on
+    2026-10-08.
+  - **T4.4b, the go-live gate.** At ≥ 50 recommended opportunities with a non-circular CLV, the
+    report's *by alert* rows: their mean must be positive and not materially below the
+    not-recommended side (within ~2 points). **A wider gap means more testing of the
+    recommendations specifically** — what the alert filter selects for — toward the original 200,
+    before real stakes. On 2026-10-08: 16 recommended at +3.57% mean against 80 not recommended
+    at +6.75%, a gap worth watching at this sample size.
+
+  The split measures each opportunity at its first-detection price; the recommendations' own CLV,
+  at the price each alert carried, stays on the results above it.
 - [ ] **T4.5 — added 2026-09-12.** Try `includeLinks=true` + `includeSids=true` on one poll
   once the quota resets (§9.4). Measure the credit cost against a cycle without them, record
   which of the ten books actually return a link and at which level, and only then wire `sid`

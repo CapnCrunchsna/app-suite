@@ -34,8 +34,8 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends
 
-from ...clv import SUMMARY_BODY, summarise
-from ...indices import OPPORTUNITIES_INDEX, RESULTS_INDEX
+from ...clv import RECOMMENDED_IDS_BODY, recommended_ids, summarise, summary_body
+from ...indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, RESULTS_INDEX
 from ..deps import Context, get_context, search
 from ..models import SummaryResponse
 
@@ -118,8 +118,14 @@ async def summary(
     ]
     # Every opportunity's CLV (§12, 2026-10-01): one more aggregation request,
     # shaped by `clv.py` so the CLI report and this page read the same figures.
+    # `by_alert` needs the recommended ids first, so this is two requests.
+    recommended = recommended_ids(
+        await search(context, RECOMMENDATIONS_INDEX, **RECOMMENDED_IDS_BODY)
+    )
     opportunity_clv = summarise(
-        await search(context, OPPORTUNITIES_INDEX, track_total_hits=True, **SUMMARY_BODY)
+        await search(
+            context, OPPORTUNITIES_INDEX, track_total_hits=True, **summary_body(recommended)
+        )
     )
     return {
         "group": group,

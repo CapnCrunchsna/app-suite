@@ -206,10 +206,12 @@ class OpportunityClvStats(BaseModel):
 class OpportunityClvSummary(BaseModel):
     """CLV over every opportunity whose game has started (§12, 2026-10-01).
 
-    Supporting evidence beside the recommendations' figures above — the cooldown
-    keeps those to about one opportunity in six. Circular measurements, priced by
-    the poll that found the edge, are counted and left out of every figure.
-    T4.4 still reads the recommendations.
+    The early read on the detector; the cooldown keeps recommendations to about
+    one opportunity in six. Circular measurements, priced by the poll that found
+    the edge, are counted and left out of every figure. `by_alert` splits it into
+    the opportunities that became recommendations and the rest (2026-10-08): the
+    recommended side is T4.4's go-live gate, and a gap between the two means more
+    recommendation testing.
     """
 
     graded: int = 0
@@ -219,6 +221,7 @@ class OpportunityClvSummary(BaseModel):
     by_sport: list[OpportunityClvStats] = Field(default_factory=list)
     by_odds: list[OpportunityClvStats] = Field(default_factory=list)
     by_lead: list[OpportunityClvStats] = Field(default_factory=list)
+    by_alert: list[OpportunityClvStats] = Field(default_factory=list)
 
 
 class SummaryResponse(BaseModel):

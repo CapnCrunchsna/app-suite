@@ -1171,11 +1171,18 @@
             },
             "type": "array",
             "title": "By Lead"
+          },
+          "by_alert": {
+            "items": {
+              "$ref": "#/components/schemas/OpportunityClvStats"
+            },
+            "type": "array",
+            "title": "By Alert"
           }
         },
         "type": "object",
         "title": "OpportunityClvSummary",
-        "description": "CLV over every opportunity whose game has started (§12, 2026-10-01).\n\nSupporting evidence beside the recommendations' figures above — the cooldown\nkeeps those to about one opportunity in six. Circular measurements, priced by\nthe poll that found the edge, are counted and left out of every figure.\nT4.4 still reads the recommendations."
+        "description": "CLV over every opportunity whose game has started (§12, 2026-10-01).\n\nThe early read on the detector; the cooldown keeps recommendations to about\none opportunity in six. Circular measurements, priced by the poll that found\nthe edge, are counted and left out of every figure. `by_alert` splits it into\nthe opportunities that became recommendations and the rest (2026-10-08): the\nrecommended side is T4.4's go-live gate, and a gap between the two means more\nrecommendation testing."
       },
       "OpportunityLegRow": {
         "properties": {

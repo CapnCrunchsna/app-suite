@@ -304,6 +304,7 @@ describe('ResultsPage (§11.1, §12)', () => {
             by_sport: [stats('americanfootball_ncaaf', 4, 2.06)],
             by_odds: [stats('10.0 and over', 2, 3.1)],
             by_lead: [stats('1 to 3 days', 4, 2.06)],
+            by_alert: [stats('recommended', 1, 3.57), stats('not recommended', 3, 1.56)],
           },
         };
       });
@@ -312,6 +313,8 @@ describe('ResultsPage (§11.1, §12)', () => {
       expect(panel).toContain('NCAAF');
       expect(panel).toContain('10.0 and over');
       expect(panel).toContain('1 to 3 days');
+      expect(panel).toContain('By alert');
+      expect(panel).toContain('Not recommended');
       expect(el.textContent?.replace(/\s+/g, ' ')).toContain('7 circular measurements left out');
     });
 

@@ -161,14 +161,15 @@
     }
   </ui-panel>
 
-  <!-- §12, 2026-10-01: every opportunity's CLV, as supporting evidence. Below
-       the recommendations on purpose — T4.4's gate reads those. -->
+  <!-- §12, 2026-10-01: every opportunity's CLV. T4.4 (restated 2026-10-08) reads
+       it as the detector's verdict and its "By alert" rows as the go-live gate. -->
   <ui-panel heading="Every opportunity's CLV">
     <p class="dim clv-note">
       Every opportunity whose game has started, measured at the price it was found at — not only
       the recommendations above, which the cooldown keeps to about one in six. A measurement
-      priced by the very poll that found the edge is circular and left out. Supporting evidence:
-      the go-live report still reads the recommendations.
+      priced by the very poll that found the edge is circular and left out. This is the read on
+      the detector; <em>By alert</em> puts the opportunities that became recommendations beside
+      the rest, and a gap between them means the recommendations need more testing.
     </p>
     @if (opportunityClv(); as clv) {
       @if (clvMeasured(); as measured) {

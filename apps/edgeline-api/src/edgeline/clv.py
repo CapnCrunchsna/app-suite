@@ -21,8 +21,10 @@ recommendations were that (2026-10-01); the one genuine CLV among them was
 +2.06%. `clv_circular` is true when the closing price was fetched at or before
 `detected_at`, and the summary's figures exclude it while counting it.
 
-T4.4 is unchanged — at least 200 paper recommendations, their CLV distribution,
-reported to the user. This is evidence beside that, not a substitute for it.
+**T4.4 reads both (restated 2026-10-08).** This report is the early read on the
+detector, and its `by_alert` split puts the opportunities that became
+recommendations beside the rest: the recommended side is the go-live gate, and a
+gap between the two sends the recommendations back for more testing (§15).
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ from typing import Any
 from .config import Settings
 from .dedup import parse_iso
 from .grading import CLV_CLOSING, CLV_DERIVED, closing_consensus_prob
-from .indices import OPPORTUNITIES_INDEX, with_prefix
+from .indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, with_prefix
 from .oddsmath import clv_pct
 from .schemas import utc_now_iso
 
@@ -224,6 +226,56 @@ SUMMARY_BODY: dict[str, Any] = {
 }
 
 
+#: Which opportunities became recommendations — each recommendation's
+#: `opportunity_id` is its opportunity's `_id`. A re-alerted opportunity has
+#: several recommendations and is one id here.
+RECOMMENDED_IDS_BODY: dict[str, Any] = {
+    "size": 0,
+    "aggs": {"ids": {"terms": {"field": "opportunity_id", "size": 10_000}}},
+}
+
+#: The split's labels, in the order the report shows them.
+RECOMMENDED = "recommended"
+NOT_RECOMMENDED = "not recommended"
+
+
+def recommended_ids(response: dict[str, Any]) -> list[str]:
+    """The `RECOMMENDED_IDS_BODY` answer as a list of opportunity ids."""
+    buckets = (response.get("aggregations") or {}).get("ids", {}).get("buckets", [])
+    return [bucket["key"] for bucket in buckets]
+
+
+def summary_body(recommended: list[str]) -> dict[str, Any]:
+    """`SUMMARY_BODY` plus `by_alert`: the same figures for the opportunities
+    that became recommendations and for the rest (2026-10-08).
+
+    The opportunity CLV is the early read on the detector, and the
+    recommendations are what money would follow; the cooldown picks the biggest
+    edge per slot, so the two can differ, and this is where a difference shows.
+    Each side is measured at the opportunity's first-detection price, so a
+    re-alert at a better price is not what this reads — the results above are.
+    """
+    ids = {"ids": {"values": recommended}}
+    body = {**SUMMARY_BODY, "aggs": {**SUMMARY_BODY["aggs"]}}
+    measured = body["aggs"]["measured"]
+    body["aggs"]["measured"] = {
+        **measured,
+        "aggs": {
+            **measured["aggs"],
+            "by_alert": {
+                "filters": {
+                    "filters": {
+                        RECOMMENDED: ids,
+                        NOT_RECOMMENDED: {"bool": {"must_not": [ids]}},
+                    }
+                },
+                "aggs": _STATS,
+            },
+        },
+    }
+    return body
+
+
 def _stats(bucket: dict[str, Any], key: str | None = None) -> dict[str, Any]:
     count = bucket.get("doc_count", 0)
     median = (bucket.get("median", {}).get("values") or {}).get("50.0")
@@ -260,12 +312,25 @@ def summarise(response: dict[str, Any]) -> dict[str, Any]:
             _stats(bucket, bucket["key"])
             for bucket in measured.get("by_lead", {}).get("buckets", [])
         ],
+        "by_alert": [
+            _stats(by_alert[key], key)
+            for by_alert in [measured.get("by_alert", {}).get("buckets", {})]
+            for key in (RECOMMENDED, NOT_RECOMMENDED)
+            if key in by_alert
+        ],
     }
 
 
 async def opportunity_clv_summary(client, *, prefix: str) -> dict[str, Any]:
+    recommended = recommended_ids(
+        await client.search(
+            index=with_prefix(RECOMMENDATIONS_INDEX, prefix), **RECOMMENDED_IDS_BODY
+        )
+    )
     response = await client.search(
-        index=with_prefix(OPPORTUNITIES_INDEX, prefix), track_total_hits=True, **SUMMARY_BODY
+        index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+        track_total_hits=True,
+        **summary_body(recommended),
     )
     return summarise(response)
 
@@ -293,11 +358,13 @@ def format_report(summary: dict[str, Any]) -> str:
         ("by sport", summary["by_sport"]),
         ("by odds", summary["by_odds"]),
         ("by lead time", summary["by_lead"]),
+        ("by alert", summary["by_alert"]),
     ):
         lines.append(title)
         lines.extend(_line(row, str(row["key"])) for row in rows)
     lines.append(
-        "Supporting evidence: T4.4 reads the recommendations' CLV, at least 200 of them."
+        "T4.4 (spec §15): this reads the detector; the recommended rows are the "
+        "go-live gate, and a gap between them means more recommendation testing."
     )
     return "\n".join(lines)
 
