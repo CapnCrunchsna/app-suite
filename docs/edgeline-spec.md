@@ -1157,10 +1157,22 @@ ET NFL window answered with 2 of its 8 games, and the 20:05 and 00:20 windows wi
 the sweep fired on time, and `/events` honours the same window, so the answer itself was short,
 and nothing kept it. Now each game carrying an opportunity that the window's answer omits is
 fetched once through `/events/{id}/odds` (the same `markets x regions`, for one game) and its
-snapshots stored `is_closing` whatever start they give; the miss goes to `edgeline-unmatched` as
+snapshots stored `is_closing`; the miss goes to `edgeline-unmatched` as
 `closing_window_miss`, with both answers summarised (each event's id, start and book count), and
 the closing fetch's quarantined fragments, which it used to drop unseen, go there too. Once per
 game per worker run; the projection does not count these, so it stays a floor (§8.4).
+
+**The cause was moved kickoffs, and the window now follows them — amended 2026-10-12.** From 10-08
+to 10-12 all 27 games with an opportunity got a closing line, six of them only by id, and in all
+six the provider had moved kickoff 3 to 10 minutes later than the stored `commence_time`, so a
+window ending at the stored start filtered the game out — and the by-id line, taken at the stored
+start, was 8 to 15 minutes early. Three changes, decided: the window's end is padded 15 minutes past
+`closing_capture_offset_s` (`CLOSING_WINDOW_PAD`; the answer bills per request, not per game); every
+closing answer, the by-id one included, rewrites the stored `commence_time` of any game whose start
+moved; and a game is due by the start the answer gives, so a moved one waits for the sweep that
+reaches its new start. A by-id answer that puts the game beyond the window stores nothing
+`is_closing`, records `deferred_to` on its miss row, and does not use up the game's one by-id
+request.
 
 **The featured cadence is measured from the last poll that landed, not from process start
 (`poll_realign`, added 2026-09-16).** An APScheduler interval job anchors its grid to when the

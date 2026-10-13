@@ -1011,21 +1011,27 @@ async def capture_closing_lines(
 
     # Always the broad `regions`, never the named books (§8.4, 2026-10-01): a
     # closing line is grading's consensus, and offshore books belong in it. The
-    # window asks only for the games about to start; none in it is free.
+    # window asks only for the games about to start, padded past `window_end`
+    # so a kickoff the provider has pushed back is still in the answer.
     window = {
         "commence_time_from": now.strftime(PROVIDER_STAMP),
-        "commence_time_to": window_end.strftime(PROVIDER_STAMP),
+        "commence_time_to": (window_end + CLOSING_WINDOW_PAD).strftime(PROVIDER_STAMP),
     }
     response = await provider.fetch_odds(
         sport_key, markets, regions=",".join(settings.regions), **window
     )
     quarantine: list[UnmatchedRow] = []
     snapshots = normalize(provider.key, response.payload, quarantine=quarantine)
+    await _refresh_start_times(client, snapshots, prefix=prefix)
 
+    # Due by the start the answer gives, not the stored one: a game pushed past
+    # `window_end` waits for a later sweep, which finds it by the start just
+    # refreshed, so its line is taken five minutes out rather than fifteen.
     due = [
         s for s in snapshots if now < parse_iso(s.commence_time) <= window_end
     ]
     event_ids = {event_doc_id(s.sport_key, s.provider_event_id) for s in due}
+    answered = {event_doc_id(s.sport_key, s.provider_event_id) for s in snapshots}
     already = await _events_with_closing_lines(client, event_ids | set(wanted), prefix=prefix)
 
     # An opportunity's game the window should have returned and did not
@@ -1036,16 +1042,24 @@ async def capture_closing_lines(
     # answer itself is what was short. Each such game is asked for once by its
     # own id, and what both answers said is kept in `edgeline-unmatched`, so the
     # next miss shows its cause rather than only its effect.
-    missed = sorted(set(wanted) - event_ids - already - (fallback_tried or set()))
+    missed = sorted(set(wanted) - answered - already - (fallback_tried or set()))
     misses: list[UnmatchedRow] = []
     for event_id in missed:
-        if fallback_tried is not None:
-            fallback_tried.add(event_id)
         found, record = await _fetch_one_closing_line(
             provider, sport_key, event_id, sorted(wanted[event_id]), settings, quarantine
         )
         record.update(event_id=event_id, window=window, answered=_answer_summary(response.payload))
         misses.append(UnmatchedRow(provider.key, CLOSING_WINDOW_MISS, record))
+        await _refresh_start_times(client, found, prefix=prefix)
+        if found and parse_iso(found[0].commence_time) > window_end:
+            # Moved beyond even the padded window (2026-10-12). Its stored start
+            # is refreshed above, so a later sweep reaches it at the real
+            # kickoff, and it may be asked for by id once more if that window
+            # leaves it out too.
+            record["deferred_to"] = found[0].commence_time
+            continue
+        if fallback_tried is not None:
+            fallback_tried.add(event_id)
         due.extend(found)
         event_ids |= {event_id} if found else set()
 
@@ -1088,6 +1102,54 @@ async def capture_closing_lines(
 #: `edgeline-unmatched` reason for a game the closing window's answer left out.
 CLOSING_WINDOW_MISS = "closing_window_miss"
 
+#: How far past `closing_capture_offset_s` the closing window asks (2026-10-12).
+#: From 10-08 to 10-12, all six games the window left out had a kickoff the
+#: provider had moved 3 to 10 minutes later than the stored one, so a window
+#: ending at the stored kickoff filtered them out. The answer bills per request,
+#: not per game, so asking further costs nothing.
+CLOSING_WINDOW_PAD = timedelta(minutes=15)
+
+
+async def _refresh_start_times(
+    client, snapshots: list[BookOddsSnapshot], *, prefix: str
+) -> list[str]:
+    """Move each stored `commence_time` to the one this answer gives.
+
+    Polls already rewrite it, but a kickoff moved after the last poll stayed
+    wrong until the next, which is what put six games outside their closing
+    windows. Only events already stored, only where the start differs; returns
+    the ids moved. A failure is logged and leaves the old start.
+    """
+    answer = event_documents(snapshots)
+    if not answer:
+        return []
+    index = with_prefix(EVENTS_INDEX, prefix)
+    try:
+        stored = await client.mget(index=index, ids=sorted(answer), source=["commence_time"])
+        moved = {
+            doc["_id"]: answer[doc["_id"]]["commence_time"]
+            for doc in stored["docs"]
+            if doc.get("found")
+            and doc["_source"].get("commence_time") != answer[doc["_id"]]["commence_time"]
+        }
+        if moved:
+            from elasticsearch.helpers import async_bulk
+
+            await async_bulk(
+                client,
+                [
+                    {"_op_type": "update", "_index": index, "_id": doc_id,
+                     "doc": {"commence_time": start}}
+                    for doc_id, start in moved.items()
+                ],
+            )
+    except Exception:
+        log.warning("closing capture: could not refresh stored start times", exc_info=True)
+        return []
+    for doc_id, start in moved.items():
+        log.info("kickoff moved for %s: now %s", doc_id, start)
+    return sorted(moved)
+
 
 def _answer_summary(payload: Any) -> list[dict[str, Any]]:
     """Each event an odds answer held: id, start, and how many books priced it."""
@@ -1115,8 +1177,8 @@ async def _fetch_one_closing_line(
     """One missed game's closing line by its own id, and what the answer said.
 
     `/events/{id}/odds` bills `markets x regions` like the window does, for one
-    game. Its snapshots are kept whatever start time it gives, since the game
-    has not started: a start that moved out of the window is itself the finding.
+    game. The start it gives is the finding: the caller refreshes the stored one
+    from it, and defers a game it puts beyond the window to its real kickoff.
     """
     provider_event_id = event_id.split(":", 1)[1]
     try:

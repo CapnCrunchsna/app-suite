@@ -194,10 +194,13 @@ Two consequences that are not obvious from §8.4:
   54 for all three. It is what gives a detection days out a price from after it was found.
 - **A game the window's answer leaves out is fetched by id, once (2026-10-07).** Sunday 10-04's
   13:00 ET NFL window came back with 2 of 8 games and the 20:05 and 00:20 windows with none, on
-  an awake machine with the sweep on time; the cause is not yet known. Each such game carrying an
-  opportunity now gets one `/events/{id}/odds` request (`markets x regions`, ~2 credits), and the
-  miss is kept in `edgeline-unmatched` as `closing_window_miss` with what both answers held — read
-  them there (or on the matching page) to see why. The projection does not count these.
+  an awake machine with the sweep on time. Each such game carrying an opportunity now gets one
+  `/events/{id}/odds` request (`markets x regions`, ~2 credits), and the miss is kept in
+  `edgeline-unmatched` as `closing_window_miss` with what both answers held. The projection does
+  not count these. **The cause (2026-10-12) was kickoffs moved 3-10 minutes later than the stored
+  start**, so the window now asks 15 minutes past the offset (free: billed per request), every
+  closing answer refreshes the stored `commence_time`, and a moved game is captured five minutes
+  before its real start. Expect the by-id requests to become rare.
 - **Grading costs 2 credits a sport, but only when there is a bet to settle.** Until
   2026-09-23 every run fetched scores for every enabled sport — including the catch-up
   grade 15 seconds after each worker start — whatever there was to grade. With the

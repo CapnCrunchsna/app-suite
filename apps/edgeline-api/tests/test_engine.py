@@ -1475,7 +1475,8 @@ async def test_opportunities_mode_buys_a_closing_line_only_where_one_will_be_rea
         assert request["regions"] == "us,us2"
         assert "bookmakers" not in request
         assert request["commence_time_from"] == utc_iso(now)
-        assert request["commence_time_to"] == utc_iso(now + timedelta(seconds=300))
+        # Padded past the offset (2026-10-12), so a pushed-back kickoff is still answered.
+        assert request["commence_time_to"] == utc_iso(now + timedelta(seconds=300 + 900))
 
         await client.indices.refresh(index=f"{prefix}*")
         provider.calls.clear()
@@ -1578,6 +1579,146 @@ async def test_a_game_the_closing_window_leaves_out_is_asked_for_by_id_once(
         ) == []
         assert provider.by_id == []
         assert tried == {"baseball_mlb:evt1"}
+    finally:
+        await client.close()
+
+
+async def _stored_start(client, prefix, event_id="baseball_mlb:evt1") -> str:
+    from edgeline.indices import EVENTS_INDEX, with_prefix
+
+    found = await client.get(index=with_prefix(EVENTS_INDEX, prefix), id=event_id)
+    return found["_source"]["commence_time"]
+
+
+async def _closing_rows(client, prefix, event_id="baseball_mlb:evt1") -> int:
+    from edgeline.indices import ODDS_SNAPSHOTS_INDEX, with_prefix
+
+    await client.indices.refresh(index=f"{prefix}*")
+    found = await client.count(
+        index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix),
+        query={"bool": {"filter": [
+            {"term": {"event_id": event_id}}, {"term": {"is_closing": True}},
+        ]}},
+    )
+    return found["count"]
+
+
+@pytest.mark.es
+async def test_a_kickoff_moved_inside_the_padded_window_waits_for_its_real_start(
+    es_url, test_index_prefix
+):
+    """2026-10-12: six games the window left out had a kickoff moved 3 to 10
+    minutes later than the stored one. The padded window answers with the game,
+    its stored start is moved, and its closing line is taken five minutes before
+    the new start rather than early — and no by-id request is needed."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+    from edgeline.indices import with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    moved_to = now + timedelta(seconds=600)
+    mode = settings(closing_capture_mode="opportunities")
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _ShortWindowProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            id="d" * 64,
+            document={
+                "type": "ev", "event_id": "baseball_mlb:evt1", "market_key": "h2h", "legs": [],
+                "edge_pct": 3.0, "status": "open", "detected_at": utc_iso(now - timedelta(hours=3)),
+                "expires_at": utc_iso(now + timedelta(seconds=120)),
+            },
+            refresh="wait_for",
+        )
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.payload = _payload_commencing_at(moved_to)
+        provider.calls.clear()
+
+        early = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix,
+            now=now, fallback_tried=set(),
+        )
+
+        assert early == []
+        assert len(provider.calls) == 1
+        assert provider.by_id == [], "the padded window answered; nothing to ask by id"
+        assert await _closing_rows(client, prefix) == 0
+        assert await _stored_start(client, prefix) == utc_iso(moved_to)
+
+        # The stored start, now right, keeps the sweep quiet until the game is due.
+        provider.calls.clear()
+        assert await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix,
+            now=now + timedelta(seconds=60), fallback_tried=set(),
+        ) == []
+        assert provider.calls == []
+
+        on_time = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix,
+            now=moved_to - timedelta(seconds=270), fallback_tried=set(),
+        )
+        assert on_time == ["baseball_mlb:evt1"]
+        assert await _closing_rows(client, prefix) > 0
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_a_kickoff_the_fallback_finds_moved_far_is_deferred_not_captured(
+    es_url, test_index_prefix
+):
+    """A game moved beyond even the padded window: the by-id answer gives its new
+    start, which is stored; nothing is captured yet, and the game is not marked
+    tried, so the sweep at its real kickoff can ask for it again."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import CLOSING_WINDOW_MISS, capture_closing_lines, run_once
+    from edgeline.indices import UNMATCHED_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    moved_to = now + timedelta(hours=1)
+    mode = settings(closing_capture_mode="opportunities")
+    try:
+        await _fresh_cluster(client, prefix)
+        provider = _ShortWindowProvider(_payload_commencing_at(now + timedelta(seconds=120)))
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.index(
+            index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+            id="c" * 64,
+            document={
+                "type": "ev", "event_id": "baseball_mlb:evt1", "market_key": "h2h", "legs": [],
+                "edge_pct": 3.0, "status": "open", "detected_at": utc_iso(now - timedelta(hours=3)),
+                "expires_at": utc_iso(now + timedelta(seconds=120)),
+            },
+            refresh="wait_for",
+        )
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.payload = _payload_commencing_at(moved_to)
+        provider.window_payload = []
+        tried: set[str] = set()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb", settings=mode, prefix=prefix,
+            now=now, fallback_tried=tried,
+        )
+
+        assert captured == []
+        assert provider.by_id == [("evt1", ["h2h"], "us,us2")]
+        assert tried == set()
+        assert await _closing_rows(client, prefix) == 0
+        assert await _stored_start(client, prefix) == utc_iso(moved_to)
+        [miss] = (await client.search(
+            index=with_prefix(UNMATCHED_INDEX, prefix),
+            query={"term": {"reason": CLOSING_WINDOW_MISS}},
+        ))["hits"]["hits"]
+        assert miss["_source"]["raw"]["deferred_to"] == utc_iso(moved_to)
     finally:
         await client.close()
 
