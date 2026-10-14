@@ -50,6 +50,7 @@ import type {
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
 import { marketLabel, matchup, sportLabel, statusLabel, typeLabel } from '../../labels';
+import { valueOr } from '../../resource-value';
 
 /** §13 stamps the heartbeat every 60 s, so three missed ones is a stopped
  *  worker rather than a slow one. */
@@ -102,18 +103,18 @@ export class DashboardPage {
     defaultValue: [] as RecommendationRow[],
   });
 
-  protected readonly settings = computed(() => this.settingsResource.value());
-  protected readonly today = computed(() => this.todayResource.value());
+  protected readonly settings = computed(() => valueOr(this.settingsResource, {}));
+  protected readonly today = computed(() => valueOr(this.todayResource, []));
   protected readonly loading = computed(
     () => this.booksResource.isLoading() || this.todayResource.isLoading(),
   );
 
-  protected readonly bankrollCents = computed(() => this.bankrollResource.value().total_cents);
+  protected readonly bankrollCents = computed(() => valueOr(this.bankrollResource, { total_cents: 0 }).total_cents);
 
   protected readonly enabledBooks = computed(() =>
-    this.booksResource.value().filter((book) => book.enabled === true),
+    valueOr(this.booksResource, []).filter((book) => book.enabled === true),
   );
-  protected readonly bookCount = computed(() => this.booksResource.value().length);
+  protected readonly bookCount = computed(() => valueOr(this.booksResource, []).length);
 
   /** §3.2's `min_books_for_consensus`; the §3.2 default only stands in until
    *  the settings read lands. */

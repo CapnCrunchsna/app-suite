@@ -40,6 +40,8 @@ import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
 import { formatDecimalOdds, toAmerican } from '../../formatting';
 import { humanise, marketLabel, matchup, sportLabel, statusLabel } from '../../labels';
+import { LoadFailure } from '../../datastore-outage';
+import { valueOr } from '../../resource-value';
 
 /** One leg of a stored §5 `StakePlan`, read defensively out of an open blob. */
 export interface StakeLegView {
@@ -62,7 +64,7 @@ type PaperFilter = 'all' | 'paper' | 'executed';
 
 @Component({
   selector: 'el-recommendations-page',
-  imports: [Panel],
+  imports: [Panel, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './recommendations-page.html',
   styleUrl: './recommendations-page.scss',
@@ -94,7 +96,7 @@ export class RecommendationsPage {
     defaultValue: [] as RecommendationRow[],
   });
 
-  protected readonly rows = computed(() => this.rowsResource.value());
+  protected readonly rows = computed(() => valueOr(this.rowsResource, [] as RecommendationRow[]));
   protected readonly loading = this.rowsResource.isLoading;
   protected readonly loadError = computed(() => this.rowsResource.error());
   protected readonly filtered = computed(

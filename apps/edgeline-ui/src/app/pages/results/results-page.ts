@@ -45,6 +45,8 @@ import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { humanise, sportLabel } from '../../labels';
 import { SystemStatus } from '../../system-status.service';
+import { LoadFailure } from '../../datastore-outage';
+import { valueOr } from '../../resource-value';
 
 /** `excluded_reason` values (`audit.py`), as the clause that follows a count. */
 const EXCLUSION_REASONS: Record<string, string> = {
@@ -66,9 +68,16 @@ const DETECTOR_TARGET = 200;
 const GATE_TARGET = 50;
 const GAP_TOLERANCE_PTS = 2;
 
+/** Before anything has loaded, and in place of a failed load. */
+const EMPTY_SUMMARY = {
+  group: 'day',
+  buckets: [],
+  totals: { graded: 0, pnl_cents: 0, avg_clv_pct: null, hit_rate: null },
+} satisfies SummaryResponse;
+
 @Component({
   selector: 'el-results-page',
-  imports: [Panel],
+  imports: [Panel, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './results-page.html',
   styleUrl: './results-page.scss',
@@ -83,17 +92,13 @@ export class ResultsPage {
   private readonly summaryResource = resource({
     params: () => this.group(),
     loader: ({ params }) => this.api.getResultsSummary({ group: params }),
-    defaultValue: {
-      group: 'day',
-      buckets: [],
-      totals: { graded: 0, pnl_cents: 0, avg_clv_pct: null, hit_rate: null },
-    } satisfies SummaryResponse,
+    defaultValue: EMPTY_SUMMARY,
   });
 
   protected readonly loading = this.summaryResource.isLoading;
   protected readonly loadError = computed(() => this.summaryResource.error());
-  protected readonly buckets = computed(() => this.summaryResource.value().buckets ?? []);
-  protected readonly totals = computed(() => this.summaryResource.value().totals);
+  protected readonly buckets = computed(() => valueOr(this.summaryResource, EMPTY_SUMMARY).buckets ?? []);
+  protected readonly totals = computed(() => valueOr(this.summaryResource, EMPTY_SUMMARY).totals);
 
   /**
    * Where the CLV figure actually came from, in words.
@@ -165,7 +170,7 @@ export class ResultsPage {
    * recommendations, and circular measurements are counted, not averaged.
    */
   protected readonly opportunityClv = computed(
-    () => this.summaryResource.value().opportunity_clv ?? null,
+    () => valueOr(this.summaryResource, EMPTY_SUMMARY).opportunity_clv ?? null,
   );
   /** The overall figures, or null before anything is measured. */
   protected readonly clvMeasured = computed(() => {

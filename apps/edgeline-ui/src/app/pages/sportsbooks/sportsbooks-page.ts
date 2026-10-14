@@ -45,6 +45,8 @@ import { Panel } from '@metrum/ui';
 import type { SportsbookRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
+import { LoadFailure } from '../../datastore-outage';
+import { valueOr } from '../../resource-value';
 
 /** §9.4's ladder, highest first. `none` is the honest state below all of them
  *  and is not editable — it is what you have when none of these are filled. */
@@ -94,7 +96,7 @@ function emptyDraft(): Draft {
 
 @Component({
   selector: 'el-sportsbooks-page',
-  imports: [FormsModule, Panel],
+  imports: [FormsModule, Panel, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sportsbooks-page.html',
   styleUrl: './sportsbooks-page.scss',
@@ -115,7 +117,7 @@ export class SportsbooksPage {
     defaultValue: [] as SportsbookRow[],
   });
 
-  protected readonly books = computed(() => this.booksResource.value());
+  protected readonly books = computed(() => valueOr(this.booksResource, [] as SportsbookRow[]));
   protected readonly loading = this.booksResource.isLoading;
   protected readonly loadError = computed(() => this.booksResource.error());
   protected readonly enabledCount = computed(

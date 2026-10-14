@@ -306,7 +306,9 @@
   </ui-panel>
 
   <ui-panel heading="Today's recommendations">
-    @if (status.failure()) {
+    @if (status.outage()) {
+      <p class="failure">Elasticsearch is not answering, so this list is not current.</p>
+    } @else if (status.failure()) {
       <p class="failure">The engine is not answering, so this list is not current.</p>
     } @else {
       <div class="table-wrap">

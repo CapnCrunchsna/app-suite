@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ...indices import SPORTSBOOKS_INDEX
+from ..datastore import raise_if_unavailable
 from ..deps import Context, get_context, hits, search
 from ..models import SportsbookRow
 
@@ -60,7 +61,8 @@ async def patch_sportsbook(
             doc=doc,
             refresh="wait_for",
         )
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         raise HTTPException(status_code=404, detail=f"sportsbook {key} not found") from None
 
     found = await context.client.get(index=context.index(SPORTSBOOKS_INDEX), id=key)

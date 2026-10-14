@@ -26,10 +26,12 @@ import type { ProviderRow } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
+import { LoadFailure } from '../../datastore-outage';
+import { valueOr } from '../../resource-value';
 
 @Component({
   selector: 'el-providers-page',
-  imports: [Panel, RouterLink],
+  imports: [Panel, RouterLink, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './providers-page.html',
   styleUrl: './providers-page.scss',
@@ -50,7 +52,7 @@ export class ProvidersPage {
     defaultValue: [] as ProviderRow[],
   });
 
-  protected readonly providers = computed(() => this.providersResource.value());
+  protected readonly providers = computed(() => valueOr(this.providersResource, [] as ProviderRow[]));
   protected readonly loading = this.providersResource.isLoading;
   protected readonly loadError = computed(() => this.providersResource.error());
 

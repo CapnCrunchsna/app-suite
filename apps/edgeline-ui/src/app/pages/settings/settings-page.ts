@@ -57,6 +57,8 @@ import {
   type FieldSpec,
   type SettingKey,
 } from './settings-fields';
+import { LoadFailure } from '../../datastore-outage';
+import { valueOr } from '../../resource-value';
 
 type FieldValue = string | number | boolean | null | PollSlot[];
 
@@ -75,7 +77,7 @@ interface SafetyChange {
 
 @Component({
   selector: 'el-settings-page',
-  imports: [ReactiveFormsModule, Panel, PollScheduleEditor],
+  imports: [ReactiveFormsModule, Panel, PollScheduleEditor, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.scss',
@@ -110,7 +112,7 @@ export class SettingsPage {
 
   protected readonly loading = this.settingsResource.isLoading;
   protected readonly loadError = computed(() => this.settingsResource.error());
-  protected readonly current = computed(() => this.settingsResource.value());
+  protected readonly current = computed(() => valueOr(this.settingsResource, {} as Settings));
 
   /** Which safety flags are staged away from what the server holds. */
   protected readonly safetyChanges = computed<SafetyChange[]>(() => {

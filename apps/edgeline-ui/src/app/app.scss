@@ -182,3 +182,39 @@
      legs, prices, edge, staleness and a timestamp. */
   max-width: 1240px;
 }
+
+// The outage banner carries steps, so it is a block with lines in it rather than
+// one paragraph (2026-10-13).
+.banner__line {
+  margin: 0 0 6px;
+}
+
+.banner__line--small {
+  font-size: 0.85rem;
+  color: var(--text-muted, inherit);
+}
+
+.banner__steps {
+  margin: 0 0 6px;
+  padding-left: 1.4em;
+
+  li {
+    margin: 2px 0;
+  }
+}
+
+.banner__action {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 3px 10px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  background: var(--surface);
+  color: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}

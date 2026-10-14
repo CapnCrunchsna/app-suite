@@ -27,7 +27,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { HealthResponse } from '@metrum/edgeline-api-client';
 
+import { datastoreOutage } from './datastore-outage';
 import { EdgelineApiService } from './edgeline-api.service';
+
+/** How soon health is read again while Elasticsearch is down, so the banner
+ *  clears by itself once `es-up` has run rather than on the next page load. */
+export const OUTAGE_RECHECK_MS = 10_000;
 
 @Injectable({ providedIn: 'root' })
 export class SystemStatus {
@@ -37,11 +42,18 @@ export class SystemStatus {
   private readonly error = signal<Error | null>(null);
   private readonly busy = signal(false);
   private loaded = false;
+  private recheck: ReturnType<typeof setTimeout> | null = null;
 
   readonly health = this.state.asReadonly();
   /** Set when the API could not be reached. Every page renders it as "the
    *  engine is not running", never as an empty result. */
   readonly failure = this.error.asReadonly();
+  /**
+   * Set when the API answered and Elasticsearch behind it did not — the 503
+   * with `detail.code: datastore_unavailable` (2026-10-13). A narrower case of
+   * `failure`, with different steps: the API is fine, Docker is not.
+   */
+  readonly outage = computed(() => datastoreOutage(this.error()));
   /** True while a kill/resume request is in flight. */
   readonly pending = this.busy.asReadonly();
 
@@ -113,6 +125,21 @@ export class SystemStatus {
     } catch (cause) {
       this.error.set(cause instanceof Error ? cause : new Error(String(cause)));
     }
+    this.scheduleRecheck();
+  }
+
+  /**
+   * The one timer here, and only during an outage: the shell otherwise reads
+   * health once per load (see `App`). An outage is the state someone is
+   * actively fixing in another window, and the banner is how they learn it
+   * worked. A down API gets no timer — that needs a restart, not a wait.
+   */
+  private scheduleRecheck(): void {
+    if (this.recheck !== null || this.outage() === null) return;
+    this.recheck = setTimeout(() => {
+      this.recheck = null;
+      void this.refresh();
+    }, OUTAGE_RECHECK_MS);
   }
 
   /**

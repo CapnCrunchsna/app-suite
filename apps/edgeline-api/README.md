@@ -39,6 +39,28 @@ time and either could recur on another machine here:
   ran fine on that same engine, because `bash` forks via plain `clone`. Only Elasticsearch
   itself reproduced it. Docker fixed this in 20.10.10; engine 29.7.2 is far past it.
 
+**When Docker Desktop will not start (2026-10-13).** After an unclean shutdown it failed with
+`starting services: initializing Secrets Engine: listening on unix://…/docker-secrets-engine/engine.sock:
+rename … engine.sock.stale: The file cannot be accessed by the system.` The socket file it left
+behind is a dead Windows AF_UNIX reparse point. No process holds it, and nothing in user mode can
+open, rename or delete it: `rm`, `del`, `rmdir /s`, `Remove-Item` and `fsutil reparsepoint` all
+fail the same way. **Its parent folder can be renamed**, though, and Docker recreates the folder on
+the next start:
+
+```bash
+node -e "const d=process.env.LOCALAPPDATA+'/docker-secrets-engine'; require('fs').renameSync(d, d+'.stale-'+Date.now())"
+```
+
+Then start Docker Desktop again. **It recurs on every shutdown, and a reboot does not clear it**:
+on 2026-10-14 the restart left a fourth one, and the folders moved aside on 10-10 and 10-13 still
+can't be deleted. So `es-up` now does this itself (`tools/docker-up.mjs`, workspace-level so this Python app has no JavaScript for Nx to infer an ESLint target over). With no daemon
+answering, it gives a running Docker Desktop 90 s to finish starting. After that it kills it,
+moves the folder aside if it holds a socket, and launches Docker Desktop. A live socket can't be
+stat'ed either, so the file can't tell you whether it's dead; with no daemon and no Docker Desktop,
+nothing is listening on it. While Elasticsearch is down, the API answers every route with a fast
+`503 datastore_unavailable` and the UI shows the steps to bring it back. The API and the worker both
+reconnect on their own once `es-up` has run.
+
 Nothing about that blocks engine work, and the suite stays honest with no datastore up: the math
 is pure functions, the Odds API adapter is tested against recorded fixtures, and
 `tests/conftest.py` skips `@pytest.mark.es` tests rather than failing them. Verified both ways on
@@ -114,7 +136,7 @@ Settings → Polling afterwards, not by hand.
 | `serve` | `uv run uvicorn edgeline.api.main:app --port 8000` |
 | `worker` | `uv run python -m edgeline.scheduler` |
 | `test` | `uv run pytest` |
-| `es-up` / `es-down` | `docker compose up -d` / `down` |
+| `es-up` / `es-down` | `node ../../tools/docker-up.mjs` (starts Docker Desktop if needed), then `docker compose up -d` / `down` |
 
 **Stop the worker before running `npm run check`.** The suite and the worker share the one
 single-node Elasticsearch on a 1 GB heap, and `_fresh_cluster` in `tests/test_engine.py` already

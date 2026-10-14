@@ -16,10 +16,7 @@
 
   <ui-panel heading="Books">
     @if (loadError()) {
-      <p class="failure">
-        Could not read the sportsbook list. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="the sportsbook list" [cause]="loadError()" /></p>
     } @else {
       <p class="lede">
         <strong>{{ enabledCount() }}</strong> of {{ books().length }} enabled. A +EV call needs

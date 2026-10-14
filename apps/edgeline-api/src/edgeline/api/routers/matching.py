@@ -18,6 +18,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ...indices import UNMATCHED_INDEX
+from ..datastore import raise_if_unavailable
 from ..deps import Context, get_context, hits, search
 from ..models import UnmatchedRowResponse
 
@@ -51,7 +52,8 @@ async def resolve(
             doc={"resolved": True},
             refresh="wait_for",
         )
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         raise HTTPException(
             status_code=404, detail=f"unmatched row {unmatched_id} not found"
         ) from None

@@ -10,10 +10,7 @@
 
   @if (loadError()) {
     <ui-panel>
-      <p class="failure">
-        Could not read settings. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="settings" [cause]="loadError()" /></p>
     </ui-panel>
   }
 

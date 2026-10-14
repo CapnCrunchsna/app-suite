@@ -120,6 +120,29 @@ async function settle(fixture: { whenStable(): Promise<unknown>; detectChanges()
 describe('DashboardPage (§11.1)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
+  /**
+   * 2026-10-13. The API used to answer an outage with a 200 of defaults; it now
+   * answers a 503, so every resource on this page lands in its error state at
+   * once — and the page has to stay a page.
+   */
+  it('stays up when Elasticsearch is down, and says that is why', async () => {
+    const down = () =>
+      Promise.reject(
+        new EdgelineApiError(503, '/api/x', {
+          detail: { code: 'datastore_unavailable', reason: 'unreachable', message: '' },
+        }),
+      );
+    const { el } = await render((api) => {
+      api.getSettings = down;
+      api.listSportsbooks = down;
+      api.listRecommendations = down;
+      api.getBankroll = down;
+      api.getHealth = down;
+    });
+    expect(el.textContent).toContain('Elasticsearch is not answering, so this list is not current.');
+    expect(el.textContent).not.toContain('The engine is not answering');
+  });
+
   describe('explaining the silence', () => {
     it('names the missing sportsbooks rather than showing an unexplained zero', async () => {
       const { el } = await render();

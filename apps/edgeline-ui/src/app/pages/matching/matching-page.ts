@@ -27,10 +27,12 @@ import { formatLocalTime } from '@metrum/format';
 import type { UnmatchedRowResponse } from '@metrum/edgeline-api-client';
 
 import { EdgelineApiService } from '../../edgeline-api.service';
+import { LoadFailure } from '../../datastore-outage';
+import { valueOr } from '../../resource-value';
 
 @Component({
   selector: 'el-matching-page',
-  imports: [Panel],
+  imports: [Panel, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './matching-page.html',
   styleUrl: './matching-page.scss',
@@ -50,7 +52,7 @@ export class MatchingPage {
     defaultValue: [] as UnmatchedRowResponse[],
   });
 
-  protected readonly rows = computed(() => this.rowsResource.value());
+  protected readonly rows = computed(() => valueOr(this.rowsResource, [] as UnmatchedRowResponse[]));
   protected readonly loading = this.rowsResource.isLoading;
   protected readonly loadError = computed(() => this.rowsResource.error());
 

@@ -92,7 +92,42 @@
   </p>
 }
 
-@if (failure()) {
+@if (outage(); as outage) {
+  <!-- The API answered; Elasticsearch behind it did not (2026-10-13). Not the
+       banner below: "start the engine" sends the reader to the one process that
+       is fine. Health is re-read every 10 s while this shows, so it clears by
+       itself once the steps have worked. -->
+  <div class="banner banner--down" role="alert">
+    @if (outage.reason === 'recovering') {
+      <p class="banner__line">
+        <strong>Elasticsearch is starting up.</strong> It is up and still recovering its shards,
+        which takes a minute or so after a start. Nothing below is current until it finishes;
+        this clears by itself.
+      </p>
+    } @else {
+      <p class="banner__line">
+        <strong>Elasticsearch is down.</strong> The engine is running, but the datastore behind it
+        is not answering, so nothing below is current. It runs in Docker. To bring it back:
+      </p>
+      <ol class="banner__steps">
+        <li>
+          Run <code>npx nx run edgeline-api:es-up</code> from <code>app-suite</code>. It starts
+          <strong>Docker Desktop</strong> if it is not running, and gets past the
+          <code>engine.sock</code> error it shows after a shutdown here, then starts the cluster.
+        </li>
+        <li>Give it a minute to recover its shards. This banner clears by itself.</li>
+      </ol>
+      <p class="banner__line banner__line--small">
+        The API and the worker reconnect on their own, so neither needs restarting. If
+        <code>es-up</code> reports no daemon, <code>apps/edgeline-api/README.md</code> lists the
+        Docker Desktop failures seen on this machine.
+      </p>
+    }
+    <button class="banner__action" type="button" [disabled]="checking()" (click)="checkAgain()">
+      {{ checking() ? 'Checking…' : 'Check again' }}
+    </button>
+  </div>
+} @else if (failure()) {
   <p class="banner banner--down" role="alert">
     <strong>The engine is not answering.</strong> Every figure in this app comes from
     <code>edgeline-api</code>, which has to be running: <code>nx run edgeline-api:serve</code>.

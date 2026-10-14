@@ -41,10 +41,7 @@
     </div>
 
     @if (loadError()) {
-      <p class="failure">
-        Could not read recommendations. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="recommendations" [cause]="loadError()" /></p>
     } @else {
       <div class="table-wrap">
         <table class="table">

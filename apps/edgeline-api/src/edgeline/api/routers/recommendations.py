@@ -25,6 +25,7 @@ from ...indices import (
     RESULTS_INDEX,
 )
 from ...schemas import utc_now_iso
+from ..datastore import raise_if_unavailable
 from ..deps import Context, get_context, hits, mget, search
 from ..models import BetRow, RecommendationRow
 from .opportunities import attach_events
@@ -101,7 +102,8 @@ async def confirm(
         await context.client.get(
             index=context.index(RECOMMENDATIONS_INDEX), id=recommendation_id
         )
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         raise HTTPException(
             status_code=404, detail=f"recommendation {recommendation_id} not found"
         ) from None

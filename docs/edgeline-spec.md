@@ -928,6 +928,20 @@ unseeded, so a fresh install is still configurable, and any other datastore fail
 **503** with nothing written. `GET /api/settings` and `GET /api/system/health` keep the lenient
 loader; they only display, and there a page that renders beats an error.
 
+**A datastore outage is a fast, named 503 from every route — amended 2026-10-13.** The lenient
+loader and the display helpers beside it answered §3.2's defaults or an empty table for *any*
+failure, an unreachable cluster included. With Docker Desktop stopped, the dashboard therefore drew
+an unconfigured install ("0 books enabled", "worker never seen") with no error anywhere, and drew
+it half a minute late. A refused connection on this laptop takes ~2 s, the client makes four
+attempts, and health makes four calls (measured 2026-10-13). Now a TCP probe of `ES_URL`, at most
+0.5 s and remembered for a few seconds, runs before every route. A cluster that cannot answer, either
+unreachable or answering 503 while its shards recover after a start, gets **503** with
+`detail: {code: "datastore_unavailable", reason: "unreachable" | "recovering", message}` on every
+route. The UI's shell banner keys on that code and lists the steps to bring Elasticsearch back. The
+lenient answers stay for everything else: a missing index on a part-bootstrapped install is still an
+empty table, and a missing settings document is still the defaults. The probe is the API's alone;
+the worker keeps the client's retries, which carry it across a laptop sleep (§13).
+
 **`POST /api/system/poll` — added 2026-09-16.** §8.4's dev row already reserves "manual
 trigger only" for props; this is the same idea for the featured cycle, and it exists because
 §13's cadence cannot be relied on to land anywhere useful. The interval is anchored to worker

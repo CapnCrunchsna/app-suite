@@ -26,10 +26,7 @@
     </div>
 
     @if (loadError()) {
-      <p class="failure">
-        Could not read the queue. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="the queue" [cause]="loadError()" /></p>
     } @else {
       @for (row of rows(); track row.id) {
         <div class="item">

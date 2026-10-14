@@ -35,6 +35,7 @@ import { EdgelineApiService } from '../../edgeline-api.service';
 import { SystemStatus } from '../../system-status.service';
 import { formatDecimalOdds, toAmerican } from '../../formatting';
 import { marketLabel, matchup, sportLabel, statusLabel, typeLabel } from '../../labels';
+import { LoadFailure } from '../../datastore-outage';
 
 /** §11.1's cadence, named so the test can assert it rather than guess. */
 export const POLL_INTERVAL_MS = 15_000;
@@ -44,7 +45,7 @@ type TypeFilter = 'all' | 'ev' | 'arb';
 
 @Component({
   selector: 'el-opportunities-page',
-  imports: [Panel, RouterLink],
+  imports: [Panel, RouterLink, LoadFailure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './opportunities-page.html',
   styleUrl: './opportunities-page.scss',

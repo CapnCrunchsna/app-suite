@@ -18,6 +18,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from ...indices import PROVIDERS_INDEX, SETTINGS_INDEX, SPORTSBOOKS_INDEX
+from ..datastore import raise_if_unavailable
 from ..deps import Context, get_context, get_provider, hits, load_settings_doc, search
 from ..models import (
     HealthResponse,
@@ -46,7 +47,8 @@ async def health(context: Context = Depends(get_context)) -> HealthResponse:
             index=context.index(SETTINGS_INDEX), id="runtime"
         )
         runtime = found["_source"]
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         runtime = {}
 
     providers = hits(await search(context, PROVIDERS_INDEX, size=10, query={"match_all": {}}))

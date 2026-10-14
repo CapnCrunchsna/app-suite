@@ -17,10 +17,7 @@
 
   <ui-panel heading="Odds providers">
     @if (loadError()) {
-      <p class="failure">
-        Could not read providers. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="providers" [cause]="loadError()" /></p>
     } @else {
       @for (provider of providers(); track provider.id) {
         <div class="provider">

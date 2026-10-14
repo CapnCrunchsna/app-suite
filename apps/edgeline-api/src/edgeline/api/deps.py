@@ -15,6 +15,8 @@ from fastapi import HTTPException
 
 from ..config import Settings, settings_from_document
 from ..indices import INDEX_PREFIX, SETTINGS_INDEX, with_prefix
+from . import datastore
+from .datastore import raise_if_unavailable
 
 
 @dataclass
@@ -28,10 +30,16 @@ class Context:
         return with_prefix(name, self.prefix)
 
 
-def get_context() -> Context:
-    """The live context. Overridden wholesale in tests."""
+async def get_context() -> Context:
+    """The live context. Overridden wholesale in tests.
+
+    Every route that reaches the datastore comes through here, so this is where
+    a down cluster is caught: `datastore.gate` answers in at most half a second, and a
+    route never starts the client's 8-second way of finding out (`datastore`).
+    """
     from ..es import get_client
 
+    await datastore.gate.check()
     return Context(client=get_client(), prefix=INDEX_PREFIX)
 
 
@@ -57,7 +65,10 @@ async def load_settings_doc(context: Context) -> Settings:
     """Current settings for display, falling back to the §3.2 defaults when
     unseeded — **or when the read fails for any reason at all.**
 
-    Right for a page that only shows them, where rendering beats an error. Never
+    Right for a page that only shows them, where rendering beats an error — **except
+    when the datastore itself cannot answer** (2026-10-13). Defaults painted over
+    an outage are a picture of an unconfigured install, so that one failure is a
+    503 (`datastore.raise_if_unavailable`). Never
     for a route that writes or spends on them: defaults are not a safe guess at
     what the user configured (`kill_switch` and `offline_mode` both default to
     off), so `PUT /api/settings` and `POST /api/system/poll` read through
@@ -65,7 +76,8 @@ async def load_settings_doc(context: Context) -> Settings:
     """
     try:
         found = await context.client.get(index=context.index(SETTINGS_INDEX), id="global")
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         return settings_from_document(None)
     return settings_from_document(found["_source"])
 
@@ -75,11 +87,13 @@ async def search(context: Context, index: str, **body: Any) -> dict[str, Any]:
 
     A freshly bootstrapped install has indices but no documents; a *partially*
     bootstrapped one may not have the index at all, and the UI asking for an
-    empty table should see an empty table.
+    empty table should see an empty table. An unreachable or recovering cluster
+    is not an empty table, and raises (`datastore.raise_if_unavailable`).
     """
     try:
         return await context.client.search(index=context.index(index), **body)
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         return {"hits": {"hits": [], "total": {"value": 0}}, "aggregations": {}}
 
 
@@ -98,16 +112,18 @@ async def mget(context: Context, index: str, ids: list[str]) -> dict[str, dict[s
     returned. Bounded by the caller's `limit`, and the alternative is the UI
     issuing N+1 requests to fill in a column.
 
-    A missing index or an unreachable cluster yields `{}` rather than raising, for
-    the same reason `search` does: the joined-in field is an enrichment, and a
-    table that renders without the matchup is better than a 500.
+    A missing index yields `{}` rather than raising, for the same reason `search`
+    does: the joined-in field is an enrichment, and a table that renders without
+    the matchup is better than a 500. An unreachable cluster used to as well; it
+    raises now, like `search`, since the search before this would have.
     """
     wanted = sorted({doc_id for doc_id in ids if doc_id})
     if not wanted:
         return {}
     try:
         found = await context.client.mget(index=context.index(index), ids=wanted)
-    except Exception:
+    except Exception as exc:
+        raise_if_unavailable(exc)
         return {}
     # Fold `_id` in, exactly as `hits()` does for a search: a joined document is a
     # row the UI addresses by id like any other.

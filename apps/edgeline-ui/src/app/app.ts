@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ThemeSwitcher } from '@metrum/ui';
 
@@ -51,11 +51,22 @@ export class App {
   protected readonly killSwitch = this.status.killSwitch;
   protected readonly offlineMode = this.status.offlineMode;
   protected readonly failure = this.status.failure;
+  protected readonly outage = this.status.outage;
+  protected readonly checking = signal(false);
 
   constructor() {
     // Read at startup, not on a timer. The dashboard refreshes it when it polls
     // and the KILL button writes through the same service, so a heartbeat poll
     // here would be a second request to be told what those already know.
     void this.status.ensureLoaded();
+  }
+
+  protected async checkAgain(): Promise<void> {
+    this.checking.set(true);
+    try {
+      await this.status.refresh();
+    } finally {
+      this.checking.set(false);
+    }
   }
 }

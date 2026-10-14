@@ -36,7 +36,8 @@
       "executor": "nx:run-commands",
       "options": {
         "cwd": "{projectRoot}",
-        "command": "docker compose up -d"
+        "commands": ["node ../../tools/docker-up.mjs", "docker compose up -d"],
+        "parallel": false
       }
     },
     "es-down": {

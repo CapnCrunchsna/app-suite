@@ -20,6 +20,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from ..config import PROJECT_ROOT
+from . import datastore
 from .routers import (
     bankroll,
     matching,
@@ -95,6 +96,9 @@ def create_app() -> FastAPI:
     ):
         app.include_router(router, prefix="/api")
 
+    # A datastore outage is one 503 shape from every route, and the UI's "start
+    # Docker" banner keys on it (`datastore`, 2026-10-13).
+    datastore.install(app)
     _mount_ui(app)
     return app
 

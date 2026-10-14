@@ -131,10 +131,7 @@
 
   <ui-panel [heading]="group() === 'day' ? 'Per day' : 'Per week'">
     @if (loadError()) {
-      <p class="failure">
-        Could not read results. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="results" [cause]="loadError()" /></p>
     } @else {
       <div class="table-wrap">
         <table class="table">

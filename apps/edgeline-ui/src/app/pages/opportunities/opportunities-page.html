@@ -59,10 +59,7 @@
     </div>
 
     @if (loadError()) {
-      <p class="failure">
-        Could not read opportunities. The engine has to be running:
-        <code>nx run edgeline-api:serve</code>.
-      </p>
+      <p class="failure"><el-load-failure what="opportunities" [cause]="loadError()" /></p>
     } @else {
       <div class="table-wrap">
         <table class="table">

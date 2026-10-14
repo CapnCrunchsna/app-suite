@@ -10,11 +10,20 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EDGELINE_THEME, METRUM_THEME, ThemeService } from '@metrum/ui';
+import { EdgelineApiError } from '@metrum/edgeline-api-client';
 import type { HealthResponse } from '@metrum/edgeline-api-client';
 
 import { App } from './app';
 import { appConfig } from './app.config';
 import { EdgelineApiService } from './edgeline-api.service';
+import { OUTAGE_RECHECK_MS, SystemStatus } from './system-status.service';
+
+/** The API's answer while Elasticsearch is down (`edgeline/api/datastore.py`). */
+function outage(reason: 'unreachable' | 'recovering'): EdgelineApiError {
+  return new EdgelineApiError(503, '/api/system/health', {
+    detail: { code: 'datastore_unavailable', reason, message: 'stand-in' },
+  });
+}
 
 const HEALTHY: HealthResponse = {
   paper_mode: true,
@@ -120,6 +129,81 @@ describe('the Edgeline shell (§11.1, §11.2)', () => {
     const banner = el.querySelector('.banner--down');
     expect(banner?.textContent).toContain('The engine is not answering');
     expect(banner?.textContent).toContain('edgeline-api:serve');
+  });
+
+  /**
+   * 2026-10-13: Docker Desktop was down, the API answered, and the app drew an
+   * unconfigured install. The steps are the point — and "start the engine",
+   * which is the other banner, would send the reader to the one process that
+   * is fine.
+   */
+  it('names a down Elasticsearch, and says how to bring it back', async () => {
+    const { el } = await render((api) => {
+      api.failWith = outage('unreachable');
+    });
+    const banner = el.querySelector('.banner--down');
+    expect(banner?.textContent).toContain('Elasticsearch is down');
+    expect(banner?.textContent).toContain('Docker Desktop');
+    expect(banner?.textContent).toContain('edgeline-api:es-up');
+    expect(banner?.textContent).not.toContain('The engine is not answering');
+    expect(el.querySelector('.banner__action')?.textContent?.trim()).toBe('Check again');
+  });
+
+  it('tells a cluster still recovering its shards to wait, not to restart anything', async () => {
+    const { el } = await render((api) => {
+      api.failWith = outage('recovering');
+    });
+    const banner = el.querySelector('.banner--down');
+    expect(banner?.textContent).toContain('Elasticsearch is starting up');
+    expect(banner?.textContent).not.toContain('Docker Desktop');
+  });
+});
+
+describe('SystemStatus during an outage (2026-10-13)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    TestBed.resetTestingModule();
+  });
+
+  function statusWith(getHealth: () => Promise<HealthResponse>) {
+    TestBed.configureTestingModule({
+      providers: [{ provide: EdgelineApiService, useValue: { getHealth } }],
+    });
+    return TestBed.inject(SystemStatus);
+  }
+
+  it('reads health again by itself until Elasticsearch is back, then stops', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const status = statusWith(() => {
+      calls += 1;
+      return calls === 1 ? Promise.reject(outage('unreachable')) : Promise.resolve(HEALTHY);
+    });
+
+    await status.refresh();
+    expect(status.outage()?.reason).toBe('unreachable');
+
+    await vi.advanceTimersByTimeAsync(OUTAGE_RECHECK_MS);
+    expect(calls).toBe(2);
+    expect(status.outage()).toBeNull();
+    expect(status.failure()).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(OUTAGE_RECHECK_MS * 3);
+    expect(calls).toBe(2);
+  });
+
+  it('does not poll a down API — that needs a restart, not a wait', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    const status = statusWith(() => {
+      calls += 1;
+      return Promise.reject(new Error('failed to fetch'));
+    });
+
+    await status.refresh();
+    await vi.advanceTimersByTimeAsync(OUTAGE_RECHECK_MS * 3);
+    expect(calls).toBe(1);
+    expect(status.outage()).toBeNull();
   });
 });
 
