@@ -17,7 +17,9 @@ inside it.
   (the ES exception for local-first mobile; keep the data model sync-friendly). App at
   `apps/meal-planner`, libs under `libs/meal-planner/`. Spec: `docs/meal-planner-spec.md` —
   normative, phases strict, §13 prohibitions are hard rules. Open choices go in the app's
-  `DECISIONS.md`.
+  `DECISIONS.md`. Phone playtests use its web build on the workspace Playtest Hub
+  (`scripts/playtest-hub/build.mjs meal-planner` in the workspace; procedure in
+  `../games/CLAUDE.md`).
 - **Photo-to-Calendar** — Ionic + Capacitor (Android); Claude vision API (Haiku); Android
   CalendarProvider.
 - **Edgeline** — sports betting intelligence: +EV/arbitrage detection with Discord alerts and
