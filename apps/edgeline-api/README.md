@@ -61,6 +61,19 @@ nothing is listening on it. While Elasticsearch is down, the API answers every r
 `503 datastore_unavailable` and the UI shows the steps to bring it back. The API and the worker both
 reconnect on their own once `es-up` has run.
 
+**What kept killing it: the Claude desktop app's auto-update (2026-10-15).** The Claude app runs
+every Code session inside a Windows job object that also contains `claude.exe` itself, and a
+plain child process (`spawn`, `detached` included, and `cmd /c start`) stays in its parent's job.
+When an update replaces the app, the job closes and everything a session had launched dies at
+once: Docker Desktop, the API and worker consoles, and the Servers page. Docker's log, which
+writes every 30 s, went silent 21 s before the Claude package install at 10-13 15:51 and 19 s
+before the one at 10-15 08:24. Docker never gets a clean stop, which is also what leaves the dead
+socket above. So `tools/docker-up.mjs`, and the workspace's `scripts/lib/servers.mjs` `start()`
+behind the Servers page's Start button, now launch through WMI (`Win32_Process.Create`).
+`IsProcessInJob` and the job's member list confirm the result sits outside the app's job, the
+way anything started from Explorer does. The two other outages were Windows restarts (yours on
+10-10, a Windows Update restart at 04:14 on 10-14); after one, nothing here restarts itself.
+
 Nothing about that blocks engine work, and the suite stays honest with no datastore up: the math
 is pure functions, the Odds API adapter is tested against recorded fixtures, and
 `tests/conftest.py` skips `@pytest.mark.es` tests rather than failing them. Verified both ways on

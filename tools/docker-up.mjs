@@ -26,7 +26,7 @@
  * Windows only; elsewhere this checks the daemon and stops.
  */
 
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -85,6 +85,29 @@ function killDockerDesktop() {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Launch through WMI, not `spawn`. A spawned child stays in the caller's job object, and
+ * the Claude desktop app closes its sessions' job when it auto-updates. A Docker Desktop
+ * started from a session died with the update on 10-13 15:51 and 10-15 08:24, uncleanly,
+ * which is also what leaves the dead socket this script exists for. The workspace's
+ * `scripts/lib/servers.mjs` `launchOutsideJob` has the measurements; this repo cannot
+ * import across the boundary, hence the copy.
+ */
+function launchOutsideJob(commandLine) {
+  const out = execFileSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      '$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments ' +
+        '@{ CommandLine = $env:LAUNCH_COMMAND }; $r.ReturnValue',
+    ],
+    { env: { ...process.env, LAUNCH_COMMAND: commandLine }, encoding: 'utf8', windowsHide: true },
+  );
+  if (out.trim() !== '0') throw new Error(`Win32_Process.Create returned ${out.trim()}`);
+}
+
 if (daemonUp()) {
   console.log('docker-up: daemon already answering');
   process.exit(0);
@@ -114,7 +137,7 @@ if (holdsSocket(folder)) {
 }
 
 console.log('docker-up: starting Docker Desktop');
-spawn(DOCKER_DESKTOP, [], { detached: true, stdio: 'ignore' }).unref();
+launchOutsideJob(`"${DOCKER_DESKTOP}"`);
 
 const after = await waitForDaemon(WAIT_S);
 if (after !== null) {
