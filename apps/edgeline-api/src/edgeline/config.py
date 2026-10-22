@@ -66,6 +66,9 @@ class Secrets(BaseSettings):
     # validation crash at import.
     discord_channel_id: str = ""
     es_url: str = "http://localhost:9200"
+    #: Where the worker's daily backup goes (`edgeline.backup`, added 2026-10-21).
+    #: Empty turns the job off. Not a secret, but machine-specific, like ES_URL.
+    edgeline_backup_dir: str = ""
 
     def require(self, name: str) -> str:
         value = getattr(self, name, "")

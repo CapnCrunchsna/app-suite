@@ -208,6 +208,32 @@
         </span>
       </div>
 
+      <!-- The store is on a disk that was failing when this was added (2026-10-21),
+           and none of it is in git. A backup that quietly stopped would look
+           exactly like one that is running, so its age is on the dashboard. -->
+      <div class="health__row">
+        <span class="health__key">Backup</span>
+        <span class="health__value">
+          @if (status.lastBackupAt()) {
+            <span class="chip" [class.chip--danger]="!backupCurrent()">
+              {{ backupCurrent() ? 'OK' : 'STALE' }}
+            </span>
+            last backup {{ backupAge() }}
+            @if (!backupCurrent()) {
+              <span class="dim">
+                · the daily 07:00 UTC run is failing; check that Google Drive (G:) is mounted
+              </span>
+            }
+          } @else {
+            <span class="chip chip--danger">NONE</span>
+            no backup recorded
+            <span class="dim">
+              · set <code>EDGELINE_BACKUP_DIR</code> and run <code>nx run edgeline-api:backup</code>
+            </span>
+          }
+        </span>
+      </div>
+
       <div class="health__row">
         <span class="health__key">Quota</span>
         <span class="health__value">

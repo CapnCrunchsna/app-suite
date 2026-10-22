@@ -143,6 +143,38 @@ describe('DashboardPage (§11.1)', () => {
     expect(el.textContent).not.toContain('The engine is not answering');
   });
 
+  describe('the backup row (2026-10-21)', () => {
+    function backupRow(el: HTMLElement): string {
+      const row = [...el.querySelectorAll('.health__row')].find(
+        (r) => r.querySelector('.health__key')?.textContent?.trim() === 'Backup',
+      );
+      return row?.textContent?.replace(/s+/g, ' ').trim() ?? '';
+    }
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+
+    it('says so when no backup has ever been recorded', async () => {
+      const { el } = await render();
+      expect(backupRow(el)).toContain('NONE');
+      expect(backupRow(el)).toContain('EDGELINE_BACKUP_DIR');
+    });
+
+    it('reads a backup from this morning as current', async () => {
+      const { el } = await render((api) => {
+        api.health = { ...api.health, runtime: { last_backup_at: hoursAgo(14) } };
+      });
+      expect(backupRow(el)).toContain('OK');
+      expect(backupRow(el)).not.toContain('failing');
+    });
+
+    it('reads a missed day as a failing job, and names the usual cause', async () => {
+      const { el } = await render((api) => {
+        api.health = { ...api.health, runtime: { last_backup_at: hoursAgo(50) } };
+      });
+      expect(backupRow(el)).toContain('STALE');
+      expect(backupRow(el)).toContain('Google Drive');
+    });
+  });
+
   describe('explaining the silence', () => {
     it('names the missing sportsbooks rather than showing an unexplained zero', async () => {
       const { el } = await render();

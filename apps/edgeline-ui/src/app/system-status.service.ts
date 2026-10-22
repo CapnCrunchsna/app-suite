@@ -110,6 +110,8 @@ export class SystemStatus {
   readonly lastHeartbeatAt = computed(() => readIsoField(this.state(), 'last_heartbeat_at'));
   readonly lastPollAt = computed(() => readIsoField(this.state(), 'last_poll_at'));
   readonly lastGradingAt = computed(() => readIsoField(this.state(), 'last_grading_at'));
+  /** The daily backup of every index (`edgeline.backup`, added 2026-10-21). */
+  readonly lastBackupAt = computed(() => readIsoField(this.state(), 'last_backup_at'));
 
   /** Read once per app load. Pages that change health call `refresh()`. */
   async ensureLoaded(): Promise<void> {

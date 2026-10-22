@@ -22,6 +22,7 @@ import logging
 import signal
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
@@ -721,6 +722,7 @@ def build_scheduler(
     sink=None,
     enabled_books: int | None = None,
     closing_credits: int = 0,
+    backup_dir: Path | None = None,
 ):
     """Register §13's jobs. Returns the scheduler, not started.
 
@@ -732,7 +734,8 @@ def build_scheduler(
     `enabled_books` is how many sportsbooks are enabled, which prices a poll
     that names them (§3.2 `poll_bookmakers`); without it the budget counts
     regions. `closing_credits` is `projected_closing_credits`' measurement,
-    which the budget adds to the polls.
+    which the budget adds to the polls. `backup_dir` turns on the daily backup
+    (`edgeline.backup`); without it there is no backup job.
     """
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -1133,6 +1136,29 @@ def build_scheduler(
         run_date=datetime.now(timezone.utc) + timedelta(seconds=STARTUP_GRADE_DELAY_S),
         id="grade_startup",
     )
+    if backup_dir is not None:
+        # Daily, an hour after grading so the night's results are in it, and
+        # caught up on wake like grading. No retry loop: the usual failure is
+        # Google Drive not mounted, which minutes will not fix, and a stale
+        # `last_backup_at` on the dashboard is the signal (added 2026-10-21).
+        async def _backup() -> None:
+            from .backup import export_backup
+
+            try:
+                report = await export_backup(client, backup_dir, prefix=prefix)
+            except Exception:
+                log.warning("backup: failed to write to %s", backup_dir, exc_info=True)
+                return
+            await record_run(client, prefix=prefix, job="backup")
+            log.info(
+                "backup: %d documents to %s; %d old backup(s) pruned",
+                report.documents, report.path, len(report.pruned),
+            )
+
+        scheduler.add_job(
+            _backup, "cron", hour=7, minute=0, id="backup",
+            coalesce=True, misfire_grace_time=RUN_WHEN_LATE,
+        )
     # A reset that is skipped for being late is skipped for a month, and the pace
     # guard then refuses every paid request against last month's spend.
     scheduler.add_job(
@@ -1159,6 +1185,7 @@ def build_scheduler(
 
 
 async def _run() -> int:
+    from .backup import backup_dir
     from .es import close_client, ensure_indices, get_client
     from .engine import load_enabled_books, load_settings
     from .providers.the_odds_api import TheOddsApiProvider
@@ -1196,6 +1223,7 @@ async def _run() -> int:
             settings,
             enabled_books=len(books),
             closing_credits=await _measured_closing_credits(client, settings) or 0,
+            backup_dir=backup_dir(),
         )
         scheduler.start()
         polls = scheduled_polls(settings)
@@ -1216,6 +1244,7 @@ async def _run() -> int:
                 "empty" if not settings.poll_schedule else "not in effect above the free tier",
                 upcoming["next_poll_at"],
             )
+        log.info("daily backup: %s", backup_dir() or "off (EDGELINE_BACKUP_DIR not set)")
         log.info(
             "worker started: %d job(s). PAPER MODE=%s. This process recommends "
             "bets and never places them.",

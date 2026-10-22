@@ -55,6 +55,8 @@ import { valueOr } from '../../resource-value';
 /** §13 stamps the heartbeat every 60 s, so three missed ones is a stopped
  *  worker rather than a slow one. */
 const HEARTBEAT_STALE_S = 180;
+/** A daily job, so a day and a half without one is a missed run, not a late one. */
+const BACKUP_STALE_S = 36 * 60 * 60;
 
 /** An arbitrage is two prices at two different books. Not a setting — you
  *  cannot configure your way to one book disagreeing with itself. */
@@ -147,6 +149,17 @@ export class DashboardPage {
    *  still arriving — the heartbeat keeps ticking either way. */
   protected readonly lastPollAt = this.status.lastPollAt;
   protected readonly pollAge = computed(() => formatAge(this.status.lastPollAt()));
+
+  /**
+   * The daily backup (`edgeline.backup`, 2026-10-21). It runs at 07:00 UTC, or on
+   * wake, and its usual failure is Google Drive not being mounted, which logs a
+   * warning in a console nobody reads. So the age is shown here, and anything
+   * older than a missed day and a half reads as a failure.
+   */
+  protected readonly backupAge = computed(() => formatAge(this.status.lastBackupAt()));
+  protected readonly backupCurrent = computed(() =>
+    isFresh(this.status.lastBackupAt(), BACKUP_STALE_S),
+  );
 
   /**
    * Which of the two detectors could fire at all with the books enabled right

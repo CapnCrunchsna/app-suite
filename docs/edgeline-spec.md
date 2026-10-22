@@ -1132,9 +1132,21 @@ APScheduler with asyncio. Jobs:
 | `poll_props(sport)` | `props_poll_interval_s`, only events with `commence_time − now < 6 h` |
 | `closing_capture` | one-shot per event at `commence_time − closing_capture_offset_s` |
 | `grade` | daily 06:00 UTC, for the sports with a bet to settle (§12, amended 2026-09-23) |
+| `backup` | daily 07:00 UTC, only while `EDGELINE_BACKUP_DIR` is set (added 2026-10-21) |
 | `quota_reset` | monthly, day 1: zero `quota_used` |
 | `heartbeat` | 60 s: update the `runtime` doc in `edgeline-settings` (read by `/api/system/health`); since 2026-09-23 also `next_poll_at` |
 | `poll_realign` | 60 s: re-anchor `poll_featured` one interval past `last_poll_at` (added 2026-09-16; interval only since 2026-09-23) |
+
+**`backup`: added 2026-10-21.** The data was on a failing disk: 1,252 bad-block errors on the system
+SSD in six days, and none of it in git. So when `EDGELINE_BACKUP_DIR` is set (`.env`, off that disk;
+here Google Drive's G: mount), the worker writes every `edgeline-*` index to one gzipped NDJSON file
+a day, `edgeline-backup-<UTC stamp>.ndjson.gz`. The first line is a header with document counts per
+index. The file is written beside its final name and renamed into place, and the newest 30 are kept.
+Restore (`python -m edgeline.backup restore FILE`) creates the indices through `ensure_indices` and
+refuses to merge into a store that already holds non-seed data unless forced. On 2026-10-21 the
+first file held 171,658 documents in 1.7 MB, and restoring it into scratch indices reproduced every
+count exactly. The job stamps `last_backup_at` on `runtime`, as does a backup taken by hand (`nx run
+edgeline-api:backup`), and the dashboard calls it stale after 36 h.
 
 Startup sequence: compute projected monthly credit cost (§8.4) → refuse to schedule if over
 budget → log the number → register jobs → start Discord bot in the same loop.

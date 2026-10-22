@@ -40,6 +40,13 @@
         "parallel": false
       }
     },
+    "backup": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "uv run python -m edgeline.backup export"
+      }
+    },
     "es-down": {
       "executor": "nx:run-commands",
       "options": {
