@@ -112,16 +112,19 @@ def test_never_alerted_means_the_cooldown_is_clear():
     assert cooldown_expired(None, NOW, 300)
 
 
-def test_cooldown_is_keyed_on_sport_and_market():
-    assert cooldown_key("baseball_mlb", "h2h") != cooldown_key("baseball_mlb", "totals")
-    assert cooldown_key("baseball_mlb", "h2h") == cooldown_key("baseball_mlb", "h2h")
+def test_cooldown_is_keyed_on_game_and_market():
+    game = "americanfootball_ncaaf:g1"
+    assert cooldown_key(game, "h2h") != cooldown_key(game, "totals")
+    assert cooldown_key(game, "h2h") == cooldown_key(game, "h2h")
+    # Two games of one sport no longer share a slot (2026-11-01).
+    assert cooldown_key(game, "h2h") != cooldown_key("americanfootball_ncaaf:g2", "h2h")
 
 
 # ---- cooldown slot allocation (§7.4) ---------------------------------------
 
 
 def test_highest_edge_wins_the_slot():
-    key = cooldown_key("baseball_mlb", "h2h")
+    key = cooldown_key("baseball_mlb:evt1", "h2h")
     winners = select_cooldown_winners(
         [(key, "small", 2.1), (key, "big", 6.4), (key, "middling", 3.0)],
         last_alert_at_by_key={},
@@ -132,8 +135,8 @@ def test_highest_edge_wins_the_slot():
 
 
 def test_different_markets_each_get_their_own_slot():
-    h2h = cooldown_key("baseball_mlb", "h2h")
-    totals = cooldown_key("baseball_mlb", "totals")
+    h2h = cooldown_key("baseball_mlb:evt1", "h2h")
+    totals = cooldown_key("baseball_mlb:evt1", "totals")
     winners = select_cooldown_winners(
         [(h2h, "a", 2.0), (totals, "b", 1.0)],
         last_alert_at_by_key={},
@@ -143,8 +146,23 @@ def test_different_markets_each_get_their_own_slot():
     assert set(winners) == {"a", "b"}
 
 
+def test_every_game_in_a_poll_gets_its_own_slot():
+    """2026-11-01: per sport, one Saturday NCAAF poll sent one h2h alert however
+    many games had a good price. Per game, each sends its best."""
+    g1 = cooldown_key("americanfootball_ncaaf:g1", "h2h")
+    g2 = cooldown_key("americanfootball_ncaaf:g2", "h2h")
+    winners = select_cooldown_winners(
+        [(g1, "g1 at book A", 4.0), (g1, "g1 at book B", 4.0), (g2, "g2", 2.5)],
+        last_alert_at_by_key={},
+        now=NOW,
+        cooldown_s=300,
+    )
+    # One per game: the same price at two books is still one alert.
+    assert len(winners) == 2 and "g2" in winners
+
+
 def test_a_key_inside_its_cooldown_wins_nothing():
-    key = cooldown_key("baseball_mlb", "h2h")
+    key = cooldown_key("baseball_mlb:evt1", "h2h")
     recent = (NOW - timedelta(seconds=10)).isoformat().replace("+00:00", "Z")
     winners = select_cooldown_winners(
         [(key, "big", 9.9)],

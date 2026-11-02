@@ -3,7 +3,7 @@
 `python -m edgeline.clv` measures what is missing and prints the report; the
 worker's nightly grade measures it too. Neither asks the provider for anything.
 
-**Why every opportunity.** §7.4's cooldown allows one alert per `(sport, market)`
+**Why every opportunity.** §7.4's cooldown allowed one alert per `(sport, market)` (per game since 2026-11-01)
 per window, so by 2026-10-01 144 opportunities had produced 26 recommendations.
 Grading recommendations alone measures CLV on a sixth of what the detector found,
 and the other five sixths cost nothing more to measure: their prices are already

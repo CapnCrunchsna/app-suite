@@ -864,7 +864,7 @@ async def run_once(
         ):
             continue
         eligible.append(
-            (cooldown_key(detection.sport_key, detection.market_key), detection, detection.edge_pct)
+            (cooldown_key(detection.event_id, detection.market_key), detection, detection.edge_pct)
         )
 
     if settings.kill_switch:
@@ -1398,7 +1398,7 @@ async def load_live_opportunities(
 async def load_last_alert_times(
     client, *, prefix: str, now: datetime, cooldown_s: int
 ) -> dict[tuple[str, str], str]:
-    """When each `(sport, market_key)` was last alerted, for §7.4's cooldown.
+    """When each `(event, market_key)` was last alerted, for §7.4's cooldown.
 
     Derived rather than stored: `edgeline-recommendations` knows *when* an alert
     went out (`sent_at`) and `edgeline-opportunities` knows *what* it was about
@@ -1434,9 +1434,7 @@ async def load_last_alert_times(
         source = by_id.get(hit["_source"]["opportunity_id"])
         if source is None:
             continue
-        key = cooldown_key(
-            source["event_id"].split(":", 1)[0], source.get("market_key", "")
-        )
+        key = cooldown_key(source["event_id"], source.get("market_key", ""))
         last.setdefault(key, hit["_source"]["sent_at"])
     return last
 

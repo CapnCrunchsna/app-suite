@@ -207,7 +207,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `consensus_weights` | `{"default":1}` | per-book integer weights, e.g. `{"pinnacle":3}` |
 | `staleness_sigma_floor` | `0.002` | σ floor to avoid divide-by-near-zero |
 | `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this since its last alert (amended 2026-10-01, §7.4) |
-| `alert_cooldown_s` | `300` | per market key |
+| `alert_cooldown_s` | `300` | per `(event, market key)` since 2026-11-01; per `(sport, market key)` before |
 | `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys. **Since 2026-09-23** what the interval polls when `poll_schedule` is empty, and what §10's manual trigger buys on a day the plan has nothing |
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
 | `markets_props` | `["batter_home_runs","pitcher_strikeouts"]` | polled per §8.4 |
@@ -542,8 +542,8 @@ id, and every state change goes through the update API under optimistic concurre
   expired (amended 2026-10-01, below).
 - Detection disappears next cycle → status `closed`, record `closing_edge_pct`.
 - `commence_time` passes → status `expired`.
-- Cooldown: at most one alert per `(sport, market_key)` per `alert_cooldown_s`, whichever
-  detection has the highest edge wins the slot.
+- Cooldown: at most one alert per `(event_id, market_key)` per `alert_cooldown_s`, whichever
+  detection has the highest edge wins the slot (per `(sport, market_key)` until 2026-11-01, below).
 
 **Known consequence of the re-alert wording (recorded 2026-09-04, T2.4; superseded 2026-10-01,
 below).** The baseline for
@@ -582,6 +582,20 @@ The last-alert time the cooldown reads is **derived, not stored**: `edgeline-rec
 knows when an alert went out (`sent_at`) and `edgeline-opportunities` knows what it was about
 (`market_key`, `event_id`), so the two are joined over the cooldown window rather than adding a
 field.
+
+**The cooldown is per game, not per sport — amended 2026-11-01.** `(sport, market_key)` was a
+rate limit sized for §13's 120-second cadence. On the weekly plan each sport is polled once or twice
+a day, so it became one alert per sport and market per poll: a Saturday NCAAF poll with fifteen good
+h2h prices across fifteen games sent one. Replayed over every +EV opportunity from 2026-09-09 to
+10-27, 176 of the 241 never sent had lost the slot to another game. The best price per game the rule
+withheld, 115 opportunities, beat the closing line 71% of the time with a median CLV of +2.89%; the
+67 it did send beat it 57% of the time, at +1.19%. So the key is now `(event_id, market_key)`: each
+game's market sends its best price, and three books quoting one price on one game still send one
+alert. Under the new key the same history sends 169, at most 14 from one poll and a median of 2.
+Stakes, `daily_exposure_cap_cents` and `daily_loss_stop_cents` are unchanged and still bound the
+day. A game's h2h and its spread can now both alert, and those are correlated bets; keying on the
+game alone would prevent that at some cost in volume, and was not chosen. T4.4's recommended-CLV
+count (§15) arrives about three times sooner.
 
 **A windowed poll reconciles only its window — added 2026-10-01.** A poll limited by §3.2's
 `poll_lookahead_h` returns nothing for a game beyond it, which says nothing about that game's lines.

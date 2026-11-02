@@ -10,7 +10,7 @@ implementation detail, and "tidying" it would orphan every stored document.
 Two independent gates stand between a detection and an alert, and they answer
 different questions. `may_alert` asks whether *this* opportunity is new to the
 reader or materially better than when it was last alerted. The cooldown asks
-whether *any* alert has gone out for this sport and market recently. Both must
+whether *any* alert has gone out for this game and market recently. Both must
 pass.
 """
 
@@ -101,9 +101,20 @@ def cooldown_expired(
     return (now - parse_iso(last_alert_at)).total_seconds() >= cooldown_s
 
 
-def cooldown_key(sport_key: str, market_key: str) -> tuple[str, str]:
-    """§7.4's cooldown is per `(sport, market_key)`, not per opportunity."""
-    return (sport_key, market_key)
+def cooldown_key(event_id: str, market_key: str) -> tuple[str, str]:
+    """§7.4's cooldown is per `(event, market_key)`, not per opportunity.
+
+    Per `(sport, market_key)` until 2026-11-01. That was a rate limit sized for
+    §13's original 120-second cadence; on the weekly plan each sport is polled
+    once or twice a day, so it became "one alert per sport and market per
+    poll", and a Saturday NCAAF poll with fifteen good h2h prices across fifteen
+    games sent one. Replayed over 2026-09-09..10-27, 176 of the 241 unsent +EV
+    opportunities had lost the slot to another game, and the best price per
+    game it withheld beat the close 71% of the time (median CLV +2.89%), against
+    57% (+1.19%) for what it sent. Keyed on the game, the rule still does its
+    other job: three books showing one price on one game send one alert.
+    """
+    return (event_id, market_key)
 
 
 def select_cooldown_winners(
@@ -113,7 +124,7 @@ def select_cooldown_winners(
     now: datetime,
     cooldown_s: int,
 ) -> list[object]:
-    """Pick at most one alert per `(sport, market_key)` — the highest edge (§7.4).
+    """Pick at most one alert per cooldown key — the highest edge (§7.4).
 
     `candidates` are `(cooldown_key, detection, edge_pct)` triples. Detections
     that lose the slot are not discarded by this function; they are simply not
