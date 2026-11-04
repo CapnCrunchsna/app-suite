@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edgeline T4.4a — What the Detector's CLV Says to Tune — MetrumDigital</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%20role='img'%20aria-label='MetrumDigital'%3E%20%3Cdefs%3E%20%3ClinearGradient%20id='mdg'%20x1='0'%20y1='0'%20x2='32'%20y2='32'%20gradientUnits='userSpaceOnUse'%3E%20%3Cstop%20offset='0'%20stop-color='%230ea5e9'/%3E%20%3Cstop%20offset='.55'%20stop-color='%2314b8a6'/%3E%20%3Cstop%20offset='1'%20stop-color='%2322c55e'/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20x='1'%20y='1'%20width='30'%20height='30'%20rx='8'%20fill='%230d9488'/%3E%20%3Cg%20fill='%235eead4'%3E%20%3Crect%20x='1'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3C/g%3E%20%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='3'%20fill='url(%23mdg)'/%3E%20%3Cpath%20d='M9%2022V10.5l7%206.5%207-6.5V22'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%20%3C/svg%3E">
+
+<!-- Restore saved theme before paint to avoid flash. Default is dark. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('md-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0a1517; --surface:#0f2124; --surface-2:#143034; --border:#1f4a47;
+    --text:#dcefeb; --text-dim:#7ea8a1; --accent:#2dd4bf; --accent-2:#34d399;
+    --code-bg:#0f2124; --shadow:0 1px 3px rgba(0,0,0,.5);
+    --radius:10px; --maxw:880px;
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff; --surface:#f0faf8; --surface-2:#e0f3ef; --border:#bfe3dc;
+    --text:#0b2a27; --text-dim:#48706a; --accent:#0d9488; --accent-2:#059669;
+    --code-bg:#f0faf8; --shadow:0 1px 3px rgba(140,149,159,.3);
+  }
+  html[data-theme="dark"]{color-scheme:dark}
+  html[data-theme="light"]{color-scheme:light}
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    transition:background .2s ease,color .2s ease;
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
+  }
+  .topbar a{color:var(--accent); text-decoration:none; font-weight:600}
+  .topbar a:hover{text-decoration:underline}
+  .home{white-space:nowrap; display:inline-flex; align-items:center; gap:8px}
+  .brand-mark{width:22px; height:22px; flex:none}
+  .related{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+  .related .label{color:var(--text-dim); font-weight:400}
+  .related a{font-weight:500; padding:3px 10px; border:1px solid var(--border);
+    border-radius:999px; background:var(--surface-2)}
+  .spacer{flex:1}
+  .toggle{
+    cursor:pointer; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:600;
+  }
+  .toggle:hover{border-color:var(--accent)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:40px 24px 80px}
+  h1{font-size:2rem; line-height:1.2; margin:0 0 6px}
+  h2{margin-top:2em; padding-bottom:.3em; border-bottom:1px solid var(--border)}
+  .meta{color:var(--text-dim); font-size:14px; margin:0 0 32px}
+  .meta .tag{display:inline-block; padding:2px 10px; border-radius:999px;
+    background:var(--surface-2); border:1px solid var(--border); margin-right:8px; font-weight:600}
+  a{color:var(--accent)}
+  code{background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:.15em .4em; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.9em}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; overflow:auto}
+  pre code{background:none; border:none; padding:0}
+  blockquote{margin:1em 0; padding:.5em 1em; border-left:4px solid var(--accent);
+    background:var(--surface); border-radius:0 var(--radius) var(--radius) 0; color:var(--text-dim)}
+  table{border-collapse:collapse; width:100%; margin:1em 0}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left}
+  th{background:var(--surface-2)}
+  hr{border:none; border-top:1px solid var(--border); margin:2em 0}
+  footer{max-width:var(--maxw); margin:0 auto; padding:24px; color:var(--text-dim);
+    font-size:14px; border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../../dashboard.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="mdLogoT" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0ea5e9"/><stop offset=".55" stop-color="#14b8a6"/><stop offset="1" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0d9488"/>
+      <g fill="#5eead4"><rect x="1" y="8.5" width="4" height="2.6"/><rect x="1" y="14.7" width="4" height="2.6"/><rect x="1" y="20.9" width="4" height="2.6"/><rect x="27" y="8.5" width="4" height="2.6"/><rect x="27" y="14.7" width="4" height="2.6"/><rect x="27" y="20.9" width="4" height="2.6"/></g>
+      <rect x="5" y="5" width="22" height="22" rx="3" fill="url(#mdLogoT)"/>
+      <path d="M9 22V10.5l7 6.5 7-6.5V22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>← Dashboard</span>
+  </a>
+  <nav class="related">
+    <span class="label">Related:</span>
+    <a href="edgeline-spec.html">Edgeline — Detailed Implementation Specification (v1.1)</a>
+  </nav>
+  <span class="spacer"></span>
+  <button id="themeToggle" class="toggle" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+<h1>Edgeline T4.4a — What the Detector's CLV Says to Tune</h1>
+<p class="meta"><span class="tag">reports</span> 2026-11-04</p>
+<p>Spec §15's T4.4a asks for this report once 200 opportunities have a clean closing-line value:<br>
+the distribution, and what it says to tune. There are now 320. They cover every +EV opportunity<br>
+the detector found from 2026-09-24 to 2026-11-03 whose game has started, on 159 games. The short version: the detector<br>
+finds real value in football and none yet in basketball or hockey, and edges under 3% are noise.<br>
+Two changes follow, one already made. The rest of the levers should stay where they are. The<br>
+go-live gate (T4.4b) passes as written, but it was measured under alert rules that changed this<br>
+week, so the recommendation is two more weeks of paper first.</p>
+<h2 id="s1">1. Recommendations</h2>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>#</th><th>Change</th><th>Status</th><th>Evidence in one line</th></tr>
+<tr><td>R1</td><td>Pause NBA and NHL alerts (<code>alerts_paused_sports</code>)</td><td><strong>Done 2026-11-04</strong></td><td>NBA CLV −3.40%, NHL +0.25%; both intervals include zero or worse</td></tr>
+<tr><td>R2</td><td>Raise <code>ev_threshold_pct</code> from 2 to 3</td><td><strong>Proposed</strong></td><td>Edges under 3% average −1.14% at the close and beat it 51% of the time</td></tr>
+<tr><td>R3</td><td>Markets: leave <code>markets_featured</code> alone</td><td>No change</td><td>Spreads and totals show no edge, but football almost never produces them</td></tr>
+<tr><td>R4</td><td>Books: no change yet; watch DraftKings</td><td>No change</td><td>DraftKings as the bet book: +1.59% in football, interval includes zero, n=20</td></tr>
+<tr><td>R5</td><td>Poll times: no change</td><td>No change</td><td>Every lead-time band is positive in football</td></tr>
+<tr><td>R6</td><td>Stay on paper two more weeks, then decide</td><td><strong>Proposed</strong></td><td>T4.4b passed under the old cooldown; the new rules' picks are untested</td></tr>
+</table></div>
+<h3>R1 — NBA and NHL stay paused until their CLV turns</h3>
+<p>Both sports were alerting and losing: NBA 0 for 11 paper bets (−$45), NHL 4 for 15 against 6.7 expected (−$46). That is $91 of the $104 lost. The detector's own measurement agrees that this isn't bad luck. NBA's opportunities average <strong>−3.40%</strong> at the close (90% interval −7.85% to +0.59%, 31 opportunities on 17 games) and beat it 42% of the time. NHL's average <strong>+0.25%</strong> (−1.64% to +2.00%) and beat it 46% of the time. A book's own margin is about 2–3%, so an "edge" that ends up at zero is the margin being paid.</p>
+<p>Both sports are still polled and measured: the setting stops alerts, not data. <strong>Unpause a sport when its opportunity CLV is positive with at least 50 measured</strong>, and its interval no longer reaches below zero.</p>
+<h3>R2 — Raise the detection threshold to 3%</h3>
+<p>The 2–3% band is where the detector is wrong. Across all sports:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Detected edge</th><th>n</th><th>Games</th><th>Mean CLV</th><th>90% interval</th><th>Median</th><th>Beat close</th></tr>
+<tr><td>2–3%</td><td>102</td><td>68</td><td>−1.14%</td><td>−3.13% to +0.54%</td><td>+0.72%</td><td>51%</td></tr>
+<tr><td>3–5%</td><td>78</td><td>46</td><td>+3.64%</td><td>+1.01% to +6.29%</td><td>+1.66%</td><td>72%</td></tr>
+<tr><td>5–10%</td><td>85</td><td>54</td><td>+7.18%</td><td>+4.18% to +10.69%</td><td>+5.88%</td><td>74%</td></tr>
+<tr><td>10%+</td><td>55</td><td>28</td><td>+13.16%</td><td>+9.18% to +17.54%</td><td>+9.71%</td><td>87%</td></tr>
+</table></div>
+<p>The same holds in football alone, where alerts stay on. 2–3% edges average <strong>−0.77%</strong> and beat the close 58% of the time, while everything from 3% up beats it 80% of the time.</p>
+<p>Edge retention, the closing value as a share of the edge detected, tells the same story for football moneylines. Edges of 2–3% keep −36%, so they reverse. 3–5% keep 142% and 5–10% keep 122%: the market moves further toward us than the detector thought. 10%+ keep 80%. Above 3%, a detected edge is a real edge.</p>
+<p><strong>Effect:</strong> in football the threshold would keep 187 of 261 opportunities, at +8.86% mean CLV with 80% beating the close, and drop 74 that average −0.77%. Volume falls by about a quarter from what the per-game cooldown would send. That still leaves well over the old rule's one-per-sport trickle.</p>
+<p><strong>The counterpoint, stated plainly:</strong> the graded football <em>bets</em> split the other way. The 13 with edges under 3% are 5 for 13 and +$3.14; the 35 at 3% and up are 5 for 35 and −$18.75. Those 35 are mostly long shots, though, and football as a whole has won 10 bets against 10.1 expected. Results on 48 bets mostly at +300 and longer are noise. Closing value is the better estimate, and it is not close: −0.77% against +8.86%.</p>
+<p><code>min_edge_to_bet_pct</code> (1.5) sits below the threshold, so it does nothing either way. Leave it.</p>
+<h3>R3 — Markets: no change</h3>
+<p>Spreads average +0.66% (20, beat 50%) and totals −0.01% (12, beat 50%), so neither shows an edge. But football produced only four of them in six weeks; nearly all came from NBA and NHL, now paused. Dropping them from <code>markets_featured</code> would cut each poll from 3 credits to 1, but the budget isn't tight (363 of 1,000 used by 11-04), and they still feed the measurement. Revisit only if credits get tight.</p>
+<h3>R4 — Books: no change, but DraftKings is the one to watch</h3>
+<p>When the book offering the price is DraftKings, the edge rarely holds: <strong>+1.59%</strong> in football (interval −0.88% to +4.33%, n=20, beat 55%), against +5.45% to +8.73% for every other book. That fits DraftKings being the sharpest of the seven: a DraftKings price that disagrees with the others is more often the others lagging than DraftKings being stale. Disabling DraftKings would also remove it from the consensus, which needs five books, so that is the wrong lever. A "never bet at this book" setting would need code, and 20 opportunities don't justify it yet. <strong>Revisit at 50.</strong></p>
+<p>BetRivers, Bally Bet and betPARX look best (about +6.2% each, 80% beat). They share one pricing feed (Kambi), though, so their 124 rows are one source of edge counted three times.</p>
+<h3>R5 — Poll times: no change</h3>
+<p>Football CLV is positive in every lead-time band:</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Detected before the game</th><th>n</th><th>Mean CLV</th><th>Beat close</th></tr>
+<tr><td>under 2 h</td><td>28</td><td>+5.03%</td><td>79%</td></tr>
+<tr><td>2–6 h</td><td>41</td><td>+9.69%</td><td>88%</td></tr>
+<tr><td>6–24 h</td><td>52</td><td>+6.21%</td><td>77%</td></tr>
+<tr><td>1–3 days</td><td>110</td><td>+5.34%</td><td>67%</td></tr>
+<tr><td>3 days+</td><td>30</td><td>+5.04%</td><td>70%</td></tr>
+</table></div>
+<p>The 2–6 hour band is the strongest, which supports the plan's same-day slots. Nothing argues for moving them. The laptop sleeping through Saturday's 10:30 and 14:00 slots (10-24) cost more than any timing change would gain; that's a power setting, not a schedule one.</p>
+<h3>R6 — Two more weeks of paper, then the go-live decision</h3>
+<p>T4.4b is met as written: 67 recommended opportunities with a clean CLV average <strong>+6.03%</strong> (+2.18% to +10.47%), against +4.34% for the 253 not recommended. That is positive, and not below the other side. But those 67 were chosen by the old one-alert-per-sport cooldown, which always picked the single biggest edge. The rules changed this week: per-game alerting on 11-01, the NBA and NHL pause on 11-04, and R2 if accepted. The recommendations from here on are a different selection, and it hasn't been measured. <strong>Two weeks of paper under the new rules should produce roughly 50 new recommendations.</strong> If their CLV is positive and close to the opportunity side, the evidence for going live is about as strong as this sample allows.</p>
+<p>Turning <code>paper_mode</code> off stays your decision alone (§16.2); nothing here will do it.</p>
+<h2 id="s2">2. What CLV can and can't tell you before real money</h2>
+<ul><li><strong>The "close" is a consensus of seven Maryland retail books.</strong> There's no sharp book among them (Pinnacle and Circa aren't available here), so beating a soft consensus is a weaker claim than beating a sharp close. The +6% is likely an overstatement of the true edge, by an unknown amount.</li><li><strong>A paper price is not a filled bet.</strong> The alert has to reach you and you have to place it before the line moves. The soft books that supply most of the edge (the Kambi three, FanDuel) also limit accounts that win. Expect some stakes to be cut or refused.</li><li><strong>The dollar record will mostly be variance.</strong> The median recommendation is about +375, which wins about one time in four. At the current caps ($1,000 bankroll, at most 2% a bet), a month's P&amp;L will swing by more than its expected gain. Judge the system by CLV, weekly, not by its balance.</li><li><strong>Weeks vary.</strong> Football's weekly CLV ran +4.7% to +10.4% for four weeks, then −1.07% in W43 (10-19 to 10-25), then +5.03% in W44. One bad week is normal; two in a row would be a signal.</li></ul>
+<h2 id="s3">3. The full distribution</h2>
+<p>All sports, every measured +EV opportunity, circular measurements left out. CLV is the bet's expected value at the closing consensus: <code>closing_prob × price − 1</code>.</p>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Cut</th><th>n</th><th>Games</th><th>Mean CLV</th><th>90% interval</th><th>Median</th><th>Beat close</th></tr>
+<tr><td><strong>All</strong></td><td>320</td><td>159</td><td>+4.69%</td><td>+3.00% to +6.52%</td><td>+2.58%</td><td>68%</td></tr>
+<tr><td>NCAAF</td><td>224</td><td>99</td><td>+6.26%</td><td>+4.20% to +8.39%</td><td>+4.50%</td><td>75%</td></tr>
+<tr><td>NFL</td><td>37</td><td>26</td><td>+5.34%</td><td>+0.67% to +12.30%</td><td>+1.38%</td><td>68%</td></tr>
+<tr><td>NBA</td><td>31</td><td>17</td><td>−3.40%</td><td>−7.85% to +0.59%</td><td>−2.06%</td><td>42%</td></tr>
+<tr><td>NHL</td><td>28</td><td>17</td><td>+0.25%</td><td>−1.64% to +2.00%</td><td>−0.34%</td><td>46%</td></tr>
+<tr><td>Moneyline</td><td>288</td><td>140</td><td>+5.17%</td><td>+3.26% to +7.11%</td><td>+3.14%</td><td>70%</td></tr>
+<tr><td>Spread</td><td>20</td><td>11</td><td>+0.66%</td><td>−1.91% to +2.76%</td><td>+0.78%</td><td>50%</td></tr>
+<tr><td>Total</td><td>12</td><td>10</td><td>−0.01%</td><td>−1.66% to +1.24%</td><td>+0.56%</td><td>50%</td></tr>
+<tr><td>Priced under 2.0</td><td>5</td><td>5</td><td>−2.68%</td><td>−5.85% to +0.14%</td><td>−1.04%</td><td>20%</td></tr>
+<tr><td>2.0–3.0</td><td>50</td><td>35</td><td>−1.14%</td><td>−4.58% to +1.45%</td><td>+1.10%</td><td>58%</td></tr>
+<tr><td>3.0–5.0</td><td>90</td><td>49</td><td>+2.73%</td><td>−0.35% to +6.29%</td><td>+1.48%</td><td>63%</td></tr>
+<tr><td>5.0–10.0</td><td>113</td><td>53</td><td>+5.29%</td><td>+2.86% to +7.95%</td><td>+3.14%</td><td>72%</td></tr>
+<tr><td>10.0+</td><td>62</td><td>25</td><td>+11.76%</td><td>+7.90% to +16.11%</td><td>+9.63%</td><td>82%</td></tr>
+<tr><td>Closing-line source</td><td>264</td><td>132</td><td>+5.12%</td><td>+3.00% to +7.29%</td><td>+2.89%</td><td>68%</td></tr>
+<tr><td>Derived source</td><td>56</td><td>27</td><td>+2.70%</td><td>+0.70% to +4.66%</td><td>+1.51%</td><td>70%</td></tr>
+<tr><td>Recommended</td><td>67</td><td>59</td><td>+6.03%</td><td>+2.18% to +10.47%</td><td>+1.91%</td><td>60%</td></tr>
+<tr><td>Not recommended</td><td>253</td><td>133</td><td>+4.34%</td><td>+2.56% to +6.15%</td><td>+2.77%</td><td>71%</td></tr>
+</table></div>
+<p>Low prices look bad mostly because low prices come with small edges. With the edge at 3% or more, football bets priced under 3.0 are slightly positive (+1.23%, 10 of them), so there's no separate odds filter to add.</p>
+<p>The paper ledger, for completeness: 76 graded bets (8 set aside as duplicates or detected after the start), 15 won, −$104 on $353 staked. Football alone is 10 won against 10.1 expected.</p>
+<h2 id="s4">4. Method</h2>
+<ul><li><strong>Source:</strong> <code>edgeline-opportunities</code>, every <code>type: ev</code> document with a stored <code>clv_pct</code>, through 2026-11-04: 394 +EV opportunities, 320 measured. 53 circular measurements (the closing price was the detecting poll's own) and 21 not yet measurable are left out, as <code>python -m edgeline.clv</code> does.</li><li><strong>CLV</strong> is §12's <code>clv_pct</code>: the closing consensus fair probability times the price at first detection (or at the alert, where there was one), minus one. It's the expected return if the close is right.</li><li><strong>Intervals</strong> are 90% cluster bootstraps over games, 4,000 draws. Several opportunities on one game (three books with one price, or both sides of a market) aren't independent evidence, so the game is the unit resampled.</li><li><strong>Paper results</strong> are joined result → recommendation → opportunity. "Expected" wins use the detector's own probability, <code>(1 + edge) / price</code>.</li><li>Reproduce with <code>python -m edgeline.clv</code> for the top-line split. The cuts here came from one-off scripts over the same documents.</li></ul>
+</main>
+
+<footer>
+  Generated by Claude Code · <a href="../../dashboard.html">Back to dashboard</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('md-theme', next); } catch (e) {}
+    syncToggleLabel();
+  }
+  function syncToggleLabel(){
+    var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+  }
+  syncToggleLabel();
+</script>
+</body>
+</html>
