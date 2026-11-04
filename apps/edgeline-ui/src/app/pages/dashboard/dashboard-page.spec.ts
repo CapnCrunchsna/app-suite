@@ -143,12 +143,23 @@ describe('DashboardPage (§11.1)', () => {
     expect(el.textContent).not.toContain('The engine is not answering');
   });
 
+  it('names the sports whose alerts are paused, beside the plan (2026-11-04)', async () => {
+    const { el } = await render((api) => {
+      api.settings = { ...api.settings, alerts_paused_sports: ['basketball_nba', 'icehockey_nhl'] };
+      api.health = {
+        ...api.health,
+        poll_plan: { mode: 'schedule', polls_per_week: 22, sports: ['basketball_nba'] },
+      } as typeof api.health;
+    });
+    expect(el.textContent?.replace(/\s+/g, ' ')).toContain('alerts paused for NBA, NHL, still measured');
+  });
+
   describe('the backup row (2026-10-21)', () => {
     function backupRow(el: HTMLElement): string {
       const row = [...el.querySelectorAll('.health__row')].find(
         (r) => r.querySelector('.health__key')?.textContent?.trim() === 'Backup',
       );
-      return row?.textContent?.replace(/s+/g, ' ').trim() ?? '';
+      return row?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
     }
     const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
 

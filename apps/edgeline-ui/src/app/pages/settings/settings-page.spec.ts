@@ -49,6 +49,7 @@ const SPEC_DEFAULTS: Settings = {
   staleness_sigma_floor: 0.002,
   edge_improve_delta_pct: 0.5,
   alert_cooldown_s: 300,
+  alerts_paused_sports: [],
   sports_enabled: ['baseball_mlb'],
   markets_featured: ['h2h', 'spreads', 'totals'],
   markets_props: ['batter_home_runs', 'pitcher_strikeouts'],
@@ -146,8 +147,8 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       // `regions` on 2026-09-09, `offline_mode` on 2026-09-10,
       // `closing_capture_mode` on 2026-09-11, `book_state` on 2026-09-12,
       // `poll_schedule` on 2026-09-23, and `poll_bookmakers` and
-      // `poll_lookahead_h` on 2026-10-01.
-      expect(covered).toHaveLength(33);
+      // `poll_lookahead_h` on 2026-10-01, and `alerts_paused_sports` on 2026-11-04.
+      expect(covered).toHaveLength(34);
       expect(covered).toContain('regions');
       expect(covered).toContain('offline_mode');
       expect(covered).toContain('closing_capture_mode');

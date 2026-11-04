@@ -596,6 +596,48 @@ async def test_kill_switch_stores_opportunities_but_writes_no_recommendation(
         await client.close()
 
 
+@pytest.mark.es
+async def test_a_paused_sport_is_stored_and_measured_but_never_alerted(es_url, test_index_prefix):
+    """§3.2 `alerts_paused_sports` (2026-11-04): the kill switch for one sport.
+    Its opportunities are stored, so CLV keeps measuring them, and lifting the
+    pause lets one still being detected alert like any never-alerted one."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, with_prefix
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        sink = RecordingSink()
+        provider = _FixtureProvider(doctored_payload())
+
+        paused = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink,
+            settings=settings(alerts_paused_sports=["baseball_mlb"]),
+        )
+        assert paused.skipped_reason == "alerts_paused"
+        assert len(paused.detections) == 2 and paused.alerted == []
+        assert sink.sent == []
+        await client.indices.refresh(index=with_prefix(OPPORTUNITIES_INDEX, prefix))
+        stored = await client.count(index=with_prefix(OPPORTUNITIES_INDEX, prefix))
+        assert stored["count"] == 2
+        recs = await client.count(index=with_prefix(RECOMMENDATIONS_INDEX, prefix))
+        assert recs["count"] == 0
+
+        # Pausing another sport changes nothing for this one.
+        resumed = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink,
+            settings=settings(alerts_paused_sports=["basketball_nba"]),
+        )
+        assert resumed.skipped_reason is None
+        assert len(resumed.alerted) == 1
+    finally:
+        await client.close()
+
+
 def fair_only_payload(commence_time: str = EVENT_HEADER["commence_time"]) -> list[dict]:
     """Every book on the same fair line: no +EV, and inv > 1 so no arb either."""
     header = {**EVENT_HEADER, "commence_time": commence_time}

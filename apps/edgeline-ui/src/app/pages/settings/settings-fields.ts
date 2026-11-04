@@ -297,7 +297,13 @@ export const POLLING = {
       step: 1,
       min: 0,
       unit: 's',
-      hint: 'Per market key. Stops one drifting line from becoming twenty messages.',
+      hint: 'Per game and market (since 2026-11-01; per sport and market before). Stops one drifting line from becoming twenty messages, and three books quoting one price on one game from becoming three.',
+    },
+    {
+      key: 'alerts_paused_sports',
+      label: 'Sports with alerts paused',
+      kind: 'list',
+      hint: 'Sport keys, comma-separated. Still polled, detected and stored, so their CLV keeps being measured — but nothing is sent. The kill switch for one sport, for one whose detector has not shown an edge yet. Takes effect on the next poll.',
     },
     {
       key: 'edge_improve_delta_pct',

@@ -231,6 +231,7 @@ export interface Settings {
   staleness_sigma_floor?: number;
   edge_improve_delta_pct?: number;
   alert_cooldown_s?: number;
+  alerts_paused_sports?: string[];
   sports_enabled?: string[];
   markets_featured?: string[];
   markets_props?: string[];

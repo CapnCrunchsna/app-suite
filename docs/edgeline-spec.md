@@ -208,6 +208,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `staleness_sigma_floor` | `0.002` | σ floor to avoid divide-by-near-zero |
 | `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this since its last alert (amended 2026-10-01, §7.4) |
 | `alert_cooldown_s` | `300` | per `(event, market key)` since 2026-11-01; per `(sport, market key)` before |
+| `alerts_paused_sports` | `[]` | added 2026-11-04: sports polled, detected and stored as usual — so §12 keeps measuring their CLV — but never alerted; §7.1's kill switch for one sport. Set to NBA and NHL that day, whose opportunity CLV was −3.07% (n=34) and +0.29% (n=29) against +6.26% for NCAAF |
 | `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys. **Since 2026-09-23** what the interval polls when `poll_schedule` is empty, and what §10's manual trigger buys on a day the plan has nothing |
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
 | `markets_props` | `["batter_home_runs","pitcher_strikeouts"]` | polled per §8.4 |

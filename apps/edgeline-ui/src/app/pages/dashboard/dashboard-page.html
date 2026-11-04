@@ -201,6 +201,12 @@
               · {{ status.pollPlan()?.polls_per_week }} polls a week at fixed Eastern times ·
               <a routerLink="/settings" fragment="field-poll_schedule">edit</a>
             </span>
+            @if (pausedLeagues()) {
+              <span class="dim">
+                · alerts paused for {{ pausedLeagues() }}, still measured ·
+                <a routerLink="/settings" fragment="field-alerts_paused_sports">edit</a>
+              </span>
+            }
           } @else {
             {{ status.sportsEnabled().length ? status.sportsEnabled().join(', ') : 'none enabled' }}
             <span class="dim">· on the dev poll interval</span>

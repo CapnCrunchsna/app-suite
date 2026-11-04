@@ -774,6 +774,11 @@ async def run_once(
     if settings.kill_switch:
         # §7.1: keep polling for data continuity, stop before alerting.
         report.skipped_reason = "kill_switch"
+    elif sport_key in settings.alerts_paused_sports:
+        # §3.2's per-sport kill switch (2026-11-04): the same "store, send
+        # nothing", for one sport. Its opportunities keep their lifecycle and
+        # their CLV, which is the evidence that would unpause it.
+        report.skipped_reason = "alerts_paused"
 
     # Always the enabled set, even when it is empty. §6.5 and §6.6 both say
     # "enabled books", so an empty set must mean no detections rather than
@@ -867,7 +872,7 @@ async def run_once(
             (cooldown_key(detection.event_id, detection.market_key), detection, detection.edge_pct)
         )
 
-    if settings.kill_switch:
+    if settings.kill_switch or sport_key in settings.alerts_paused_sports:
         return report
 
     last_alerts = await load_last_alert_times(

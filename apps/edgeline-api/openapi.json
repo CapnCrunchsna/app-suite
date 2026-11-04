@@ -1958,6 +1958,13 @@
             "title": "Alert Cooldown S",
             "default": 300
           },
+          "alerts_paused_sports": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Alerts Paused Sports"
+          },
           "sports_enabled": {
             "items": {
               "type": "string"

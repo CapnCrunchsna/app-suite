@@ -193,6 +193,11 @@ class Settings(BaseModel):
     # Alerting
     edge_improve_delta_pct: float = 0.5
     alert_cooldown_s: int = 300
+    #: Sports that are polled, detected and stored as usual, so their CLV keeps
+    #: being measured, but never alerted (added 2026-11-04). For a sport whose
+    #: detector has not shown an edge yet: NBA and NHL, at CLV -3.07% (n=34)
+    #: and +0.29% (n=29), with 0 of 11 and 4 of 15 paper bets won.
+    alerts_paused_sports: list[str] = Field(default_factory=list)
 
     # Coverage
     sports_enabled: list[str] = Field(default_factory=lambda: ["baseball_mlb"])

@@ -278,6 +278,12 @@ export class DashboardPage {
 
   /** The plan's sports, for the Sports row — the enabled list alone stopped
    *  describing what is polled once the plan took over the cadence. */
+  /** §3.2 `alerts_paused_sports` (2026-11-04): polled and measured, never sent.
+   *  On the Sports row because it qualifies the plan beside it: a sport in the
+   *  plan that cannot alert reads as broken unless the page says why. */
+  protected readonly pausedLeagues = computed(() =>
+    (this.settings().alerts_paused_sports ?? []).map((key) => sportLabel(key)).join(', '),
+  );
   protected readonly planLeagues = computed(() =>
     (this.status.pollPlan()?.sports ?? []).map((key) => sportLabel(key)).join(', '),
   );

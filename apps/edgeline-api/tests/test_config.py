@@ -43,6 +43,8 @@ SPEC_DEFAULTS = {
     "staleness_sigma_floor": 0.002,
     "edge_improve_delta_pct": 0.5,
     "alert_cooldown_s": 300,
+    # Added 2026-11-04: polled and stored, never alerted.
+    "alerts_paused_sports": [],
     "sports_enabled": ["baseball_mlb"],
     "markets_featured": ["h2h", "spreads", "totals"],
     "markets_props": ["batter_home_runs", "pitcher_strikeouts"],
