@@ -37,7 +37,7 @@ from typing import Any
 
 from .config import Settings
 from .dedup import parse_iso
-from .grading import CLV_CLOSING, CLV_DERIVED, closing_consensus_prob
+from .grading import CLV_CLOSING, CLV_DERIVED, closing_consensus_prob, sharp_closing_prob
 from .indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, with_prefix
 from .oddsmath import clv_pct
 from .schemas import utc_now_iso
@@ -94,10 +94,23 @@ async def measure(
     sources: set[str] = set()
     staleness: list[int] = []
     priced: list[str] = []
+    sharp_values: list[float] = []
+    priced_legs = 0
     for leg in legs:
         price = float(leg.get("price_decimal") or 0.0)
         if price <= 1.0:
             continue
+        priced_legs += 1
+        sharp = await sharp_closing_prob(
+            client, event_id, source.get("market_key", ""), leg.get("selection", ""),
+            settings, prefix=prefix,
+        )
+        # A sharp close is bought at the close, so it postdates any detection;
+        # checked anyway, since a circular one would re-measure the edge.
+        if sharp is not None and not (
+            detected and sharp.priced_at and parse_iso(sharp.priced_at) <= parse_iso(detected)
+        ):
+            sharp_values.append(clv_pct(sharp.prob, price))
         closing = await closing_consensus_prob(
             client, event_id, source.get("market_key", ""), leg.get("selection", ""),
             settings, prefix=prefix,
@@ -115,12 +128,19 @@ async def measure(
         # Nothing stored before the start — honestly unknown, and final: no
         # pre-game price appears after the game has begun.
         return {**patch, "clv_pct": None, "clv_source": None, "clv_staleness_s": None,
-                "clv_priced_at": None, "clv_circular": None}
+                "clv_priced_at": None, "clv_circular": None, "clv_sharp_pct": None}
 
     earliest = min(priced) if priced else None
     return {
         **patch,
         "clv_pct": sum(values) / len(values),
+        # Every leg or none: an arbitrage half-measured against the sharp close
+        # would compare a different bet with the consensus figure beside it.
+        "clv_sharp_pct": (
+            sum(sharp_values) / len(sharp_values)
+            if sharp_values and len(sharp_values) == priced_legs
+            else None
+        ),
         # A mix is reported as derived, like a result: the weaker leg is what
         # the number inherits.
         "clv_source": CLV_CLOSING if sources == {CLV_CLOSING} else CLV_DERIVED,
@@ -189,6 +209,18 @@ _STATS: dict[str, Any] = {
     "median": {"percentiles": {"field": "clv_pct", "percents": [50]}},
     "positive": {"filter": {"range": {"clv_pct": {"gt": 0}}}},
     "closing": {"filter": {"term": {"clv_source": CLV_CLOSING}}},
+    # The same group against the sharp close (2026-11-05), with the consensus
+    # mean over the *same* opportunities beside it: the sharp ones are only the
+    # games since Pinnacle was recorded, so the group's headline mean is not a
+    # fair comparison.
+    "sharp": {
+        "filter": {"exists": {"field": "clv_sharp_pct"}},
+        "aggs": {
+            "mean": {"avg": {"field": "clv_sharp_pct"}},
+            "paired": {"avg": {"field": "clv_pct"}},
+            "positive": {"filter": {"range": {"clv_sharp_pct": {"gt": 0}}}},
+        },
+    },
 }
 
 #: The summary as one aggregation request (§10: summaries are ES aggregations,
@@ -287,6 +319,17 @@ def _stats(bucket: dict[str, Any], key: str | None = None) -> dict[str, Any]:
         # `None` rather than 0.0 with nothing measured: "no data" is not "never".
         "share_positive": (bucket["positive"]["doc_count"] / count) if count else None,
         "from_closing": bucket.get("closing", {}).get("doc_count", 0),
+        **_sharp_stats(bucket.get("sharp") or {}),
+    }
+
+
+def _sharp_stats(sharp: dict[str, Any]) -> dict[str, Any]:
+    count = sharp.get("doc_count", 0)
+    return {
+        "sharp_count": count,
+        "mean_sharp_clv_pct": sharp.get("mean", {}).get("value"),
+        "paired_mean_clv_pct": sharp.get("paired", {}).get("value"),
+        "sharp_share_positive": (sharp["positive"]["doc_count"] / count) if count else None,
     }
 
 
@@ -340,11 +383,17 @@ def _line(stats: dict[str, Any], label: str) -> str:
         return "    —" if value is None else f"{value:+6.2f}%"
 
     share = stats["share_positive"]
-    return (
+    line = (
         f"  {label:18s} {stats['count']:4d}  mean {pct(stats['mean_clv_pct'])}  "
         f"median {pct(stats['median_clv_pct'])}  positive "
         f"{'  —' if share is None else f'{share:4.0%}'}  closing {stats['from_closing']}"
     )
+    if stats.get("sharp_count"):
+        line += (
+            f"  | sharp {stats['sharp_count']}: {pct(stats['mean_sharp_clv_pct'])} "
+            f"vs consensus {pct(stats['paired_mean_clv_pct'])}"
+        )
+    return line
 
 
 def format_report(summary: dict[str, Any]) -> str:

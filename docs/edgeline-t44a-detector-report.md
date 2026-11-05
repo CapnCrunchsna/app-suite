@@ -119,10 +119,17 @@ Turning `paper_mode` off stays your decision alone (§16.2); nothing here will d
 The biggest caveat below is that the close is a soft consensus. The Odds API does carry
 Pinnacle, the market-making book whose closing line is the standard estimate of true odds: a test
 request priced 55 of the next 56 college games and all 15 NFL games, at 1 credit a request.
-Pinnacle would be recorded at each closing capture as a reference only, never in the consensus
-and never a bet, so every opportunity gets a second CLV against it. Naming the ten enabled books
-plus Pinnacle bills like the two regions the capture already asks for, so that costs about
-nothing extra; a separate Pinnacle-only request would be about 85 credits a month.
+A separate Pinnacle-only request at each capture would be about 85 credits a month.
+
+**Built 2026-11-05.** The closing capture now names its books instead of asking for the two
+regions: the 18 books those regions returned at the close over the last 30 days (so the consensus
+is unchanged, offshore books included) plus Pinnacle. Nineteen names bill as two regions, exactly
+what the capture already paid, so the benchmark costs nothing. Pinnacle's rows are kept in their
+own index, never in the consensus and never a bet. Every opportunity whose game starts from now on
+gets a second CLV against Pinnacle's close, shown as *Sharp CLV* on the Results page and in
+`python -m edgeline.clv`, beside the consensus CLV for the same opportunities. The 11-18 review
+reads both: an edge that holds against the sharp close is real; one that shows only against the
+retail consensus is the soft books lagging each other.
 
 ## 2. What CLV can and can't tell you before real money
 

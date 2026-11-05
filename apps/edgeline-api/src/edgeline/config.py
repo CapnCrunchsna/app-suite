@@ -227,9 +227,32 @@ class Settings(BaseModel):
     #:   the poll falls back to `regions`.
     #: * ``regions`` — request the `regions` buckets above, as before.
     #:
-    #: Closing snapshots always request `regions`, whatever this says: grading's
-    #: consensus reads every book stored, offshore ones included (§12).
+    #: Closing snapshots ignore this: they ask for `closing_bookmakers`, or for
+    #: `regions` when that is empty, because grading's consensus reads every book
+    #: stored, offshore ones included (§12).
     poll_bookmakers: PollBookmakers = "enabled"
+    #: The books a closing capture names instead of asking for `regions` (§8.4,
+    #: §12; added 2026-11-05). Empty, the default, asks for `regions` as before.
+    #: Named books bill a region per ten, so the 18 books `us,us2` returned at the
+    #: close over the 30 days to 11-05, plus `sharp_reference_books`, are 19
+    #: names, two units, the same as `us,us2`. The list is fixed rather than
+    #: discovered: a book the provider adds to those regions later stays out of
+    #: the consensus until it is named here.
+    closing_bookmakers: list[str] = Field(default_factory=list)
+    #: Books recorded at the close for a second CLV and for nothing else (§12,
+    #: added 2026-11-05): `pinnacle`, the market maker whose closing line is the
+    #: standard estimate of the true price. Their rows are written to
+    #: `edgeline-sharp-closes`, never to `edgeline-odds-snapshots`, so no
+    #: consensus, detection, alert or stake can read them. Asked for only while
+    #: `closing_bookmakers` names the books: a regions request cannot add one.
+    sharp_reference_books: list[str] = Field(default_factory=list)
+
+    def closing_request_books(self) -> list[str]:
+        """What a closing capture names (`closing_bookmakers` plus the sharp
+        references), or `[]` when it asks for `regions`."""
+        if not self.closing_bookmakers:
+            return []
+        return list(dict.fromkeys([*self.closing_bookmakers, *self.sharp_reference_books]))
 
     # Cadence
     poll_interval_s: int = 120

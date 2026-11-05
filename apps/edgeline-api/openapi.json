@@ -1125,6 +1125,44 @@
             "type": "integer",
             "title": "From Closing",
             "default": 0
+          },
+          "sharp_count": {
+            "type": "integer",
+            "title": "Sharp Count",
+            "default": 0
+          },
+          "mean_sharp_clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Sharp Clv Pct"
+          },
+          "paired_mean_clv_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paired Mean Clv Pct"
+          },
+          "sharp_share_positive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharp Share Positive"
           }
         },
         "type": "object",
@@ -2001,6 +2039,20 @@
             ],
             "title": "Poll Bookmakers",
             "default": "enabled"
+          },
+          "closing_bookmakers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Closing Bookmakers"
+          },
+          "sharp_reference_books": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sharp Reference Books"
           },
           "poll_interval_s": {
             "type": "integer",

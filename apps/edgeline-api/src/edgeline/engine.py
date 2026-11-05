@@ -46,6 +46,7 @@ from .indices import (
     OPPORTUNITIES_INDEX,
     RECOMMENDATIONS_INDEX,
     SETTINGS_INDEX,
+    SHARP_CLOSES_INDEX,
     SPORTSBOOKS_INDEX,
     UNMATCHED_INDEX,
     event_doc_id,
@@ -1014,19 +1015,25 @@ async def capture_closing_lines(
     ):
         return []
 
-    # Always the broad `regions`, never the named books (§8.4, 2026-10-01): a
-    # closing line is grading's consensus, and offshore books belong in it. The
-    # window asks only for the games about to start, padded past `window_end`
-    # so a kickoff the provider has pushed back is still in the answer.
+    # The broad `regions`, or `closing_bookmakers` naming the same books, never
+    # the enabled ones a poll names (§8.4, 2026-10-01): a closing line is
+    # grading's consensus, and offshore books belong in it. The window asks only
+    # for the games about to start, padded past `window_end` so a kickoff the
+    # provider has pushed back is still in the answer.
     window = {
         "commence_time_from": now.strftime(PROVIDER_STAMP),
         "commence_time_to": (window_end + CLOSING_WINDOW_PAD).strftime(PROVIDER_STAMP),
     }
     response = await provider.fetch_odds(
-        sport_key, markets, regions=",".join(settings.regions), **window
+        sport_key, markets, **closing_selection(settings), **window
     )
     quarantine: list[UnmatchedRow] = []
-    snapshots = normalize(provider.key, response.payload, quarantine=quarantine)
+    # The sharp references come off before anything else reads the answer, so
+    # what is due, what was answered and what is stored are the consensus books'
+    # alone, exactly as before Pinnacle was asked for (2026-11-05).
+    snapshots, sharp = _split_sharp(
+        normalize(provider.key, response.payload, quarantine=quarantine), settings
+    )
     await _refresh_start_times(client, snapshots, prefix=prefix)
 
     # Due by the start the answer gives, not the stored one: a game pushed past
@@ -1053,6 +1060,8 @@ async def capture_closing_lines(
         found, record = await _fetch_one_closing_line(
             provider, sport_key, event_id, sorted(wanted[event_id]), settings, quarantine
         )
+        found, found_sharp = _split_sharp(found, settings)
+        sharp.extend(found_sharp)
         record.update(event_id=event_id, window=window, answered=_answer_summary(response.payload))
         misses.append(UnmatchedRow(provider.key, CLOSING_WINDOW_MISS, record))
         await _refresh_start_times(client, found, prefix=prefix)
@@ -1092,16 +1101,50 @@ async def capture_closing_lines(
     if not pending:
         return []
 
+    pending_ids = {event_doc_id(s.sport_key, s.provider_event_id) for s in pending}
+    sharp_pending = [
+        s for s in sharp if event_doc_id(s.sport_key, s.provider_event_id) in pending_ids
+    ]
     await async_bulk(
         client,
         [
             {"_index": with_prefix(ODDS_SNAPSHOTS_INDEX, prefix), "_source": doc}
             for doc in snapshot_documents(pending, is_closing=True)
+        ]
+        + [
+            {"_index": with_prefix(SHARP_CLOSES_INDEX, prefix), "_source": doc}
+            for doc in snapshot_documents(sharp_pending, is_closing=True)
         ],
     )
     captured = sorted(event_ids - already)
-    log.info("captured closing lines for %d event(s)", len(captured))
+    log.info(
+        "captured closing lines for %d event(s), %d with a sharp reference",
+        len(captured),
+        len({event_doc_id(s.sport_key, s.provider_event_id) for s in sharp_pending}),
+    )
     return captured
+
+
+def closing_selection(settings: Settings) -> dict[str, Any]:
+    """The provider arguments a closing fetch asks with: the named books when
+    §3.2's `closing_bookmakers` lists them (with `sharp_reference_books`), else
+    `regions`."""
+    books = settings.closing_request_books()
+    return {"bookmakers": books} if books else {"regions": ",".join(settings.regions)}
+
+
+def _split_sharp(
+    snapshots: list[BookOddsSnapshot], settings: Settings
+) -> tuple[list[BookOddsSnapshot], list[BookOddsSnapshot]]:
+    """(consensus rows, sharp reference rows): §3.2's `sharp_reference_books`
+    are measured against, never part of the consensus (2026-11-05)."""
+    sharp_books = set(settings.sharp_reference_books)
+    if not sharp_books:
+        return snapshots, []
+    return (
+        [s for s in snapshots if s.book_key not in sharp_books],
+        [s for s in snapshots if s.book_key in sharp_books],
+    )
 
 
 #: `edgeline-unmatched` reason for a game the closing window's answer left out.
@@ -1188,7 +1231,7 @@ async def _fetch_one_closing_line(
     provider_event_id = event_id.split(":", 1)[1]
     try:
         response = await provider.fetch_event_odds(
-            sport_key, provider_event_id, markets, regions=",".join(settings.regions)
+            sport_key, provider_event_id, markets, **closing_selection(settings)
         )
     except Exception as failed:
         return [], {"fallback": {"error": f"{type(failed).__name__}: {failed}"}}

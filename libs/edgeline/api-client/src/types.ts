@@ -83,6 +83,10 @@ export interface OpportunityClvStats {
   median_clv_pct?: number | null;
   share_positive?: number | null;
   from_closing?: number;
+  sharp_count?: number;
+  mean_sharp_clv_pct?: number | null;
+  paired_mean_clv_pct?: number | null;
+  sharp_share_positive?: number | null;
 }
 
 /** CLV over every opportunity whose game has started (§12, 2026-10-01). */
@@ -237,6 +241,8 @@ export interface Settings {
   markets_props?: string[];
   regions?: string[];
   poll_bookmakers?: "enabled" | "regions";
+  closing_bookmakers?: string[];
+  sharp_reference_books?: string[];
   poll_interval_s?: number;
   poll_interval_dev_s?: number;
   poll_schedule?: PollSlot[];

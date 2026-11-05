@@ -915,6 +915,15 @@ async def test_the_closing_projection_replays_the_last_weeks_games(es_url, test_
         assert await projected("all") == 78
         assert await projected("off") == 0
         assert await projected("opportunities", offline_mode=True) == 0
+        # Named books bill a region per ten (2026-11-05): 18 plus Pinnacle is two
+        # units, what `us,us2` costs; 21 would be three.
+        eighteen = [f"book{n}" for n in range(18)]
+        assert await projected(
+            "opportunities", closing_bookmakers=eighteen, sharp_reference_books=["pinnacle"]
+        ) == 35
+        assert await projected(
+            "opportunities", closing_bookmakers=[*eighteen, "x", "y", "z"]
+        ) == 52  # 12 a week x 30/7 = 51.4
     finally:
         await client.close()
 

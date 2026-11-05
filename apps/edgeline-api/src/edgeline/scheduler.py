@@ -525,8 +525,11 @@ async def projected_closing_credits(
         source = events[event_id]
         fetches.setdefault((source["sport_key"], source["commence_time"]), set()).update(wanted)
 
-    regions = max(len(settings.regions), 1)
-    credits = sum(len(wanted) * regions for wanted in fetches.values())
+    # A region per ten named books when §3.2's `closing_bookmakers` names them
+    # (2026-11-05), else the regions.
+    named = len(settings.closing_request_books())
+    units = -(-named // BOOKS_PER_REGION) if named else max(len(settings.regions), 1)
+    credits = sum(len(wanted) * units for wanted in fetches.values())
     return -(-credits * DAYS_PER_MONTH // CLOSING_LOOKBACK_DAYS)
 
 

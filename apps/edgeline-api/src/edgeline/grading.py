@@ -37,6 +37,7 @@ from .indices import (
     RECOMMENDATIONS_INDEX,
     RESULTS_INDEX,
     SETTINGS_INDEX,
+    SHARP_CLOSES_INDEX,
     event_doc_id,
     with_prefix,
 )
@@ -550,6 +551,60 @@ async def closing_consensus_prob(
         source=source,
         staleness_s=staleness,
         priced_at=priced_at,
+    )
+
+
+async def sharp_closing_prob(
+    client, event_id: str, market_key: str, selection: str, settings: Settings, *, prefix: str
+) -> "ClosingPrice | None":
+    """The sharp reference's fair probability at the close (§12, 2026-11-05).
+
+    Read from `edgeline-sharp-closes`, which only the closing capture writes,
+    from §3.2's `sharp_reference_books` (Pinnacle). Each book's newest price,
+    de-vigged as the consensus is, then averaged evenly: it is a benchmark, so
+    `consensus_weights` (tuned for the retail books) does not apply. A spread or
+    total on another line has another selection name, so it is never compared
+    with this one. `None` when nothing was stored, which is every game before
+    2026-11-05.
+    """
+    try:
+        found = await client.search(
+            index=with_prefix(SHARP_CLOSES_INDEX, prefix),
+            size=200,
+            sort=[{"@timestamp": {"order": "desc"}}],
+            query={
+                "bool": {
+                    "filter": [
+                        {"term": {"event_id": event_id}},
+                        {"term": {"market_key": market_key}},
+                    ]
+                }
+            },
+        )
+    except Exception:
+        return None
+    newest: dict[str, str] = {}
+    by_book: dict[str, dict[str, float]] = {}
+    for hit in found["hits"]["hits"]:
+        row = hit["_source"]
+        stamp = newest.setdefault(row["book_key"], row["@timestamp"])
+        if row["@timestamp"] == stamp:
+            by_book.setdefault(row["book_key"], {})[row["selection"]] = row["price_decimal"]
+
+    fair: list[float] = []
+    for prices in by_book.values():
+        if len(prices) < 2 or selection not in prices:
+            continue
+        selections = list(prices)
+        try:
+            devigged = devig([implied_prob(prices[s]) for s in selections], settings.devig_method)
+        except (ValueError, NotImplementedError):
+            continue
+        fair.append(dict(zip(selections, devigged))[selection])
+    if not fair:
+        return None
+    return ClosingPrice(
+        prob=sum(fair) / len(fair), source=CLV_CLOSING, priced_at=max(newest.values())
     )
 
 

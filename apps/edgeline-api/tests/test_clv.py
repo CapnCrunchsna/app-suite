@@ -157,6 +157,60 @@ async def test_a_bought_closing_line_is_used_and_labelled(es_url, test_index_pre
         assert stored["clv_staleness_s"] is None
         assert stored["clv_circular"] is False
         assert stored["clv_pct"] == pytest.approx(LATER_CLV, abs=1e-3)
+        assert stored["clv_sharp_pct"] is None  # no sharp close stored
+    finally:
+        await client.close()
+
+
+async def test_a_sharp_close_is_a_second_clv_and_never_part_of_the_consensus(
+    es_url, test_index_prefix
+):
+    """§12, 2026-11-05: Pinnacle's close, from `edgeline-sharp-closes`, measures
+    the same price a second time. 1.95 / 1.95 de-vigs to 0.5, so Reds at 2.10 is
+    +5.00% against it, while the consensus CLV stays the retail books' +13.08%;
+    a Pinnacle row in the consensus would have pulled that toward +5. The
+    summary sets the consensus mean over the same opportunities beside it."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.clv import opportunity_clv_summary, grade_opportunities
+    from edgeline.indices import SHARP_CLOSES_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh(client, prefix)
+        await _game(client, prefix, "baseball_mlb:e1")
+        await _poll(client, prefix, "baseball_mlb:e1", "2026-09-02T12:00:00Z", 1.90, 2.00)
+        await _poll(client, prefix, "baseball_mlb:e1", "2026-09-02T16:36:00Z", 1.80, 2.10,
+                    closing=True)
+        for selection in (REDS, PADRES):
+            await client.index(
+                index=with_prefix(SHARP_CLOSES_INDEX, prefix),
+                document={"event_id": "baseball_mlb:e1", "book_key": "pinnacle",
+                          "market_key": "h2h", "selection": selection, "line": None,
+                          "price_decimal": 1.95, "is_closing": True,
+                          "@timestamp": "2026-09-02T16:36:00Z"},
+            )
+        await _opportunity(client, prefix, "o", "baseball_mlb:e1", "2026-09-02T12:00:03Z")
+        # Without a sharp close: counted in the headline, not in the sharp pair.
+        await _game(client, prefix, "baseball_mlb:e2")
+        await _poll(client, prefix, "baseball_mlb:e2", "2026-09-02T15:41:00Z", 1.80, 2.10)
+        await _opportunity(client, prefix, "p", "baseball_mlb:e2", "2026-09-02T12:00:03Z")
+        await client.indices.refresh(index=f"{prefix}*")
+
+        await grade_opportunities(client, Settings(), prefix=prefix, now=NOW)
+        stored = await _stored(client, prefix, "o")
+        assert stored["clv_pct"] == pytest.approx(LATER_CLV, abs=1e-3)
+        assert stored["clv_sharp_pct"] == pytest.approx(5.0, abs=1e-6)
+        assert (await _stored(client, prefix, "p"))["clv_sharp_pct"] is None
+
+        await client.indices.refresh(index=f"{prefix}*")
+        measured = (await opportunity_clv_summary(client, prefix=prefix))["measured"]
+        assert measured["count"] == 2
+        assert measured["sharp_count"] == 1
+        assert measured["mean_sharp_clv_pct"] == pytest.approx(5.0, abs=1e-6)
+        assert measured["paired_mean_clv_pct"] == pytest.approx(LATER_CLV, abs=1e-3)
+        assert measured["sharp_share_positive"] == 1.0
     finally:
         await client.close()
 

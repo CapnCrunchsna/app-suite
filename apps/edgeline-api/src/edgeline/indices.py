@@ -39,6 +39,11 @@ BETS_INDEX = "edgeline-bets"
 RESULTS_INDEX = "edgeline-results"
 BANKROLL_LEDGER_INDEX = "edgeline-bankroll-ledger"
 UNMATCHED_INDEX = "edgeline-unmatched"
+#: Closing prices from §3.2's `sharp_reference_books` (Pinnacle), added
+#: 2026-11-05. A separate index rather than a flag on the snapshots, so that no
+#: reader of `edgeline-odds-snapshots` (the consensus, detection, grading's
+#: closing line) can mistake a reference price for one of its own.
+SHARP_CLOSES_INDEX = "edgeline-sharp-closes"
 
 _KEYWORD: dict[str, Any] = {"type": "keyword"}
 _DATE: dict[str, Any] = {"type": "date"}
@@ -148,6 +153,10 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             #: `clv_circular`, left out of the summary's figures.
             "clv_priced_at": _DATE,
             "clv_circular": _BOOLEAN,
+            #: The same measurement against the sharp reference's close (Pinnacle,
+            #: §3.2 `sharp_reference_books`, added 2026-11-05) instead of the
+            #: consensus. Null when no sharp close was stored for every leg.
+            "clv_sharp_pct": _DOUBLE,
             #: Seconds from detection to the start, for the lead-time bands.
             "clv_lead_s": _LONG,
             #: The leg's price for the odds bands; null for an arbitrage.
@@ -223,6 +232,21 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             "reason": _KEYWORD,
             "resolved": _BOOLEAN,
             "created_at": _DATE,
+        },
+    },
+    # Shaped exactly like a snapshot (`snapshot_documents`), so one writer serves
+    # both; `is_closing` is always true here.
+    SHARP_CLOSES_INDEX: {
+        "dynamic": "strict",
+        "properties": {
+            "event_id": _KEYWORD,
+            "book_key": _KEYWORD,
+            "market_key": _KEYWORD,
+            "selection": _KEYWORD,
+            "line": _DOUBLE,
+            "price_decimal": _DOUBLE,
+            "is_closing": _BOOLEAN,
+            "@timestamp": _DATE,
         },
     },
 }

@@ -55,6 +55,10 @@ SPEC_DEFAULTS = {
     # bill as one region: an NCAAF h2h call naming the ten cost 1 credit against
     # 2 for us,us2, with the same seven Maryland books on all 65 events.
     "poll_bookmakers": "enabled",
+    # Added 2026-11-05: closing captures name these instead of asking for
+    # `regions`, plus the sharp references, kept apart for a second CLV.
+    "closing_bookmakers": [],
+    "sharp_reference_books": [],
     "poll_interval_s": 120,
     # 12 h, not §3.2's original 6 h: two regions double the per-poll cost, so the
     # halved rate keeps the dev cadence at the same 360 credits/month.

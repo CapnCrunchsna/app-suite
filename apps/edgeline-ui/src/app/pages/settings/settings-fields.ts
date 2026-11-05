@@ -223,7 +223,7 @@ export const POLLING = {
       key: 'regions',
       label: 'Provider regions',
       kind: 'list',
-      hint: 'The Odds API region buckets to request, comma-separated. Each one multiplies the credit cost of every poll they are used for and the §13 budget guard counts them — `us` alone returns only four MD-legal books, one short of what a consensus needs, which is why the default is `us, us2` (§8.4). Closing snapshots always use them; featured polls only when books are not named below.',
+      hint: 'The Odds API region buckets to request, comma-separated. Each one multiplies the credit cost of every poll they are used for and the §13 budget guard counts them — `us` alone returns only four MD-legal books, one short of what a consensus needs, which is why the default is `us, us2` (§8.4). Closing snapshots use them unless the closing capture names its books; featured polls only when books are not named below.',
     },
     {
       key: 'poll_bookmakers',
@@ -289,6 +289,18 @@ export const POLLING = {
       kind: 'select',
       options: ['off', 'recommended', 'opportunities', 'all'],
       hint: 'Whether to spend credits buying closing lines. Off buys none and measures CLV against the last price already stored before kickoff — free, but up to a poll interval stale, and circular when that is the very poll that found the edge. Recommended buys one for games with an alerted opportunity, in every market. Opportunities buys one for every game with an opportunity of any status, in only the markets they are in — the games CLV is measured on for every opportunity, at ~155 credits/month on the week to 2026-10-01. All buys one per game in the window: 1,188 credits/month, measured, against a 500 budget. The worker counts the chosen mode in its budget.',
+    },
+    {
+      key: 'closing_bookmakers',
+      label: 'Closing capture names',
+      kind: 'list',
+      hint: 'Book keys, comma-separated, that a closing capture names instead of requesting the regions; empty requests the regions. Every ten names bill as one region, so the 18 books us + us2 return at the close plus Pinnacle (19) cost what us + us2 does. A book left off is out of the closing consensus, and a book the provider adds later stays out until it is named here.',
+    },
+    {
+      key: 'sharp_reference_books',
+      label: 'Sharp reference books',
+      kind: 'list',
+      hint: 'Recorded at the close for a second CLV and nothing else: never in the consensus, never alerted or staked. Pinnacle’s closing line is the standard estimate of the true price, so beating it says more than beating the retail consensus. Asked for only while the closing capture names its books.',
     },
     {
       key: 'alert_cooldown_s',

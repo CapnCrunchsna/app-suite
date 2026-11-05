@@ -213,7 +213,9 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `markets_featured` | `["h2h","spreads","totals"]` | polled every cycle |
 | `markets_props` | `["batter_home_runs","pitcher_strikeouts"]` | polled per §8.4 |
 | `regions` | `["us","us2"]` | **added 2026-09-09.** The Odds API region buckets to request. `us` alone returns only 4 MD-legal books, one short of what §6.4's consensus needs — see §8.4. Each region multiplies the credit cost |
-| `poll_bookmakers` | `"enabled"` | **added 2026-10-01.** What a featured poll asks for: `enabled` names the enabled sportsbooks with `bookmakers=` — ten or fewer bill as one region, half of `us,us2` — and falls back to `regions` when none is enabled; `regions` requests the buckets above. Closing snapshots always ask for `regions` (§8.4, §12) |
+| `poll_bookmakers` | `"enabled"` | **added 2026-10-01.** What a featured poll asks for: `enabled` names the enabled sportsbooks with `bookmakers=` — ten or fewer bill as one region, half of `us,us2` — and falls back to `regions` when none is enabled; `regions` requests the buckets above. Closing snapshots never name the enabled books: they ask for `closing_bookmakers`, or `regions` when that is empty (§8.4, §12) |
+| `closing_bookmakers` | `[]` | added 2026-11-05: the books a closing capture names with `bookmakers=` instead of asking for `regions`, plus `sharp_reference_books`; empty asks for `regions`. Set that day to the 18 books `us,us2` had returned at the close over 30 days, so the consensus is unchanged, and 18 + Pinnacle = 19 names bill as two regions, what `us,us2` cost. Fixed rather than discovered: a book the provider adds later stays out until named here |
+| `sharp_reference_books` | `[]` | added 2026-11-05: books recorded at the close for a second CLV and nothing else (§12) — set to `["pinnacle"]`. Their rows go to `edgeline-sharp-closes`, never to `edgeline-odds-snapshots`, so no consensus, detection, alert or stake reads them. Asked for only while `closing_bookmakers` names the books |
 | `poll_interval_s` | `120` | featured-markets cycle (production) |
 | `poll_interval_dev_s` | `43200` | dev/free tier: 2 polls/day. **Halved from 6 h on 2026-09-09** — two regions double the per-poll cost, so this keeps the cadence at the same 360 credits/month. **Since 2026-09-23 only the fallback:** it applies when `poll_schedule` is empty |
 | `poll_schedule` | 14 slots — §8.4's table | **added 2026-09-23.** The free tier's featured cadence as fixed **America/New_York** times: a list of `{days, time, sport}` — `days` from `mon`…`sun`, `time` a 24-hour `HH:MM`, `sport` a The Odds API key. Each slot is one poll of one sport. Empty restores `poll_interval_dev_s`; a budget above the free tier's selects `poll_interval_s` and ignores it (§13). Takes effect at the next worker start |
@@ -297,12 +299,13 @@ update`.
 | `edgeline-sportsbooks` | book key | display_name kw · md_licensed bool · enabled bool · priority integer · link_templates obj(enabled:false) |
 | `edgeline-events` | `{sport_key}:{provider_event_id}` | sport_key kw · commence_time date · home_team kw · away_team kw · completed bool · home_score integer · away_score integer |
 | `edgeline-odds-snapshots` | auto | event_id kw · book_key kw · market_key kw · selection kw · line double · price_decimal double · is_closing bool · @timestamp date |
-| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double · sport_key kw · clv_pct double · clv_source kw · clv_staleness_s long · clv_priced_at date · clv_circular bool · clv_lead_s long · clv_price_decimal double · clv_graded_at date (§12, added 2026-10-01) |
+| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double · sport_key kw · clv_pct double · clv_source kw · clv_staleness_s long · clv_priced_at date · clv_circular bool · clv_lead_s long · clv_price_decimal double · clv_graded_at date (§12, added 2026-10-01) · clv_sharp_pct double (§12, added 2026-11-05) |
 | `edgeline-recommendations` | auto | opportunity_id kw (= opp_hash) · stakes obj(enabled:false, the §5 StakePlan) · paper bool · channel kw · sent_at date · message_ref kw |
 | `edgeline-bets` | auto | recommendation_id kw · confirmed_via kw(button\|reaction\|ui) · stake_actual_cents long · odds_actual_decimal double · placed_at date |
 | `edgeline-results` | **recommendation id** | bet_id kw · outcome kw(win\|loss\|push\|void) · pnl_cents long · clv_pct double · clv_source kw(closing\|derived) · clv_staleness_s long · needs_manual bool · graded_at date · excluded_reason kw (§12, added 2026-09-23) |
 | `edgeline-bankroll-ledger` | auto | book_key kw · delta_cents long · reason kw(deposit\|withdrawal\|bet_won\|bet_lost\|manual_adjust) · ref_result_id kw · @timestamp date — **no stored balance field** |
 | `edgeline-unmatched` | auto | provider_key kw · raw obj(enabled:false) · reason kw · resolved bool · created_at date |
+| `edgeline-sharp-closes` | auto | the `edgeline-odds-snapshots` fields, for §3.2's `sharp_reference_books` at the close only (§12, added 2026-11-05) — a separate index so no reader of the snapshots can take a reference price for a consensus one |
 
 `legs` is a plain `object` array, NOT `nested` — no query correlates fields across two legs
 of the same document, so nested overhead is unjustified.
@@ -789,7 +792,8 @@ NBA slots are free until the window reaches the 2026-10-20 opener; NCAAF's Thurs
 games, 122 hours and more after Saturday's polls, are not reached. **Two consequences.** Prices a
 poll stores now come from the named books alone, so a game graded without a closing snapshot
 derives its consensus from the Maryland seven rather than the ~14 books two regions returned,
-offshore ones included (§12); closing snapshots keep asking for `regions` for that reason. And
+offshore ones included (§12); closing snapshots keep asking for `regions` for that reason (or, since
+2026-11-05, name the same books with §3.2's `closing_bookmakers`). And
 §7.4's reconciliation is limited to the window, or every opportunity days out would close on each
 poll.
 
@@ -1109,7 +1113,8 @@ builds its consensus from every book stored for the market. Two-region polls sto
 game, offshore ones included; since §3.2's `poll_bookmakers` names the enabled books, a poll stores
 the Maryland seven alone, so a game graded without a closing snapshot is measured by a consensus
 about half as broad, of the books a person here could bet at. Closing snapshots keep asking for
-`regions`, so a game with a bought closing line keeps the broad consensus (§8.4).
+`regions` (or `closing_bookmakers`, the same books by name), so a game with a bought closing line
+keeps the broad consensus (§8.4).
 
 **CLV is measured for every opportunity, not only the recommendations — added 2026-10-01.** §7.4's
 cooldown allows one alert per `(sport, market_key)` per window, so by 2026-10-01 144 opportunities
@@ -1133,6 +1138,20 @@ as `opportunity_clv`, and the Results page shows it below the recommendations' f
 with nothing stored before its start is marked measured with no CLV, and not asked again. Since
 2026-10-08 the report also splits by alert — the opportunities that became recommendations (any
 recommendation's `opportunity_id`) and the rest — and **T4.4 reads both** (§15).
+
+**A second CLV against a sharp close — added 2026-11-05.** The consensus is of retail books, so
+beating it is a weaker claim than beating a market maker's close (T4.4a report). Each closing
+capture now names §3.2's `closing_bookmakers` plus `sharp_reference_books` (Pinnacle) in one
+request, at the credits `regions` cost; the sharp rows are split off before anything reads the
+answer and written to `edgeline-sharp-closes` alone. `sharp_closing_prob` de-vigs each sharp
+book's newest price there as the consensus is de-vigged and averages them evenly
+(`consensus_weights` is for the retail books), and the opportunity's `clv_sharp_pct` is the same
+first-detection price measured against it — null unless every leg has one, and never from a price
+fetched at or before `detected_at`. A spread or total on another line is a different selection, so
+it is never compared. The report and `opportunity_clv` give each group's sharp count, mean and
+share positive, with `paired_mean_clv_pct`, the consensus mean over the same opportunities: the
+sharp ones begin on 11-05, so the group's headline mean is not the comparison. Reference only —
+it changes no consensus, detection, threshold or gate.
 
 ---
 
@@ -1181,7 +1200,8 @@ game carrying an opportunity starts within `closing_capture_offset_s`. **The eve
 decided:** an opportunity of *any* status — open, alerted or closed — because each is a CLV worth
 measuring, and one that closed an hour after detection is as much a measurement as one still open; expired
 opportunities are on games already started and cannot be due. It asks only for the markets those
-opportunities are in, over the broad `regions` rather than the named books (§8.4 — grading's
+opportunities are in, over the broad `regions` (or `closing_bookmakers`, the same books by name)
+rather than the enabled books (§8.4 — grading's
 consensus wants the offshore books), and only for games starting in the window, so an answer with
 none in it is free. It pays only when due: the question is answered from Elasticsearch — events in
 the window, less those with a closing line, intersected with opportunities — before the provider is

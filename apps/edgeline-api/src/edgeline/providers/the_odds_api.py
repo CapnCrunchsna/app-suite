@@ -324,12 +324,15 @@ class TheOddsApiProvider:
         markets: list[str],
         *,
         regions: str = DEFAULT_REGIONS,
+        bookmakers: list[str] | None = None,
     ) -> ProviderResponse:
+        """One game's odds; `bookmakers` replaces `regions` as in `fetch_odds`."""
+        selection = {"bookmakers": ",".join(bookmakers)} if bookmakers else {"regions": regions}
         return await self._request(
             "event_odds",
             f"/sports/{sport_key}/events/{event_id}/odds",
             {
-                "regions": regions,
+                **selection,
                 "markets": ",".join(markets),
                 "oddsFormat": ODDS_FORMAT,
             },

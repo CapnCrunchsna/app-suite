@@ -42,6 +42,8 @@ EXPECTED_INDICES = {
     "edgeline-results",
     "edgeline-bankroll-ledger",
     "edgeline-unmatched",
+    # Added 2026-11-05: Pinnacle's closing prices, kept out of the snapshots.
+    "edgeline-sharp-closes",
 }
 
 BLOB_FIELDS = {"config", "link_templates", "stakes", "raw"}

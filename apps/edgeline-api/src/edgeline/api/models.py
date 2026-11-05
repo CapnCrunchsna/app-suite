@@ -201,6 +201,14 @@ class OpportunityClvStats(BaseModel):
     share_positive: float | None = None
     #: How many were measured against a bought closing line, not a derived one.
     from_closing: int = 0
+    #: How many also have a CLV against the sharp reference's close (Pinnacle,
+    #: §3.2 `sharp_reference_books`, 2026-11-05), and that CLV's mean and share
+    #: positive. `paired_mean_clv_pct` is the consensus CLV over those same
+    #: opportunities, the fair comparison while the sharp ones are a subset.
+    sharp_count: int = 0
+    mean_sharp_clv_pct: float | None = None
+    paired_mean_clv_pct: float | None = None
+    sharp_share_positive: float | None = None
 
 
 class OpportunityClvSummary(BaseModel):

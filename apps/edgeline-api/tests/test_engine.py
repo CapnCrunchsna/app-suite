@@ -1394,6 +1394,72 @@ async def test_a_sweep_pays_once_for_an_event_inside_the_window(
 
 
 @pytest.mark.es
+async def test_a_sharp_reference_book_is_stored_apart_from_the_consensus(
+    es_url, test_index_prefix
+):
+    """§3.2 `closing_bookmakers` and `sharp_reference_books` (2026-11-05). The
+    capture names the consensus books plus Pinnacle in one request, the same
+    credits as the regions it replaces, and Pinnacle's rows go to
+    `edgeline-sharp-closes` only: a Pinnacle row among the closing snapshots
+    would join grading's consensus."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import capture_closing_lines, run_once
+    from edgeline.indices import ODDS_SNAPSHOTS_INDEX, SHARP_CLOSES_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    now = datetime.now(timezone.utc)
+    consensus_books = [*FAIR_BOOKS, "juicy"]
+    try:
+        await _fresh_cluster(client, prefix)
+        payload = _payload_commencing_at(now + timedelta(seconds=120))
+        provider = _FixtureProvider(payload)
+        await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix)
+        await client.indices.refresh(index=f"{prefix}*")
+        provider.payload = [
+            {**payload[0], "bookmakers": [*payload[0]["bookmakers"], h2h("pinnacle", 1.95, 1.95)]}
+        ]
+        provider.requests.clear()
+
+        captured = await capture_closing_lines(
+            provider, client, sport_key="baseball_mlb",
+            settings=settings(
+                closing_capture_mode="all",
+                closing_bookmakers=consensus_books,
+                sharp_reference_books=["pinnacle"],
+            ),
+            prefix=prefix, now=now,
+        )
+
+        assert len(captured) == 1
+        [request] = provider.requests
+        assert request["bookmakers"] == [*consensus_books, "pinnacle"]
+        await client.indices.refresh(index=f"{prefix}*")
+        closing = await client.search(
+            index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix), size=100,
+            query={"term": {"is_closing": True}},
+        )
+        closing_books = {hit["_source"]["book_key"] for hit in closing["hits"]["hits"]}
+        assert closing_books == set(consensus_books)
+        sharp = await client.search(index=with_prefix(SHARP_CLOSES_INDEX, prefix), size=100)
+        assert [hit["_source"]["book_key"] for hit in sharp["hits"]["hits"]] == ["pinnacle"] * 2
+    finally:
+        await client.close()
+
+
+def test_closing_selection_names_books_only_when_closing_bookmakers_does():
+    """Empty `closing_bookmakers` keeps the regions, and the sharp references
+    with it: a regions request cannot add a single book."""
+    from edgeline.engine import closing_selection
+
+    assert closing_selection(settings(sharp_reference_books=["pinnacle"])) == {"regions": "us,us2"}
+    assert closing_selection(
+        settings(closing_bookmakers=["a", "pinnacle", "b"], sharp_reference_books=["pinnacle"])
+    ) == {"bookmakers": ["a", "pinnacle", "b"]}
+
+
+@pytest.mark.es
 async def test_the_default_mode_buys_no_closing_lines_at_all(es_url, test_index_prefix):
     """`closing_capture_mode="off"` is §3.2's default, and the only value that
     cannot overspend. Buying one for every event measured at 1,188 credits a

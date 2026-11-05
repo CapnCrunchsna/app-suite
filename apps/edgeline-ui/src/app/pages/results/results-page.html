@@ -208,6 +208,7 @@
                 <th class="num">Mean CLV</th>
                 <th class="num">Median</th>
                 <th class="num">Positive</th>
+                <th class="num" title="The same prices measured against Pinnacle’s close, recorded since 2026-11-05">Sharp CLV</th>
               </tr>
             </thead>
             <tbody>
@@ -217,10 +218,11 @@
                 <td class="num">{{ signedPercent(measured.mean_clv_pct) }}</td>
                 <td class="num">{{ signedPercent(measured.median_clv_pct) }}</td>
                 <td class="num">{{ ratio(measured.share_positive) }}</td>
+                <td class="num">{{ signedPercent(measured.mean_sharp_clv_pct ?? null) }}</td>
               </tr>
               @for (group of opportunityClvGroups(); track group.title) {
                 <tr class="opportunity-clv__group">
-                  <th colspan="5">{{ group.title }}</th>
+                  <th colspan="6">{{ group.title }}</th>
                 </tr>
                 @for (row of group.rows; track row.label) {
                   <tr>
@@ -229,6 +231,7 @@
                     <td class="num">{{ signedPercent(row.mean_clv_pct) }}</td>
                     <td class="num">{{ signedPercent(row.median_clv_pct) }}</td>
                     <td class="num">{{ ratio(row.share_positive) }}</td>
+                    <td class="num">{{ signedPercent(row.mean_sharp_clv_pct ?? null) }}</td>
                   </tr>
                 }
               }
@@ -239,6 +242,18 @@
           {{ clv.circular ?? 0 }} circular {{ clv.circular === 1 ? 'measurement' : 'measurements' }}
           left out · {{ clv.unpriced ?? 0 }} with no stored price ·
           {{ measured.from_closing ?? 0 }} against a bought closing line
+        </p>
+        <p class="dim clv-note sharp-note">
+          @if (measured.sharp_count) {
+            {{ measured.sharp_count }} also measured against Pinnacle’s close (sharp CLV):
+            {{ signedPercent(measured.mean_sharp_clv_pct ?? null) }}, against
+            {{ signedPercent(measured.paired_mean_clv_pct ?? null) }} on the consensus for the same
+            opportunities. A sharp close is the harder test; the gap is how much of the edge the
+            retail consensus flatters.
+          } @else {
+            Sharp CLV: none yet. Pinnacle’s close is recorded from 2026-11-05, as a benchmark only,
+            never part of the consensus or a bet.
+          }
         </p>
       } @else {
         <p class="empty">

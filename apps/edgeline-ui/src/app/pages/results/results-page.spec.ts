@@ -343,6 +343,42 @@ describe('ResultsPage (§11.1, §12)', () => {
       expect(gate.textContent).toContain('wider than the gate allows');
     });
 
+    // 2026-11-05: Pinnacle's close as a second CLV, compared on the same
+    // opportunities rather than against the headline mean.
+    it('sets the sharp CLV beside the consensus on the same opportunities', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = {
+          ...POPULATED,
+          opportunity_clv: {
+            graded: 40, circular: 0, unpriced: 0,
+            measured: {
+              ...stats(null, 40, 4.69),
+              sharp_count: 12,
+              mean_sharp_clv_pct: 1.25,
+              paired_mean_clv_pct: 3.4,
+              sharp_share_positive: 0.58,
+            },
+            by_sport: [{ ...stats('americanfootball_nfl', 40, 4.69), sharp_count: 12, mean_sharp_clv_pct: 1.25 }],
+          },
+        };
+      });
+      const allRow = el.querySelector('.opportunity-clv__all')?.textContent?.replace(/\s+/g, ' ') ?? '';
+      expect(allRow).toContain('+1.25%');
+      const note = el.querySelector('.sharp-note')?.textContent?.replace(/\s+/g, ' ') ?? '';
+      expect(note).toContain('12 also measured against Pinnacle');
+      expect(note).toContain('+3.40%');
+    });
+
+    it('says no sharp CLV exists yet rather than showing a zero', async () => {
+      const { el } = await render((stub) => {
+        stub.summary = {
+          ...POPULATED,
+          opportunity_clv: { graded: 4, circular: 0, unpriced: 0, measured: stats(null, 4, 2.06) },
+        };
+      });
+      expect(el.querySelector('.sharp-note')?.textContent).toContain('Sharp CLV: none yet');
+    });
+
     it('says nothing has been measured rather than showing zeros', async () => {
       const { el } = await render((stub) => {
         stub.summary = {
