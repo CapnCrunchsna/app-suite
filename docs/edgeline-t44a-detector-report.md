@@ -13,11 +13,11 @@ week, so the recommendation is two more weeks of paper first.
 | # | Change | Status | Evidence in one line |
 |---|---|---|---|
 | R1 | Pause NBA and NHL alerts (`alerts_paused_sports`) | **Done 2026-11-04** | NBA CLV −3.40%, NHL +0.25%; both intervals include zero or worse |
-| R2 | Raise `ev_threshold_pct` from 2 to 3 | **Proposed** | Edges under 3% average −1.14% at the close and beat it 51% of the time |
+| R2 | Raise `ev_threshold_pct` from 2 to 3 | **Done 2026-11-04** | Edges under 3% average −1.14% at the close and beat it 51% of the time |
 | R3 | Markets: leave `markets_featured` alone | No change | Spreads and totals show no edge, but football almost never produces them |
 | R4 | Books: no change yet; watch DraftKings | No change | DraftKings as the bet book: +1.59% in football, interval includes zero, n=20 |
 | R5 | Poll times: no change | No change | Every lead-time band is positive in football |
-| R6 | Stay on paper two more weeks, then decide | **Proposed** | T4.4b passed under the old cooldown; the new rules' picks are untested |
+| R6 | Stay on paper two more weeks, then decide | **Agreed 2026-11-04** — review about 11-18 | T4.4b passed under the old cooldown; the new rules' picks are untested |
 
 ### R1 — NBA and NHL stay paused until their CLV turns
 
@@ -113,6 +113,16 @@ roughly 50 new recommendations.** If their CLV is positive and close to the oppo
 the evidence for going live is about as strong as this sample allows.
 
 Turning `paper_mode` off stays your decision alone (§16.2); nothing here will do it.
+
+### Follow-up: a sharp benchmark (2026-11-04)
+
+The biggest caveat below is that the close is a soft consensus. The Odds API does carry
+Pinnacle, the market-making book whose closing line is the standard estimate of true odds: a test
+request priced 55 of the next 56 college games and all 15 NFL games, at 1 credit a request.
+Pinnacle would be recorded at each closing capture as a reference only, never in the consensus
+and never a bet, so every opportunity gets a second CLV against it. Naming the ten enabled books
+plus Pinnacle bills like the two regions the capture already asks for, so that costs about
+nothing extra; a separate Pinnacle-only request would be about 85 credits a month.
 
 ## 2. What CLV can and can't tell you before real money
 
