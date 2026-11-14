@@ -26,6 +26,7 @@ import type {
   SportsbookRow,
   SummaryResponse,
   UnmatchedRowResponse,
+  WhatIfResponse,
 } from './types.js';
 
 export interface RequestOptions {
@@ -183,6 +184,15 @@ export class EdgelineApiClient {
       "GET",
       `/api/results/summary`,
       { query, ...options },
+    );
+  }
+
+  /** What If */
+  async getWhatIf(options?: RequestOptions): Promise<WhatIfResponse> {
+    return this.request<WhatIfResponse>(
+      "GET",
+      `/api/results/what-if`,
+      { ...options },
     );
   }
 

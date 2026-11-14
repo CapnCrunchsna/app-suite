@@ -215,6 +215,39 @@ async def test_a_sharp_close_is_a_second_clv_and_never_part_of_the_consensus(
         await client.close()
 
 
+async def test_every_opportunity_is_settled_against_its_games_final_score(
+    es_url, test_index_prefix
+):
+    """2026-11-13, the What-if page: `settle_opportunities` judges each started
+    single-leg opportunity's own bet with `settle_leg`, once its game has a
+    score. No score, nothing written; and a second pass settles nothing again."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.grading import settle_opportunities
+    from edgeline.indices import EVENTS_INDEX, with_prefix
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh(client, prefix)
+        await client.index(
+            index=with_prefix(EVENTS_INDEX, prefix), id="baseball_mlb:e1",
+            document={"sport_key": "baseball_mlb", "commence_time": START, "home_team": REDS,
+                      "away_team": PADRES, "completed": True, "home_score": 5, "away_score": 3},
+        )
+        await _game(client, prefix, "baseball_mlb:e2")  # started, no score yet
+        await _opportunity(client, prefix, "reds", "baseball_mlb:e1", "2026-09-02T12:00:03Z")
+        await _opportunity(client, prefix, "unscored", "baseball_mlb:e2", "2026-09-02T12:00:03Z")
+        await client.indices.refresh(index=f"{prefix}*")
+
+        assert await settle_opportunities(client, prefix=prefix, now=NOW) == 1
+        assert (await _stored(client, prefix, "reds"))["bet_outcome"] == "win"
+        assert "bet_outcome" not in await _stored(client, prefix, "unscored")
+        assert await settle_opportunities(client, prefix=prefix, now=NOW) == 0
+    finally:
+        await client.close()
+
+
 async def test_the_summary_counts_mean_median_and_share_with_circular_left_out(
     es_url, test_index_prefix
 ):

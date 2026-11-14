@@ -326,3 +326,32 @@ export interface ValidationError {
   input?: unknown;
   ctx?: Record<string, unknown>;
 }
+
+/** One settled bet for the What-if page (§11, added 2026-11-13). */
+export interface WhatIfBet {
+  id: string;
+  sport_key: string;
+  event_id: string;
+  market_key: string;
+  selection: string;
+  book_key: string;
+  price_decimal: number;
+  edge_pct?: number | null;
+  clv_pct: number;
+  clv_sharp_pct?: number | null;
+  clv_circular?: boolean | null;
+  outcome: string;
+  starts_at: string;
+  detected_at?: string | null;
+  recommended?: boolean;
+  stake_cents?: number | null;
+  pnl_cents?: number | null;
+}
+
+/** The paper ledger as graded, and every settled +EV opportunity. */
+export interface WhatIfResponse {
+  paper?: WhatIfBet[];
+  opportunities?: WhatIfBet[];
+  paper_without_clv?: number;
+  opportunities_without_clv?: number;
+}

@@ -323,15 +323,25 @@ async def sports_awaiting_settlement(
     on a sport since dropped from the plan still gets settled.
 
     Raises when the datastore cannot answer; the caller decides what not knowing
-    means.
+    means. Since 2026-11-13 a sport with an unsettled opportunity counts too
+    (`_sports_with_unsettled_opportunities`).
     """
     now = now or datetime.now(timezone.utc)
+    return sorted(
+        await _sports_with_unsettled_recommendations(client, prefix=prefix, now=now)
+        | await _sports_with_unsettled_opportunities(client, prefix=prefix, now=now)
+    )
+
+
+async def _sports_with_unsettled_recommendations(
+    client, *, prefix: str, now: datetime
+) -> set[str]:
     found = await client.search(
         index=with_prefix(RECOMMENDATIONS_INDEX, prefix), size=1000, query={"match_all": {}}
     )
     hits = found["hits"]["hits"]
     if not hits:
-        return []
+        return set()
     existing = await client.mget(
         index=with_prefix(RESULTS_INDEX, prefix), ids=[hit["_id"] for hit in hits]
     )
@@ -344,7 +354,7 @@ async def sports_awaiting_settlement(
         }
     )
     if not opportunity_ids:
-        return []
+        return set()
 
     opportunities = await client.mget(
         index=with_prefix(OPPORTUNITIES_INDEX, prefix), ids=opportunity_ids
@@ -357,7 +367,7 @@ async def sports_awaiting_settlement(
         }
     )
     if not event_ids:
-        return []
+        return set()
 
     events = await client.mget(index=with_prefix(EVENTS_INDEX, prefix), ids=event_ids)
     sports: set[str] = set()
@@ -371,7 +381,135 @@ async def sports_awaiting_settlement(
             continue
         if now - SETTLEMENT_LOOKBACK <= started <= now:
             sports.add(source.get("sport_key") or doc["_id"].split(":", 1)[0])
-    return sorted(sports)
+    return sports
+
+
+async def _sports_with_unsettled_opportunities(
+    client, *, prefix: str, now: datetime
+) -> set[str]:
+    """Sports with a started +EV opportunity whose game has no final score yet.
+
+    Added 2026-11-13 for the What-if page, which settles every opportunity
+    (`settle_opportunities`), not only the paper bets. Without it a sport whose
+    alerts are paused had no recommendation to settle, so its scores were never
+    fetched and its opportunities could never be judged; NBA and NHL from 11-04
+    to 11-13 are mostly unscored for that reason, beyond the feed's reach now.
+    The cost is the same 2 credits a sport, on the days such a game exists.
+    The type and outcome are checked here as well as in the query, so a store
+    that ignores the filter cannot widen it.
+    """
+    stamp = "%Y-%m-%dT%H:%M:%SZ"
+    found = await client.search(
+        index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+        size=1000,
+        source=["event_id", "type", "bet_outcome"],
+        query={
+            "bool": {
+                "filter": [
+                    {"term": {"type": "ev"}},
+                    {"range": {"expires_at": {
+                        "gte": (now - SETTLEMENT_LOOKBACK).strftime(stamp),
+                        "lte": now.strftime(stamp),
+                    }}},
+                ],
+                "must_not": [{"exists": {"field": "bet_outcome"}}],
+            }
+        },
+    )
+    event_ids = sorted({
+        hit["_source"]["event_id"]
+        for hit in found["hits"]["hits"]
+        if hit["_source"].get("type") == "ev"
+        and not hit["_source"].get("bet_outcome")
+        and hit["_source"].get("event_id")
+    })
+    if not event_ids:
+        return set()
+    events = await client.mget(index=with_prefix(EVENTS_INDEX, prefix), ids=event_ids)
+    sports: set[str] = set()
+    for doc in events["docs"]:
+        if not doc.get("found") or doc["_source"].get("completed"):
+            continue
+        try:
+            started = parse_iso(doc["_source"]["commence_time"])
+        except (KeyError, TypeError, AttributeError, ValueError):
+            continue
+        if now - SETTLEMENT_LOOKBACK <= started <= now:
+            sports.add(doc["_source"].get("sport_key") or doc["_id"].split(":", 1)[0])
+    return sports
+
+
+async def settle_opportunities(client, *, prefix: str, now: datetime | None = None) -> int:
+    """Settle every started single-leg +EV opportunity whose game has a final score.
+
+    Added 2026-11-13 for the What-if page (§11). It reads only what step 1 has
+    already written onto `edgeline-events`, so it is free, and it is idempotent:
+    `bet_outcome` marks what is done. It uses the same `settle_leg` a paper bet
+    is settled by, on the opportunity's own selection and line. An opportunity
+    whose game never got a score keeps no outcome and is simply left out.
+    Returns how many it settled.
+    """
+    now = now or datetime.now(timezone.utc)
+    index = with_prefix(OPPORTUNITIES_INDEX, prefix)
+    settled = 0
+    seen: set[str] = set()
+    while True:
+        found = await client.search(
+            index=index,
+            size=500,
+            source=["event_id", "market_key", "legs", "type"],
+            query={
+                "bool": {
+                    "filter": [
+                        {"term": {"type": "ev"}},
+                        {"range": {"expires_at": {"lte": now.strftime("%Y-%m-%dT%H:%M:%SZ")}}},
+                    ],
+                    "must_not": [
+                        {"exists": {"field": "bet_outcome"}},
+                        {"ids": {"values": sorted(seen)}},
+                    ],
+                }
+            },
+            sort=[{"expires_at": {"order": "asc"}}],
+        )
+        hits = found["hits"]["hits"]
+        if not hits:
+            break
+        seen.update(hit["_id"] for hit in hits)
+        event_ids = sorted({hit["_source"].get("event_id", "") for hit in hits} - {""})
+        events = await client.mget(index=with_prefix(EVENTS_INDEX, prefix), ids=event_ids)
+        scored = {
+            doc["_id"]: doc["_source"]
+            for doc in events["docs"]
+            if doc.get("found")
+            and doc["_source"].get("completed")
+            and doc["_source"].get("home_score") is not None
+            and doc["_source"].get("away_score") is not None
+        }
+        for hit in hits:
+            source = hit["_source"]
+            event = scored.get(source.get("event_id", ""))
+            legs = source.get("legs") or []
+            if event is None or len(legs) != 1:
+                continue
+            scores = {
+                event["home_team"]: int(event["home_score"]),
+                event["away_team"]: int(event["away_score"]),
+            }
+            leg = legs[0]
+            outcome = settle_leg(
+                source.get("market_key", ""), leg.get("selection", ""), leg.get("line"), scores
+            )
+            await client.update(
+                index=index, id=hit["_id"],
+                doc={"bet_outcome": outcome, "bet_settled_at": now.strftime("%Y-%m-%dT%H:%M:%SZ")},
+            )
+            settled += 1
+        if len(hits) < 500:
+            break
+    if settled:
+        await client.indices.refresh(index=index)
+    return settled
 
 
 async def _grade_one(

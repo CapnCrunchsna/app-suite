@@ -36,8 +36,8 @@ from fastapi import APIRouter, Depends
 
 from ...clv import RECOMMENDED_IDS_BODY, recommended_ids, summarise, summary_body
 from ...indices import OPPORTUNITIES_INDEX, RECOMMENDATIONS_INDEX, RESULTS_INDEX
-from ..deps import Context, get_context, search
-from ..models import SummaryResponse
+from ..deps import Context, get_context, mget, search
+from ..models import SummaryResponse, WhatIfResponse
 
 router = APIRouter(prefix="/results", tags=["results"])
 
@@ -132,6 +132,118 @@ async def summary(
         "buckets": buckets,
         "totals": _totals(aggregations),
         "opportunity_clv": opportunity_clv,
+    }
+
+
+@router.get("/what-if", operation_id="getWhatIf")
+async def what_if(context: Context = Depends(get_context)) -> WhatIfResponse:
+    """Settled bets for the What-if page (§11, 2026-11-13): the paper ledger, and
+    every settled single-leg +EV opportunity.
+
+    Rows, not aggregations, unlike `/summary`: the page re-totals them on every
+    toggle (sport, odds, edge, market, period, stake) and computes a luck range
+    per bet, which a fixed aggregation cannot. There are a few hundred.
+    """
+    opportunities = await search(
+        context, OPPORTUNITIES_INDEX, size=10_000,
+        query={"bool": {"filter": [{"term": {"type": "ev"}}, {"exists": {"field": "bet_outcome"}}]}},
+    )
+    recommended = set(
+        recommended_ids(await search(context, RECOMMENDATIONS_INDEX, **RECOMMENDED_IDS_BODY))
+    )
+    rows, without = [], 0
+    for hit in opportunities.get("hits", {}).get("hits", []):
+        row = _what_if_row(hit["_id"], hit["_source"], recommended=hit["_id"] in recommended)
+        # A circular CLV was priced by the poll that found the edge, so it
+        # restates the detector rather than testing it, and every other CLV
+        # figure leaves it out (§12). Here it would also inflate "expected":
+        # with them in, all opportunities averaged +10.8% against +7.3% for
+        # football, the best sport.
+        if row is None or row["clv_circular"]:
+            without += 1
+        else:
+            rows.append(row)
+
+    results = await search(
+        context, RESULTS_INDEX, size=10_000,
+        query={"bool": {"must_not": [{"exists": {"field": "excluded_reason"}}]}},
+    )
+    graded = {hit["_id"]: hit["_source"] for hit in results.get("hits", {}).get("hits", [])}
+    recommendations = await mget(context, RECOMMENDATIONS_INDEX, sorted(graded))
+    linked = await mget(
+        context, OPPORTUNITIES_INDEX,
+        sorted({r.get("opportunity_id", "") for r in recommendations.values()} - {""}),
+    )
+    paper, paper_without = [], 0
+    for rec_id, result in graded.items():
+        rec = recommendations.get(rec_id) or {}
+        legs = (rec.get("stakes") or {}).get("legs") or []
+        opportunity = linked.get(rec.get("opportunity_id", ""))
+        if len(legs) != 1 or opportunity is None or result.get("clv_pct") is None:
+            paper_without += 1
+            continue
+        leg = legs[0]
+        stake = int(leg.get("stake_cents") or 0)
+        if stake <= 0:
+            paper_without += 1
+            continue
+        # The result's own CLV, measured at the price alerted at.
+        base = _what_if_row(
+            rec_id, {**opportunity, "clv_pct": result["clv_pct"]},
+            recommended=True, require_outcome=False,
+        )
+        if base is None:
+            paper_without += 1
+            continue
+        paper.append({
+            **base,
+            "book_key": leg.get("book_key", base["book_key"]),
+            # The price alerted at, which a re-alert may have improved.
+            "price_decimal": 1 + int(leg.get("to_win_cents") or 0) / stake,
+            "clv_pct": result["clv_pct"],
+            "outcome": result.get("outcome", "void"),
+            "stake_cents": stake,
+            "pnl_cents": int(result.get("pnl_cents") or 0),
+        })
+    rows.sort(key=lambda r: r["starts_at"])
+    paper.sort(key=lambda r: r["starts_at"])
+    return {
+        "paper": paper,
+        "opportunities": rows,
+        "paper_without_clv": paper_without,
+        "opportunities_without_clv": without,
+    }
+
+
+def _what_if_row(
+    doc_id: str, source: dict[str, Any], *, recommended: bool, require_outcome: bool = True
+) -> dict[str, Any] | None:
+    """An opportunity as a `WhatIfBet`, or `None` when it cannot be judged:
+    more than one leg, no price, no CLV, or (for an opportunity) no outcome."""
+    legs = source.get("legs") or []
+    if len(legs) != 1 or source.get("clv_pct") is None:
+        return None
+    leg = legs[0]
+    price = float(leg.get("price_decimal") or 0)
+    if price <= 1 or (require_outcome and not source.get("bet_outcome")):
+        return None
+    event_id = source.get("event_id", "")
+    return {
+        "id": doc_id,
+        "sport_key": source.get("sport_key") or event_id.split(":", 1)[0],
+        "event_id": event_id,
+        "market_key": source.get("market_key", ""),
+        "selection": leg.get("selection", ""),
+        "book_key": leg.get("book_key", ""),
+        "price_decimal": price,
+        "edge_pct": source.get("edge_pct"),
+        "clv_pct": source["clv_pct"],
+        "clv_sharp_pct": source.get("clv_sharp_pct"),
+        "clv_circular": source.get("clv_circular"),
+        "outcome": source.get("bet_outcome") or "void",
+        "starts_at": source.get("expires_at", ""),
+        "detected_at": source.get("detected_at"),
+        "recommended": recommended,
     }
 
 

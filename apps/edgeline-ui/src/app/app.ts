@@ -4,7 +4,8 @@ import { ThemeSwitcher } from '@metrum/ui';
 
 import { SystemStatus } from './system-status.service';
 
-/** §11.1's eight routes, in §11.1's order. */
+/** §11.1's eight routes, in §11.1's order, plus What if (2026-11-13) beside the
+ *  Results it reads from. */
 interface Section {
   readonly label: string;
   readonly path: string;
@@ -15,6 +16,7 @@ const SECTIONS: readonly Section[] = [
   { label: 'Opportunities', path: 'opportunities' },
   { label: 'Recommendations', path: 'recommendations' },
   { label: 'Results', path: 'results' },
+  { label: 'What if', path: 'what-if' },
   { label: 'Settings', path: 'settings' },
   { label: 'Sportsbooks', path: 'sportsbooks' },
   { label: 'Providers', path: 'providers' },

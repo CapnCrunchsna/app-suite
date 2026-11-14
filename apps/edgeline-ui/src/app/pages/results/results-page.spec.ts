@@ -9,6 +9,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import type { SummaryResponse } from '@metrum/edgeline-api-client';
 
 import { ResultsPage } from './results-page';
@@ -65,7 +66,7 @@ async function render(configure: (api: ApiStub) => void = () => undefined) {
   configure(api);
   TestBed.configureTestingModule({
     imports: [ResultsPage],
-    providers: [{ provide: EdgelineApiService, useValue: api }],
+    providers: [{ provide: EdgelineApiService, useValue: api }, provideRouter([])],
   });
   const fixture = TestBed.createComponent(ResultsPage);
   fixture.detectChanges();

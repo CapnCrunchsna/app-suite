@@ -514,6 +514,28 @@
         }
       }
     },
+    "/api/results/what-if": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "What If",
+        "description": "Settled bets for the What-if page (§11, 2026-11-13): the paper ledger, and\nevery settled single-leg +EV opportunity.\n\nRows, not aggregations, unlike `/summary`: the page re-totals them on every\ntoggle (sport, odds, edge, market, period, stake) and computes a luck range\nper bet, which a fixed aggregation cannot. There are a few hundred.",
+        "operationId": "getWhatIf",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatIfResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/bankroll": {
       "get": {
         "tags": [
@@ -2523,6 +2545,167 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WhatIfBet": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sport_key": {
+            "type": "string",
+            "title": "Sport Key"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "market_key": {
+            "type": "string",
+            "title": "Market Key"
+          },
+          "selection": {
+            "type": "string",
+            "title": "Selection"
+          },
+          "book_key": {
+            "type": "string",
+            "title": "Book Key"
+          },
+          "price_decimal": {
+            "type": "number",
+            "title": "Price Decimal"
+          },
+          "edge_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Pct"
+          },
+          "clv_pct": {
+            "type": "number",
+            "title": "Clv Pct"
+          },
+          "clv_sharp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clv Sharp Pct"
+          },
+          "clv_circular": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clv Circular"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "starts_at": {
+            "type": "string",
+            "title": "Starts At"
+          },
+          "detected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected At"
+          },
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended",
+            "default": false
+          },
+          "stake_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stake Cents"
+          },
+          "pnl_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl Cents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sport_key",
+          "event_id",
+          "market_key",
+          "selection",
+          "book_key",
+          "price_decimal",
+          "clv_pct",
+          "outcome",
+          "starts_at"
+        ],
+        "title": "WhatIfBet",
+        "description": "One settled bet for the What-if page (§11, added 2026-11-13).\n\nThe page filters and totals these in the browser so every toggle is\ninstant; there are a few hundred. `stake_cents` and `pnl_cents` are the\npaper ledger's own and are null on an opportunity, which has no stake."
+      },
+      "WhatIfResponse": {
+        "properties": {
+          "paper": {
+            "items": {
+              "$ref": "#/components/schemas/WhatIfBet"
+            },
+            "type": "array",
+            "title": "Paper"
+          },
+          "opportunities": {
+            "items": {
+              "$ref": "#/components/schemas/WhatIfBet"
+            },
+            "type": "array",
+            "title": "Opportunities"
+          },
+          "paper_without_clv": {
+            "type": "integer",
+            "title": "Paper Without Clv",
+            "default": 0
+          },
+          "opportunities_without_clv": {
+            "type": "integer",
+            "title": "Opportunities Without Clv",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "WhatIfResponse",
+        "description": "The paper ledger as graded, and every settled +EV opportunity.\n\nBoth carry a CLV, which is what the page's expected result and luck range\nare computed from; a bet without one is left out of both and counted."
       }
     }
   }

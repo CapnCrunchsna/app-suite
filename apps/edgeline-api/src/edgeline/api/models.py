@@ -232,6 +232,52 @@ class OpportunityClvSummary(BaseModel):
     by_alert: list[OpportunityClvStats] = Field(default_factory=list)
 
 
+class WhatIfBet(BaseModel):
+    """One settled bet for the What-if page (§11, added 2026-11-13).
+
+    The page filters and totals these in the browser so every toggle is
+    instant; there are a few hundred. `stake_cents` and `pnl_cents` are the
+    paper ledger's own and are null on an opportunity, which has no stake.
+    """
+
+    id: str
+    sport_key: str
+    event_id: str
+    market_key: str
+    selection: str
+    book_key: str
+    price_decimal: float
+    #: The edge the detector saw, and the CLV against the consensus close and
+    #: Pinnacle's (null before 2026-11-05 and on a different line).
+    edge_pct: float | None = None
+    clv_pct: float
+    clv_sharp_pct: float | None = None
+    clv_circular: bool | None = None
+    outcome: str  # win | loss | push | void
+    #: When the game started, which orders the bets.
+    starts_at: str
+    detected_at: str | None = None
+    #: Became a recommendation (any recommendation's `opportunity_id`).
+    recommended: bool = False
+    stake_cents: int | None = None
+    pnl_cents: int | None = None
+
+
+class WhatIfResponse(BaseModel):
+    """The paper ledger as graded, and every settled +EV opportunity.
+
+    Both carry a CLV, which is what the page's expected result and luck range
+    are computed from; a bet without one is left out of both and counted.
+    """
+
+    paper: list[WhatIfBet] = Field(default_factory=list)
+    opportunities: list[WhatIfBet] = Field(default_factory=list)
+    #: Settled but without a CLV, so not shown; for opportunities, a circular
+    #: CLV (priced by the poll that found it) counts as none.
+    paper_without_clv: int = 0
+    opportunities_without_clv: int = 0
+
+
 class SummaryResponse(BaseModel):
     group: str
     buckets: list[SummaryBucket] = Field(default_factory=list)

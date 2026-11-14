@@ -1,0 +1,260 @@
+<section class="page">
+  <header class="page__head">
+    <h1 class="page__title">What if</h1>
+    <p class="page__lede">
+      The same graded bets, asked different ways. Each view is set against what its closing-line value
+      expected and the range luck alone would give, so a losing run can be told apart from a losing
+      strategy. Nothing here changes what is alerted; it is a way of reading the record.
+    </p>
+  </header>
+
+  <!-- One filter row above everything it scopes: every tile, the chart and the
+       tables re-total against the same slice. -->
+  <div class="filters" role="group" aria-label="What to include">
+    <div class="filter">
+      <span class="filter__label">Bets</span>
+      <div class="segmented">
+        <button type="button" class="segmented__item" [class.segmented__item--on]="set() === 'paper'"
+          [attr.aria-pressed]="set() === 'paper'" (click)="set.set('paper')">Paper bets</button>
+        <button type="button" class="segmented__item" [class.segmented__item--on]="set() === 'opportunities'"
+          [attr.aria-pressed]="set() === 'opportunities'" (click)="set.set('opportunities')">Every opportunity</button>
+      </div>
+    </div>
+
+    <div class="filter">
+      <span class="filter__label">Stake</span>
+      <div class="segmented">
+        <button type="button" class="segmented__item" [class.segmented__item--on]="effectiveStaking() === 'ledger'"
+          [attr.aria-pressed]="effectiveStaking() === 'ledger'" [disabled]="set() !== 'paper'"
+          [title]="set() === 'paper' ? 'The stakes the paper ledger used' : 'Only paper bets have stakes; opportunities are judged flat'"
+          (click)="staking.set('ledger')">As staked</button>
+        <button type="button" class="segmented__item" [class.segmented__item--on]="effectiveStaking() === 'flat'"
+          [attr.aria-pressed]="effectiveStaking() === 'flat'" (click)="staking.set('flat')">Flat {{ flatLabel }}</button>
+      </div>
+    </div>
+
+    <div class="filter">
+      <span class="filter__label">Sports</span>
+      <div class="chips">
+        @for (chip of sportChips(); track chip.key) {
+          <button type="button" class="chip" [class.chip--off]="excludedSports().has(chip.key)"
+            [attr.aria-pressed]="!excludedSports().has(chip.key)" (click)="toggleSport(chip.key)">
+            {{ chip.label }}@if (chip.paused) {<span class="chip__tag">paused</span>}
+          </button>
+        }
+        <button type="button" class="chip chip--quiet" (click)="footballOnly()">Football only</button>
+      </div>
+    </div>
+
+    <div class="filter">
+      <span class="filter__label">Longest odds</span>
+      <div class="segmented">
+        @for (option of oddsOptions; track option.label) {
+          <button type="button" class="segmented__item" [class.segmented__item--on]="maxPrice() === option.value"
+            [attr.aria-pressed]="maxPrice() === option.value" (click)="maxPrice.set(option.value)">{{ option.label }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="filter">
+      <span class="filter__label">Detected edge</span>
+      <div class="segmented">
+        @for (option of edgeOptions; track option.label) {
+          <button type="button" class="segmented__item" [class.segmented__item--on]="minEdge() === option.value"
+            [attr.aria-pressed]="minEdge() === option.value" (click)="minEdge.set(option.value)">{{ option.label }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="filter">
+      <span class="filter__label">Markets</span>
+      <div class="chips">
+        @for (chip of marketChips(); track chip.key) {
+          <button type="button" class="chip" [class.chip--off]="excludedMarkets().has(chip.key)"
+            [attr.aria-pressed]="!excludedMarkets().has(chip.key)" (click)="toggleMarket(chip.key)">{{ chip.label }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="filter">
+      <span class="filter__label">Games from</span>
+      <div class="segmented">
+        @for (option of periodOptions; track option.value) {
+          <button type="button" class="segmented__item" [class.segmented__item--on]="period() === option.value"
+            [attr.aria-pressed]="period() === option.value" (click)="period.set(option.value)">{{ option.label }}</button>
+        }
+      </div>
+    </div>
+
+    @if (!isDefault()) {
+      <button type="button" class="button reset" (click)="reset()">Show everything</button>
+    }
+  </div>
+
+  @if (loadError()) {
+    <p class="failure"><el-load-failure what="the what-if bets" [cause]="loadError()" /></p>
+  } @else {
+    <div class="tiles" [class.stale]="loading()">
+      <div class="tile">
+        <span class="tile__label">Bets</span>
+        <span class="tile__value">{{ totals().bets }}</span>
+        <span class="tile__sub">
+          {{ totals().wins }} won, {{ totals().expectedWins.toFixed(1) }} expected
+          @if (set() === 'opportunities') { · one per pick, best price }
+        </span>
+      </div>
+
+      <div class="tile">
+        <span class="tile__label">P&amp;L</span>
+        <span class="tile__value" [class.pos]="totals().pnlCents > 0" [class.neg]="totals().pnlCents < 0">
+          {{ totals().bets ? money(totals().pnlCents) : '—' }}
+        </span>
+        <span class="tile__sub">
+          {{ ratio(totals().roi) }} of {{ money(totals().stakedCents).replace('+', '') }} staked
+        </span>
+      </div>
+
+      <div class="tile">
+        <span class="tile__label">Expected at the close</span>
+        <span class="tile__value">{{ totals().bets ? money(totals().expectedCents) : '—' }}</span>
+        <span class="tile__sub">
+          CLV {{ pct(totals().meanClvPct) }}
+          @if (totals().sharpCount) { · Pinnacle {{ pct(totals().meanSharpClvPct) }} on {{ totals().sharpCount }} }
+        </span>
+      </div>
+
+      <div class="tile">
+        <span class="tile__label">Luck range</span>
+        <span class="tile__value tile__value--range">{{ range(totals()) }}</span>
+        <span class="tile__sub">2 runs in 3 land here · 19 in 20: {{ range(totals(), 2) }}</span>
+      </div>
+
+      <div class="tile" [class.tile--pos]="tone(totals()) === 'pos'" [class.tile--neg]="tone(totals()) === 'neg'">
+        <span class="tile__label">Verdict</span>
+        <span class="tile__value tile__value--words">{{ verdictLabel() }}</span>
+        <span class="tile__sub">
+          @if (chance() !== null) {
+            {{ ratio(chance()) }} of runs with this edge end this low or lower
+          } @else {
+            Nothing settled in this view
+          }
+        </span>
+      </div>
+    </div>
+
+    <ui-panel heading="Running P&L against luck">
+      <el-luck-chart [points]="points()" />
+      <p class="note">
+        If the closing line is right about each bet, the actual line should wander inside the shaded
+        band around the dashed one. Below the band for a long stretch would mean the edge is not real;
+        inside it, a loss is just the price of betting long odds.
+      </p>
+    </ui-panel>
+
+    <ui-panel heading="Broken down">
+      <div class="segmented segmented--inline" role="group" aria-label="Break down by">
+        @for (option of dimensions; track option.value) {
+          <button type="button" class="segmented__item" [class.segmented__item--on]="dimension() === option.value"
+            [attr.aria-pressed]="dimension() === option.value" (click)="dimension.set(option.value)">{{ option.label }}</button>
+        }
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="num">Bets</th>
+              <th class="num">Won / expected</th>
+              <th class="num">P&amp;L</th>
+              <th class="num">Expected</th>
+              <th class="num">Luck range (±1 sd)</th>
+              <th class="num">CLV</th>
+              <th class="num">Pinnacle CLV</th>
+              <th>Verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rowsByDimension(); track row.key) {
+              <tr>
+                <td>{{ row.label }}</td>
+                <td class="num">{{ row.stats.bets }}</td>
+                <td class="num">{{ row.stats.wins }} / {{ row.stats.expectedWins.toFixed(1) }}</td>
+                <td class="num" [class.pos]="row.stats.pnlCents > 0" [class.neg]="row.stats.pnlCents < 0">
+                  {{ money(row.stats.pnlCents) }}
+                </td>
+                <td class="num">{{ money(row.stats.expectedCents) }}</td>
+                <td class="num dim">{{ range(row.stats) }}</td>
+                <td class="num">{{ pct(row.stats.meanClvPct) }}</td>
+                <td class="num">
+                  {{ pct(row.stats.meanSharpClvPct) }}
+                  @if (row.stats.sharpCount) {<span class="dim"> ({{ row.stats.sharpCount }})</span>}
+                </td>
+                <td [class]="tone(row.stats)">{{ verdictOf(row.stats) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9"><p class="empty">{{ loading() ? 'Reading…' : 'No bets in this view.' }}</p></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </ui-panel>
+
+    <ui-panel heading="How to read this">
+      <ul class="notes">
+        <li>
+          <strong>Expected</strong> is each bet's closing-line value times its stake: what the bet was worth if
+          the market's final price was right. <strong>Luck range</strong> is how far a run of bets like these
+          strays from that by chance alone. Long odds win rarely and pay a lot, so their range is wide.
+        </li>
+        <li>
+          <strong>Paper bets</strong> are the paper ledger the Results page totals; <em>as staked</em> is its own
+          P&amp;L. <strong>Every opportunity</strong> is every edge the detector found and the game settled,
+          one per pick at the best price, at a flat {{ flatLabel }}. It includes the ones the cooldown never
+          alerted.
+        </li>
+        <li>
+          <strong>Paused sports are still measured.</strong> Pausing stops alerts, so a paused sport stops
+          adding paper bets, but its opportunities are still found, priced at the close and settled, and they
+          appear under Every opportunity. Games from 11-04 to 11-13 are partly missing: their scores were
+          never fetched and the feed no longer reaches back that far.
+        </li>
+        <li>
+          <strong>Detected edge</strong> is the edge at the last poll that saw it, and a paper bet's price is the
+          one alerted at. {{ withoutClv() }} settled {{ set() === 'paper' ? 'paper bets have' : 'opportunities have' }}
+          no closing-line value and are left out{{ set() === 'opportunities' ? ', counting the ones priced only by the poll that found them, whose CLV just restates the detector' : '' }}.
+        </li>
+      </ul>
+    </ui-panel>
+
+    <details class="bets">
+      <summary>Every bet in this view ({{ totals().bets }}){{ totals().bets > betListLimit ? ', newest ' + betListLimit : '' }}</summary>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Game day</th><th>Sport</th><th>Pick</th><th class="num">Odds</th><th>Book</th>
+              <th class="num">Edge</th><th class="num">CLV</th><th>Result</th><th class="num">P&amp;L</th>
+              <th class="num">Running</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (point of betList(); track point.bet.row.id) {
+              <tr>
+                <td>{{ day(point.bet.row.starts_at) }}</td>
+                <td>{{ sport(point.bet.row.sport_key) }}</td>
+                <td>{{ point.bet.row.selection }} <span class="dim">{{ market(point.bet.row.market_key) }}</span></td>
+                <td class="num">{{ odds(point.bet.row.price_decimal) }}</td>
+                <td class="dim">{{ point.bet.row.book_key }}</td>
+                <td class="num">{{ pct(point.bet.row.edge_pct) }}</td>
+                <td class="num">{{ pct(point.bet.row.clv_pct) }}</td>
+                <td>{{ point.bet.row.outcome }}</td>
+                <td class="num" [class.pos]="point.bet.pnlCents > 0" [class.neg]="point.bet.pnlCents < 0">{{ money(point.bet.pnlCents) }}</td>
+                <td class="num">{{ money(point.actualCents) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+  }
+</section>

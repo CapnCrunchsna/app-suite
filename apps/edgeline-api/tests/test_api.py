@@ -379,6 +379,63 @@ async def test_summary_aggregates_pnl_hit_rate_and_clv(api):
     assert bucket["needs_manual"] == 1
 
 
+async def test_what_if_returns_the_paper_ledger_and_every_settled_opportunity(api):
+    """§11's What-if page, 2026-11-13. A settled single-leg opportunity with a CLV
+    is a row; one with no outcome, two legs or no CLV is left out and counted.
+    A paper bet carries its own stake, P&L, alerted price and result CLV."""
+    http, client, prefix = api
+    from edgeline.indices import (
+        OPPORTUNITIES_INDEX,
+        RECOMMENDATIONS_INDEX,
+        RESULTS_INDEX,
+        with_prefix,
+    )
+
+    def opp(outcome, legs=1, clv=5.0, price=3.5):
+        doc = {"type": "ev", "event_id": "americanfootball_ncaaf:g", "market_key": "h2h",
+               "legs": [{"book_key": "fanduel", "selection": "Owls", "price_decimal": price}] * legs,
+               "edge_pct": 6.0, "status": "expired", "sport_key": "americanfootball_ncaaf",
+               "detected_at": "2026-11-07T12:00:00Z", "expires_at": "2026-11-07T17:00:00Z",
+               "clv_pct": clv, "clv_sharp_pct": 3.0, "clv_circular": False}
+        if outcome:
+            doc["bet_outcome"] = outcome
+        return doc
+
+    for doc_id, doc in {
+        "won": opp("win"), "unsettled": opp(None), "arb": opp("win", legs=2),
+        "no-clv": opp("loss", clv=None), "circular": {**opp("loss"), "clv_circular": True},
+    }.items():
+        await client.index(index=with_prefix(OPPORTUNITIES_INDEX, prefix), id=doc_id,
+                           document=doc, refresh="wait_for")
+    await client.index(
+        index=with_prefix(RECOMMENDATIONS_INDEX, prefix), id="rec-w",
+        document={"opportunity_id": "won", "paper": True, "channel": "log",
+                  "sent_at": "2026-11-07T12:00:05Z",
+                  "stakes": {"total_cents": 400, "legs": [
+                      {"book_key": "betparx", "selection": "Owls", "stake_cents": 400,
+                       "to_win_cents": 1200}]}},
+        refresh="wait_for",
+    )
+    await client.index(
+        index=with_prefix(RESULTS_INDEX, prefix), id="rec-w",
+        document={"bet_id": "", "outcome": "win", "pnl_cents": 1200, "clv_pct": 7.5,
+                  "graded_at": "2026-11-08T06:00:00Z"},
+        refresh="wait_for",
+    )
+
+    body = (await http.get("/api/results/what-if")).json()
+    [row] = body["opportunities"]
+    assert row["id"] == "won" and row["outcome"] == "win" and row["recommended"] is True
+    assert row["price_decimal"] == 3.5 and row["clv_sharp_pct"] == 3.0
+    assert row["stake_cents"] is None
+    # The arb, the one with no CLV, and the circular one, which restates the detector.
+    assert body["opportunities_without_clv"] == 3
+    [paper] = body["paper"]
+    assert paper["stake_cents"] == 400 and paper["pnl_cents"] == 1200
+    assert paper["price_decimal"] == pytest.approx(4.0)  # the alerted price, not the first
+    assert paper["clv_pct"] == 7.5 and paper["book_key"] == "betparx"
+
+
 async def test_hit_rate_is_null_rather_than_zero_with_nothing_settled(api):
     """"No data yet" and "you lose every bet" are very different claims."""
     http, _client, _prefix = api

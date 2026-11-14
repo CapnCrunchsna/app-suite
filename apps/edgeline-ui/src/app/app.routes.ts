@@ -50,6 +50,13 @@ export const appRoutes: Routes = [
       import('./pages/results/results-page').then((module) => module.ResultsPage),
   },
   {
+    // Added 2026-11-13: Results' question asked several ways, against luck.
+    path: 'what-if',
+    title: 'What if · Edgeline',
+    loadComponent: () =>
+      import('./pages/what-if/what-if-page').then((module) => module.WhatIfPage),
+  },
+  {
     path: 'settings',
     title: 'Settings · Edgeline',
     loadComponent: () =>

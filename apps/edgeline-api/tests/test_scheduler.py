@@ -1427,3 +1427,31 @@ async def test_only_a_started_game_with_an_unsettled_bet_needs_scores():
         "americanfootball_nfl"
     ]
     assert await sports_awaiting_settlement(_Store({}), prefix="edgeline-", now=now) == []
+
+
+async def test_a_paused_sports_unsettled_opportunity_needs_scores_too():
+    """2026-11-13: the What-if page settles every opportunity, so a sport with no
+    recommendation (paused) still has its scores fetched while a started game
+    with an unsettled opportunity has none. A settled one, a scored game or an
+    arbitrage does not ask."""
+    from edgeline.grading import sports_awaiting_settlement
+    from edgeline.indices import EVENTS_INDEX, OPPORTUNITIES_INDEX
+
+    now = _utc("2026-11-12T12:00:00")
+    started = _iso(now - timedelta(hours=5))
+    store = _Store({
+        OPPORTUNITIES_INDEX: {
+            "nba": {"type": "ev", "event_id": "basketball_nba:a"},
+            "nhl-settled": {"type": "ev", "event_id": "icehockey_nhl:b", "bet_outcome": "loss"},
+            "nfl-scored": {"type": "ev", "event_id": "americanfootball_nfl:c"},
+            "mlb-arb": {"type": "arb", "event_id": "baseball_mlb:d"},
+        },
+        EVENTS_INDEX: {
+            "basketball_nba:a": {"sport_key": "basketball_nba", "commence_time": started},
+            "icehockey_nhl:b": {"sport_key": "icehockey_nhl", "commence_time": started},
+            "americanfootball_nfl:c": {"sport_key": "americanfootball_nfl",
+                                       "commence_time": started, "completed": True},
+            "baseball_mlb:d": {"sport_key": "baseball_mlb", "commence_time": started},
+        },
+    })
+    assert await sports_awaiting_settlement(store, prefix="edgeline-", now=now) == ["basketball_nba"]

@@ -429,6 +429,10 @@ async def _run() -> int:
         settings = await load_settings(client, prefix="edgeline-")
         measured = await grade_opportunities(client, settings, prefix="edgeline-")
         print(f"measured {measured} opportunit{'y' if measured == 1 else 'ies'} just now")
+        from .grading import settle_opportunities
+
+        settled = await settle_opportunities(client, prefix="edgeline-")
+        print(f"settled {settled} opportunit{'y' if settled == 1 else 'ies'} against stored scores")
         print(format_report(await opportunity_clv_summary(client, prefix="edgeline-")))
         return 0
     finally:

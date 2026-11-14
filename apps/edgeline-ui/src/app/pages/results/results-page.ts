@@ -38,6 +38,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Panel } from '@metrum/ui';
 import { NO_DATA, formatCents, formatLocalDay, formatRatioAsPercent, formatSignedCents, formatSignedPercent } from '@metrum/format';
 import type { SummaryBucket, SummaryResponse } from '@metrum/edgeline-api-client';
@@ -77,7 +78,7 @@ const EMPTY_SUMMARY = {
 
 @Component({
   selector: 'el-results-page',
-  imports: [Panel, LoadFailure],
+  imports: [Panel, LoadFailure, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './results-page.html',
   styleUrl: './results-page.scss',

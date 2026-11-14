@@ -299,7 +299,7 @@ update`.
 | `edgeline-sportsbooks` | book key | display_name kw · md_licensed bool · enabled bool · priority integer · link_templates obj(enabled:false) |
 | `edgeline-events` | `{sport_key}:{provider_event_id}` | sport_key kw · commence_time date · home_team kw · away_team kw · completed bool · home_score integer · away_score integer |
 | `edgeline-odds-snapshots` | auto | event_id kw · book_key kw · market_key kw · selection kw · line double · price_decimal double · is_closing bool · @timestamp date |
-| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double · sport_key kw · clv_pct double · clv_source kw · clv_staleness_s long · clv_priced_at date · clv_circular bool · clv_lead_s long · clv_price_decimal double · clv_graded_at date (§12, added 2026-10-01) · clv_sharp_pct double (§12, added 2026-11-05) |
+| `edgeline-opportunities` | **`opp_hash`** (§7.4) | type kw(arb\|ev) · event_id kw · market_key kw · legs object[] (book_key kw, selection kw, line double, price_decimal double, devig_prob double, staleness double, bet_first bool) · edge_pct double · alerted_edge_pct double (§7.4, added 2026-10-01) · status kw(open\|alerted\|closed\|expired) · detected_at/expires_at/closed_at date · closing_edge_pct double · sport_key kw · clv_pct double · clv_source kw · clv_staleness_s long · clv_priced_at date · clv_circular bool · clv_lead_s long · clv_price_decimal double · clv_graded_at date (§12, added 2026-10-01) · clv_sharp_pct double (§12, added 2026-11-05) · bet_outcome kw · bet_settled_at date (§12, added 2026-11-13) |
 | `edgeline-recommendations` | auto | opportunity_id kw (= opp_hash) · stakes obj(enabled:false, the §5 StakePlan) · paper bool · channel kw · sent_at date · message_ref kw |
 | `edgeline-bets` | auto | recommendation_id kw · confirmed_via kw(button\|reaction\|ui) · stake_actual_cents long · odds_actual_decimal double · placed_at date |
 | `edgeline-results` | **recommendation id** | bet_id kw · outcome kw(win\|loss\|push\|void) · pnl_cents long · clv_pct double · clv_source kw(closing\|derived) · clv_staleness_s long · needs_manual bool · graded_at date · excluded_reason kw (§12, added 2026-09-23) |
@@ -928,6 +928,7 @@ All routes under `/api`. Auto-generated OpenAPI at `/api/openapi.json` (feeds §
 | `GET /api/recommendations?paper=&from=&to=` | history w/ joined opportunity + result |
 | `POST /api/recommendations/{id}/confirm` | body `{stake_actual_cents, odds_actual_decimal}` → bets row (`confirmed_via='ui'`) |
 | `GET /api/results/summary?group=day\|week` | pnl, hit rate, avg CLV, rec vs executed split; `opportunity_clv`, CLV over every opportunity (§12, added 2026-10-01) |
+| `GET /api/results/what-if` | added 2026-11-13: rows for the What-if page (§11.1) — `paper`, each graded recommendation with its stake, P&L, alerted price and result CLV, and `opportunities`, each settled single-leg +EV opportunity with its CLV, Pinnacle CLV and `bet_outcome`; rows without a CLV, or for an opportunity with a circular one, are counted, not returned. Rows rather than aggregations because the page re-totals them per toggle |
 | `GET /api/bankroll` / `POST /api/bankroll/adjust` | ledger view / manual deposit-withdraw rows |
 | `GET /api/matching` / `POST /api/matching/{id}/resolve` | quarantine queue |
 | `GET /api/system/health` | scheduler last-run, quota, kill_switch, paper_mode; `poll_plan` (added 2026-09-23) |
@@ -1001,6 +1002,7 @@ Summary and bankroll endpoints are thin wrappers over ES aggregations (`date_his
 | `/opportunities` | live table (poll `GET /api/opportunities` every 15 s), filters status/type |
 | `/recommendations` | history table; row action "confirm bet" dialog → confirm endpoint |
 | `/results` | summary tiles (P&L, hit rate, avg CLV) + per-day table; rec-vs-executed toggle |
+| `/what-if` | added 2026-11-13: the graded record against luck. Paper bets (as staked, which is `/results`' P&L, or flat) or every settled opportunity (one per pick at its best price, flat), filtered by sport, longest odds, detected edge, market and period; tiles for bets and wins against expected, P&L, expected P&L at the close (stake × CLV), the ±1/±2 sd luck range and a verdict with a simulated chance of a run this bad; the running P&L drawn against that band; and a breakdown by sport, odds, edge, market or book with each CLV and Pinnacle CLV |
 | `/settings` | reactive form over §3.2 (grouped: Staking, Thresholds, Polling, Safety); `poll_schedule` edited as rows of sport, weekdays and Eastern time, priced against the budget as it is edited (2026-09-23) |
 | `/sportsbooks` | table with enable toggles, priority, link-template editor + "test link" button |
 | `/providers` | enable toggles, quota bar (used vs budget) |
@@ -1107,6 +1109,8 @@ those sports — on most days, none. It follows the data rather than the setting
 sport since dropped from the plan still settles, and when the datastore cannot answer, every sport
 a poll can reach is graded as before. One consequence: a sport with nothing to settle no longer
 has its events' final scores written, which nothing but this job reads.
+
+**Scores are also fetched for a sport with an unsettled opportunity — added 2026-11-13.** The What-if page (§11.1) judges every opportunity, not only the paper bets, so a sport whose alerts are paused, with no recommendation to settle, still needs its scores: a started +EV opportunity with no `bet_outcome` on a game not yet `completed`, inside the same three days, adds its sport. The cost is the same 2 credits a sport, on days such a game exists (NBA and NHL daily, about 120 credits a month). After the scores, `settle_opportunities` writes each started single-leg +EV opportunity's own `bet_outcome` from its game's stored score with step 2's `settle_leg`, on its own selection and line; it reads stored data only, so it is free, and it runs every grade, including days that fetch nothing. Paused-sport games from 11-04 to 11-13 were never scored and are beyond the feed now, so they stay unsettled.
 
 **The derived price is the polled books' price — amended 2026-10-01.** `closing_consensus_prob`
 builds its consensus from every book stored for the market. Two-region polls stored about 14 books a

@@ -58,6 +58,7 @@ import type {
   SportsbookRow,
   SummaryResponse,
   UnmatchedRowResponse,
+  WhatIfResponse,
 } from '@metrum/edgeline-api-client';
 
 /** Same origin as the page. See the note above on why this is not `:8000`. */
@@ -119,6 +120,10 @@ export class EdgelineApiService {
 
   getResultsSummary(query?: { group?: 'day' | 'week' }): Promise<SummaryResponse> {
     return this.api.getResultsSummary(query);
+  }
+
+  getWhatIf(): Promise<WhatIfResponse> {
+    return this.api.getWhatIf();
   }
 
   getBankroll(query?: { limit?: number }): Promise<BankrollResponse> {

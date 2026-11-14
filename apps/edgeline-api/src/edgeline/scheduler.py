@@ -952,7 +952,8 @@ def build_scheduler(
             )
             sports = active_sports(current)
         if not sports:
-            log.info("grading: no recommendation is waiting on a started game; no scores fetched")
+            log.info("grading: no bet or opportunity is waiting on a started game; no scores fetched")
+            await _settle_opportunities()
             return
 
         failed = False
@@ -973,12 +974,25 @@ def build_scheduler(
                 failed = True
                 log.exception("grading failed for %s", sport_key)
 
+        await _settle_opportunities()
         if failed:
             # The whole job, not the one sport that failed: settlement re-reads
             # what is still ungraded, so a sport that succeeded costs its 2
             # credits again and nothing else. Per-sport retry state would be the
             # more expensive mistake to get wrong.
             _retry_soon(_grade, [attempt + 1], kind="grade", attempt=attempt + 1)
+
+    async def _settle_opportunities() -> None:
+        """Every opportunity's own bet against the scores now stored (2026-11-13,
+        the What-if page). Free, and a failure is the next run's to repair."""
+        from .grading import settle_opportunities
+
+        try:
+            settled = await settle_opportunities(client, prefix=prefix)
+            if settled:
+                log.info("grading: settled %d opportunit(ies) for the What-if page", settled)
+        except Exception:
+            log.warning("grading: settling opportunities failed; the next run retries", exc_info=True)
 
     async def _poll_startup() -> None:
         """A catch-up poll at startup, when one is actually due.

@@ -157,6 +157,12 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
             #: §3.2 `sharp_reference_books`, added 2026-11-05) instead of the
             #: consensus. Null when no sharp close was stored for every leg.
             "clv_sharp_pct": _DOUBLE,
+            #: How the opportunity's own bet would have settled — win, loss, push
+            #: or void — from the game's final score (§12, added 2026-11-13,
+            #: `grading.settle_opportunities`), for the What-if page. Absent until
+            #: the game has a score; single-leg +EV opportunities only.
+            "bet_outcome": _KEYWORD,
+            "bet_settled_at": _DATE,
             #: Seconds from detection to the start, for the lead-time bands.
             "clv_lead_s": _LONG,
             #: The leg's price for the odds bands; null for an arbitrage.

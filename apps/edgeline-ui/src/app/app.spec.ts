@@ -60,13 +60,14 @@ async function render(configure: (api: ApiStub) => void = () => undefined) {
 describe('the Edgeline shell (§11.1, §11.2)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('lists §11.1’s eight pages, in §11.1’s order', async () => {
+  it('lists §11.1’s eight pages, in §11.1’s order, with What if beside Results', async () => {
     const { el } = await render();
     expect([...el.querySelectorAll('.rail__item')].map((n) => n.textContent?.trim())).toEqual([
       'Dashboard',
       'Opportunities',
       'Recommendations',
       'Results',
+      'What if',
       'Settings',
       'Sportsbooks',
       'Providers',
