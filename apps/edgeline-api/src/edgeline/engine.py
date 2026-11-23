@@ -35,6 +35,7 @@ from .dedup import (
     may_alert,
     opp_hash,
     parse_iso,
+    pick_key,
     select_cooldown_winners,
 )
 from .notify import AlertSink, LogSink, render_alert
@@ -829,6 +830,10 @@ async def run_once(
         prefix=prefix,
     )
 
+    picked = await _recommended_picks(
+        client, sorted({d.event_id for d in report.detections}), prefix=prefix
+    )
+
     eligible: list[tuple[tuple[str, str], Detection, float]] = []
     for detection in report.detections:
         prior = stored.get(detection.hash)
@@ -868,6 +873,11 @@ async def run_once(
             new_edge_pct=detection.edge_pct,
             delta_pct=settings.edge_improve_delta_pct,
         ):
+            continue
+        # §7.4, 2026-11-22: one recommendation per pick, whichever book. The
+        # same outcome at another book, or at the same one at a better edge, is
+        # not a second bet; live, it would be a second stake on one result.
+        if pick_key(detection.event_id, detection.market_key, [leg.selection for leg in detection.legs]) in picked:
             continue
         eligible.append(
             (cooldown_key(detection.event_id, detection.market_key), detection, detection.edge_pct)
@@ -1441,6 +1451,23 @@ async def load_live_opportunities(
     except Exception:
         return {}
     return {hit["_id"]: hit for hit in found["hits"]["hits"]}
+
+
+async def _recommended_picks(client, event_ids: list[str], *, prefix: str) -> set:
+    """The picks on these games that a recommendation already names (§7.4,
+    2026-11-22). Empty on a failed read, like `_earlier_lives`: a repeat that
+    slips through is still caught by grading's duplicate rule, and raising here
+    would fail a cycle whose odds are already bought."""
+    from .audit import recommendations_by_pick
+
+    if not event_ids:
+        return set()
+    try:
+        recs, picks = await recommendations_by_pick(client, [], prefix=prefix, event_ids=event_ids)
+    except Exception:
+        log.warning("could not read earlier recommendations; picks are not deduplicated this cycle", exc_info=True)
+        return set()
+    return {picks[r["opportunity_id"]] for r in recs.values() if r.get("opportunity_id") in picks}
 
 
 async def load_last_alert_times(

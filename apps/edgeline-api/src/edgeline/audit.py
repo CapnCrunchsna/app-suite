@@ -40,7 +40,7 @@ import logging
 from collections import defaultdict
 from typing import Any
 
-from .dedup import parse_iso
+from .dedup import PickKey, parse_iso, pick_key
 from .indices import (
     EVENTS_INDEX,
     OPPORTUNITIES_INDEX,
@@ -120,38 +120,74 @@ async def exclude_results_detected_after_start(client, *, prefix: str) -> list[s
 # ---- the repeat alert (2026-10-01) -----------------------------------------
 
 
-def repeated_recommendations(recommendations: dict[str, dict[str, Any]]) -> set[str]:
-    """Ids among `recommendations` that repeat an earlier one of the same opportunity.
+def repeated_recommendations(
+    recommendations: dict[str, dict[str, Any]],
+    picks: dict[str, PickKey] | None = None,
+) -> set[str]:
+    """Ids among `recommendations` that repeat an earlier one of the same pick.
 
     Same opportunity means same graded price: `grading._grade_one` values every
     leg at the opportunity's own `price_decimal`, never the recommendation's, so
     a second recommendation of one opportunity adds a copy of the first one's CLV
-    and outcome. The earliest of a run is the one that counts.
+    and outcome. Since 2026-11-22 the same *pick* at another book counts too
+    (`picks`, opportunity id -> `dedup.pick_key`): it is one outcome, so a
+    second recommendation of it is the same evidence again, and live it would
+    be a second stake. The earliest of a run is the one that counts. An
+    opportunity missing from `picks` is its own group, as before.
     """
-    by_opportunity: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    picks = picks or {}
+    by_pick: dict[Any, list[tuple[str, str]]] = defaultdict(list)
     for rec_id, source in recommendations.items():
         opportunity_id = source.get("opportunity_id")
         if opportunity_id:
-            by_opportunity[opportunity_id].append((source.get("sent_at") or "", rec_id))
+            by_pick[picks.get(opportunity_id, opportunity_id)].append(
+                (source.get("sent_at") or "", rec_id)
+            )
     repeats: set[str] = set()
-    for runs in by_opportunity.values():
+    for runs in by_pick.values():
         repeats.update(rec_id for _sent_at, rec_id in sorted(runs)[1:])
     return repeats
 
 
-async def _recommendations_for(
-    client, opportunity_ids: list[str], *, prefix: str
-) -> dict[str, dict[str, Any]]:
-    """Every recommendation naming one of `opportunity_ids`, keyed by id."""
-    wanted = sorted({opportunity_id for opportunity_id in opportunity_ids if opportunity_id})
-    if not wanted:
-        return {}
+async def recommendations_by_pick(
+    client, opportunity_ids: list[str], *, prefix: str, event_ids: list[str] | None = None
+) -> tuple[dict[str, dict[str, Any]], dict[str, PickKey]]:
+    """Every recommendation on the games of `opportunity_ids` (or `event_ids`),
+    and the pick of every opportunity on those games.
+
+    The siblings a pick can have are on its own game, so the games are the
+    search: their opportunities give each one's pick, and the recommendations
+    naming any of them are the candidates for a repeat.
+    """
+    events = set(event_ids or [])
+    if opportunity_ids:
+        named = await _mget(client, with_prefix(OPPORTUNITIES_INDEX, prefix), opportunity_ids)
+        events |= {opp.get("event_id", "") for opp in named.values()}
+    events.discard("")
+    if not events:
+        return {}, {}
     found = await client.search(
+        index=with_prefix(OPPORTUNITIES_INDEX, prefix),
+        size=10_000,
+        source=["event_id", "market_key", "legs.selection"],
+        query={"terms": {"event_id": sorted(events)}},
+    )
+    picks = {
+        hit["_id"]: pick_key(
+            hit["_source"].get("event_id", ""),
+            hit["_source"].get("market_key", ""),
+            [leg.get("selection", "") for leg in hit["_source"].get("legs") or []],
+        )
+        for hit in found["hits"]["hits"]
+    }
+    if not picks:
+        return {}, {}
+    recs = await client.search(
         index=with_prefix(RECOMMENDATIONS_INDEX, prefix),
         size=10_000,
-        query={"terms": {"opportunity_id": wanted}},
+        query={"terms": {"opportunity_id": sorted(picks)}},
     )
-    return {hit["_id"]: hit["_source"] for hit in found["hits"]["hits"]}
+    return {hit["_id"]: hit["_source"] for hit in recs["hits"]["hits"]}, picks
 
 
 async def is_duplicate_recommendation(
@@ -162,11 +198,11 @@ async def is_duplicate_recommendation(
     Raises when the datastore cannot answer; grading decides what not knowing
     means.
     """
-    siblings = await _recommendations_for(
+    siblings, picks = await recommendations_by_pick(
         client, [source.get("opportunity_id", "")], prefix=prefix
     )
     siblings[rec_id] = source
-    return rec_id in repeated_recommendations(siblings)
+    return rec_id in repeated_recommendations(siblings, picks)
 
 
 async def find_duplicate_results(client, *, prefix: str) -> list[str]:
@@ -181,12 +217,12 @@ async def find_duplicate_results(client, *, prefix: str) -> list[str]:
     recommendations = await _mget(
         client, with_prefix(RECOMMENDATIONS_INDEX, prefix), result_ids
     )
-    siblings = await _recommendations_for(
+    siblings, picks = await recommendations_by_pick(
         client,
         [rec.get("opportunity_id", "") for rec in recommendations.values()],
         prefix=prefix,
     )
-    repeats = repeated_recommendations({**siblings, **recommendations})
+    repeats = repeated_recommendations({**siblings, **recommendations}, picks)
     return [result_id for result_id in result_ids if result_id in repeats]
 
 
@@ -215,7 +251,7 @@ RULES = (
     ),
     (
         DUPLICATE_ALERT,
-        "repeating an earlier recommendation of the same opportunity",
+        "repeating an earlier recommendation of the same pick",
         find_duplicate_results,
         exclude_duplicate_results,
     ),

@@ -206,7 +206,7 @@ All runtime-tunable values live in the single `"global"` document of `edgeline-s
 | `devig_method` | `"multiplicative"` | one of multiplicative/additive/power/shin |
 | `consensus_weights` | `{"default":1}` | per-book integer weights, e.g. `{"pinnacle":3}` |
 | `staleness_sigma_floor` | `0.002` | σ floor to avoid divide-by-near-zero |
-| `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this since its last alert (amended 2026-10-01, §7.4) |
+| `edge_improve_delta_pct` | `0.5` | re-alert same opportunity only if edge grew ≥ this since its last alert (amended 2026-10-01, §7.4). **No effect since 2026-11-22**: a pick is recommended once (§7.4) |
 | `alert_cooldown_s` | `300` | per `(event, market key)` since 2026-11-01; per `(sport, market key)` before |
 | `alerts_paused_sports` | `[]` | added 2026-11-04: sports polled, detected and stored as usual — so §12 keeps measuring their CLV — but never alerted; §7.1's kill switch for one sport. Set to NBA and NHL that day, whose opportunity CLV was −3.07% (n=34) and +0.29% (n=29) against +6.26% for NCAAF |
 | `sports_enabled` | `["baseball_mlb"]` | The Odds API sport keys. **Since 2026-09-23** what the interval polls when `poll_schedule` is empty, and what §10's manual trigger buys on a day the plan has nothing |
@@ -543,7 +543,8 @@ id, and every state change goes through the update API under optimistic concurre
 
 - Hash exists with status open/alerted: update `edge_pct`; re-alert ONLY if edge improved by
   ≥ `edge_improve_delta_pct` over `alerted_edge_pct`, the edge at its last alert, AND cooldown
-  expired (amended 2026-10-01, below).
+  expired (amended 2026-10-01, below). Since 2026-11-22 no re-alert happens: a pick is recommended
+  once (below).
 - Detection disappears next cycle → status `closed`, record `closing_edge_pct`.
 - `commence_time` passes → status `expired`.
 - Cooldown: at most one alert per `(event_id, market_key)` per `alert_cooldown_s`, whichever
@@ -581,6 +582,8 @@ that closes and comes back is the same hash and the same bet: the re-created doc
 `status: alerted` and its `alerted_edge_pct`, and where a closed document predates the field, a
 recommendation naming the hash is what marks it as alerted. §12 sets aside the second Utah State
 recommendation on other grounds: grading values both at the opportunity's 11.5.
+
+**One recommendation per pick — amended 2026-11-22.** `opp_hash` names the books, so the same selection at FanDuel and at DraftKings is two opportunities, and with the per-game cooldown five minutes long against polls hours apart, each poll could recommend the pick again wherever it was best: 33 of 88 paper bets from 11-04 to 11-22 repeated an earlier pick (Rutgers three times, at three books). Live, that is a second and third stake on one outcome. A pick is `(event_id, market_key, selections)` (`dedup.pick_key`; a spread or total carries its line in the selection, so another line is another pick), and once any recommendation names an opportunity on a pick, no detection of that pick is recommended again, at any book or edge. That retires the re-alert above: `edge_improve_delta_pct` and `alerted_edge_pct` stay, but no longer let anything through. §12's `duplicate_alert` groups by pick too, so the earliest recommendation of a pick is the one that counts, and `python -m edgeline.audit --apply` marks the repeats graded before.
 
 The last-alert time the cooldown reads is **derived, not stored**: `edgeline-recommendations`
 knows when an alert went out (`sent_at`) and `edgeline-opportunities` knows what it was about

@@ -701,18 +701,19 @@ async def test_the_audit_sets_aside_a_repeat_recommendation_already_graded_and_s
 
     await graded("rec-1800", OPP_HASH, "2026-09-30T22:00:16Z")  # staked at 12.5
     await graded("rec-1930", OPP_HASH, "2026-09-30T23:30:21Z")  # 13.0; both graded at 11.5
-    await graded("rec-ballybet", "f" * 64, "2026-09-30T23:38:00Z")  # another opportunity
+    # Another book, the same pick: a repeat since 2026-11-22.
+    await graded("rec-ballybet", "f" * 64, "2026-09-30T23:38:00Z")
     await graded("rec-dead", "c" * 64, "2026-09-10T02:45:00Z", excluded_reason="detected_after_start")
 
-    assert await exclude_duplicate_results(client, prefix=prefix) == ["rec-1930"]
+    assert sorted(await exclude_duplicate_results(client, prefix=prefix)) == ["rec-1930", "rec-ballybet"]
     marked = await client.get(index=with_prefix(RESULTS_INDEX, prefix), id="rec-1930")
     assert marked["_source"]["excluded_reason"] == DUPLICATE_ALERT
     assert await exclude_duplicate_results(client, prefix=prefix) == []  # idempotent
 
     totals = (await http.get("/api/results/summary")).json()["totals"]
-    assert totals["graded"] == 2
-    assert totals["excluded"] == 2
-    assert totals["excluded_by_reason"] == {"detected_after_start": 1, "duplicate_alert": 1}
+    assert totals["graded"] == 1
+    assert totals["excluded"] == 3
+    assert totals["excluded_by_reason"] == {"detected_after_start": 1, "duplicate_alert": 2}
 
 
 # ---- bankroll (§10, §4.4 rule 3) -------------------------------------------

@@ -191,6 +191,9 @@ class Settings(BaseModel):
     staleness_sigma_floor: float = 0.002
 
     # Alerting
+    #: No effect since 2026-11-22: a pick is recommended once, at whatever
+    #: book or edge (§7.4, `dedup.pick_key`). Kept so a stored settings
+    #: document still validates, and in case re-alerts come back.
     edge_improve_delta_pct: float = 0.5
     alert_cooldown_s: int = 300
     #: Sports that are polled, detected and stored as usual, so their CLV keeps

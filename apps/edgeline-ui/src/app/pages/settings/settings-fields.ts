@@ -323,7 +323,7 @@ export const POLLING = {
       kind: 'number',
       step: 0.1,
       unit: '%',
-      hint: 'An opportunity already alerted is alerted again only once its edge is at least this much better than when it was last alerted — not than at the last poll, against which an edge that dipped and recovered could re-alert an unchanged price (§7.4).',
+      hint: 'No effect since 2026-11-22: each pick is recommended once, at whatever book or edge, because a second alert on the same outcome is a second stake on it (§7.4). Before then, an alerted opportunity re-alerted once its edge was at least this much better than at its last alert.',
     },
     {
       key: 'quota_monthly_budget',

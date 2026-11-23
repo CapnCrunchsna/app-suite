@@ -562,11 +562,14 @@ async def test_a_second_recommendation_of_one_opportunity_is_graded_and_set_asid
 
 
 @pytest.mark.es
-async def test_a_recommendation_of_another_opportunity_still_counts(es_url, test_index_prefix):
-    """Another opportunity — another book, say — is graded at its own leg, so it
-    is its own evidence, even on the same game."""
+async def test_the_same_pick_at_another_book_is_a_repeat(es_url, test_index_prefix):
+    """Until 2026-11-22 another book's opportunity on the same selection counted
+    as its own evidence. It is the same outcome: one bet's result twice, and live
+    a second stake on it (33 of 88 paper bets from 11-04 to 11-22). The earliest
+    recommendation of the pick counts; the later is graded and kept out."""
     from elasticsearch import AsyncElasticsearch
 
+    from edgeline.audit import DUPLICATE_ALERT
     from edgeline.grading import grade
     from edgeline.indices import OPPORTUNITIES_INDEX, RESULTS_INDEX, with_prefix
 
@@ -591,9 +594,28 @@ async def test_a_recommendation_of_another_opportunity_still_counts(es_url, test
         )
 
         result = (await client.get(index=with_prefix(RESULTS_INDEX, prefix), id=later))["_source"]
-        assert "excluded_reason" not in result
+        assert result["excluded_reason"] == DUPLICATE_ALERT
+        first = (await client.get(index=with_prefix(RESULTS_INDEX, prefix), id=REC_ID))["_source"]
+        assert "excluded_reason" not in first
     finally:
         await client.close()
+
+
+def test_picks_group_recommendations_across_books():
+    """With picks, two books on one selection are one group; another selection
+    on the same game is its own."""
+    from edgeline.audit import repeated_recommendations
+
+    recommendations = {
+        "rutgers-betrivers": {"opportunity_id": "o-br", "sent_at": "2026-11-15T15:30:00Z"},
+        "rutgers-fanduel": {"opportunity_id": "o-fd", "sent_at": "2026-11-15T19:00:00Z"},
+        "rutgers-betparx": {"opportunity_id": "o-bp", "sent_at": "2026-11-15T22:30:00Z"},
+        "other-side": {"opportunity_id": "o-other", "sent_at": "2026-11-15T19:00:00Z"},
+    }
+    rutgers = ("ncaaf:g", "h2h", ("Rutgers Scarlet Knights",))
+    picks = {"o-br": rutgers, "o-fd": rutgers, "o-bp": rutgers,
+             "o-other": ("ncaaf:g", "h2h", ("Ohio State Buckeyes",))}
+    assert repeated_recommendations(recommendations, picks) == {"rutgers-fanduel", "rutgers-betparx"}
 
 
 def test_only_the_first_recommendation_of_an_opportunity_counts():

@@ -45,6 +45,22 @@ def opp_hash(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+PickKey = tuple[str, str, tuple[str, ...]]
+
+
+def pick_key(event_id: str, market_key: str, selections: Iterable[str]) -> PickKey:
+    """The bet itself, whichever book offers it: `(event, market, selections)`.
+
+    §7.4, added 2026-11-22. `opp_hash` includes the books, so the same pick at
+    FanDuel and at DraftKings is two opportunities, and with the per-game
+    cooldown only five minutes long against polls hours apart, each poll could
+    recommend it again wherever it was best: 33 of 88 paper bets from 11-04 to
+    11-22 repeated an earlier pick (Rutgers three times, at three books). A
+    spread or total's selection carries its line, so another line is another pick.
+    """
+    return (event_id, market_key, tuple(sorted(selections)))
+
+
 def parse_iso(value: str) -> datetime:
     """Parse a §1 UTC ISO-8601 string, `Z` suffix included, as an aware datetime."""
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))

@@ -853,10 +853,12 @@ async def test_a_surviving_alert_is_recorded_and_not_re_alerted(
 
 
 @pytest.mark.es
-async def test_a_materially_better_edge_re_alerts_once_the_cooldown_clears(
+async def test_a_materially_better_edge_no_longer_re_alerts_a_pick(
     es_url, test_index_prefix
 ):
-    """§7.4's two gates together: edge improvement AND an expired cooldown."""
+    """§7.4 as amended 2026-11-22: one recommendation per pick. A better edge on
+    the same bet, with the cooldown clear, used to re-alert (the edge gate); it
+    was a second stake on one outcome, so now it stays quiet."""
     from elasticsearch import AsyncElasticsearch
 
     from edgeline.engine import run_once
@@ -887,23 +889,61 @@ async def test_a_materially_better_edge_re_alerts_once_the_cooldown_clears(
             settings=settings(alert_cooldown_s=0),
         )
 
-        assert len(opened.alerted) == 1
-        assert len(sink.sent) == 2
+        # The arbitrage is another pick and may take its freed slot; the +EV may not.
+        assert TYPE_EV not in [d.type for d in opened.alerted]
     finally:
         await client.close()
 
 
 @pytest.mark.es
-async def test_an_improvement_absorbed_during_a_cooldown_is_announced_once_it_clears(
+async def test_the_same_pick_at_another_book_is_not_recommended_again(
     es_url, test_index_prefix
 ):
-    """The half of §7.4's 2026-09-04 note that the 2026-10-01 amendment reverses.
+    """The 2026-11-22 repeat: Rutgers at BetRivers, then FanDuel, then betPARX,
+    one poll after another. A later poll finding the same pick best at another
+    book is another opportunity (`opp_hash` names the book) but the same bet."""
+    from elasticsearch import AsyncElasticsearch
 
-    The baseline for "improved" used to be the stored `edge_pct`, which every
-    cycle overwrites, so a jump that arrived while the cooldown was running was
-    absorbed and never announced — pinned here then as the literal reading.
-    Measured against `alerted_edge_pct`, the edge at the alert, the jump is still
-    an improvement when the cooldown clears.
+    from edgeline.engine import run_once
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    clear = settings(alert_cooldown_s=0)
+    try:
+        from edgeline.indices import SPORTSBOOKS_INDEX, with_prefix
+
+        await _fresh_cluster(client, prefix)
+        await client.index(
+            index=with_prefix(SPORTSBOOKS_INDEX, prefix), id="other",
+            document={"display_name": "other", "enabled": True, "priority": 1, "link_templates": {}},
+            refresh="wait_for",
+        )
+        sink = RecordingSink()
+        provider = _FixtureProvider(ev_only_payload(2.20))
+        first = await run_once(provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink)
+        assert len(first.alerted) == 1
+
+        # Next poll: "juicy" is gone and "other" has the Guardians even longer.
+        bookmakers = [h2h(book, 1.80, 1.80) for book in FAIR_BOOKS] + [h2h("other", 2.24, 1.60)]
+        provider.payload = [{**EVENT_HEADER, "bookmakers": bookmakers}]
+        second = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
+        )
+        assert [d.legs[0].book_key for d in second.detections if d.type == TYPE_EV] == ["other"]
+        assert second.alerted == []
+        assert len(sink.sent) == 1
+    finally:
+        await client.close()
+
+
+@pytest.mark.es
+async def test_an_improvement_during_a_cooldown_is_not_announced_when_it_clears(
+    es_url, test_index_prefix
+):
+    """§7.4's 2026-10-01 amendment announced a jump that arrived during the
+    cooldown once it cleared, measured against `alerted_edge_pct`. Since
+    2026-11-22 a pick is recommended once, so it is not announced at all.
     """
     from elasticsearch import AsyncElasticsearch
 
@@ -930,8 +970,8 @@ async def test_an_improvement_absorbed_during_a_cooldown_is_announced_once_it_cl
         )
         assert blocked.alerted == []
 
-        # Cooldown now clear, edge unchanged since the last cycle — but well
-        # above where it was alerted, so it is announced.
+        # Cooldown now clear, edge well above where it was alerted: still the
+        # same pick, so still quiet.
         settled = await run_once(
             provider,
             client,
@@ -940,8 +980,7 @@ async def test_an_improvement_absorbed_during_a_cooldown_is_announced_once_it_cl
             sink=sink,
             settings=settings(alert_cooldown_s=0),
         )
-        assert [d.type for d in settled.alerted] == [TYPE_EV]
-        assert len(sink.sent) == 2
+        assert TYPE_EV not in [d.type for d in settled.alerted]
     finally:
         await client.close()
 
@@ -1006,15 +1045,15 @@ async def test_an_edge_that_dips_and_recovers_does_not_re_alert_at_the_same_pric
         assert recovered.alerted == []
         assert len(sink.sent) == 1
 
-        # A real improvement on the alert still gets through, and becomes the
-        # baseline for the next one.
+        # A real improvement on the alert used to get through; since 2026-11-22
+        # the pick is recommended once, so the alert's edge stays the record.
         provider.payload = ev_only_payload(2.24)  # 12%
         better = await run_once(
             provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink, settings=clear
         )
-        assert [d.hash for d in better.alerted] == [alerted.hash]
+        assert better.alerted == []
         assert (await _opportunity(client, prefix, alerted.hash))["alerted_edge_pct"] == (
-            pytest.approx(12.0)
+            pytest.approx(10.0)
         )
     finally:
         await client.close()
