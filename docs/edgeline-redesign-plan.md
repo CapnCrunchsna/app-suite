@@ -99,7 +99,8 @@ props: the free tier cannot afford them.
 | 1a | Pinnacle in the polls, both edges stored, `fair_price_source`, shadow opportunities | −90 a month | **Done 2026-11-22** |
 | 1b | What-if page: detector toggle (consensus or Pinnacle edge), shadow rows included | none | **Done 2026-11-22** |
 | 1c | Switch to `pinnacle`, moneylines only; spec §3.2, §4.3, §6.4, §11.1 amended | — | **Done 2026-11-22**: projected 404 credits a month, from 506 |
-| 2a | Offers: entry, pricing from stored or on-demand Pinnacle, verdict | about 1 an offer | Waiting on §2's decisions |
+| 2a | Offers: intake endpoint, pricing from stored or on-demand Pinnacle, verdict, Offers page | about 1 an offer | Waiting on the entry route (§2, decision 3) |
+| 2a′ | The reading skill: screenshots (or emails) to offers | none | Waiting on the entry route |
 | 2b | Line shop, bonus-bet conversion | none | |
 | 2c | Record and settle offers; value taken against expected | none | |
 | — | Read Phase 1 after the bowls, about 2027-01-05 | — | |
