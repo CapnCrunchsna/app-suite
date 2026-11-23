@@ -71,13 +71,26 @@ The books show them in their apps, not in any feed, so they come in by hand.
 legs that no free feed carries, so the page says so rather than guessing. The same goes for player
 props: the free tier cannot afford them.
 
-**Open decisions** (Phase 2 starts once these are answered):
+**Decisions (2026-11-22).**
 
-1. Offer types in the first cut: profit boosts and odds boosts on singles, bonus bets, no-sweat bets.
-   Any others the user actually sees?
-2. Typed entry only, or also paste-and-parse? Parsing a pasted offer through the Claude API costs about
-   a cent an offer, so it is not strictly free.
-3. Its own page in Edgeline, beside What if, or a separate small app.
+1. **Offer types:** odds and profit boosts on singles, and bonus bets. No-sweat bets and deposit
+   matches can come later.
+2. **Its home:** a page in Edgeline, beside What if, reusing its events, Pinnacle prices, books,
+   settlement and luck maths.
+3. **Entry: not typed, and not through the Claude API.** The user would not keep up with typing, and
+   wants the reading done on their Claude subscription instead. Claude cannot open the books' sites
+   itself: the built-in browser refuses sportsbook domains as a safety restriction, and that is not to
+   be worked around. So the offers have to reach Claude some other way:
+   - **Screenshots (proposed):** the user screenshots each book's boosts tab, a few seconds a book, and
+     drops them into a Claude Code session. A skill reads them, matches each to a stored game and
+     selection, posts them to Edgeline (`POST /api/offers`), and answers with the verdicts.
+   - **Promo emails (possible):** if the books email their boosts, a scheduled Claude task could read
+     them through a Gmail connector. It depends on the books sending them, and many boosts only appear
+     in the apps.
+
+   Either way, Edgeline only gains an intake endpoint and the Offers page; the reading is a skill. A
+   caveat on value: many daily boosts are on parlays or same-game parlays, which cannot be priced (see
+   below), so the number of priceable single-bet boosts a day is not yet known.
 
 ## 3. Order of work
 
