@@ -45,8 +45,11 @@ bowls (about 2027-01-05)**, by the same rules as T4.4a:
 - the Pinnacle detector's opportunity CLV against Pinnacle's close, positive with its interval clear of
   zero;
 - beside the consensus detector's on the same weeks, on the What-if page's new detector toggle;
-- whichever is better stays in charge. If neither holds an edge, the recommendation is to park the
-  detector and keep Phase 2.
+- whichever is better stays in charge. If neither holds an edge, park the detector.
+- **If it holds, turn on real-time alerting.** Edgeline was always meant to hand over a finished bet
+  for the user to place. Today recommendations go only to a log; going live needs alerts that arrive
+  while the price is still there (Discord, §9). That is the step after this read, taken only once the
+  edge has shown it is worth acting on.
 
 ## 2. Phase 2 — the offer evaluator (dropped 2026-11-22)
 
