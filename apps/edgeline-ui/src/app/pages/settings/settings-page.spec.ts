@@ -57,6 +57,7 @@ const SPEC_DEFAULTS: Settings = {
   poll_bookmakers: 'enabled',
   closing_bookmakers: [],
   sharp_reference_books: [],
+  fair_price_source: 'consensus',
   poll_interval_s: 120,
   poll_interval_dev_s: 43200,
   poll_schedule: [
@@ -150,8 +151,9 @@ describe('SettingsPage (§11.1, §3.2)', () => {
       // `closing_capture_mode` on 2026-09-11, `book_state` on 2026-09-12,
       // `poll_schedule` on 2026-09-23, and `poll_bookmakers` and
       // `poll_lookahead_h` on 2026-10-01, `alerts_paused_sports` on 2026-11-04,
-      // and `closing_bookmakers` and `sharp_reference_books` on 2026-11-05.
-      expect(covered).toHaveLength(36);
+      // `closing_bookmakers` and `sharp_reference_books` on 2026-11-05, and
+      // `fair_price_source` on 2026-11-22.
+      expect(covered).toHaveLength(37);
       expect(covered).toContain('regions');
       expect(covered).toContain('offline_mode');
       expect(covered).toContain('closing_capture_mode');

@@ -297,6 +297,13 @@ export const POLLING = {
       hint: 'Book keys, comma-separated, that a closing capture names instead of requesting the regions; empty requests the regions. Every ten names bill as one region, so the 18 books us + us2 return at the close plus Pinnacle (19) cost what us + us2 does. A book left off is out of the closing consensus, and a book the provider adds later stays out until it is named here.',
     },
     {
+      key: 'fair_price_source',
+      label: 'Fair price',
+      kind: 'select',
+      options: ['consensus', 'pinnacle'],
+      hint: 'What a +EV edge is measured against. Consensus is the other retail books with their margins removed; Pinnacle is the sharp reference book’s line, margin removed, which every poll names alongside the enabled books. Both edges are stored either way, and a price only the other one likes is kept as a shadow opportunity, never alerted, for the What-if page to compare.',
+    },
+    {
       key: 'sharp_reference_books',
       label: 'Sharp reference books',
       kind: 'list',

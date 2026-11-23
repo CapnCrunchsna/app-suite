@@ -108,6 +108,26 @@ describe('What-if arithmetic', () => {
     expect(chanceThisBad([])).toBeNull();
   });
 
+  it('judges the opportunity set as either detector would have found it', () => {
+    const rows = [
+      // Found by the consensus, Pinnacle disagrees.
+      bet({ id: 'c', event_id: 'c', edge_pct: 5, consensus_edge_pct: 5, sharp_edge_pct: 1 }),
+      // A shadow: only Pinnacle liked it.
+      bet({ id: 'p', event_id: 'p', edge_pct: 9, consensus_edge_pct: 2, sharp_edge_pct: 9, shadow: true }),
+      // From before 2026-11-22: the consensus's, with no Pinnacle edge.
+      bet({ id: 'old', event_id: 'old', edge_pct: 4 }),
+    ];
+    const ids = (detector: 'as-run' | 'consensus' | 'pinnacle') =>
+      select(rows, { ...ALL, detector }).map((b) => b.row.id).sort();
+    expect(ids('as-run')).toEqual(['c', 'old']);
+    expect(ids('consensus')).toEqual(['c', 'old']);
+    expect(ids('pinnacle')).toEqual(['p']);
+    // The edge filter and bands read the chosen detector's edge.
+    expect(select(rows, { ...ALL, detector: 'pinnacle', minEdgePct: 8 })[0].row.edge_pct).toBe(9);
+    // The paper set is what was recommended, whatever the toggle says.
+    expect(select(rows, { ...ALL, set: 'paper', detector: 'pinnacle' })).toHaveLength(3);
+  });
+
   it('runs the totals in start order and breaks a view down', () => {
     const rows = [
       bet({ id: 'a', event_id: 'a', outcome: 'win', price_decimal: 2.5 }),

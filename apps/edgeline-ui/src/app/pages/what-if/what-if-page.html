@@ -22,6 +22,18 @@
     </div>
 
     <div class="filter">
+      <span class="filter__label">Detector</span>
+      <div class="segmented">
+        @for (option of detectorOptions; track option.value) {
+          <button type="button" class="segmented__item" [class.segmented__item--on]="set() === 'opportunities' && detector() === option.value"
+            [attr.aria-pressed]="detector() === option.value" [disabled]="set() !== 'opportunities'"
+            [title]="set() === 'opportunities' ? 'Which fair price judged each opportunity' : 'Paper bets are what was recommended; the detector applies to every opportunity'"
+            (click)="detector.set(option.value)">{{ option.label }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="filter">
       <span class="filter__label">Stake</span>
       <div class="segmented">
         <button type="button" class="segmented__item" [class.segmented__item--on]="effectiveStaking() === 'ledger'"
@@ -211,6 +223,12 @@
           P&amp;L. <strong>Every opportunity</strong> is every edge the detector found and the game settled,
           one per pick at the best price, at a flat {{ flatLabel }}. It includes the ones the cooldown never
           alerted.
+        </li>
+        <li>
+          <strong>Detector</strong> (every opportunity only): <em>as run</em> is whatever was in charge when each
+          was found. <em>Consensus</em> and <em>Pinnacle</em> keep the ones whose edge against that fair price
+          cleared 3%, including the shadow opportunities the other detector found and never alerted, so the
+          two can be compared on the same games. Pinnacle edges exist from 2026-11-22.
         </li>
         <li>
           <strong>Paused sports are still measured.</strong> Pausing stops alerts, so a paused sport stops

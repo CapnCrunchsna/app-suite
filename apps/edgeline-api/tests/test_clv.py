@@ -196,6 +196,13 @@ async def test_a_sharp_close_is_a_second_clv_and_never_part_of_the_consensus(
         await _game(client, prefix, "baseball_mlb:e2")
         await _poll(client, prefix, "baseball_mlb:e2", "2026-09-02T15:41:00Z", 1.80, 2.10)
         await _opportunity(client, prefix, "p", "baseball_mlb:e2", "2026-09-02T12:00:03Z")
+        # A shadow (2026-11-22): measured like any other, left out of the
+        # detector's summary, which is the ruling fair price's record.
+        await _opportunity(client, prefix, "shadow", "baseball_mlb:e2", "2026-09-02T12:00:03Z")
+        from edgeline.indices import OPPORTUNITIES_INDEX
+
+        await client.update(index=with_prefix(OPPORTUNITIES_INDEX, prefix), id="shadow",
+                            doc={"shadow": True})
         await client.indices.refresh(index=f"{prefix}*")
 
         await grade_opportunities(client, Settings(), prefix=prefix, now=NOW)

@@ -243,6 +243,7 @@ export interface Settings {
   poll_bookmakers?: "enabled" | "regions";
   closing_bookmakers?: string[];
   sharp_reference_books?: string[];
+  fair_price_source?: "consensus" | "pinnacle";
   poll_interval_s?: number;
   poll_interval_dev_s?: number;
   poll_schedule?: PollSlot[];
@@ -337,6 +338,9 @@ export interface WhatIfBet {
   book_key: string;
   price_decimal: number;
   edge_pct?: number | null;
+  consensus_edge_pct?: number | null;
+  sharp_edge_pct?: number | null;
+  shadow?: boolean;
   clv_pct: number;
   clv_sharp_pct?: number | null;
   clv_circular?: boolean | null;

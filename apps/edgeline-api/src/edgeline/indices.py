@@ -126,6 +126,12 @@ INDEX_MAPPINGS: dict[str, dict[str, Any]] = {
                 },
             },
             "edge_pct": _DOUBLE,
+            #: The edge against each fair price, and whether this one passed only
+            #: the price not in charge (§3.2 `fair_price_source`, added 2026-11-22).
+            #: `edge_pct` is the ruling one, or for a shadow the other.
+            "consensus_edge_pct": _DOUBLE,
+            "sharp_edge_pct": _DOUBLE,
+            "shadow": _BOOLEAN,
             #: The edge when this opportunity was last alerted (§7.4, added
             #: 2026-10-01). `edge_pct` is overwritten every cycle, so comparing a
             #: re-alert against it measured the last poll, not the last alert: an

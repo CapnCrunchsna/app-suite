@@ -91,6 +91,13 @@ class Detection:
     #: Per leg, how many other books backed its staleness figure. §9.2's arb
     #: message quotes this ("leg 2 matches {n} books").
     leg_consensus_books: list[int] = field(default_factory=list)
+    #: The edge against each fair price (§6.4, 2026-11-22): the retail books'
+    #: consensus and Pinnacle's line. `None` where that price is unavailable.
+    consensus_edge_pct: float | None = None
+    sharp_edge_pct: float | None = None
+    #: Passed only the fair price not in charge (§3.2 `fair_price_source`):
+    #: stored, settled and measured, never alerted.
+    shadow: bool = False
     hash: str = ""
 
     def __post_init__(self) -> None:
@@ -123,6 +130,9 @@ class Detection:
                 for leg in self.legs
             ],
             "edge_pct": self.edge_pct,
+            "consensus_edge_pct": self.consensus_edge_pct,
+            "sharp_edge_pct": self.sharp_edge_pct,
+            "shadow": self.shadow,
             "status": STATUS_OPEN,
             "detected_at": self.detected_at,
             "expires_at": self.commence_time,
@@ -199,8 +209,14 @@ def detect_opportunities(
     *,
     enabled_books: set[str] | None = None,
     now_iso: str | None = None,
+    sharp: list[BookOddsSnapshot] | None = None,
 ) -> list[Detection]:
     """Run §6.4 (+EV) and §6.5 (arbitrage) over every same-line market group.
+
+    `sharp` is the poll's §3.2 `sharp_reference_books` rows (Pinnacle), split
+    off before anything else reads the answer. Each +EV price is scored against
+    them as well as against the consensus (2026-11-22); without them the
+    detector is exactly what it was.
 
     `enabled_books` of `None` means "consider every book present", which is what
     the fixture-replay tests want. In production it is the enabled set from
@@ -220,6 +236,7 @@ def detect_opportunities(
 
     detected_at = now_iso or utc_now_iso()
     detections: list[Detection] = []
+    sharp_groups = group_same_line(sharp) if sharp else {}
 
     for (event_id, market_key, _line), rows in group_same_line(snapshots).items():
         usable = [
@@ -243,7 +260,8 @@ def detect_opportunities(
 
         detections.extend(
             _detect_ev(
-                quotes, selections, lines, settings, header, event_id, market_key, detected_at
+                quotes, selections, lines, settings, header, event_id, market_key, detected_at,
+                sharp_fair=_sharp_fair(sharp_groups.get((event_id, market_key, _line), []), settings),
             )
         )
         arb = _detect_arb(
@@ -264,8 +282,20 @@ def _detect_ev(
     event_id: str,
     market_key: str,
     detected_at: str,
+    *,
+    sharp_fair: dict[str, float] | None = None,
 ) -> list[Detection]:
-    """§6.4: price a book against the consensus of the *other* books."""
+    """§6.4: price a book against a fair probability — the consensus of the
+    *other* books, and since 2026-11-22 Pinnacle's line too (`sharp_fair`).
+
+    Both edges are computed and stored. §3.2's `fair_price_source` decides
+    which is `edge_pct`, the one thresholded, staked and alerted; a price that
+    clears the threshold only on the other is kept as a shadow opportunity, so
+    the two detectors can be compared on the same games.
+    """
+    sharp_fair = sharp_fair or {}
+    pinnacle = settings.fair_price_source == "pinnacle"
+    threshold = settings.ev_threshold_pct
     found: list[Detection] = []
     for selection in selections:
         for book_key, quote in quotes.items():
@@ -279,13 +309,24 @@ def _detect_ev(
             }
             # "consensus available from >= min_books_for_consensus OTHER books"
             # — the book being priced never votes on its own fair value.
-            if len(others) < settings.min_books_for_consensus:
-                continue
+            consensus_prob = (
+                consensus(others, settings.consensus_weights)
+                if len(others) >= settings.min_books_for_consensus
+                else None
+            )
+            consensus_edge = ev_pct(consensus_prob, price) if consensus_prob is not None else None
+            sharp_prob = sharp_fair.get(selection)
+            sharp_edge = ev_pct(sharp_prob, price) if sharp_prob is not None else None
 
-            consensus_prob = consensus(others, settings.consensus_weights)
-            edge = ev_pct(consensus_prob, price)
-            if edge < settings.ev_threshold_pct:
+            ruling = (sharp_edge, sharp_prob) if pinnacle else (consensus_edge, consensus_prob)
+            shadowing = (consensus_edge, consensus_prob) if pinnacle else (sharp_edge, sharp_prob)
+            if ruling[0] is not None and ruling[0] >= threshold:
+                (edge, fair_prob), shadow = ruling, False
+            elif shadowing[0] is not None and shadowing[0] >= threshold:
+                (edge, fair_prob), shadow = shadowing, True
+            else:
                 continue
+            consensus_prob = fair_prob
 
             found.append(
                 Detection(
@@ -307,9 +348,26 @@ def _detect_ev(
                     edge_pct=edge,
                     detected_at=detected_at,
                     consensus_prob=consensus_prob,
+                    consensus_edge_pct=consensus_edge,
+                    sharp_edge_pct=sharp_edge,
+                    shadow=shadow,
                 )
             )
     return found
+
+
+def _sharp_fair(rows: list[BookOddsSnapshot], settings: Settings) -> dict[str, float]:
+    """Pinnacle's fair probability per selection for one market group: each
+    sharp book's complete quote de-vigged, averaged evenly. Empty when no
+    sharp book priced the market."""
+    per_book = [q.fair for q in _book_quotes(rows, settings.devig_method).values() if q.fair]
+    if not per_book:
+        return {}
+    selections = set().union(*per_book)
+    return {
+        s: sum(fair[s] for fair in per_book if s in fair) / sum(1 for fair in per_book if s in fair)
+        for s in selections
+    }
 
 
 def _detect_arb(
@@ -692,7 +750,10 @@ def featured_request(
     """
     request: dict[str, Any] = {"regions": ",".join(settings.regions)}
     if settings.poll_bookmakers == "enabled" and enabled_books:
-        request["bookmakers"] = sorted(enabled_books)
+        # Plus the sharp reference books (2026-11-22), the detector's fair price.
+        request["bookmakers"] = sorted(enabled_books) + [
+            b for b in settings.sharp_reference_books if b not in enabled_books
+        ]
     if settings.poll_lookahead_h > 0:
         request["commence_time_from"] = now.strftime(PROVIDER_STAMP)
         request["commence_time_to"] = (
@@ -750,13 +811,21 @@ async def run_once(
     report.quota_remaining = response.quota.remaining
 
     quarantine: list[UnmatchedRow] = []
-    snapshots = normalize(provider.key, response.payload, quarantine=quarantine)
+    # Pinnacle comes off first (2026-11-22): its prices are a yardstick, kept in
+    # `edgeline-sharp-closes` with `is_closing: false`, never among the
+    # snapshots a consensus, a closing line or a stake could read.
+    snapshots, sharp = _split_sharp(
+        normalize(provider.key, response.payload, quarantine=quarantine), settings
+    )
     report.snapshots = len(snapshots)
     report.quarantined = len(quarantine)
 
     actions: list[dict[str, Any]] = [
         {"_index": with_prefix(ODDS_SNAPSHOTS_INDEX, prefix), "_source": doc}
         for doc in snapshot_documents(snapshots)
+    ] + [
+        {"_index": with_prefix(SHARP_CLOSES_INDEX, prefix), "_source": doc}
+        for doc in snapshot_documents(sharp)
     ]
     events = event_documents(snapshots)
     report.events = len(events)
@@ -786,7 +855,7 @@ async def run_once(
     # "enabled books", so an empty set must mean no detections rather than
     # quietly falling back to every book the feed happened to return.
     report.detections = detect_opportunities(
-        snapshots, settings, enabled_books=set(books), now_iso=now_iso
+        snapshots, settings, enabled_books=set(books), now_iso=now_iso, sharp=sharp
     )
 
     now = parse_iso(now_iso) if now_iso else datetime.now(timezone.utc)
@@ -862,8 +931,18 @@ async def run_once(
         else:
             # Hash exists: update the edge and keep whatever status it carries.
             await _update_opportunity(
-                client, opportunities, detection.hash, {"edge_pct": detection.edge_pct}, prior
+                client, opportunities, detection.hash,
+                {
+                    "edge_pct": detection.edge_pct,
+                    "consensus_edge_pct": detection.consensus_edge_pct,
+                    "sharp_edge_pct": detection.sharp_edge_pct,
+                    "shadow": detection.shadow,
+                },
+                prior,
             )
+        # A shadow passed only the fair price not in charge: measured, never sent.
+        if detection.shadow:
+            continue
         # §7.4: an alerted opportunity re-alerts only when materially better
         # than at that alert — not than at the last poll, against which an edge
         # that dipped and recovered reads as an improvement at an unchanged price.

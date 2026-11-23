@@ -25,9 +25,22 @@ import type { WhatIfBet } from '@metrum/edgeline-api-client';
 
 export type BetSet = 'paper' | 'opportunities';
 export type Staking = 'ledger' | 'flat';
+/**
+ * Which detector the opportunity set is judged as (2026-11-22). `as-run` is
+ * whatever was in charge when each was found, shadows left out. `consensus`
+ * and `pinnacle` keep the opportunities whose edge against that fair price
+ * cleared the live 3%, shadows included, so the two detectors can be compared
+ * on the same games. Pinnacle edges exist from 2026-11-22.
+ */
+export type Detector = 'as-run' | 'consensus' | 'pinnacle';
+
+/** The threshold a detector toggle applies, the live one since 2026-11-04. */
+export const DETECTOR_THRESHOLD_PCT = 3;
 
 export interface Filters {
   readonly set: BetSet;
+  /** Ignored for the paper set, which is what was recommended. */
+  readonly detector?: Detector;
   /** `ledger` is the paper ledger's own (Kelly) stakes; only the paper set has them. */
   readonly staking: Staking;
   readonly flatCents: number;
@@ -134,8 +147,29 @@ export function price(row: WhatIfBet, filters: Filters): PricedBet {
   };
 }
 
+/** The edge `detector` judged this row by, or `null` if it never measured one.
+ *  Rows from before 2026-11-22 carry only `edge_pct`, which was the consensus. */
+export function edgeFor(row: WhatIfBet, detector: Detector): number | null {
+  if (detector === 'pinnacle') return row.sharp_edge_pct ?? null;
+  if (detector === 'consensus') return row.consensus_edge_pct ?? (row.shadow ? null : (row.edge_pct ?? null));
+  return row.edge_pct ?? null;
+}
+
+/** The opportunity set as `detector` would have found it, each row's
+ *  `edge_pct` replaced by that detector's edge so every later filter and
+ *  breakdown reads it. */
+export function asDetector(rows: readonly WhatIfBet[], detector: Detector): WhatIfBet[] {
+  if (detector === 'as-run') return rows.filter((row) => !row.shadow);
+  return rows
+    .map((row) => ({ ...row, edge_pct: edgeFor(row, detector) }))
+    .filter((row) => row.edge_pct !== null && (row.edge_pct as number) >= DETECTOR_THRESHOLD_PCT);
+}
+
 export function select(rows: readonly WhatIfBet[], filters: Filters): PricedBet[] {
-  const base = filters.set === 'opportunities' ? onePerPick(rows) : [...rows];
+  const base =
+    filters.set === 'opportunities'
+      ? onePerPick(asDetector(rows, filters.detector ?? 'as-run'))
+      : [...rows];
   return base.filter((row) => passes(row, filters)).map((row) => price(row, filters));
 }
 

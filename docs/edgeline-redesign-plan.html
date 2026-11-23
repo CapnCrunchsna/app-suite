@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edgeline Redesign — Pinnacle as the Fair Price, and an Offer Evaluator — MetrumDigital</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%20role='img'%20aria-label='MetrumDigital'%3E%20%3Cdefs%3E%20%3ClinearGradient%20id='mdg'%20x1='0'%20y1='0'%20x2='32'%20y2='32'%20gradientUnits='userSpaceOnUse'%3E%20%3Cstop%20offset='0'%20stop-color='%230ea5e9'/%3E%20%3Cstop%20offset='.55'%20stop-color='%2314b8a6'/%3E%20%3Cstop%20offset='1'%20stop-color='%2322c55e'/%3E%20%3C/linearGradient%3E%20%3C/defs%3E%20%3Crect%20x='1'%20y='1'%20width='30'%20height='30'%20rx='8'%20fill='%230d9488'/%3E%20%3Cg%20fill='%235eead4'%3E%20%3Crect%20x='1'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='1'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='8.5'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='14.7'%20width='4'%20height='2.6'/%3E%20%3Crect%20x='27'%20y='20.9'%20width='4'%20height='2.6'/%3E%20%3C/g%3E%20%3Crect%20x='5'%20y='5'%20width='22'%20height='22'%20rx='3'%20fill='url(%23mdg)'/%3E%20%3Cpath%20d='M9%2022V10.5l7%206.5%207-6.5V22'%20fill='none'%20stroke='%23ffffff'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%20%3C/svg%3E">
+
+<!-- Restore saved theme before paint to avoid flash. Default is dark. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('md-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0a1517; --surface:#0f2124; --surface-2:#143034; --border:#1f4a47;
+    --text:#dcefeb; --text-dim:#7ea8a1; --accent:#2dd4bf; --accent-2:#34d399;
+    --code-bg:#0f2124; --shadow:0 1px 3px rgba(0,0,0,.5);
+    --radius:10px; --maxw:880px;
+  }
+  html[data-theme="light"]{
+    --bg:#ffffff; --surface:#f0faf8; --surface-2:#e0f3ef; --border:#bfe3dc;
+    --text:#0b2a27; --text-dim:#48706a; --accent:#0d9488; --accent-2:#059669;
+    --code-bg:#f0faf8; --shadow:0 1px 3px rgba(140,149,159,.3);
+  }
+  html[data-theme="dark"]{color-scheme:dark}
+  html[data-theme="light"]{color-scheme:light}
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    transition:background .2s ease,color .2s ease;
+  }
+
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    box-shadow:var(--shadow);
+  }
+  .topbar a{color:var(--accent); text-decoration:none; font-weight:600}
+  .topbar a:hover{text-decoration:underline}
+  .home{white-space:nowrap; display:inline-flex; align-items:center; gap:8px}
+  .brand-mark{width:22px; height:22px; flex:none}
+  .related{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px}
+  .related .label{color:var(--text-dim); font-weight:400}
+  .related a{font-weight:500; padding:3px 10px; border:1px solid var(--border);
+    border-radius:999px; background:var(--surface-2)}
+  .spacer{flex:1}
+  .toggle{
+    cursor:pointer; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); border-radius:999px; padding:6px 14px; font-size:14px; font-weight:600;
+  }
+  .toggle:hover{border-color:var(--accent)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:40px 24px 80px}
+  h1{font-size:2rem; line-height:1.2; margin:0 0 6px}
+  h2{margin-top:2em; padding-bottom:.3em; border-bottom:1px solid var(--border)}
+  .meta{color:var(--text-dim); font-size:14px; margin:0 0 32px}
+  .meta .tag{display:inline-block; padding:2px 10px; border-radius:999px;
+    background:var(--surface-2); border:1px solid var(--border); margin-right:8px; font-weight:600}
+  a{color:var(--accent)}
+  code{background:var(--code-bg); border:1px solid var(--border); border-radius:6px;
+    padding:.15em .4em; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.9em}
+  pre{background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; overflow:auto}
+  pre code{background:none; border:none; padding:0}
+  blockquote{margin:1em 0; padding:.5em 1em; border-left:4px solid var(--accent);
+    background:var(--surface); border-radius:0 var(--radius) var(--radius) 0; color:var(--text-dim)}
+  table{border-collapse:collapse; width:100%; margin:1em 0}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left}
+  th{background:var(--surface-2)}
+  hr{border:none; border-top:1px solid var(--border); margin:2em 0}
+  footer{max-width:var(--maxw); margin:0 auto; padding:24px; color:var(--text-dim);
+    font-size:14px; border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="home" href="../../dashboard.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="mdLogoT" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0ea5e9"/><stop offset=".55" stop-color="#14b8a6"/><stop offset="1" stop-color="#22c55e"/>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="#0d9488"/>
+      <g fill="#5eead4"><rect x="1" y="8.5" width="4" height="2.6"/><rect x="1" y="14.7" width="4" height="2.6"/><rect x="1" y="20.9" width="4" height="2.6"/><rect x="27" y="8.5" width="4" height="2.6"/><rect x="27" y="14.7" width="4" height="2.6"/><rect x="27" y="20.9" width="4" height="2.6"/></g>
+      <rect x="5" y="5" width="22" height="22" rx="3" fill="url(#mdLogoT)"/>
+      <path d="M9 22V10.5l7 6.5 7-6.5V22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>← Dashboard</span>
+  </a>
+  <nav class="related">
+    <span class="label">Related:</span>
+    <a href="edgeline-t44a-detector-report.html">Edgeline T4.4a — What the Detector's CLV Says to Tune</a>
+  </nav>
+  <span class="spacer"></span>
+  <button id="themeToggle" class="toggle" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+<h1>Edgeline Redesign — Pinnacle as the Fair Price, and an Offer Evaluator</h1>
+<p class="meta"><span class="tag">plans</span> 2026-11-22</p>
+<p>By 2026-11-22 Edgeline had shown a real but small edge: football opportunities beat the closing line by<br>
+about 2–3% since the 11-04 rule changes, and about the same against Pinnacle's close, mostly on long<br>
+shots, in a college season that ends 11-29. On free data it polls one to three times a day, so many of<br>
+those prices are gone before a person could bet them, and at a $1,000 bankroll the edge is worth tens of<br>
+dollars a season. The user asked for both of the changes proposed that day. Phase 1 changes how the<br>
+detector judges a price. Phase 2 adds the use where free, slow data is not a handicap: pricing the books'<br>
+own offers. Both stay on The Odds API's free tier and keep §16's rule: Edgeline recommends, it never<br>
+places a bet.</p>
+<h2 id="s1">1. Phase 1 — Pinnacle as the fair price</h2>
+<p><strong>The change.</strong> Today a price is judged against the average of the other retail books, with each one's margin removed. Phase 1 judges it against Pinnacle's line, with its margin removed. Pinnacle is the market-making book, and its line is the standard estimate of the true odds. Our picks already beat its close, so it is the better yardstick to find them with.</p>
+<p><strong>Measured side by side, not swapped blind.</strong> Pinnacle's prices exist only from the closing captures since 11-05, so the new detector cannot be backtested. Instead every price is scored both ways on every poll:</p>
+<ul><li>Each opportunity stores <code>consensus_edge_pct</code> and <code>sharp_edge_pct</code>.</li><li>A new setting, <code>fair_price_source</code> (<code>consensus</code> or <code>pinnacle</code>), decides which edge is <code>edge_pct</code>, the one that is thresholded, staked and alerted.</li><li>A price that passes only the other method is stored as a <strong>shadow</strong> opportunity. It is never alerted, but it is settled and measured at the close like any other.</li><li>So the What-if page can answer "what if the other detector had been in charge" on the same games, at no extra cost.</li></ul>
+<p><strong>Polls.</strong> Moneylines only (<code>markets_featured: ["h2h"]</code>): spreads and totals have shown no edge and were almost all NBA and NHL. Each poll names the ten enabled books plus Pinnacle: 11 names, which bill as 2 units. That is 2 credits a poll against 3 today, about 190 credits a month instead of 280. Pinnacle's poll prices go to <code>edgeline-sharp-closes</code> with <code>is_closing: false</code>, never to the snapshots, so the consensus never reads them.</p>
+<p><strong>What stays.</strong> The 3% threshold, applied to whichever edge is in charge. One recommendation per pick. Paper mode. NBA and NHL paused. A game Pinnacle does not price yields no Pinnacle edge: under <code>pinnacle</code> it is skipped, and under <code>consensus</code> it is unaffected.</p>
+<p><strong>The switch.</strong> <code>fair_price_source</code> goes to <code>pinnacle</code> when Phase 1 ships, so the paper recommendations from then on are the new detector's, and the consensus detector runs as the shadow. <strong>Read it after the bowls (about 2027-01-05)</strong>, by the same rules as T4.4a:</p>
+<ul><li>the Pinnacle detector's opportunity CLV against Pinnacle's close, positive with its interval clear of zero;</li><li>beside the consensus detector's on the same weeks, on the What-if page's new detector toggle;</li><li>whichever is better stays in charge. If neither holds an edge, the recommendation is to park the detector and keep Phase 2.</li></ul>
+<h2 id="s2">2. Phase 2 — the offer evaluator</h2>
+<p><strong>Why.</strong> For a bettor in Maryland, the steadiest positive-value bets are the books' own offers: profit boosts, odds boosts, bonus bets, "no sweat" refunds. They often carry 10–30% expected value, they last hours rather than minutes, and they need no bankroll to speak of, so neither of Phase 1's limits applies. The books show them in their apps, not in any feed, so they come in by hand.</p>
+<p><strong>What it does.</strong> A new Offers page:</p>
+<ul><li><strong>Enter an offer:</strong> the book, the game and selection (picked from stored events), the offer type and its terms (boosted price, profit-boost %, bonus-bet amount, refund cap), and the stake limit.</li><li><strong>Price it:</strong> the fair probability comes from Pinnacle, from the latest stored poll if it is recent, or one on-demand request for that game (1 credit). The page shows expected profit in dollars and %, a verdict, and for a bonus bet the expected cash it converts to.</li><li><strong>Line shop:</strong> the same selection at every enabled book, so a bet you were making anyway goes where it pays most.</li><li><strong>Record and settle:</strong> offers taken are stored and settled from the game's score like any other bet, so the page reports value taken against value expected, the same way the What-if page does.</li></ul>
+<p><strong>Out of scope for now:</strong> parlay and same-game-parlay boosts. Pricing them needs correlations between legs that no free feed carries, so the page says so rather than guessing. The same goes for player props: the free tier cannot afford them.</p>
+<p><strong>Open decisions</strong> (Phase 2 starts once these are answered):</p>
+<ol><li>Offer types in the first cut: profit boosts and odds boosts on singles, bonus bets, no-sweat bets. Any others the user actually sees?</li><li>Typed entry only, or also paste-and-parse? Parsing a pasted offer through the Claude API costs about a cent an offer, so it is not strictly free.</li><li>Its own page in Edgeline, beside What if, or a separate small app.</li></ol>
+<h2 id="s3">3. Order of work</h2>
+<div style="overflow-x:auto;margin:1em 0"><table>
+<tr><th>Step</th><th>What</th><th>Credits</th><th>Status</th></tr>
+<tr><td>1a</td><td>Pinnacle in the polls, both edges stored, <code>fair_price_source</code>, shadow opportunities</td><td>−90 a month</td><td><strong>Done 2026-11-22</strong></td></tr>
+<tr><td>1b</td><td>What-if page: detector toggle (consensus or Pinnacle edge), shadow rows included</td><td>none</td><td><strong>Done 2026-11-22</strong></td></tr>
+<tr><td>1c</td><td>Switch to <code>pinnacle</code>, moneylines only; spec <a href="#s3">§3.2</a>, §4.3, §6.4, §11.1 amended</td><td>—</td><td><strong>Done 2026-11-22</strong>: projected 404 credits a month, from 506</td></tr>
+<tr><td>2a</td><td>Offers: entry, pricing from stored or on-demand Pinnacle, verdict</td><td>about 1 an offer</td><td>Waiting on <a href="#s2">§2</a>'s decisions</td></tr>
+<tr><td>2b</td><td>Line shop, bonus-bet conversion</td><td>none</td><td></td></tr>
+<tr><td>2c</td><td>Record and settle offers; value taken against expected</td><td>none</td><td></td></tr>
+<tr><td>—</td><td>Read Phase 1 after the bowls, about 2027-01-05</td><td>—</td><td></td></tr>
+</table></div>
+</main>
+
+<footer>
+  Generated by Claude Code · <a href="../../dashboard.html">Back to dashboard</a>
+</footer>
+
+<script>
+  function toggleTheme(){
+    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('md-theme', next); } catch (e) {}
+    syncToggleLabel();
+  }
+  function syncToggleLabel(){
+    var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    var btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = theme === 'light' ? '🌙 Dark' : '☀ Light';
+  }
+  syncToggleLabel();
+</script>
+</body>
+</html>

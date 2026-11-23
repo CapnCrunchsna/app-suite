@@ -30,6 +30,7 @@ ENV_FILE = PROJECT_ROOT / ".env"
 DevigMethod = Literal["multiplicative", "additive", "power", "shin"]
 ClosingCaptureMode = Literal["off", "recommended", "opportunities", "all"]
 PollBookmakers = Literal["enabled", "regions"]
+FairPriceSource = Literal["consensus", "pinnacle"]
 Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 #: `datetime.weekday()` order, so `WEEKDAYS[d.weekday()]` names a date's day.
 WEEKDAYS: tuple[Weekday, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -249,6 +250,14 @@ class Settings(BaseModel):
     #: consensus, detection, alert or stake can read them. Asked for only while
     #: `closing_bookmakers` names the books: a regions request cannot add one.
     sharp_reference_books: list[str] = Field(default_factory=list)
+    #: Which fair price a +EV edge is measured against (§6.4, added 2026-11-22,
+    #: the redesign plan's Phase 1). ``consensus`` is the other retail books,
+    #: margins removed, as before; ``pinnacle`` is the
+    #: `sharp_reference_books` line, margin removed, which polls name alongside
+    #: the enabled books. Both edges are computed and stored either way; a
+    #: price that clears the threshold only on the other is a shadow
+    #: opportunity, measured but never alerted, so the two can be compared.
+    fair_price_source: FairPriceSource = "consensus"
 
     def closing_request_books(self) -> list[str]:
         """What a closing capture names (`closing_bookmakers` plus the sharp

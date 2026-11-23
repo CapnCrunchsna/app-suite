@@ -2076,6 +2076,15 @@
             "type": "array",
             "title": "Sharp Reference Books"
           },
+          "fair_price_source": {
+            "type": "string",
+            "enum": [
+              "consensus",
+              "pinnacle"
+            ],
+            "title": "Fair Price Source",
+            "default": "consensus"
+          },
           "poll_interval_s": {
             "type": "integer",
             "title": "Poll Interval S",
@@ -2586,6 +2595,33 @@
               }
             ],
             "title": "Edge Pct"
+          },
+          "consensus_edge_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Edge Pct"
+          },
+          "sharp_edge_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharp Edge Pct"
+          },
+          "shadow": {
+            "type": "boolean",
+            "title": "Shadow",
+            "default": false
           },
           "clv_pct": {
             "type": "number",

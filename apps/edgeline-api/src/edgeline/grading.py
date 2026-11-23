@@ -715,6 +715,9 @@ async def sharp_closing_prob(
                     "filter": [
                         {"term": {"event_id": event_id}},
                         {"term": {"market_key": market_key}},
+                        # Since 2026-11-22 polls store Pinnacle here too; only
+                        # the closing capture's rows are a close.
+                        {"term": {"is_closing": True}},
                     ]
                 }
             },

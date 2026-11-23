@@ -381,7 +381,8 @@ def named_books_for_polls(settings: Settings, enabled_books: int | None) -> int 
     to `regions`, which is the dearer request for any list of ten or fewer.
     """
     if settings.poll_bookmakers == "enabled" and enabled_books:
-        return enabled_books
+        # Since 2026-11-22 the poll names the sharp reference books too.
+        return enabled_books + len(settings.sharp_reference_books)
     return None
 
 

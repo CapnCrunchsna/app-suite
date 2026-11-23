@@ -59,6 +59,8 @@ SPEC_DEFAULTS = {
     # `regions`, plus the sharp references, kept apart for a second CLV.
     "closing_bookmakers": [],
     "sharp_reference_books": [],
+    # Added 2026-11-22: which fair price a +EV edge is measured against.
+    "fair_price_source": "consensus",
     "poll_interval_s": 120,
     # 12 h, not §3.2's original 6 h: two regions double the per-poll cost, so the
     # halved rate keeps the dev cadence at the same 360 credits/month.

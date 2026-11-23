@@ -228,7 +228,14 @@ _STATS: dict[str, Any] = {
 #: opportunities; `circular` and `unpriced` count what was set aside.
 SUMMARY_BODY: dict[str, Any] = {
     "size": 0,
-    "query": {"exists": {"field": "clv_graded_at"}},
+    # Shadow opportunities (2026-11-22) passed only the fair price not in
+    # charge; they are the What-if page's comparison, not the detector's record.
+    "query": {
+        "bool": {
+            "filter": [{"exists": {"field": "clv_graded_at"}}],
+            "must_not": [{"term": {"shadow": True}}],
+        }
+    },
     "aggs": {
         "measured": {
             "filter": {

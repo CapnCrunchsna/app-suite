@@ -113,6 +113,54 @@ def test_the_ev_detection_has_the_hand_computed_edge():
     assert ev.legs[0].price_american == 110
 
 
+def _pinnacle_case():
+    """Five books at 1.80/1.80 (fair Guardians 0.5) and "juicy" at 2.05: 2.5%
+    against the consensus, under the 3% threshold. Pinnacle at 1.70/2.20 de-vigs
+    to Guardians 0.588235/1.042781 = 0.564103, so 2.05 is +15.64% against it."""
+    books = [h2h(book, 1.80, 1.80) for book in FAIR_BOOKS] + [h2h("juicy", 2.05, 1.60)]
+    snapshots = normalize(PROVIDER, [{**EVENT_HEADER, "bookmakers": books}])
+    sharp = normalize(PROVIDER, [{**EVENT_HEADER, "bookmakers": [h2h("pinnacle", 1.70, 2.20)]}])
+    return snapshots, sharp
+
+
+def test_pinnacle_in_charge_finds_what_the_consensus_misses():
+    """§6.4, 2026-11-22: with `fair_price_source: pinnacle` the edge is measured
+    against Pinnacle's line, and the consensus edge is stored beside it."""
+    snapshots, sharp = _pinnacle_case()
+    [ev] = [d for d in detect_opportunities(snapshots, settings(fair_price_source="pinnacle", ev_threshold_pct=3), sharp=sharp)
+            if d.type == TYPE_EV]
+    assert ev.legs[0].book_key == "juicy"
+    assert ev.shadow is False
+    assert ev.edge_pct == pytest.approx(15.64, abs=0.01)
+    assert ev.sharp_edge_pct == pytest.approx(15.64, abs=0.01)
+    assert ev.consensus_edge_pct == pytest.approx(2.5, abs=0.01)
+    assert ev.consensus_prob == pytest.approx(0.564103, abs=TOL)  # what the stake is sized on
+
+
+#: The live threshold since 2026-11-04 (the spec default is 2%).
+THREE = settings(ev_threshold_pct=3)
+
+
+def test_a_price_only_the_other_fair_price_likes_is_a_shadow():
+    """With the consensus in charge the same price is a shadow: stored for the
+    comparison, never alerted. And without Pinnacle rows nothing changes."""
+    snapshots, sharp = _pinnacle_case()
+    [ev] = [d for d in detect_opportunities(snapshots, THREE, sharp=sharp) if d.type == TYPE_EV]
+    assert ev.shadow is True
+    assert ev.edge_pct == pytest.approx(15.64, abs=0.01)
+    assert [d for d in detect_opportunities(snapshots, THREE) if d.type == TYPE_EV] == []
+
+
+def test_the_poll_names_pinnacle_beside_the_enabled_books():
+    from edgeline.engine import featured_request
+
+    request = featured_request(
+        settings(sharp_reference_books=["pinnacle"], poll_lookahead_h=0), {"dk", "fd"},
+        datetime.now(timezone.utc),
+    )
+    assert request["bookmakers"] == ["dk", "fd", "pinnacle"]
+
+
 def test_the_arb_detection_has_the_hand_computed_edge():
     snapshots = normalize(PROVIDER, doctored_payload())
     arb = next(d for d in detect_opportunities(snapshots, settings()) if d.type == TYPE_ARB)
@@ -1496,6 +1544,50 @@ def test_closing_selection_names_books_only_when_closing_bookmakers_does():
     assert closing_selection(
         settings(closing_bookmakers=["a", "pinnacle", "b"], sharp_reference_books=["pinnacle"])
     ) == {"bookmakers": ["a", "pinnacle", "b"]}
+
+
+@pytest.mark.es
+async def test_a_poll_keeps_pinnacle_apart_and_never_alerts_a_shadow(es_url, test_index_prefix):
+    """2026-11-22: Pinnacle's poll prices go to `edgeline-sharp-closes` with
+    `is_closing: false`, not to the snapshots; a shadow opportunity is stored
+    with both edges and no recommendation."""
+    from elasticsearch import AsyncElasticsearch
+
+    from edgeline.engine import run_once
+    from edgeline.indices import ODDS_SNAPSHOTS_INDEX, SHARP_CLOSES_INDEX, with_prefix
+    from edgeline.notify import RecordingSink
+
+    client = AsyncElasticsearch(hosts=[es_url])
+    prefix = test_index_prefix
+    try:
+        await _fresh_cluster(client, prefix)
+        books = [h2h(book, 1.80, 1.80) for book in FAIR_BOOKS] + [h2h("juicy", 2.05, 1.60)]
+        provider = _FixtureProvider(
+            [{**EVENT_HEADER, "bookmakers": [*books, h2h("pinnacle", 1.70, 2.20)]}]
+        )
+        sink = RecordingSink()
+        report = await run_once(
+            provider, client, sport_key="baseball_mlb", prefix=prefix, sink=sink,
+            settings=settings(sharp_reference_books=["pinnacle"], ev_threshold_pct=3),
+        )
+        assert provider.requests[-1]["bookmakers"][-1] == "pinnacle"
+        [shadow] = [d for d in report.detections if d.type == TYPE_EV]
+        assert shadow.shadow is True and report.alerted == [] and sink.sent == []
+
+        await client.indices.refresh(index=f"{prefix}*")
+        stored = await _opportunity(client, prefix, shadow.hash)
+        assert stored["shadow"] is True
+        assert stored["consensus_edge_pct"] == pytest.approx(2.5, abs=0.01)
+        snap_books = await client.search(
+            index=with_prefix(ODDS_SNAPSHOTS_INDEX, prefix), size=0,
+            aggs={"b": {"terms": {"field": "book_key"}}},
+        )
+        assert "pinnacle" not in {b["key"] for b in snap_books["aggregations"]["b"]["buckets"]}
+        sharp = await client.search(index=with_prefix(SHARP_CLOSES_INDEX, prefix), size=10)
+        assert {h["_source"]["is_closing"] for h in sharp["hits"]["hits"]} == {False}
+        assert len(sharp["hits"]["hits"]) == 2
+    finally:
+        await client.close()
 
 
 @pytest.mark.es

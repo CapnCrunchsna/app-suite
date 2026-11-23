@@ -250,6 +250,12 @@ class WhatIfBet(BaseModel):
     #: The edge the detector saw, and the CLV against the consensus close and
     #: Pinnacle's (null before 2026-11-05 and on a different line).
     edge_pct: float | None = None
+    #: The edge against each fair price, and whether it passed only the one not
+    #: in charge (§3.2 `fair_price_source`, 2026-11-22). Absent before then,
+    #: when every opportunity was the consensus detector's.
+    consensus_edge_pct: float | None = None
+    sharp_edge_pct: float | None = None
+    shadow: bool = False
     clv_pct: float
     clv_sharp_pct: float | None = None
     clv_circular: bool | None = None

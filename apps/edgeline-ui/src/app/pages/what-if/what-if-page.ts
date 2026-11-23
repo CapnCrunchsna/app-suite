@@ -34,6 +34,7 @@ import {
   stats,
   verdict,
   type BetSet,
+  type Detector,
   type Dimension,
   type Filters,
   type Staking,
@@ -102,6 +103,12 @@ export class WhatIfPage {
   // ---- the controls --------------------------------------------------------
 
   protected readonly set = signal<BetSet>('paper');
+  protected readonly detector = signal<Detector>('as-run');
+  protected readonly detectorOptions: readonly Option<Detector>[] = [
+    { value: 'as-run', label: 'As run' },
+    { value: 'consensus', label: 'Consensus' },
+    { value: 'pinnacle', label: 'Pinnacle' },
+  ];
   protected readonly staking = signal<Staking>('ledger');
   protected readonly excludedSports = signal<ReadonlySet<string>>(new Set());
   protected readonly excludedMarkets = signal<ReadonlySet<string>>(new Set());
@@ -143,6 +150,7 @@ export class WhatIfPage {
 
   private readonly filters = computed<Filters>(() => ({
     set: this.set(),
+    detector: this.detector(),
     staking: this.effectiveStaking(),
     flatCents: DEFAULT_FLAT_CENTS,
     excludedSports: this.excludedSports(),
