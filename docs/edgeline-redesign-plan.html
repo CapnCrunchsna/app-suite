@@ -125,7 +125,8 @@ places a bet.</p>
 <p><strong>What stays.</strong> The 3% threshold, applied to whichever edge is in charge. One recommendation per pick. Paper mode. NBA and NHL paused. A game Pinnacle does not price yields no Pinnacle edge: under <code>pinnacle</code> it is skipped, and under <code>consensus</code> it is unaffected.</p>
 <p><strong>The switch.</strong> <code>fair_price_source</code> goes to <code>pinnacle</code> when Phase 1 ships, so the paper recommendations from then on are the new detector's, and the consensus detector runs as the shadow. <strong>Read it after the bowls (about 2027-01-05)</strong>, by the same rules as T4.4a:</p>
 <ul><li>the Pinnacle detector's opportunity CLV against Pinnacle's close, positive with its interval clear of zero;</li><li>beside the consensus detector's on the same weeks, on the What-if page's new detector toggle;</li><li>whichever is better stays in charge. If neither holds an edge, the recommendation is to park the detector and keep Phase 2.</li></ul>
-<h2 id="s2">2. Phase 2 — the offer evaluator</h2>
+<h2 id="s2">2. Phase 2 — the offer evaluator (dropped 2026-11-22)</h2>
+<p><strong>Dropped.</strong> The user's rule for any of these tools: largely hands-off, little to no work for the user. Every route left needs a daily step. Claude cannot read the books' sites itself, and screenshots mean opening each app. The books' promo emails were the only hands-off route, and they carry few of the boosts. A pricing sketch stays below for the record.</p>
 <p><strong>Why.</strong> For a bettor in Maryland, the steadiest positive-value bets are the books' own offers: profit boosts, odds boosts, bonus bets, "no sweat" refunds. They often carry 10–30% expected value, they last hours rather than minutes, and they need no bankroll to speak of, so neither of Phase 1's limits applies. The books show them in their apps, not in any feed, so they come in by hand.</p>
 <p><strong>What it does.</strong> A new Offers page:</p>
 <ul><li><strong>Enter an offer:</strong> the book, the game and selection (picked from stored events), the offer type and its terms (boosted price, profit-boost %, bonus-bet amount, refund cap), and the stake limit.</li><li><strong>Price it:</strong> the fair probability comes from Pinnacle, from the latest stored poll if it is recent, or one on-demand request for that game (1 credit). The page shows expected profit in dollars and %, a verdict, and for a bonus bet the expected cash it converts to.</li><li><strong>Line shop:</strong> the same selection at every enabled book, so a bet you were making anyway goes where it pays most.</li><li><strong>Record and settle:</strong> offers taken are stored and settled from the game's score like any other bet, so the page reports value taken against value expected, the same way the What-if page does.</li></ul>
@@ -139,10 +140,7 @@ places a bet.</p>
 <tr><td>1a</td><td>Pinnacle in the polls, both edges stored, <code>fair_price_source</code>, shadow opportunities</td><td>−90 a month</td><td><strong>Done 2026-11-22</strong></td></tr>
 <tr><td>1b</td><td>What-if page: detector toggle (consensus or Pinnacle edge), shadow rows included</td><td>none</td><td><strong>Done 2026-11-22</strong></td></tr>
 <tr><td>1c</td><td>Switch to <code>pinnacle</code>, moneylines only; spec <a href="#s3">§3.2</a>, §4.3, §6.4, §11.1 amended</td><td>—</td><td><strong>Done 2026-11-22</strong>: projected 404 credits a month, from 506</td></tr>
-<tr><td>2a</td><td>Offers: intake endpoint, pricing from stored or on-demand Pinnacle, verdict, Offers page</td><td>about 1 an offer</td><td>Waiting on the entry route (<a href="#s2">§2</a>, decision 3)</td></tr>
-<tr><td>2a′</td><td>The reading skill: screenshots (or emails) to offers</td><td>none</td><td>Waiting on the entry route</td></tr>
-<tr><td>2b</td><td>Line shop, bonus-bet conversion</td><td>none</td><td></td></tr>
-<tr><td>2c</td><td>Record and settle offers; value taken against expected</td><td>none</td><td></td></tr>
+<tr><td>2</td><td>The offer evaluator</td><td>—</td><td><strong>Dropped 2026-11-22</strong>: no hands-off way to get the offers in (<a href="#s2">§2</a>)</td></tr>
 <tr><td>—</td><td>Read Phase 1 after the bowls, about 2027-01-05</td><td>—</td><td></td></tr>
 </table></div>
 </main>

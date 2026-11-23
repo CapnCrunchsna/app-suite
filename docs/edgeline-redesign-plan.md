@@ -48,7 +48,12 @@ bowls (about 2027-01-05)**, by the same rules as T4.4a:
 - whichever is better stays in charge. If neither holds an edge, the recommendation is to park the
   detector and keep Phase 2.
 
-## 2. Phase 2 — the offer evaluator
+## 2. Phase 2 — the offer evaluator (dropped 2026-11-22)
+
+**Dropped.** The user's rule for any of these tools: largely hands-off, little to no work for the
+user. Every route left needs a daily step. Claude cannot read the books' sites itself, and screenshots
+mean opening each app. The books' promo emails were the only hands-off route, and they carry few of
+the boosts. A pricing sketch stays below for the record.
 
 **Why.** For a bettor in Maryland, the steadiest positive-value bets are the books' own offers: profit
 boosts, odds boosts, bonus bets, "no sweat" refunds. They often carry 10–30% expected value, they last
@@ -99,8 +104,5 @@ props: the free tier cannot afford them.
 | 1a | Pinnacle in the polls, both edges stored, `fair_price_source`, shadow opportunities | −90 a month | **Done 2026-11-22** |
 | 1b | What-if page: detector toggle (consensus or Pinnacle edge), shadow rows included | none | **Done 2026-11-22** |
 | 1c | Switch to `pinnacle`, moneylines only; spec §3.2, §4.3, §6.4, §11.1 amended | — | **Done 2026-11-22**: projected 404 credits a month, from 506 |
-| 2a | Offers: intake endpoint, pricing from stored or on-demand Pinnacle, verdict, Offers page | about 1 an offer | Waiting on the entry route (§2, decision 3) |
-| 2a′ | The reading skill: screenshots (or emails) to offers | none | Waiting on the entry route |
-| 2b | Line shop, bonus-bet conversion | none | |
-| 2c | Record and settle offers; value taken against expected | none | |
+| 2 | The offer evaluator | — | **Dropped 2026-11-22**: no hands-off way to get the offers in (§2) |
 | — | Read Phase 1 after the bowls, about 2027-01-05 | — | |
