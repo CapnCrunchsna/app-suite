@@ -1429,6 +1429,29 @@ async def test_only_a_started_game_with_an_unsettled_bet_needs_scores():
     assert await sports_awaiting_settlement(_Store({}), prefix="edgeline-", now=now) == []
 
 
+def test_the_worker_also_logs_to_a_file(tmp_path, monkeypatch):
+    """2026-11-26: the worker stopped unnoticed for three days and its only log
+    was a console window a crash then closed. It now writes `worker.log` too."""
+    import logging
+
+    from edgeline.scheduler import _log_to_file
+
+    monkeypatch.setenv("EDGELINE_LOG_DIR", str(tmp_path / "logs"))
+    root = logging.getLogger()
+    before = list(root.handlers)
+    try:
+        _log_to_file()
+        added = [h for h in root.handlers if h not in before]
+        assert len(added) == 1
+        logging.getLogger("edgeline.scheduler").warning("a line to keep")
+        added[0].flush()
+        assert "a line to keep" in (tmp_path / "logs" / "worker.log").read_text(encoding="utf-8")
+    finally:
+        for handler in [h for h in root.handlers if h not in before]:
+            root.removeHandler(handler)
+            handler.close()
+
+
 async def test_a_paused_sports_unsettled_opportunity_needs_scores_too():
     """2026-11-13: the What-if page settles every opportunity, so a sport with no
     recommendation (paused) still has its scores fetched while a started game

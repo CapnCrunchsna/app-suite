@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -1312,7 +1313,41 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check_budget:
         return asyncio.run(_check_budget_only())
-    return asyncio.run(_run())
+    _log_to_file()
+    log.info("worker starting (pid %d)", os.getpid())
+    try:
+        return asyncio.run(_run())
+    except BaseException:
+        log.critical("worker stopped by an unhandled exception", exc_info=True)
+        raise
+    finally:
+        log.info("worker exiting (pid %d)", os.getpid())
+
+
+#: Where the worker's log is kept (2026-11-26), beside its console. The worker
+#: stopped unnoticed from 11-23 to 11-26 and its only log was the console
+#: window, which the 11-26 crash closed, so the cause was lost.
+#: `EDGELINE_LOG_DIR` overrides it; the default folder is git-ignored.
+DEFAULT_LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
+
+
+def _log_to_file() -> None:
+    """Also write the log to `worker.log`, rotated at 5 MB, five kept. A worker
+    killed outright logs nothing on the way out, but the last line it wrote
+    then says when it stopped."""
+    from logging.handlers import RotatingFileHandler
+
+    folder = Path(os.environ.get("EDGELINE_LOG_DIR") or DEFAULT_LOG_DIR)
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        handler = RotatingFileHandler(
+            folder / "worker.log", maxBytes=5_000_000, backupCount=5, encoding="utf-8"
+        )
+    except OSError:
+        log.warning("could not open a log file in %s; logging to the console only", folder)
+        return
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    logging.getLogger().addHandler(handler)
 
 
 async def _measured_closing_credits(client, settings: Settings) -> int | None:

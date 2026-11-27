@@ -62,6 +62,8 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 *.tsbuildinfo
 npm-debug.log
+# Edgeline's worker and watchdog logs (2026-11-26): local, rotated, never versioned.
+apps/edgeline-api/logs/
 yarn-error.log
 
 vitest.config.*.timestamp*

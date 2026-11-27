@@ -481,6 +481,30 @@ uv run python -m edgeline.scheduler --check-budget # what it would cost, without
 Runs §13's jobs: featured polling per sport, a closing-line sweep, nightly grading at 06:00 UTC,
 a monthly quota reset, and a heartbeat onto the `runtime` settings document.
 
+**Its log is also on disk**, at `apps/edgeline-api/logs/worker.log` (rotated at 5 MB, five kept,
+git-ignored; `EDGELINE_LOG_DIR` moves it), including a line when it starts and stops. Until
+2026-11-26 the console window was the only log. The worker stopped unnoticed from 11-23 to 11-26,
+and the crash that ended it closed that window, so the cause was lost.
+
+### Keeping it up: `edgeline-up.mjs` and the watchdog
+
+`node tools/edgeline-up.mjs` (from `app-suite`) brings everything up in order after a reboot or
+crash: `es-up`, the API through the Servers page's `start()`, the worker outside the Claude app's
+job object, a fresh heartbeat, and a backup if the last is over a day old. It leaves anything
+already up alone.
+
+The **"Edgeline watchdog"** scheduled task runs it with `--watchdog` at logon and every 15
+minutes, through `tools/edgeline-watchdog.vbs` so no console window flashes.
+- **When healthy**, meaning Elasticsearch answers, a worker console exists and its heartbeat is
+  under 10 minutes old, it exits in about a second and writes nothing.
+- **Otherwise** it repairs whatever is down and records what it did in
+  `apps/edgeline-api/logs/watchdog.log`.
+- **A hung worker** (console open, heartbeat stale) gets three more minutes before it is killed and
+  relaunched, so one waking from sleep is left alone.
+
+`tools/install-edgeline-watchdog.ps1` registers the task, and re-running it replaces the task.
+`Unregister-ScheduledTask -TaskName 'Edgeline watchdog'` removes it.
+
 **It refuses to start if the cadence would blow the credit budget**, and that refusal is the
 point rather than a nicety. §8.4's production cadence costs ~64,800 credits a month against a
 free tier of 500 — a worker started on the wrong interval exhausts the month in about four hours
